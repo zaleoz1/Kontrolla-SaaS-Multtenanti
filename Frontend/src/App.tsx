@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
 import Vendas from "./pages/Vendas";
@@ -16,6 +17,7 @@ import NFe from "./pages/NFe";
 import NovoProduto from "./pages/NovoProduto";
 import NovoCliente from "./pages/NovoCliente";
 import NovaTransacao from "./pages/NovaTransacao";
+
 import PaginaNaoEncontrada from "./pages/NotFound";
 
 const clienteQuery = new QueryClient();
@@ -27,7 +29,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<AppLayout />}>
+          {/* Landing Page */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Rota de demonstração */}
+          <Route path="/demo" element={<div>Demonstração</div>} />
+          
+          {/* Área administrativa - com layout */}
+          <Route path="/dashboard" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="produtos" element={<Produtos />} />
             <Route path="novo-produto" element={<NovoProduto />} />
@@ -41,6 +50,8 @@ const App = () => (
             <Route path="nova-transacao" element={<NovaTransacao />} />
             <Route path="nfe" element={<NFe />} />
           </Route>
+          
+          {/* Rota 404 */}
           <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
       </BrowserRouter>

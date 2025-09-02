@@ -1,6 +1,7 @@
 // Configuração centralizada das rotas da aplicação
 export const routes = {
-  dashboard: "/",
+  landing: "/",
+  dashboard: "/dashboard",
   produtos: "/produtos",
   novoProduto: "/novo-produto",
   vendas: "/vendas",
@@ -12,6 +13,10 @@ export const routes = {
   financeiro: "/financeiro",
   novaTransacao: "/nova-transacao",
   nfe: "/nfe",
+  login: "/login",
+  signup: "/signup",
+  esqueciSenha: "/esqueci-senha",
+  demo: "/demo",
 } as const;
 
 // Tipos para as rotas

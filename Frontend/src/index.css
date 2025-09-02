@@ -127,7 +127,24 @@
   }
 
   html, body {
-    @apply h-full overflow-hidden;
+    @apply h-full;
+  }
+  
+  /* Scroll behavior para landing page */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  .scroll-snap-type-y-mandatory {
+    scroll-snap-type: y mandatory;
+  }
+  
+  .scroll-snap-align-start {
+    scroll-snap-align: start;
+  }
+  
+  .scroll-snap-align-center {
+    scroll-snap-align: center;
   }
 
   #root {
