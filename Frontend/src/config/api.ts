@@ -83,6 +83,7 @@ export const API_ENDPOINTS = {
     PRODUCTS: '/catalogo/produtos',
     PRODUCT: (id: number) => `/catalogo/produtos/${id}`,
     CATEGORIES: '/catalogo/categorias',
+    CREATE_CATEGORY: '/catalogo/categorias',
     HIGHLIGHTS: '/catalogo/destaques',
     RELATED: (id: number) => `/catalogo/produtos/${id}/relacionados`,
     SEARCH_BARCODE: (code: string) => `/catalogo/buscar/codigo-barras/${code}`,

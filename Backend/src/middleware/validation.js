@@ -5,6 +5,7 @@ export const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
+    console.log('❌ Erro de validação:', errors.array());
     return res.status(400).json({
       error: 'Dados inválidos',
       details: errors.array().map(err => ({
@@ -202,24 +203,177 @@ export const validateCliente = [
 // Validações para produtos
 export const validateProduto = [
   body('nome')
+    .custom((value) => {
+      console.log('🔍 Validando nome:', value, 'tipo:', typeof value);
+      if (!value || typeof value !== 'string') {
+        throw new Error('Nome é obrigatório');
+      }
+      const trimmed = value.trim();
+      if (trimmed.length < 2) {
+        throw new Error('Nome deve ter pelo menos 2 caracteres');
+      }
+      if (trimmed.length > 255) {
+        throw new Error('Nome deve ter no máximo 255 caracteres');
+      }
+      return true;
+    }),
+  body('descricao')
+    .optional()
     .trim()
-    .isLength({ min: 2, max: 255 })
-    .withMessage('Nome deve ter entre 2 e 255 caracteres'),
+    .isLength({ max: 1000 })
+    .withMessage('Descrição deve ter no máximo 1000 caracteres'),
+  body('categoria_id')
+    .optional()
+    .custom((value) => {
+      console.log('🔍 Validando categoria_id:', value, 'tipo:', typeof value);
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 1) {
+        throw new Error('ID da categoria deve ser um número inteiro positivo');
+      }
+      return true;
+    }),
+  body('codigo_barras')
+    .optional()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Código de barras deve ter entre 1 e 50 caracteres'),
+  body('sku')
+    .optional()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('SKU deve ter entre 1 e 100 caracteres'),
   body('preco')
-    .isFloat({ min: 0 })
-    .withMessage('Preço deve ser um número positivo'),
+    .custom((value) => {
+      console.log('🔍 Validando preço:', value, 'tipo:', typeof value);
+      if (value === null || value === undefined || value === '') {
+        throw new Error('Preço é obrigatório');
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) {
+        throw new Error('Preço deve ser um número válido');
+      }
+      if (numValue <= 0) {
+        throw new Error('Preço deve ser maior que zero');
+      }
+      return true;
+    }),
+  body('preco_promocional')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Preço promocional deve ser um número positivo');
+      }
+      return true;
+    }),
   body('estoque')
     .optional()
-    .isInt({ min: 0 })
-    .withMessage('Estoque deve ser um número inteiro não negativo'),
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Estoque deve ser um número inteiro não negativo');
+      }
+      return true;
+    }),
   body('estoque_minimo')
     .optional()
-    .isInt({ min: 0 })
-    .withMessage('Estoque mínimo deve ser um número inteiro não negativo'),
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Estoque mínimo deve ser um número inteiro não negativo');
+      }
+      return true;
+    }),
+  body('peso')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Peso deve ser um número positivo');
+      }
+      return true;
+    }),
+  body('largura')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Largura deve ser um número positivo');
+      }
+      return true;
+    }),
+  body('altura')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Altura deve ser um número positivo');
+      }
+      return true;
+    }),
+  body('comprimento')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Comprimento deve ser um número positivo');
+      }
+      return true;
+    }),
+  body('fornecedor')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Fornecedor deve ter no máximo 255 caracteres'),
+  body('marca')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Marca deve ter no máximo 100 caracteres'),
+  body('modelo')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Modelo deve ter no máximo 100 caracteres'),
+  body('garantia')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Garantia deve ter no máximo 100 caracteres'),
   body('status')
     .optional()
     .isIn(['ativo', 'inativo', 'rascunho'])
     .withMessage('Status deve ser "ativo", "inativo" ou "rascunho"'),
+  body('destaque')
+    .optional()
+    .isBoolean()
+    .withMessage('Destaque deve ser um valor booleano'),
+  body('imagens')
+    .optional()
+    .isArray()
+    .withMessage('Imagens deve ser um array'),
   handleValidationErrors
 ];
 

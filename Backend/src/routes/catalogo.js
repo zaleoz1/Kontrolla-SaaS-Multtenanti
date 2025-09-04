@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../database/connection.js';
+import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken, optionalAuth } from '../middleware/auth.js';
 import { validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 
@@ -143,6 +143,53 @@ router.get('/categorias', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao listar categorias do catálogo:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Criar nova categoria (apenas para usuários autenticados)
+router.post('/categorias', authenticateToken, async (req, res) => {
+  try {
+    const { nome, descricao = '' } = req.body;
+
+    if (!nome || nome.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Nome da categoria é obrigatório'
+      });
+    }
+
+    // Verificar se já existe categoria com mesmo nome
+    const existingCategorias = await query(
+      'SELECT id FROM categorias WHERE nome = ? AND tenant_id = ?',
+      [nome.trim(), req.user.tenant_id]
+    );
+
+    if (existingCategorias.length > 0) {
+      return res.status(409).json({
+        error: 'Já existe uma categoria com este nome'
+      });
+    }
+
+    const result = await queryWithResult(
+      `INSERT INTO categorias (tenant_id, nome, descricao, status) 
+       VALUES (?, ?, ?, ?)`,
+      [req.user.tenant_id, nome.trim(), descricao.trim(), 'ativo']
+    );
+
+    // Buscar categoria criada
+    const [categoria] = await query(
+      'SELECT id, nome, descricao, status FROM categorias WHERE id = ?',
+      [result.insertId]
+    );
+
+    res.status(201).json({
+      message: 'Categoria criada com sucesso',
+      categoria
+    });
+  } catch (error) {
+    console.error('Erro ao criar categoria:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

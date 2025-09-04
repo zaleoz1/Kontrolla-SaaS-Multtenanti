@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useApi } from "@/hooks/useApi";
+import { API_ENDPOINTS } from "@/config/api";
+import { toast } from "sonner";
 import { 
   Save, 
   X, 
@@ -15,19 +18,21 @@ import {
   Settings,
   AlertCircle,
   CheckCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Loader2
 } from "lucide-react";
 
 interface Produto {
   nome: string;
   descricao: string;
   categoria: string;
+  categoria_id?: number;
   preco: number | null;
-  precoPromocional?: number | null;
-  codigoBarras: string;
+  preco_promocional?: number | null;
+  codigo_barras: string;
   sku: string;
   estoque: number | null;
-  estoqueMinimo: number | null;
+  estoque_minimo: number | null;
   peso: number | null;
   largura: number | null;
   altura: number | null;
@@ -41,19 +46,31 @@ interface Produto {
   imagens: string[];
 }
 
+interface Categoria {
+  id: number;
+  nome: string;
+  descricao: string;
+}
+
 export default function NovoProduto() {
   const navigate = useNavigate();
   const [abaAtiva, setAbaAtiva] = useState("basico");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [novaCategoria, setNovaCategoria] = useState("");
+  const [mostrarInputNovaCategoria, setMostrarInputNovaCategoria] = useState(false);
+  const { makeRequest, loading, error } = useApi();
+  
   const [produto, setProduto] = useState<Produto>({
     nome: "",
     descricao: "",
     categoria: "",
+    categoria_id: undefined,
     preco: null,
-    precoPromocional: null,
-    codigoBarras: "",
+    preco_promocional: null,
+    codigo_barras: "",
     sku: "",
     estoque: null,
-    estoqueMinimo: null,
+    estoque_minimo: null,
     peso: null,
     largura: null,
     altura: null,
@@ -68,6 +85,60 @@ export default function NovoProduto() {
   });
 
 
+
+  // Carregar categorias ao montar o componente
+  useEffect(() => {
+    carregarCategorias();
+  }, []);
+
+  const carregarCategorias = async () => {
+    try {
+      const response = await makeRequest(API_ENDPOINTS.CATALOG.CATEGORIES);
+      setCategorias(response.categorias || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+      toast.error('Erro ao carregar categorias');
+    }
+  };
+
+  const criarNovaCategoria = async () => {
+    if (!novaCategoria.trim()) {
+      toast.error('Nome da categoria é obrigatório');
+      return;
+    }
+
+    try {
+      const response = await makeRequest(API_ENDPOINTS.CATALOG.CATEGORIES, {
+        method: 'POST',
+        body: {
+          nome: novaCategoria.trim(),
+          descricao: `Categoria: ${novaCategoria.trim()}`
+        }
+      });
+
+      // Adicionar a nova categoria à lista
+      const novaCategoriaObj = {
+        id: response.categoria.id,
+        nome: response.categoria.nome,
+        descricao: response.categoria.descricao
+      };
+      
+      setCategorias(prev => [...prev, novaCategoriaObj]);
+      
+      // Selecionar a nova categoria automaticamente
+      atualizarProduto("categoria_id", novaCategoriaObj.id);
+      atualizarProduto("categoria", novaCategoriaObj.nome);
+      
+      // Limpar e esconder o input
+      setNovaCategoria("");
+      setMostrarInputNovaCategoria(false);
+      
+      toast.success('Categoria criada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar categoria:', error);
+      toast.error('Erro ao criar categoria. Tente novamente.');
+    }
+  };
 
   const atualizarProduto = (campo: keyof Produto, valor: any) => {
     setProduto(prev => ({ ...prev, [campo]: valor }));
@@ -87,13 +158,60 @@ export default function NovoProduto() {
     }));
   };
 
-  const salvarProduto = () => {
-    // Aqui seria implementada a lógica para salvar o produto
-    console.log("Produto salvo:", produto);
-    navigate("/dashboard/produtos");
+  const salvarProduto = async () => {
+    try {
+      // Validar se o preço é válido
+      if (!produto.preco || produto.preco <= 0) {
+        toast.error('Preço deve ser maior que zero');
+        return;
+      }
+
+      // Validar se o nome é válido
+      if (!produto.nome || produto.nome.trim().length < 2) {
+        toast.error('Nome deve ter pelo menos 2 caracteres');
+        return;
+      }
+
+      // Preparar dados para envio
+      const dadosProduto = {
+        nome: produto.nome.trim(),
+        descricao: produto.descricao?.trim() || null,
+        categoria_id: produto.categoria_id || null,
+        codigo_barras: produto.codigo_barras?.trim() || null,
+        sku: produto.sku?.trim() || null,
+        preco: parseFloat(String(produto.preco)),
+        preco_promocional: produto.preco_promocional ? parseFloat(String(produto.preco_promocional)) : null,
+        estoque: parseInt(String(produto.estoque)) || 0,
+        estoque_minimo: parseInt(String(produto.estoque_minimo)) || 0,
+        peso: produto.peso ? parseFloat(String(produto.peso)) : null,
+        largura: produto.largura ? parseFloat(String(produto.largura)) : null,
+        altura: produto.altura ? parseFloat(String(produto.altura)) : null,
+        comprimento: produto.comprimento ? parseFloat(String(produto.comprimento)) : null,
+        fornecedor: produto.fornecedor?.trim() || null,
+        marca: produto.marca?.trim() || null,
+        modelo: produto.modelo?.trim() || null,
+        garantia: produto.garantia?.trim() || null,
+        status: produto.status || 'ativo',
+        destaque: produto.destaque || false,
+        imagens: produto.imagens || []
+      };
+
+      console.log('📦 Enviando dados do produto:', dadosProduto);
+
+      const response = await makeRequest(API_ENDPOINTS.PRODUCTS.CREATE, {
+        method: 'POST',
+        body: dadosProduto
+      });
+
+      toast.success('Produto criado com sucesso!');
+      navigate("/dashboard/produtos");
+    } catch (error) {
+      console.error('Erro ao salvar produto:', error);
+      toast.error('Erro ao salvar produto. Tente novamente.');
+    }
   };
 
-  const formularioValido = produto.nome && produto.categoria && (produto.preco && produto.preco > 0);
+  const formularioValido = produto.nome && produto.preco && produto.preco > 0;
 
   return (
     <div className="space-y-6">
@@ -113,10 +231,14 @@ export default function NovoProduto() {
           <Button 
             className="bg-gradient-primary" 
             onClick={salvarProduto}
-            disabled={!formularioValido}
+            disabled={!formularioValido || loading}
           >
-            <Save className="h-4 w-4 mr-2" />
-            Salvar Produto
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {loading ? 'Salvando...' : 'Salvar Produto'}
           </Button>
         </div>
       </div>
@@ -174,13 +296,75 @@ export default function NovoProduto() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Categoria *</label>
-                      <Input
-                        placeholder="Ex: Eletrônicos, Acessórios, Informática..."
-                        value={produto.categoria}
-                        onChange={(e) => atualizarProduto("categoria", e.target.value)}
-                        className="mt-1"
-                      />
+                      <label className="text-sm font-medium">Categoria</label>
+                      <div className="space-y-2">
+                        <select
+                          value={produto.categoria_id || ""}
+                          onChange={(e) => {
+                            const categoriaId = e.target.value ? parseInt(e.target.value) : undefined;
+                            const categoriaNome = e.target.selectedOptions[0]?.text || "";
+                            atualizarProduto("categoria_id", categoriaId);
+                            atualizarProduto("categoria", categoriaNome);
+                          }}
+                          className="w-full p-2 border rounded-md bg-background"
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          {categorias.map((categoria) => (
+                            <option key={categoria.id} value={categoria.id}>
+                              {categoria.nome}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        {!mostrarInputNovaCategoria ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setMostrarInputNovaCategoria(true)}
+                            className="w-full"
+                          >
+                            + Nova Categoria
+                          </Button>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <Input
+                              placeholder="Nome da nova categoria"
+                              value={novaCategoria}
+                              onChange={(e) => setNovaCategoria(e.target.value)}
+                              className="flex-1"
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  criarNovaCategoria();
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={criarNovaCategoria}
+                              disabled={!novaCategoria.trim() || loading}
+                            >
+                              {loading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setMostrarInputNovaCategoria(false);
+                                setNovaCategoria("");
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -221,8 +405,8 @@ export default function NovoProduto() {
                       <label className="text-sm font-medium">Código de Barras</label>
                       <Input
                         placeholder="7891234567890"
-                        value={produto.codigoBarras}
-                        onChange={(e) => atualizarProduto("codigoBarras", e.target.value)}
+                        value={produto.codigo_barras}
+                        onChange={(e) => atualizarProduto("codigo_barras", e.target.value)}
                         className="mt-1"
                       />
                     </div>
@@ -269,25 +453,25 @@ export default function NovoProduto() {
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        value={produto.precoPromocional || ""}
-                        onChange={(e) => atualizarProduto("precoPromocional", e.target.value ? parseFloat(e.target.value) : null)}
+                        value={produto.preco_promocional || ""}
+                        onChange={(e) => atualizarProduto("preco_promocional", e.target.value ? parseFloat(e.target.value) : null)}
                         className="mt-1"
                       />
                     </div>
                   </div>
 
-                  {produto.precoPromocional && produto.precoPromocional > 0 && produto.preco && produto.preco > 0 && (
+                  {produto.preco_promocional && produto.preco_promocional > 0 && produto.preco && produto.preco > 0 && (
                     <div className="p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Economia:</span>
                         <span className="font-medium text-success">
-                          {((produto.preco - produto.precoPromocional) / produto.preco * 100).toFixed(1)}%
+                          {((produto.preco - produto.preco_promocional) / produto.preco * 100).toFixed(1)}%
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Valor economizado:</span>
                         <span className="font-medium text-success">
-                          R$ {(produto.preco - produto.precoPromocional).toFixed(2)}
+                          R$ {(produto.preco - produto.preco_promocional).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -322,18 +506,18 @@ export default function NovoProduto() {
                         type="number"
                         min="0"
                         placeholder="0"
-                        value={produto.estoqueMinimo || ""}
-                        onChange={(e) => atualizarProduto("estoqueMinimo", e.target.value ? parseInt(e.target.value) : null)}
+                        value={produto.estoque_minimo || ""}
+                        onChange={(e) => atualizarProduto("estoque_minimo", e.target.value ? parseInt(e.target.value) : null)}
                         className="mt-1"
                       />
                     </div>
                   </div>
 
-                  {produto.estoque !== null && produto.estoqueMinimo !== null && produto.estoque <= produto.estoqueMinimo && produto.estoqueMinimo > 0 && (
+                  {produto.estoque !== null && produto.estoque_minimo !== null && produto.estoque <= produto.estoque_minimo && produto.estoque_minimo > 0 && (
                     <div className="flex items-center space-x-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
                       <AlertCircle className="h-4 w-4 text-warning" />
                       <span className="text-sm text-warning-foreground">
-                        Estoque baixo! Quantidade atual ({produto.estoque}) está no limite mínimo ({produto.estoqueMinimo})
+                        Estoque baixo! Quantidade atual ({produto.estoque}) está no limite mínimo ({produto.estoque_minimo})
                       </span>
                     </div>
                   )}
@@ -477,10 +661,10 @@ export default function NovoProduto() {
                   </div>
 
                   <div className="space-y-2">
-                    {produto.precoPromocional && produto.precoPromocional > 0 ? (
+                    {produto.preco_promocional && produto.preco_promocional > 0 ? (
                       <div className="flex items-center space-x-2">
                         <span className="text-lg font-bold text-primary">
-                          R$ {produto.precoPromocional.toFixed(2)}
+                          R$ {produto.preco_promocional.toFixed(2)}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
                           R$ {produto.preco?.toFixed(2) || "0,00"}
@@ -567,12 +751,12 @@ export default function NovoProduto() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {produto.categoria ? (
+                {produto.categoria_id ? (
                   <CheckCircle className="h-4 w-4 text-success" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="text-sm">Categoria</span>
+                <span className="text-sm">Categoria (opcional)</span>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -608,3 +792,4 @@ export default function NovoProduto() {
     </div>
   );
 }
+ 
