@@ -1,5 +1,7 @@
 # KontrollaPro Backend
 
+Get-Content "c:\Users\Isaléo Guimarães\OneDrive\Documentos\Projetos\Kontrolla-SaaS-multitenanti\Backend\src\database\schema.sql"
+
 Backend para o sistema SaaS multitenanti KontrollaPro - Sistema de gestão comercial completo.
 
 ## 🚀 Tecnologias
