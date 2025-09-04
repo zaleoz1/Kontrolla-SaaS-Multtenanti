@@ -18,14 +18,14 @@ import { NavLink } from "react-router-dom";
 
 // Array de objetos que define os itens de navegação da sidebar
 const navegacao = [
-  { nome: "Dashboard", href: "/", icone: LayoutDashboard },
-  { nome: "Produtos", href: "/produtos", icone: Package },
-  { nome: "Vendas", href: "/vendas", icone: ShoppingCart },
-  { nome: "Catálogo", href: "/catalogo", icone: Store },
-  { nome: "Clientes", href: "/clientes", icone: Users },
-  { nome: "Relatórios", href: "/relatorios", icone: BarChart3 },
-  { nome: "Financeiro", href: "/financeiro", icone: TrendingUp },
-  { nome: "NF-e", href: "/nfe", icone: Receipt },
+  { nome: "Dashboard", href: "/dashboard", icone: LayoutDashboard },
+  { nome: "Produtos", href: "/dashboard/produtos", icone: Package },
+  { nome: "Vendas", href: "/dashboard/vendas", icone: ShoppingCart },
+  { nome: "Catálogo", href: "/dashboard/catalogo", icone: Store },
+  { nome: "Clientes", href: "/dashboard/clientes", icone: Users },
+  { nome: "Relatórios", href: "/dashboard/relatorios", icone: BarChart3 },
+  { nome: "Financeiro", href: "/dashboard/financeiro", icone: TrendingUp },
+  { nome: "NF-e", href: "/dashboard/nfe", icone: Receipt },
 ];
 
 interface PropsSidebar {
@@ -76,6 +76,7 @@ export function Sidebar({ isOpen, onClose }: PropsSidebar) {
             <NavLink
               key={item.nome}
               to={item.href}
+              end={item.href === "/dashboard"}
               onClick={() => {
                 // Fecha o sidebar em mobile ao clicar em um item
                 if (window.innerWidth < 1024) {

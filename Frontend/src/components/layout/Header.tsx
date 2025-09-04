@@ -43,9 +43,9 @@ export function Header({ onMenuClick }: PropsCabecalho) {
         </div>
 
         {/* Área de ações e informações */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4">   
           {/* Botão para criar nova venda */}
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/nova-venda")}>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/dashboard/nova-venda")}>
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Nova Venda</span>
           </Button>

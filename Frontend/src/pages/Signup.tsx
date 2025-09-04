@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { 
   ArrowRight, 
   Eye, 
@@ -42,7 +43,8 @@ export default function Signup() {
     password: "",
     confirmPassword: "",
     acceptTerms: false,
-    acceptMarketing: false
+    acceptMarketing: false,
+    selectedPlan: ""
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -78,6 +80,18 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação adicional
+    if (!formData.selectedPlan) {
+      alert("Por favor, selecione um plano para continuar.");
+      return;
+    }
+    
+    if (!formData.acceptTerms) {
+      alert("Por favor, aceite os termos de uso para continuar.");
+      return;
+    }
+    
     setIsLoading(true);
     
     // Simular delay de cadastro
@@ -88,7 +102,7 @@ export default function Signup() {
   };
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -140,10 +154,72 @@ export default function Signup() {
     { icon: Sparkles, text: "IA Integrada", desc: "Previsões automáticas" }
   ];
 
+  const plans = [
+    {
+      id: "starter",
+      name: "Starter",
+      price: "R$ 97",
+      period: "/mês",
+      description: "Perfeito para pequenos negócios",
+      features: [
+        "Até 100 produtos",
+        "Até 500 vendas/mês",
+        "1 usuário",
+        "Relatórios básicos",
+        "Suporte por email",
+        "Catálogo online",
+        "Backup diário"
+      ],
+      popular: false,
+      cta: "Escolher Starter"
+    },
+    {
+      id: "professional",
+      name: "Professional",
+      price: "R$ 197",
+      period: "/mês",
+      description: "Ideal para empresas em crescimento",
+      features: [
+        "Produtos ilimitados",
+        "Vendas ilimitadas",
+        "Até 5 usuários",
+        "Relatórios avançados + IA",
+        "NF-e integrada",
+        "Suporte prioritário",
+        "API completa",
+        "Backup automático",
+        "Integrações populares"
+      ],
+      popular: true,
+      cta: "Escolher Professional"
+    },
+    {
+      id: "enterprise",
+      name: "Enterprise",
+      price: "R$ 397",
+      period: "/mês",
+      description: "Para grandes empresas",
+      features: [
+        "Tudo do Professional",
+        "Usuários ilimitados",
+        "Multi-empresas",
+        "Integrações customizadas",
+        "Suporte 24/7",
+        "Treinamento dedicado",
+        "SLA 99.9% garantido",
+        "Consultoria incluída",
+        "White-label disponível"
+      ],
+      popular: false,
+      cta: "Escolher Enterprise"
+    }
+  ];
+
   const steps = [
     { number: 1, title: "Informações Pessoais", desc: "Seus dados básicos" },
     { number: 2, title: "Empresa", desc: "Dados da sua empresa" },
-    { number: 3, title: "Segurança", desc: "Crie sua senha" }
+    { number: 3, title: "Segurança", desc: "Crie sua senha" },
+    { number: 4, title: "Plano", desc: "Escolha seu plano" }
   ];
 
   return (
@@ -527,6 +603,108 @@ export default function Signup() {
                     </motion.div>
                   )}
 
+                  {/* Step 4: Plan Selection */}
+                  {currentStep === 4 && (
+                    <motion.div
+                      variants={fadeInUp}
+                      className="space-y-6"
+                    >
+                      <div className="text-center mb-8">
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                          Escolha seu plano
+                        </h3>
+                        <p className="text-slate-300">
+                          Selecione o plano que melhor se adapta ao seu negócio
+                        </p>
+                      </div>
+
+                      <div className="grid gap-4">
+                        {plans.map((plan, index) => (
+                          <motion.div
+                            key={plan.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className={`relative cursor-pointer transition-all duration-300 ${
+                              formData.selectedPlan === plan.id
+                                ? 'ring-2 ring-emerald-500 bg-emerald-500/10'
+                                : 'hover:bg-white/5'
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, selectedPlan: plan.id }))}
+                          >
+                            <Card className={`bg-white/10 backdrop-blur-sm border transition-all duration-300 ${
+                              formData.selectedPlan === plan.id
+                                ? 'border-emerald-500/50 shadow-emerald-500/20'
+                                : 'border-white/20 hover:border-emerald-400/50'
+                            }`}>
+                              <CardContent className="p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                      <h4 className={`text-xl font-bold ${
+                                        formData.selectedPlan === plan.id ? 'text-emerald-400' : 'text-white'
+                                      }`}>
+                                        {plan.name}
+                                      </h4>
+                                      {plan.popular && (
+                                        <Badge className="bg-emerald-500 text-white text-xs px-2 py-1">
+                                          Popular
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-slate-300 text-sm mb-3">{plan.description}</p>
+                                    <div className="flex items-baseline">
+                                      <span className={`text-3xl font-bold ${
+                                        formData.selectedPlan === plan.id ? 'text-emerald-400' : 'text-white'
+                                      }`}>
+                                        {plan.price}
+                                      </span>
+                                      <span className="text-slate-300 ml-1">{plan.period}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                    formData.selectedPlan === plan.id
+                                      ? 'border-emerald-500 bg-emerald-500'
+                                      : 'border-white/30'
+                                  }`}>
+                                    {formData.selectedPlan === plan.id && (
+                                      <Check className="h-4 w-4 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+
+                                <ul className="space-y-2">
+                                  {plan.features.slice(0, 4).map((feature, featureIndex) => (
+                                    <li key={featureIndex} className="flex items-center text-sm text-slate-300">
+                                      <Check className="h-4 w-4 text-emerald-400 mr-2 flex-shrink-0" />
+                                      {feature}
+                                    </li>
+                                  ))}
+                                  {plan.features.length > 4 && (
+                                    <li className="text-sm text-slate-400 ml-6">
+                                      +{plan.features.length - 4} recursos adicionais
+                                    </li>
+                                  )}
+                                </ul>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {!formData.selectedPlan && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-center text-red-400 text-sm"
+                        >
+                          Por favor, selecione um plano para continuar
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  )}
+
                   {/* Navigation Buttons */}
                   <div className="flex justify-between pt-6">
                     {currentStep > 1 ? (
@@ -543,11 +721,12 @@ export default function Signup() {
                       <div />
                     )}
 
-                    {currentStep < 3 ? (
+                    {currentStep < 4 ? (
                       <Button
                         type="button"
                         onClick={nextStep}
                         className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
+                        disabled={currentStep === 3 && !formData.acceptTerms}
                       >
                         Próximo
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -556,7 +735,7 @@ export default function Signup() {
                       <Button
                         type="submit"
                         className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-emerald-500/25 transition-all duration-300"
-                        disabled={isLoading || !formData.acceptTerms}
+                        disabled={isLoading || !formData.acceptTerms || !formData.selectedPlan}
                       >
                         {isLoading ? (
                           <motion.div
