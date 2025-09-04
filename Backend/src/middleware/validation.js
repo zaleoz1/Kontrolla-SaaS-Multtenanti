@@ -30,6 +30,145 @@ export const validateLogin = [
   handleValidationErrors
 ];
 
+// Validações para cadastro (versão simplificada para debug)
+export const validateSignup = [
+  body('firstName').notEmpty().withMessage('Nome é obrigatório'),
+  body('lastName').notEmpty().withMessage('Sobrenome é obrigatório'),
+  body('email').isEmail().withMessage('Email deve ser válido'),
+  body('phone').optional(),
+  body('company').notEmpty().withMessage('Nome da empresa é obrigatório'),
+  body('password').isLength({ min: 8 }).withMessage('Senha deve ter pelo menos 8 caracteres'),
+  body('confirmPassword').custom((value, { req }) => {
+    if (value !== req.body.password) {
+      throw new Error('As senhas não coincidem');
+    }
+    return true;
+  }),
+  body('selectedPlan').isIn(['starter', 'professional', 'enterprise']).withMessage('Plano deve ser starter, professional ou enterprise'),
+  body('acceptTerms').custom((value) => {
+    if (!value) {
+      throw new Error('Aceite dos termos é obrigatório');
+    }
+    return true;
+  }),
+  body('acceptMarketing').optional(),
+  handleValidationErrors
+];
+
+// Validações para cadastro (versão original comentada)
+export const validateSignupOriginal = [
+  /*
+  body('firstName')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Nome é obrigatório');
+      }
+      const trimmed = value.trim();
+      if (trimmed.length < 2 || trimmed.length > 255) {
+        throw new Error('Nome deve ter entre 2 e 255 caracteres');
+      }
+      return true;
+    }),
+  body('lastName')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Sobrenome é obrigatório');
+      }
+      const trimmed = value.trim();
+      if (trimmed.length < 2 || trimmed.length > 255) {
+        throw new Error('Sobrenome deve ter entre 2 e 255 caracteres');
+      }
+      return true;
+    }),
+  body('email')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Email é obrigatório');
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        throw new Error('Email deve ser válido');
+      }
+      return true;
+    }),
+  body('phone')
+    .optional()
+    .custom((value) => {
+      if (value && value.length > 0) {
+        if (value.length < 10 || value.length > 20) {
+          throw new Error('Telefone deve ter entre 10 e 20 caracteres');
+        }
+        if (!/^[\d\s\(\)\-\+]+$/.test(value)) {
+          throw new Error('Telefone deve conter apenas números, espaços, parênteses, hífens e sinal de mais');
+        }
+      }
+      return true;
+    }),
+  body('company')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Nome da empresa é obrigatório');
+      }
+      const trimmed = value.trim();
+      if (trimmed.length < 2 || trimmed.length > 255) {
+        throw new Error('Nome da empresa deve ter entre 2 e 255 caracteres');
+      }
+      return true;
+    }),
+  body('password')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Senha é obrigatória');
+      }
+      if (value.length < 8) {
+        throw new Error('Senha deve ter pelo menos 8 caracteres');
+      }
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+        throw new Error('Senha deve conter pelo menos uma letra minúscula, uma maiúscula e um número');
+      }
+      return true;
+    }),
+  body('confirmPassword')
+    .custom((value, { req }) => {
+      if (!value) {
+        throw new Error('Confirmação de senha é obrigatória');
+      }
+      if (value !== req.body.password) {
+        throw new Error('As senhas não coincidem');
+      }
+      return true;
+    }),
+  body('selectedPlan')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Plano é obrigatório');
+      }
+      if (!['starter', 'professional', 'enterprise'].includes(value)) {
+        throw new Error('Plano deve ser starter, professional ou enterprise');
+      }
+      return true;
+    }),
+  body('acceptTerms')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Aceite dos termos é obrigatório');
+      }
+      if (value !== true && value !== 'true') {
+        throw new Error('Você deve aceitar os termos de uso');
+      }
+      return true;
+    }),
+  body('acceptMarketing')
+    .optional()
+    .custom((value) => {
+      if (value !== undefined && value !== null && value !== true && value !== false && value !== 'true' && value !== 'false') {
+        throw new Error('Aceite de marketing deve ser um valor booleano');
+      }
+      return true;
+    }),
+  handleValidationErrors
+  */
+];
+
 // Validações para clientes
 export const validateCliente = [
   body('nome')

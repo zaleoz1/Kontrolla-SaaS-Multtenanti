@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { query } from '../database/connection.js';
+import { query, queryWithResult } from '../database/connection.js';
 
 // Middleware para verificar autenticação com sistema de sessões
 export const authenticateToken = async (req, res, next) => {

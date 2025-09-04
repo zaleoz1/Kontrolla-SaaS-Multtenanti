@@ -1,0 +1,117 @@
+// Configuração da API
+export const API_CONFIG = {
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  TIMEOUT: 10000,
+  RETRY_ATTEMPTS: 3,
+};
+
+// Endpoints da API
+export const API_ENDPOINTS = {
+  // Autenticação
+  AUTH: {
+    LOGIN: '/auth/login',
+    SIGNUP: '/auth/signup',
+    LOGOUT: '/auth/logout',
+    ME: '/auth/me',
+    VERIFY: '/auth/verify',
+    CHANGE_PASSWORD: '/auth/change-password',
+  },
+  
+  // Produtos
+  PRODUCTS: {
+    LIST: '/produtos',
+    CREATE: '/produtos',
+    GET: (id: number) => `/produtos/${id}`,
+    UPDATE: (id: number) => `/produtos/${id}`,
+    DELETE: (id: number) => `/produtos/${id}`,
+    SEARCH_BARCODE: (code: string) => `/produtos/buscar/codigo-barras/${code}`,
+    LOW_STOCK: '/produtos/estoque/baixo',
+    STATS: '/produtos/stats/overview',
+  },
+  
+  // Vendas
+  SALES: {
+    LIST: '/vendas',
+    CREATE: '/vendas',
+    GET: (id: number) => `/vendas/${id}`,
+    UPDATE_STATUS: (id: number) => `/vendas/${id}/status`,
+    DELETE: (id: number) => `/vendas/${id}`,
+    STATS: '/vendas/stats/overview',
+  },
+  
+  // Clientes
+  CLIENTS: {
+    LIST: '/clientes',
+    CREATE: '/clientes',
+    GET: (id: number) => `/clientes/${id}`,
+    UPDATE: (id: number) => `/clientes/${id}`,
+    DELETE: (id: number) => `/clientes/${id}`,
+    STATS: '/clientes/stats/overview',
+  },
+  
+  // Financeiro
+  FINANCIAL: {
+    TRANSACTIONS: '/financeiro/transacoes',
+    TRANSACTION: (id: number) => `/financeiro/transacoes/${id}`,
+    ACCOUNTS_RECEIVABLE: '/financeiro/contas-receber',
+    ACCOUNTS_PAYABLE: '/financeiro/contas-pagar',
+    STATS: '/financeiro/stats/overview',
+  },
+  
+  // Relatórios
+  REPORTS: {
+    SALES_PERIOD: '/relatorios/vendas-periodo',
+    PRODUCTS_SOLD: '/relatorios/produtos-vendidos',
+    CLIENT_ANALYSIS: '/relatorios/analise-clientes',
+    FINANCIAL: '/relatorios/financeiro',
+    STOCK_CONTROL: '/relatorios/controle-estoque',
+    PERFORMANCE: '/relatorios/performance-vendas',
+  },
+  
+  // Dashboard
+  DASHBOARD: {
+    METRICS: '/dashboard/metricas',
+    RECENT_SALES: '/dashboard/vendas-recentes',
+    LOW_STOCK: '/dashboard/estoque-baixo',
+    SALES_CHART: '/dashboard/grafico-vendas',
+    TOP_PRODUCTS: '/dashboard/top-produtos',
+    FINANCIAL_SUMMARY: '/dashboard/resumo-financeiro',
+  },
+  
+  // Catálogo
+  CATALOG: {
+    PRODUCTS: '/catalogo/produtos',
+    PRODUCT: (id: number) => `/catalogo/produtos/${id}`,
+    CATEGORIES: '/catalogo/categorias',
+    HIGHLIGHTS: '/catalogo/destaques',
+    RELATED: (id: number) => `/catalogo/produtos/${id}/relacionados`,
+    SEARCH_BARCODE: (code: string) => `/catalogo/buscar/codigo-barras/${code}`,
+    STATS: '/catalogo/stats',
+    CONFIG: '/catalogo/configuracoes',
+  },
+};
+
+// Status codes
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  INTERNAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
+} as const;
+
+// Mensagens de erro padrão
+export const ERROR_MESSAGES = {
+  NETWORK_ERROR: 'Erro de conexão. Verifique sua internet.',
+  TIMEOUT: 'Tempo limite excedido. Tente novamente.',
+  UNAUTHORIZED: 'Sessão expirada. Faça login novamente.',
+  FORBIDDEN: 'Você não tem permissão para esta ação.',
+  NOT_FOUND: 'Recurso não encontrado.',
+  SERVER_ERROR: 'Erro interno do servidor. Tente novamente mais tarde.',
+  VALIDATION_ERROR: 'Dados inválidos. Verifique os campos.',
+  UNKNOWN_ERROR: 'Erro desconhecido. Tente novamente.',
+} as const;

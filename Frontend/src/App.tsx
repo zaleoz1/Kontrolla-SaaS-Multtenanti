@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
+import { NotificationContainer } from "./components/ui/notification";
+import { useNotifications } from "./hooks/useNotifications";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
@@ -25,11 +27,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 
 const clienteQuery = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={clienteQuery}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+function AppContent() {
+  const { notifications, removeNotification } = useNotifications();
+
+  return (
+    <>
       <BrowserRouter>
         <Routes>
           {/* Landing Page */}
@@ -63,6 +65,22 @@ const App = () => (
           <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
       </BrowserRouter>
+      
+      {/* Sistema de notificações */}
+      <NotificationContainer
+        notifications={notifications}
+        onClose={removeNotification}
+      />
+    </>
+  );
+}
+
+const App = () => (
+  <QueryClientProvider client={clienteQuery}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AppContent />
     </TooltipProvider>
   </QueryClientProvider>
 );

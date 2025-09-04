@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "node src/database/migrate.js",
-    "seed": "node src/database/seed.js"
+    "seed": "node src/database/seed.js",
+    "setup": "node setup.js"
   },
   "keywords": ["saas", "multitenant", "ecommerce", "nodejs", "mysql"],
   "author": "KontrollaPro Team",
