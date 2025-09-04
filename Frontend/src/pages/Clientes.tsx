@@ -117,7 +117,7 @@ export default function Clientes() {
             Gerencie seus clientes e relacionamentos
           </p>
         </div>
-        <Button className="bg-gradient-primary" onClick={() => navigate("/novo-cliente")}>
+        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Cliente
         </Button>
@@ -296,7 +296,7 @@ export default function Clientes() {
             <p className="text-muted-foreground mb-4">
               {termoBusca ? "Tente ajustar sua busca" : "Adicione seu primeiro cliente"}
             </p>
-            <Button className="bg-gradient-primary">
+            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Cliente
             </Button>

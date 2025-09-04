@@ -103,7 +103,7 @@ export default function NovoCliente() {
   const salvarCliente = () => {
     // Aqui seria implementada a lógica para salvar o cliente
     console.log("Cliente salvo:", cliente);
-    navigate("/clientes");
+    navigate("/dashboard/clientes");
   };
 
   const formularioValido = cliente.nome && cliente.cpfCnpj && cliente.telefone;
@@ -119,7 +119,7 @@ export default function NovoCliente() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => navigate("/clientes")}>
+          <Button variant="outline" onClick={() => navigate("/dashboard/clientes")}>
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>

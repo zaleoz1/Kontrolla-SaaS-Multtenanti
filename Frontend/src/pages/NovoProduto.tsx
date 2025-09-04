@@ -90,7 +90,7 @@ export default function NovoProduto() {
   const salvarProduto = () => {
     // Aqui seria implementada a lógica para salvar o produto
     console.log("Produto salvo:", produto);
-    navigate("/produtos");
+    navigate("/dashboard/produtos");
   };
 
   const formularioValido = produto.nome && produto.categoria && (produto.preco && produto.preco > 0);
@@ -106,7 +106,7 @@ export default function NovoProduto() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => navigate("/produtos")}>
+          <Button variant="outline" onClick={() => navigate("/dashboard/produtos")}>
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>

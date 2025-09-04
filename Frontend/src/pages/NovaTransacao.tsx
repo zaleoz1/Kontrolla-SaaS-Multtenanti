@@ -130,7 +130,7 @@ export default function NovaTransacao() {
   const salvarTransacao = () => {
     // Aqui seria implementada a lógica para salvar a transação
     console.log("Transação salva:", transacao);
-    navigate("/financeiro");
+    navigate("/dashboard/financeiro");
   };
 
   const formularioValido = transacao.categoria && transacao.descricao && transacao.valor > 0;
@@ -146,7 +146,7 @@ export default function NovaTransacao() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => navigate("/financeiro")}>
+          <Button variant="outline" onClick={() => navigate("/dashboard/financeiro")}>
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>

@@ -391,11 +391,11 @@ export default function NovaVenda() {
   );
 
   const irParaNovoCliente = () => {
-    navigate("/novo-cliente");
+    navigate("/dashboard/novo-cliente");
   };
 
   const irParaNovoProduto = () => {
-    navigate("/novo-produto");
+    navigate("/dashboard/novo-produto");
   };
 
   const limparVendaRapida = () => {
