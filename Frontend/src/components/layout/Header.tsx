@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Search, Plus, Menu, Package, Users, TrendingUp } from "lucide-react";
+import { Bell, Search, Plus, Menu, Package, Users, TrendingUp, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 interface PropsCabecalho {
   onMenuClick: () => void;
@@ -15,6 +16,38 @@ interface PropsCabecalho {
  */
 export function Header({ onMenuClick }: PropsCabecalho) {
   const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Carregar dados do usuário do localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    } finally {
+      // Limpar dados do localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      navigate('/login');
+    }
+  };
   
   return (
     // Header principal com fundo e borda inferior
@@ -63,13 +96,49 @@ export function Header({ onMenuClick }: PropsCabecalho) {
             </Button>
           </div>
 
-          {/* Informações da loja e status online */}
-          <div className="flex items-center space-x-2">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">Loja Principal</p>
-              <p className="text-xs text-muted-foreground">Online</p>
-            </div>
-            <div className="h-2 w-2 rounded-full bg-success"></div>
+          {/* Informações do usuário e logout */}
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <>
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium">{user.nome} {user.sobrenome}</p>
+                  <p className="text-xs text-muted-foreground">{user.tenant_nome}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="relative"
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/login")}
+                >
+                  Entrar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/signup")}
+                >
+                  Cadastrar
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

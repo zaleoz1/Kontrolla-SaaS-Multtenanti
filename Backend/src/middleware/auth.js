@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { query } from '../database/connection.js';
 
-// Middleware para verificar autenticação
+// Middleware para verificar autenticação com sistema de sessões
 export const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -16,29 +17,47 @@ export const authenticateToken = async (req, res, next) => {
     // Verificar e decodificar o token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Buscar usuário no banco de dados
-    const usuarios = await query(
-      'SELECT u.*, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.id = ? AND u.status = "ativo"',
-      [decoded.userId]
+    // Verificar se a sessão ainda é válida
+    const sessoes = await query(
+      `SELECT s.*, u.id as usuario_id, u.nome, u.sobrenome, u.email, u.role, u.status, u.tenant_id, t.nome as tenant_nome, t.slug as tenant_slug
+       FROM sessoes_usuario s
+       JOIN usuarios u ON s.usuario_id = u.id
+       JOIN tenants t ON u.tenant_id = t.id
+       WHERE s.token_sessao = ? AND s.ativa = TRUE AND s.data_expiracao > NOW()`,
+      [decoded.sessionToken]
     );
 
-    if (usuarios.length === 0) {
+    if (sessoes.length === 0) {
       return res.status(401).json({
-        error: 'Usuário não encontrado ou inativo'
+        error: 'Sessão inválida ou expirada'
       });
     }
 
-    const usuario = usuarios[0];
+    const sessao = sessoes[0];
+    
+    if (sessao.status !== 'ativo') {
+      return res.status(401).json({
+        error: 'Usuário inativo'
+      });
+    }
 
-    // Adicionar informações do usuário e tenant à requisição
+    // Adicionar informações do usuário, tenant e sessão à requisição
     req.user = {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      role: usuario.role,
-      tenant_id: usuario.tenant_id,
-      tenant_nome: usuario.tenant_nome,
-      tenant_slug: usuario.tenant_slug
+      id: sessao.usuario_id,
+      nome: sessao.nome,
+      sobrenome: sessao.sobrenome,
+      email: sessao.email,
+      role: sessao.role,
+      status: sessao.status,
+      tenant_id: sessao.tenant_id,
+      tenant_nome: sessao.tenant_nome,
+      tenant_slug: sessao.tenant_slug
+    };
+    
+    req.session = {
+      id: sessao.id,
+      token: sessao.token_sessao,
+      ip_address: sessao.ip_address
     };
 
     next();
@@ -133,21 +152,26 @@ export const optionalAuth = async (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      const usuarios = await query(
-        'SELECT u.*, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.id = ? AND u.status = "ativo"',
-        [decoded.userId]
+      const sessoes = await query(
+        `SELECT s.*, u.id as usuario_id, u.nome, u.sobrenome, u.email, u.role, u.status, u.tenant_id, t.nome as tenant_nome, t.slug as tenant_slug
+         FROM sessoes_usuario s
+         JOIN usuarios u ON s.usuario_id = u.id
+         JOIN tenants t ON u.tenant_id = t.id
+         WHERE s.token_sessao = ? AND s.ativa = TRUE AND s.data_expiracao > NOW()`,
+        [decoded.sessionToken]
       );
 
-      if (usuarios.length > 0) {
-        const usuario = usuarios[0];
+      if (sessoes.length > 0) {
+        const sessao = sessoes[0];
         req.user = {
-          id: usuario.id,
-          nome: usuario.nome,
-          email: usuario.email,
-          role: usuario.role,
-          tenant_id: usuario.tenant_id,
-          tenant_nome: usuario.tenant_nome,
-          tenant_slug: usuario.tenant_slug
+          id: sessao.usuario_id,
+          nome: sessao.nome,
+          sobrenome: sessao.sobrenome,
+          email: sessao.email,
+          role: sessao.role,
+          tenant_id: sessao.tenant_id,
+          tenant_nome: sessao.tenant_nome,
+          tenant_slug: sessao.tenant_slug
         };
       }
     }
@@ -157,4 +181,52 @@ export const optionalAuth = async (req, res, next) => {
     // Se houver erro no token, continua sem autenticação
     next();
   }
+};
+
+// Função para gerar token de sessão
+export const generateSessionToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+// Função para criar sessão de usuário
+export const createUserSession = async (usuarioId, tenantId, ipAddress, userAgent) => {
+  const sessionToken = generateSessionToken();
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 7); // 7 dias
+
+  await query(
+    `INSERT INTO sessoes_usuario (usuario_id, tenant_id, token_sessao, ip_address, user_agent, data_expiracao)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [usuarioId, tenantId, sessionToken, ipAddress, userAgent, expirationDate]
+  );
+
+  return sessionToken;
+};
+
+// Função para invalidar sessão
+export const invalidateSession = async (sessionToken) => {
+  await query(
+    'UPDATE sessoes_usuario SET ativa = FALSE WHERE token_sessao = ?',
+    [sessionToken]
+  );
+};
+
+// Função para invalidar todas as sessões de um usuário
+export const invalidateAllUserSessions = async (usuarioId) => {
+  await query(
+    'UPDATE sessoes_usuario SET ativa = FALSE WHERE usuario_id = ?',
+    [usuarioId]
+  );
+};
+
+// Função para gerar token JWT com sessão
+export const generateJWT = (usuarioId, sessionToken) => {
+  return jwt.sign(
+    { 
+      userId: usuarioId,
+      sessionToken: sessionToken
+    },
+    process.env.JWT_SECRET || 'sua-chave-secreta',
+    { expiresIn: '7d' }
+  );
 };
