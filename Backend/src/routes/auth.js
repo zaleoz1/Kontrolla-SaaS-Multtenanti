@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { query } from '../database/connection.js';
+import { query, queryWithResult } from '../database/connection.js';
 import { 
   authenticateToken, 
   requireAdmin, 
@@ -9,13 +9,16 @@ import {
   invalidateSession, 
   generateJWT 
 } from '../middleware/auth.js';
-import { validateLogin } from '../middleware/validation.js';
+import { validateLogin, validateSignup } from '../middleware/validation.js';
 
 const router = express.Router();
 
 // Rota de cadastro
-router.post('/signup', async (req, res) => {
+router.post('/signup', validateSignup, async (req, res) => {
   try {
+    console.log('📝 Iniciando processo de cadastro...');
+    console.log('📋 Dados recebidos:', req.body);
+    
     const { 
       firstName, 
       lastName, 
@@ -28,51 +31,35 @@ router.post('/signup', async (req, res) => {
       acceptTerms 
     } = req.body;
 
-    // Validações básicas
-    if (!firstName || !lastName || !email || !password || !selectedPlan) {
-      return res.status(400).json({
-        error: 'Todos os campos obrigatórios devem ser preenchidos'
-      });
-    }
+    // Validações são feitas pelo middleware validateSignup
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        error: 'As senhas não coincidem'
-      });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({
-        error: 'A senha deve ter pelo menos 8 caracteres'
-      });
-    }
-
-    if (!acceptTerms) {
-      return res.status(400).json({
-        error: 'Você deve aceitar os termos de uso'
-      });
-    }
-
-    // Verificar se o email já existe
+    // Verificar se o email já existe em qualquer tenant
+    console.log('🔍 Verificando se email já existe...');
     const existingUsers = await query(
       'SELECT id FROM usuarios WHERE email = ?',
       [email]
     );
+    console.log('📊 Usuários encontrados com este email:', existingUsers.length);
 
     if (existingUsers.length > 0) {
+      console.log('❌ Email já está em uso');
       return res.status(400).json({
         error: 'Este email já está em uso'
       });
     }
 
     // Criar tenant para o novo usuário
+    console.log('🏢 Criando tenant...');
     const tenantSlug = company.toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, '-') // Substitui espaços por hífens
+      .replace(/-+/g, '-') // Remove hífens duplicados
+      .replace(/^-|-$/g, ''); // Remove hífens do início e fim
+
+    console.log('🏷️ Tenant slug gerado:', tenantSlug);
 
     // Verificar se o slug já existe
-    let finalSlug = tenantSlug;
+    let finalSlug = tenantSlug || 'empresa';
     let counter = 1;
     while (true) {
       const existingTenants = await query(
@@ -80,47 +67,59 @@ router.post('/signup', async (req, res) => {
         [finalSlug]
       );
       if (existingTenants.length === 0) break;
-      finalSlug = `${tenantSlug}-${counter}`;
+      finalSlug = `${tenantSlug || 'empresa'}-${counter}`;
       counter++;
     }
+    console.log('🏷️ Slug final do tenant:', finalSlug);
 
     // Criar tenant
-    const [tenantResult] = await query(
+    console.log('💾 Inserindo tenant no banco...');
+    const tenantResult = await queryWithResult(
       `INSERT INTO tenants (nome, slug, email, telefone, status, plano) 
        VALUES (?, ?, ?, ?, ?, ?)`,
       [company, finalSlug, email, phone, 'ativo', selectedPlan]
     );
 
     const tenantId = tenantResult.insertId;
+    console.log('✅ Tenant criado com ID:', tenantId);
 
     // Criptografar senha
+    console.log('🔐 Criptografando senha...');
     const senhaHash = await bcrypt.hash(password, 12);
 
     // Criar usuário
-    const [usuarioResult] = await query(
+    console.log('👤 Criando usuário...');
+    const usuarioResult = await queryWithResult(
       `INSERT INTO usuarios (tenant_id, nome, sobrenome, email, senha, telefone, role, status, email_verificado) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [tenantId, firstName, lastName, email, senhaHash, phone, 'admin', 'ativo', true]
     );
 
     const usuarioId = usuarioResult.insertId;
+    console.log('✅ Usuário criado com ID:', usuarioId);
 
     // Criar sessão
+    console.log('🔑 Criando sessão...');
     const sessionToken = await createUserSession(
       usuarioId, 
       tenantId, 
       req.ip, 
       req.get('User-Agent')
     );
+    console.log('✅ Sessão criada');
 
     // Gerar JWT
+    console.log('🎫 Gerando JWT...');
     const token = generateJWT(usuarioId, sessionToken);
+    console.log('✅ JWT gerado');
 
     // Buscar dados completos do usuário
+    console.log('👤 Buscando dados do usuário...');
     const usuarios = await query(
       'SELECT u.*, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.id = ?',
       [usuarioId]
     );
+    console.log('✅ Dados do usuário encontrados');
 
     res.status(201).json({
       message: 'Cadastro realizado com sucesso',
@@ -138,7 +137,8 @@ router.post('/signup', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro no cadastro:', error);
+    console.error('❌ Erro no cadastro:', error);
+    console.error('❌ Stack trace:', error.stack);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

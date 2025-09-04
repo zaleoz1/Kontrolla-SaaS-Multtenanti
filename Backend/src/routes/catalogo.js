@@ -192,7 +192,7 @@ router.get('/produtos/:id/relacionados', async (req, res) => {
       [id, tenantId]
     );
 
-    if (produtos.length === 0) {
+    if (produto.length === 0) {
       return res.status(404).json({
         error: 'Produto não encontrado'
       });

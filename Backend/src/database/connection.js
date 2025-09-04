@@ -35,8 +35,19 @@ export const testConnection = async () => {
 // Função para executar queries
 export const query = async (sql, params = []) => {
   try {
-    const [rows] = await pool.execute(sql, params);
+    const [rows, fields] = await pool.execute(sql, params);
     return rows;
+  } catch (error) {
+    console.error('Erro na query:', error);
+    throw error;
+  }
+};
+
+// Função para executar queries que retornam resultado com insertId
+export const queryWithResult = async (sql, params = []) => {
+  try {
+    const [result] = await pool.execute(sql, params);
+    return result;
   } catch (error) {
     console.error('Erro na query:', error);
     throw error;

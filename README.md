@@ -1,213 +1,233 @@
-# Kontrolla SaaS - Sistema de Gestão Empresarial
+# 🚀 KontrollaPro - Sistema SaaS Multitenanti
 
-Sistema completo de gestão empresarial desenvolvido como SaaS multitenant, oferecendo funcionalidades de controle de estoque, vendas, clientes, financeiro e emissão de NF-e.
+Sistema completo de gestão de vendas e estoque para pequenas e médias empresas, desenvolvido com arquitetura multitenanti.
 
-## 🚀 Tecnologias
+## ✨ Funcionalidades
+
+### 🏢 **Gestão Multitenanti**
+- Isolamento completo de dados por empresa
+- Sistema de autenticação JWT com sessões
+- Controle de acesso baseado em roles
+
+### 📦 **Gestão de Produtos**
+- CRUD completo de produtos
+- Controle de estoque em tempo real
+- Categorias e busca avançada
+- Código de barras e SKU
+- Produtos em destaque
+
+### 🛒 **Gestão de Vendas**
+- Criação de vendas com múltiplos itens
+- Controle de status (pendente, pago, cancelado)
+- Geração automática de números de venda
+- Atualização automática de estoque
+- Histórico completo de vendas
+
+### 👥 **Gestão de Clientes**
+- Cadastro completo de clientes
+- Dados pessoais e empresariais
+- Sistema VIP com benefícios
+- Histórico de compras
+- Limite de crédito
+
+### 💰 **Módulo Financeiro**
+- Transações de entrada e saída
+- Contas a receber e pagar
+- Relatórios financeiros detalhados
+- Controle de fluxo de caixa
+
+### 📊 **Relatórios Avançados**
+- Vendas por período
+- Produtos mais vendidos
+- Análise de clientes
+- Controle de estoque
+- Performance de vendas
+- Exportação de dados
+
+### 🏪 **Catálogo Público**
+- Visualização pública de produtos
+- Filtros por categoria e preço
+- Produtos em destaque
+- Busca por código de barras
+
+## 🛠️ **Tecnologias**
+
+### Backend
+- **Node.js** com Express
+- **MySQL** com pool de conexões
+- **JWT** para autenticação
+- **Bcrypt** para criptografia
+- **Express Validator** para validações
+- **Helmet** para segurança
 
 ### Frontend
 - **React 18** com TypeScript
-- **Vite** para build e desenvolvimento
+- **Vite** para build
 - **Tailwind CSS** para estilização
 - **Radix UI** para componentes
 - **React Router** para navegação
-- **TanStack Query** para gerenciamento de estado
-- **React Hook Form** para formulários
-- **Zod** para validação
+- **React Query** para cache
+- **Framer Motion** para animações
 
-### Backend
-- **Node.js** com TypeScript
-- **Express.js** para API REST
-- **Prisma** como ORM
-- **PostgreSQL** como banco de dados
-- **JWT** para autenticação
-- **Bcrypt** para hash de senhas
-- **Swagger** para documentação da API
-
-## 📁 Estrutura do Projeto
-
-```
-kontrolla-saas/
-├── frontend/                 # Aplicação React
-│   ├── src/
-│   │   ├── components/       # Componentes reutilizáveis
-│   │   │   ├── ui/          # Componentes base (shadcn/ui)
-│   │   │   ├── layout/      # Componentes de layout
-│   │   │   └── dashboard/   # Componentes específicos do dashboard
-│   │   ├── pages/           # Páginas da aplicação
-│   │   ├── hooks/           # Custom hooks
-│   │   ├── lib/             # Utilitários e configurações
-│   │   ├── config/          # Configurações da aplicação
-│   │   └── types/           # Tipos TypeScript
-│   ├── public/              # Arquivos estáticos
-│   └── package.json
-├── backend/                  # API Node.js
-│   ├── src/
-│   │   ├── controllers/     # Controladores da API
-│   │   ├── middleware/      # Middlewares
-│   │   ├── routes/          # Rotas da API
-│   │   ├── services/        # Lógica de negócio
-│   │   ├── models/          # Modelos de dados
-│   │   ├── utils/           # Utilitários
-│   │   ├── config/          # Configurações
-│   │   └── types/           # Tipos TypeScript
-│   ├── prisma/              # Schema e migrações do banco
-│   └── package.json
-└── package.json             # Configuração do workspace
-```
-
-## 🛠️ Instalação e Configuração
+## 🚀 **Instalação e Configuração**
 
 ### Pré-requisitos
 - Node.js 18+ 
-- PostgreSQL 14+
-- npm 8+
+- MySQL 8.0+
+- npm ou yarn
 
 ### 1. Clone o repositório
 ```bash
-git clone <repository-url>
+git clone https://github.com/seu-usuario/kontrolla-saas.git
 cd kontrolla-saas
 ```
 
-### 2. Instale as dependências
+### 2. Configure o Backend
 ```bash
-npm run install:all
+cd Backend
+npm install
+npm run setup
 ```
 
-### 3. Configure as variáveis de ambiente
-
-#### Backend
+### 3. Configure o Frontend
 ```bash
-cd backend
-cp env.example .env
-```
-
-Edite o arquivo `.env` com suas configurações:
-```env
-DATABASE_URL="postgresql://username:password@localhost:5432/kontrolla_db"
-JWT_SECRET="your-super-secret-jwt-key"
-PORT=8000
-NODE_ENV=development
-```
-
-#### Frontend
-```bash
-cd frontend
-cp .env.example .env.local
-```
-
-Edite o arquivo `.env.local`:
-```env
-VITE_API_URL=http://localhost:8000/api
-VITE_APP_NAME=Kontrolla
-```
-
-### 4. Configure o banco de dados
-```bash
-npm run db:migrate
-npm run db:seed
-```
-
-### 5. Execute o projeto
-```bash
+cd ../Frontend
+npm install
 npm run dev
 ```
 
-O frontend estará disponível em `http://localhost:3000` e o backend em `http://localhost:8000`.
+### 4. Configure as variáveis de ambiente
 
-## 📚 Scripts Disponíveis
+Crie um arquivo `.env` na pasta `Backend` baseado no `env.example`:
 
-### Desenvolvimento
-- `npm run dev` - Executa frontend e backend simultaneamente
-- `npm run dev:frontend` - Executa apenas o frontend
-- `npm run dev:backend` - Executa apenas o backend
+```env
+# Configurações do Servidor
+PORT=3000
+NODE_ENV=development
 
-### Build
-- `npm run build` - Build completo (frontend + backend)
-- `npm run build:frontend` - Build do frontend
-- `npm run build:backend` - Build do backend
+# Configurações do Banco de Dados MySQL
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=kontrollapro
+DB_USER=root
+DB_PASSWORD=sua_senha_mysql
 
-### Banco de Dados
-- `npm run db:migrate` - Executa migrações
-- `npm run db:generate` - Gera cliente Prisma
-- `npm run db:seed` - Popula banco com dados iniciais
-- `npm run db:studio` - Abre Prisma Studio
+# Configurações de Autenticação
+JWT_SECRET=seu_jwt_secret_muito_seguro_aqui
 
-### Qualidade de Código
-- `npm run lint` - Executa linter em todo o projeto
-- `npm run test` - Executa testes
+# Configurações de CORS
+CORS_ORIGIN=http://localhost:5173
+```
 
-## 🏗️ Arquitetura
+### 5. Execute o projeto
 
-### Multitenancy
-O sistema implementa multitenancy por banco de dados compartilhado com isolamento por `tenant_id`. Cada tenant possui:
-- Dados isolados
-- Configurações personalizáveis
-- Planos de assinatura
-- Usuários próprios
+**Backend:**
+```bash
+cd Backend
+npm start
+```
+
+**Frontend:**
+```bash
+cd Frontend
+npm run dev
+```
+
+## 📱 **Acesso ao Sistema**
+
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:3000
+- **Health Check:** http://localhost:3000/health
+
+### 🔑 **Credenciais de Teste**
+- **Email:** admin@lojaexemplo.com.br
+- **Senha:** admin123
+
+## 📚 **Documentação da API**
 
 ### Autenticação
-- JWT tokens para autenticação
-- Middleware de autenticação em todas as rotas protegidas
-- Middleware de tenant para isolamento de dados
-- Refresh tokens para renovação automática
+- `POST /api/auth/signup` - Cadastro de novo usuário
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Dados do usuário logado
+- `POST /api/auth/logout` - Logout
 
-### API REST
-- Endpoints RESTful seguindo convenções
-- Documentação automática com Swagger
-- Validação de dados com express-validator
-- Tratamento de erros padronizado
-- Rate limiting para segurança
+### Produtos
+- `GET /api/produtos` - Listar produtos
+- `POST /api/produtos` - Criar produto
+- `GET /api/produtos/:id` - Buscar produto
+- `PUT /api/produtos/:id` - Atualizar produto
+- `DELETE /api/produtos/:id` - Deletar produto
 
-## 🔧 Desenvolvimento
+### Vendas
+- `GET /api/vendas` - Listar vendas
+- `POST /api/vendas` - Criar venda
+- `GET /api/vendas/:id` - Buscar venda
+- `PATCH /api/vendas/:id/status` - Atualizar status
 
-### Adicionando Novas Funcionalidades
+### Clientes
+- `GET /api/clientes` - Listar clientes
+- `POST /api/clientes` - Criar cliente
+- `GET /api/clientes/:id` - Buscar cliente
+- `PUT /api/clientes/:id` - Atualizar cliente
+- `DELETE /api/clientes/:id` - Deletar cliente
 
-#### Frontend
-1. Crie os componentes em `frontend/src/components/`
-2. Adicione as páginas em `frontend/src/pages/`
-3. Configure as rotas em `frontend/src/config/routes.ts`
-4. Adicione os tipos em `frontend/src/lib/types.ts`
+### Relatórios
+- `GET /api/relatorios/vendas-periodo` - Relatório de vendas
+- `GET /api/relatorios/produtos-vendidos` - Produtos mais vendidos
+- `GET /api/relatorios/analise-clientes` - Análise de clientes
+- `GET /api/relatorios/controle-estoque` - Controle de estoque
 
-#### Backend
-1. Crie o modelo no schema Prisma
-2. Execute a migração: `npm run db:migrate`
-3. Crie o controller em `backend/src/controllers/`
-4. Crie as rotas em `backend/src/routes/`
-5. Adicione middleware se necessário
+## 🏗️ **Arquitetura**
 
-### Convenções de Código
-- Use TypeScript em todo o projeto
-- Siga as convenções do ESLint configurado
-- Use nomes descritivos para variáveis e funções
-- Documente APIs com Swagger
-- Escreva testes para funcionalidades críticas
-
-## 📖 Documentação da API
-
-A documentação da API está disponível em `http://localhost:8000/api-docs` quando o backend estiver rodando.
-
-## 🚀 Deploy
-
-### Frontend (Vercel/Netlify)
-```bash
-npm run build:frontend
+### Backend
 ```
+Backend/
+├── src/
+│   ├── database/          # Configuração do banco
+│   ├── middleware/        # Middlewares de autenticação e validação
+│   ├── routes/           # Rotas da API
+│   └── server.js         # Servidor principal
+├── uploads/              # Arquivos enviados
+└── package.json
+```
+
+### Frontend
+```
+Frontend/
+├── src/
+│   ├── components/       # Componentes reutilizáveis
+│   ├── pages/           # Páginas da aplicação
+│   ├── hooks/           # Hooks customizados
+│   ├── lib/             # Utilitários
+│   └── config/          # Configurações
+├── public/              # Arquivos estáticos
+└── package.json
+```
+
+## 🔒 **Segurança**
+
+- Autenticação JWT com sessões
+- Criptografia de senhas com bcrypt
+- Rate limiting para prevenir ataques
+- Validação rigorosa de entrada
+- CORS configurado
+- Headers de segurança com Helmet
+
+## 🚀 **Deploy**
 
 ### Backend (Railway/Heroku)
 ```bash
-npm run build:backend
+# Configure as variáveis de ambiente
+# Deploy automático via Git
 ```
 
-### Docker
+### Frontend (Vercel/Netlify)
 ```bash
-docker-compose up -d
+npm run build
+# Deploy da pasta dist/
 ```
 
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 🤝 Contribuição
+## 🤝 **Contribuição**
 
 1. Fork o projeto
 2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
@@ -215,6 +235,14 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
 
-## 📞 Suporte
+## 📄 **Licença**
 
-Para suporte, entre em contato através do email: suporte@kontrolla.com
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 📞 **Suporte**
+
+Para suporte, envie um email para suporte@kontrollapro.com ou abra uma issue no GitHub.
+
+---
+
+**Desenvolvido com ❤️ pela equipe KontrollaPro**
