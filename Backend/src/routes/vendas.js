@@ -50,7 +50,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
        ${whereClause} 
        ORDER BY v.data_venda DESC 
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros

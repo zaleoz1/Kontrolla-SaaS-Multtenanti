@@ -19,7 +19,8 @@ import {
   AlertCircle,
   CheckCircle,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  Eye
 } from "lucide-react";
 
 interface Produto {
@@ -58,6 +59,8 @@ export default function NovoProduto() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [novaCategoria, setNovaCategoria] = useState("");
   const [mostrarInputNovaCategoria, setMostrarInputNovaCategoria] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const { makeRequest, loading, error } = useApi();
   
   const [produto, setProduto] = useState<Produto>({
@@ -144,7 +147,94 @@ export default function NovoProduto() {
     setProduto(prev => ({ ...prev, [campo]: valor }));
   };
 
+  const redimensionarImagem = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calcular novas dimensões mantendo proporção
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        // Configurar canvas
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Desenhar imagem redimensionada
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Converter para base64
+        const dataURL = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataURL);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxImages = 5;
+    const remainingSlots = maxImages - produto.imagens.length;
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+
+    if (filesToProcess.length < files.length) {
+      toast.warning(`Máximo de ${maxImages} imagens permitidas. Apenas as primeiras ${filesToProcess.length} serão processadas.`);
+    }
+
+    try {
+      const promises = filesToProcess.map(file => {
+        // Validar tipo de arquivo
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`Arquivo ${file.name} não é uma imagem válida`);
+        }
+        
+        // Validar tamanho (máximo 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`Arquivo ${file.name} é muito grande. Máximo 5MB`);
+        }
+        
+        return redimensionarImagem(file);
+      });
+
+      const resizedImages = await Promise.all(promises);
+      
+      setProduto(prev => ({
+        ...prev,
+        imagens: [...prev.imagens, ...resizedImages]
+      }));
+
+      toast.success(`${resizedImages.length} imagem(ns) adicionada(s) com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao processar imagens:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao processar imagens');
+    }
+
+    // Limpar input
+    event.target.value = '';
+  };
+
   const adicionarImagem = (url: string) => {
+    if (produto.imagens.length >= 5) {
+      toast.warning('Máximo de 5 imagens permitidas');
+      return;
+    }
+    
     setProduto(prev => ({
       ...prev,
       imagens: [...prev.imagens, url]
@@ -156,6 +246,64 @@ export default function NovoProduto() {
       ...prev,
       imagens: prev.imagens.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    // Processar arquivos diretamente
+    const maxImages = 5;
+    const remainingSlots = maxImages - produto.imagens.length;
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    if (filesToProcess.length < files.length) {
+      toast.warning(`Máximo de ${maxImages} imagens permitidas. Apenas as primeiras ${filesToProcess.length} serão processadas.`);
+    }
+
+    try {
+      const promises = filesToProcess.map(file => {
+        // Validar tipo de arquivo
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`Arquivo ${file.name} não é uma imagem válida`);
+        }
+        
+        // Validar tamanho (máximo 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`Arquivo ${file.name} é muito grande. Máximo 5MB`);
+        }
+        
+        return redimensionarImagem(file);
+      });
+
+      Promise.all(promises).then(resizedImages => {
+        setProduto(prev => ({
+          ...prev,
+          imagens: [...prev.imagens, ...resizedImages]
+        }));
+
+        toast.success(`${resizedImages.length} imagem(ns) adicionada(s) com sucesso!`);
+      }).catch(error => {
+        console.error('Erro ao processar imagens:', error);
+        toast.error(error instanceof Error ? error.message : 'Erro ao processar imagens');
+      });
+    } catch (error) {
+      console.error('Erro ao processar imagens:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao processar imagens');
+    }
   };
 
   const salvarProduto = async () => {
@@ -700,38 +848,131 @@ export default function NovoProduto() {
           {/* Upload de Imagens */}
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle>Imagens do Produto</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                Imagens do Produto
+                <span className="text-sm text-muted-foreground">
+                  {produto.imagens.length}/5 imagens
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2 grid-cols-2">
+              {/* Grid de Imagens */}
+              <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
                 {produto.imagens.map((imagem, index) => (
-                  <div key={index} className="relative aspect-square">
+                  <div key={index} className="relative aspect-square group">
                     <img 
                       src={imagem} 
                       alt={`Imagem ${index + 1}`}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded-lg border border-border cursor-pointer"
+                      onClick={() => setImagemPreview(imagem)}
                     />
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="absolute top-1 right-1 h-6 w-6 p-0"
-                      onClick={() => removerImagem(index)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImagemPreview(imagem);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removerImagem(index);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      {index + 1}
+                    </div>
                   </div>
                 ))}
+                
+                {/* Slot para nova imagem */}
+                {produto.imagens.length < 5 && (
+                  <div className="aspect-square">
+                    <label htmlFor="image-upload" className="cursor-pointer">
+                      <div className="w-full h-full border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center hover:border-primary/50 transition-colors">
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-xs text-muted-foreground text-center">
+                          Adicionar Imagem
+                        </p>
+                      </div>
+                    </label>
+                    <input
+                      id="image-upload"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Arraste imagens aqui ou clique para selecionar
-                </p>
-                <Button variant="outline" size="sm">
-                  Selecionar Imagens
-                </Button>
-              </div>
+              {/* Área de Upload Principal */}
+              {produto.imagens.length === 0 && (
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    isDragOver 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className={`h-12 w-12 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <h3 className="text-lg font-medium mb-2">
+                    {isDragOver ? 'Solte as imagens aqui' : 'Adicionar Imagens do Produto'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {isDragOver 
+                      ? 'As imagens serão redimensionadas automaticamente'
+                      : 'Arraste e solte ou clique para selecionar até 5 imagens. Elas serão redimensionadas automaticamente para 800x800px.'
+                    }
+                  </p>
+                  <div className="space-y-2">
+                    <Button asChild>
+                      <label htmlFor="main-image-upload" className="cursor-pointer">
+                        Selecionar Imagens
+                      </label>
+                    </Button>
+                    <input
+                      id="main-image-upload"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Formatos: JPG, PNG, GIF • Máximo: 5MB por imagem
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Informações sobre as imagens */}
+              {produto.imagens.length > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>
+                      {produto.imagens.length} imagem(ns) carregada(s) • Redimensionadas automaticamente
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -789,6 +1030,29 @@ export default function NovoProduto() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Preview da Imagem */}
+      {imagemPreview && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-4xl max-h-[90vh] bg-background rounded-lg overflow-hidden">
+            <div className="absolute top-4 right-4 z-10">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setImagemPreview(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <img 
+              src={imagemPreview} 
+              alt="Preview da imagem"
+              className="w-full h-full object-contain max-h-[90vh]"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

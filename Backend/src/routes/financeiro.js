@@ -55,7 +55,7 @@ router.get('/transacoes', validatePagination, validateSearch, handleValidationEr
        ${whereClause} 
        ORDER BY t.data_transacao DESC, t.data_criacao DESC 
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros
@@ -327,7 +327,7 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
        ${whereClause} 
        ORDER BY cr.data_vencimento ASC 
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros
@@ -390,7 +390,7 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
        ${whereClause} 
        ORDER BY cp.data_vencimento ASC 
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros

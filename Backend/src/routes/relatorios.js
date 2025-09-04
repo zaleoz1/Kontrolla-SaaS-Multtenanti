@@ -62,7 +62,7 @@ router.get('/vendas-periodo', validatePagination, handleValidationErrors, async 
        GROUP BY ${groupBy}
        ORDER BY periodo DESC 
        LIMIT ? OFFSET ?`,
-      [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), offset]
+      [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), parseInt(offset)]
     );
 
     // Total geral
@@ -133,7 +133,7 @@ router.get('/produtos-vendidos', validatePagination, handleValidationErrors, asy
        GROUP BY p.id, p.nome, p.codigo_barras, p.sku, p.preco, c.nome
        ORDER BY total_vendido DESC
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Total de registros
@@ -222,7 +222,7 @@ router.get('/analise-clientes', validatePagination, handleValidationErrors, asyn
        HAVING total_vendas > 0
        ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`,
-      [data_inicio, data_fim, req.user.tenant_id, parseInt(limit), offset]
+      [data_inicio, data_fim, req.user.tenant_id, parseInt(limit), parseInt(offset)]
     );
 
     // Estatísticas gerais
@@ -291,7 +291,7 @@ router.get('/financeiro', validatePagination, handleValidationErrors, async (req
          WHERE t.tenant_id = ? AND DATE(t.data_transacao) BETWEEN ? AND ?
          ORDER BY t.data_transacao DESC
          LIMIT ? OFFSET ?`,
-        [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), offset]
+        [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), parseInt(offset)]
       );
 
       // Resumo das transações
@@ -324,7 +324,7 @@ router.get('/financeiro', validatePagination, handleValidationErrors, async (req
          WHERE cr.tenant_id = ? AND DATE(cr.data_vencimento) BETWEEN ? AND ?
          ORDER BY cr.data_vencimento ASC
          LIMIT ? OFFSET ?`,
-        [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), offset]
+        [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), parseInt(offset)]
       );
 
       const contasPagar = await query(
@@ -335,7 +335,7 @@ router.get('/financeiro', validatePagination, handleValidationErrors, async (req
          WHERE cp.tenant_id = ? AND DATE(cp.data_vencimento) BETWEEN ? AND ?
          ORDER BY cp.data_vencimento ASC
          LIMIT ? OFFSET ?`,
-        [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), offset]
+        [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), parseInt(offset)]
       );
 
       res.json({
@@ -395,7 +395,7 @@ router.get('/controle-estoque', validatePagination, handleValidationErrors, asyn
        ${whereClause}
        ORDER BY p.estoque ASC, p.nome ASC
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Estatísticas do estoque
@@ -482,7 +482,7 @@ router.get('/performance-vendas', validatePagination, handleValidationErrors, as
        GROUP BY ${groupBy}
        ORDER BY receita_total DESC
        LIMIT ? OFFSET ?`,
-      [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), offset]
+      [req.user.tenant_id, data_inicio, data_fim, parseInt(limit), parseInt(offset)]
     );
 
     res.json({

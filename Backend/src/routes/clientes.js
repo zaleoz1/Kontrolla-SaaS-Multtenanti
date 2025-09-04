@@ -33,7 +33,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     // Buscar clientes
     const clientes = await query(
       `SELECT * FROM clientes ${whereClause} ORDER BY nome ASC LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros

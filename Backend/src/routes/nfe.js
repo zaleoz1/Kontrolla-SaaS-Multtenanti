@@ -49,7 +49,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
        ${whereClause} 
        ORDER BY n.data_emissao DESC 
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros
