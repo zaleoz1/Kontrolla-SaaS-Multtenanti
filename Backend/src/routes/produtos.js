@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../database/connection.js';
+import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateProduto, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 
@@ -108,6 +108,10 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
 // Criar novo produto
 router.post('/', validateProduto, async (req, res) => {
   try {
+    // Debug: Log dos dados recebidos
+    console.log('📦 Dados recebidos para criação de produto:');
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('User:', req.user);
     const {
       categoria_id,
       nome,
@@ -173,7 +177,7 @@ router.post('/', validateProduto, async (req, res) => {
       }
     }
 
-    const result = await query(
+    const result = await queryWithResult(
       `INSERT INTO produtos (
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
         preco_promocional, estoque, estoque_minimo, peso, largura, altura,

@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../database/connection.js';
+import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 
@@ -177,7 +177,7 @@ router.post('/', async (req, res) => {
     const numeroNfe = await gerarNumeroNfe(req.user.tenant_id);
 
     // Criar NF-e
-    const result = await query(
+    const result = await queryWithResult(
       `INSERT INTO nfe (
         tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
         status, ambiente, observacoes

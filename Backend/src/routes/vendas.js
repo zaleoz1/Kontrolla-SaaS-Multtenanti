@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../database/connection.js';
+import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateVenda, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 
@@ -186,7 +186,7 @@ router.post('/', validateVenda, async (req, res) => {
     const numeroVenda = await gerarNumeroVenda(req.user.tenant_id);
 
     // Iniciar transação
-    const result = await query(
+    const result = await queryWithResult(
       `INSERT INTO vendas (
         tenant_id, cliente_id, usuario_id, numero_venda, subtotal, desconto, total,
         forma_pagamento, parcelas, observacoes

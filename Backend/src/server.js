@@ -37,9 +37,34 @@ app.use(helmet());
 app.use(compression());
 
 // Middleware de CORS
+const allowedOrigins = [
+  'http://localhost:5173', // Vite dev server padrão
+  'http://localhost:8080', // Vite dev server alternativo
+  'http://localhost:3000', // React dev server
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:3000'
+];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
+  origin: function (origin, callback) {
+    // Permitir requisições sem origin (ex: mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // Em desenvolvimento, permitir qualquer origin local
+      if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Não permitido pelo CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Middleware de rate limiting
