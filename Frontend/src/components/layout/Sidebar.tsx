@@ -16,6 +16,26 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+// Interface para dados do usuário
+interface User {
+  id: number;
+  nome: string;
+  sobrenome: string;
+  email: string;
+  role: string;
+  tenant_id: number;
+  tenant_nome: string;
+  tenant_slug: string;
+}
+
+// Interface para dados da empresa/tenant
+interface Tenant {
+  id: number;
+  nome: string;
+  slug: string;
+  logo?: string;
+}
+
 // Array de objetos que define os itens de navegação da sidebar
 const navegacao = [
   { nome: "Dashboard", href: "/dashboard", icone: LayoutDashboard },
@@ -31,10 +51,13 @@ const navegacao = [
 interface PropsSidebar {
   isOpen: boolean;
   onClose: () => void;
+  user: User | null;
+  tenant: Tenant | null;
+  onLogout: () => void;
 }
 
 // Componente principal da Sidebar
-export function Sidebar({ isOpen, onClose }: PropsSidebar) {
+export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSidebar) {
   return (
     <>
       {/* Overlay para mobile - só aparece quando sidebar está aberta */}
@@ -54,8 +77,18 @@ export function Sidebar({ isOpen, onClose }: PropsSidebar) {
         {/* Logo e nome do sistema */}
         <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0">
           <div className="flex items-center space-x-2">
-            <Store className="h-8 w-8 text-white" />
-            <span className="text-xl font-bold text-white">KontrollaPro</span>
+            {tenant?.logo ? (
+              <img 
+                src={tenant.logo} 
+                alt={`Logo ${tenant.nome}`}
+                className="h-8 w-8 rounded object-cover"
+              />
+            ) : (
+              <Store className="h-8 w-8 text-white" />
+            )}
+            <span className="text-xl font-bold text-white">
+              {tenant?.nome || "KontrollaPro"}
+            </span>
           </div>
           
           {/* Botão de fechar para mobile */}
@@ -106,15 +139,17 @@ export function Sidebar({ isOpen, onClose }: PropsSidebar) {
           <div className="flex items-center space-x-3 mb-3">
             {/* Avatar do usuário */}
             <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center">
-              <span className="text-sm font-medium text-white">A</span>
+              <span className="text-sm font-medium text-white">
+                {user ? (user.nome.charAt(0) + user.sobrenome.charAt(0)).toUpperCase() : "U"}
+              </span>
             </div>
             {/* Informações do usuário */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
-                Admin
+                {user ? `${user.nome} ${user.sobrenome}` : "Usuário"}
               </p>
               <p className="text-xs text-sidebar-foreground/60 truncate">
-                admin@loja.com
+                {user?.email || "email@exemplo.com"}
               </p>
             </div>
           </div>
@@ -132,6 +167,7 @@ export function Sidebar({ isOpen, onClose }: PropsSidebar) {
           <Button 
             variant="ghost" 
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent mt-1"
+            onClick={onLogout}
           >
             <LogOut className="mr-3 h-4 w-4" />
             Sair

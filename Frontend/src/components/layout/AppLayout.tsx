@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar"; 
-import { Header } from "./Header"; 
+import { Header } from "./Header";
+import { useAuth } from "@/hooks/useAuth"; 
 
 // Componente principal de layout da aplicação
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   // Fecha o sidebar quando a tela é redimensionada para desktop
   useEffect(() => {
@@ -27,11 +29,25 @@ export function AppLayout() {
     setIsSidebarOpen(false);
   };
 
+  // Criar objeto tenant a partir dos dados do usuário
+  const tenant = user ? {
+    id: user.tenant_id,
+    nome: user.tenant_nome,
+    slug: user.tenant_slug,
+    logo: undefined // Pode ser adicionado posteriormente se necessário
+  } : null;
+
   return (
     // Container principal usando flexbox, ocupando toda a altura da tela
     <div className="flex h-screen w-full bg-background">
       {/* Barra lateral fixa à esquerda */}
-      <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={closeSidebar} 
+        user={user}
+        tenant={tenant}
+        onLogout={logout}
+      />
       {/* Área principal do layout */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Cabeçalho fixo no topo */}
