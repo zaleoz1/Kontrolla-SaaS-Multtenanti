@@ -1,0 +1,456 @@
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  ArrowRight, 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  Lock, 
+  ArrowLeft,
+  Sparkles,
+  Shield,
+  Zap,
+  TrendingUp,
+  Users,
+  ShoppingCart,
+  Package,
+  BarChart3
+} from "lucide-react";
+
+export default function Login() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    rememberMe: false
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Simular delay de login
+    setTimeout(() => {
+      setIsLoading(false);
+      navigate("/dashboard");
+    }, 2000);
+  };
+
+  // Variantes de animação
+  const fadeInUp = {
+    initial: { opacity: 0, y: 30 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }
+  };
+
+  const staggerContainer = {
+    animate: {
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+
+  const scaleIn = {
+    initial: { opacity: 0, scale: 0.95 },
+    animate: { opacity: 1, scale: 1 },
+    transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0">
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95" />
+        
+        {/* Animated Grid */}
+        <div className="absolute inset-0 bg-grid-slate-400/[0.02] bg-[size:50px_50px]" />
+        
+        {/* Floating Elements */}
+        <motion.div
+          className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl"
+          animate={{
+            x: [0, 100, 0],
+            y: [0, -50, 0],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+          animate={{
+            x: [0, -100, 0],
+            y: [0, 50, 0],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+        />
+        
+        {/* Geometric shapes */}
+        <motion.div
+          className="absolute top-1/4 right-1/3 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-blue-400/10 rounded-lg rotate-45 blur-xl"
+          animate={{ rotate: [45, 405, 45] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 left-1/3 w-24 h-24 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-xl"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          <motion.div 
+            className="flex items-center justify-center mb-8"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            <img 
+              src="/logo.png" 
+              alt="KontrollaPro Logo" 
+              className="h-16 w-16 rounded-xl mr-4"
+            />
+            <span className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
+              KontrollaPro
+            </span>
+          </motion.div>
+          
+          <motion.h1 
+            className="text-4xl md:text-5xl font-bold text-white mb-4"
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+          >
+            Bem-vindo de volta
+          </motion.h1>
+          
+          <motion.p 
+            className="text-slate-300 text-xl max-w-2xl mx-auto"
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+          >
+            Entre na sua conta para continuar
+          </motion.p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-2 gap-12 items-start">
+          {/* Left Side - Login Form */}
+          <motion.div
+            variants={scaleIn}
+            initial="initial"
+            animate="animate"
+          >
+
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+              <CardHeader className="space-y-1 pb-6">
+                <CardTitle className="text-2xl font-bold text-center text-white">
+                  Fazer Login
+                </CardTitle>
+                <p className="text-center text-slate-300">
+                  Entre com suas credenciais
+                </p>
+              </CardHeader>
+            
+            <CardContent>
+              <motion.form 
+                onSubmit={handleSubmit}
+                className="space-y-6"
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
+              >
+                {/* Email Field */}
+                <motion.div variants={fadeInUp} className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-slate-200">
+                    Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                      required
+                    />
+                  </div>
+                </motion.div>
+
+                {/* Password Field */}
+                <motion.div variants={fadeInUp} className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium text-slate-200">
+                    Senha
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Sua senha"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </motion.div>
+
+                {/* Remember Me & Forgot Password */}
+                <motion.div 
+                  variants={fadeInUp}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="rememberMe"
+                      name="rememberMe"
+                      checked={formData.rememberMe}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, rememberMe: !!checked }))}
+                    />
+                    <Label htmlFor="rememberMe" className="text-sm text-slate-300">
+                      Lembrar de mim
+                    </Label>
+                  </div>
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+                  >
+                    Esqueceu a senha?
+                  </Link>
+                </motion.div>
+
+                {/* Submit Button */}
+                <motion.div variants={fadeInUp}>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold text-lg shadow-lg hover:shadow-emerald-500/25 transition-all duration-300"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <motion.div
+                        className="flex items-center"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+                      </motion.div>
+                    ) : (
+                      <>
+                        Entrar
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+
+                {/* Divider */}
+                <motion.div 
+                  variants={fadeInUp}
+                  className="relative my-6"
+                >
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/20" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-6 text-center text-slate-400">ou continue com</span>
+                  </div>
+                </motion.div>
+
+                {/* Social Login Buttons */}
+                <motion.div 
+                  variants={fadeInUp}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30"
+                  >
+                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Google
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </Button>
+                </motion.div>
+
+                {/* Sign Up Link */}
+                <motion.div 
+                  variants={fadeInUp}
+                  className="text-center pt-4"
+                >
+                  <p className="text-slate-300">
+                    Não tem uma conta?{" "}
+                    <Link 
+                      to="/signup" 
+                      className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
+                    >
+                      Cadastre-se grátis
+                    </Link>
+                  </p>
+                </motion.div>
+              </motion.form>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+          {/* Right Side - Benefits */}
+          <motion.div
+            className="space-y-8"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            {/* Benefits List */}
+            <motion.div
+              className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 rounded-2xl p-8 border border-emerald-500/20 backdrop-blur-sm"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+            >
+              <h3 className="text-2xl font-bold text-white mb-6">
+                Por que escolher o KontrollaPro:
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { icon: Shield, text: "100% Seguro", desc: "Dados protegidos com criptografia" },
+                  { icon: Zap, text: "Rápido e Eficiente", desc: "Interface intuitiva e responsiva" },
+                  { icon: BarChart3, text: "Dashboard Inteligente", desc: "Métricas em tempo real" },
+                  { icon: Users, text: "Suporte 24/7", desc: "Equipe sempre disponível" }
+                ].map((benefit, index) => (
+                  <motion.div
+                    key={index}
+                    className="flex items-start space-x-3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 + 0.5 }}
+                  >
+                    <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <benefit.icon className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{benefit.text}</p>
+                      <p className="text-slate-300 text-sm">{benefit.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Features Preview */}
+            <motion.div 
+              className="grid grid-cols-2 gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              {[
+                { icon: TrendingUp, text: "Relatórios Avançados", desc: "Insights para crescimento" },
+                { icon: ShoppingCart, text: "Gestão de Vendas", desc: "Controle total do processo" },
+                { icon: Package, text: "Controle de Estoque", desc: "Organização inteligente" },
+                { icon: Sparkles, text: "IA Integrada", desc: "Previsões automáticas" }
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  className="text-center p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-emerald-500/30 transition-all duration-300"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <feature.icon className="h-8 w-8 text-emerald-400 mx-auto mb-3" />
+                  <p className="text-sm font-semibold text-white mb-1">{feature.text}</p>
+                  <p className="text-xs text-slate-400">{feature.desc}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Features Preview - Mobile */}
+        <motion.div 
+          className="mt-12 grid grid-cols-3 gap-4 lg:hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          {[
+            { icon: Shield, text: "Seguro" },
+            { icon: Zap, text: "Rápido" },
+            { icon: Sparkles, text: "Inteligente" }
+          ].map((feature, index) => (
+            <motion.div
+              key={index}
+              className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10"
+              whileHover={{ scale: 1.05, y: -2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <feature.icon className="h-6 w-6 text-emerald-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-300 font-medium">{feature.text}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Back to Home */}
+        <motion.div 
+          className="text-center mt-12"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Link 
+            to="/" 
+            className="inline-flex items-center text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar para o início
+          </Link>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

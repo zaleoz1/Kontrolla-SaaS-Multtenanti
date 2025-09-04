@@ -19,6 +19,9 @@ import NovoCliente from "./pages/NovoCliente";
 import NovaTransacao from "./pages/NovaTransacao";
 
 import PaginaNaoEncontrada from "./pages/NotFound";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 
 const clienteQuery = new QueryClient();
 
@@ -31,6 +34,11 @@ const App = () => (
         <Routes>
           {/* Landing Page */}
           <Route path="/" element={<LandingPage />} />
+          
+          {/* Páginas de Autenticação */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/esqueci-senha" element={<ForgotPassword />} />
           
           {/* Rota de demonstração */}
           <Route path="/demo" element={<div>Demonstração</div>} />
