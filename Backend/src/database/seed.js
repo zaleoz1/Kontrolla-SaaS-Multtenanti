@@ -38,16 +38,18 @@ async function seedDatabase() {
     console.log('👤 Criando usuário administrador...');
     const senhaHash = await bcrypt.hash('admin123', 12);
     await query(
-      `INSERT INTO usuarios (tenant_id, nome, email, senha, telefone, role, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO usuarios (tenant_id, nome, sobrenome, email, senha, telefone, role, status, email_verificado) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         tenantId,
         'Administrador',
+        'Sistema',
         'admin@lojaexemplo.com.br',
         senhaHash,
         '(11) 99999-8888',
         'admin',
-        'ativo'
+        'ativo',
+        true
       ]
     );
 

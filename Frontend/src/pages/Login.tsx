@@ -45,11 +45,37 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simular delay de login
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          senha: formData.password,
+          rememberMe: formData.rememberMe
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Salvar token e dados do usuário no localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Redirecionar para o dashboard
+        navigate("/dashboard");
+      } else {
+        alert(data.error || 'Erro ao fazer login. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro no login:', error);
+      alert('Erro de conexão. Tente novamente.');
+    } finally {
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 2000);
+    }
   };
 
   // Variantes de animação

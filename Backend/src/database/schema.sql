@@ -27,17 +27,54 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id INT PRIMARY KEY AUTO_INCREMENT,
     tenant_id INT NOT NULL,
     nome VARCHAR(255) NOT NULL,
+    sobrenome VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     senha VARCHAR(255) NOT NULL,
     telefone VARCHAR(20),
     avatar VARCHAR(255),
     role ENUM('admin', 'vendedor', 'gerente', 'financeiro') DEFAULT 'vendedor',
-    status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+    status ENUM('ativo', 'inativo', 'pendente') DEFAULT 'pendente',
+    email_verificado BOOLEAN DEFAULT FALSE,
+    token_verificacao VARCHAR(255),
     ultimo_login TIMESTAMP NULL,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     UNIQUE KEY unique_email_tenant (email, tenant_id)
+);
+
+-- Tabela de cadastros pendentes (para validação de email)
+CREATE TABLE IF NOT EXISTS cadastros_pendentes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    sobrenome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    telefone VARCHAR(20),
+    token_verificacao VARCHAR(255) NOT NULL,
+    plano VARCHAR(50) NOT NULL,
+    dados_empresa JSON,
+    data_expiracao TIMESTAMP NOT NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_token (token_verificacao)
+);
+
+-- Tabela de sessões de usuário
+CREATE TABLE IF NOT EXISTS sessoes_usuario (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    usuario_id INT NOT NULL,
+    tenant_id INT NOT NULL,
+    token_sessao VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    data_expiracao TIMESTAMP NOT NULL,
+    ativa BOOLEAN DEFAULT TRUE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_token (token_sessao)
 );
 
 -- Tabela de clientes
@@ -256,6 +293,11 @@ CREATE TABLE IF NOT EXISTS tenant_configuracoes (
 
 -- Índices para melhor performance
 CREATE INDEX idx_usuarios_tenant ON usuarios(tenant_id);
+CREATE INDEX idx_usuarios_email ON usuarios(email);
+CREATE INDEX idx_cadastros_pendentes_tenant ON cadastros_pendentes(tenant_id);
+CREATE INDEX idx_cadastros_pendentes_token ON cadastros_pendentes(token_verificacao);
+CREATE INDEX idx_sessoes_usuario ON sessoes_usuario(usuario_id);
+CREATE INDEX idx_sessoes_token ON sessoes_usuario(token_sessao);
 CREATE INDEX idx_clientes_tenant ON clientes(tenant_id);
 CREATE INDEX idx_produtos_tenant ON produtos(tenant_id);
 CREATE INDEX idx_vendas_tenant ON vendas(tenant_id);

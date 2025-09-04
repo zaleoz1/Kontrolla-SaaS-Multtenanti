@@ -94,11 +94,44 @@ export default function Signup() {
     
     setIsLoading(true);
     
-    // Simular delay de cadastro
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          selectedPlan: formData.selectedPlan,
+          acceptTerms: formData.acceptTerms,
+          acceptMarketing: formData.acceptMarketing
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Salvar token e dados do usuário no localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Redirecionar para o dashboard
+        navigate("/dashboard");
+      } else {
+        alert(data.error || 'Erro ao criar conta. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      alert('Erro de conexão. Tente novamente.');
+    } finally {
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 2000);
+    }
   };
 
   const nextStep = () => {
