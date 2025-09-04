@@ -116,7 +116,7 @@ export default function Vendas() {
             Gerencie suas vendas e transações
           </p>
         </div>
-        <Button className="bg-gradient-primary" onClick={() => navigate("/nova-venda")}>
+        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Venda
         </Button>
@@ -273,7 +273,7 @@ export default function Vendas() {
             <p className="text-muted-foreground mb-4">
               {termoBusca ? "Tente ajustar sua busca" : "Registre sua primeira venda"}
             </p>
-            <Button className="bg-gradient-primary" onClick={() => navigate("/nova-venda")}>
+            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Venda
             </Button>

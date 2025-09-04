@@ -76,7 +76,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button size="sm" className="bg-gradient-primary" onClick={() => navigate("/relatorios")}>
+          <Button size="sm" className="bg-gradient-primary" onClick={() => navigate("/dashboard/relatorios")}>
             <TrendingUp className="h-4 w-4 mr-2" />
             Ver Relatórios
           </Button>
@@ -96,7 +96,7 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">Vendas Recentes</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/vendas")}>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/vendas")}>
                 <Eye className="h-4 w-4 mr-2" />
                 Ver Todas
               </Button>
@@ -154,7 +154,7 @@ export default function Dashboard() {
                   )}
                 </div>
               ))}
-              <Button size="sm" variant="outline" className="w-full mt-4" onClick={() => navigate("/produtos")}>
+              <Button size="sm" variant="outline" className="w-full mt-4" onClick={() => navigate("/dashboard/produtos")}>
                 Gerenciar Estoque
               </Button>
             </div>

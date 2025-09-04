@@ -169,7 +169,7 @@ export default function Financeiro() {
             <Calendar className="h-4 w-4 mr-2" />
             Este Mês
           </Button>
-          <Button className="bg-gradient-primary" onClick={() => navigate("/nova-transacao")}>
+          <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-transacao")}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Transação
           </Button>

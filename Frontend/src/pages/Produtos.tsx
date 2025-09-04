@@ -94,7 +94,7 @@ export default function Produtos() {
             Gerencie seu catálogo de produtos
           </p>
         </div>
-        <Button className="bg-gradient-primary" onClick={() => navigate("/novo-produto")}>
+        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-produto")}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Produto
         </Button>
