@@ -55,7 +55,7 @@ router.get('/produtos', validatePagination, validateSearch, handleValidationErro
        ${whereClause} 
        ORDER BY p.destaque DESC, p.nome ASC 
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), parseInt(offset)]
     );
 
     // Contar total de registros
