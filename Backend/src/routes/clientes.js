@@ -12,7 +12,11 @@ router.use(authenticateToken);
 router.get('/', validatePagination, validateSearch, handleValidationErrors, async (req, res) => {
   try {
     const { page = 1, limit = 10, q = '', status = '' } = req.query;
-    const offset = (page - 1) * limit;
+    
+    // Garantir que limit e page sejam números válidos
+    const limitNum = Math.max(1, Math.min(100, Number(limit) || 10));
+    const pageNum = Math.max(1, Number(page) || 1);
+    const offset = (pageNum - 1) * limitNum;
 
     let whereClause = 'WHERE tenant_id = ?';
     let params = [req.user.tenant_id];
@@ -32,8 +36,8 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
     // Buscar clientes
     const clientes = await query(
-      `SELECT * FROM clientes ${whereClause} ORDER BY nome ASC LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+      `SELECT * FROM clientes ${whereClause} ORDER BY nome ASC LIMIT ${limitNum} OFFSET ${offset}`,
+      params
     );
 
     // Contar total de registros
@@ -43,17 +47,17 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     );
 
     const total = totalResult.total;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limitNum);
 
     res.json({
       clientes,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
         totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
       }
     });
   } catch (error) {

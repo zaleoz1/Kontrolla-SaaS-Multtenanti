@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCrudApi } from "@/hooks/useApi";
+import { API_ENDPOINTS } from "@/config/api";
 import { 
   Plus, 
   Search, 
@@ -17,71 +21,125 @@ import {
   Edit,
   Trash2,
   Star,
-  UserPlus
+  UserPlus,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
+
+// Interface para o tipo Cliente
+interface Cliente {
+  id: number;
+  nome: string;
+  email?: string;
+  telefone?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  cpf_cnpj?: string;
+  tipo_pessoa: 'fisica' | 'juridica';
+  data_nascimento?: string;
+  sexo?: 'masculino' | 'feminino' | 'outro';
+  razao_social?: string;
+  inscricao_estadual?: string;
+  inscricao_municipal?: string;
+  nome_fantasia?: string;
+  observacoes?: string;
+  status: 'ativo' | 'inativo';
+  vip: boolean;
+  limite_credito: number;
+  total_compras: number;
+  data_criacao: string;
+  data_atualizacao: string;
+}
+
+// Interface para resposta da API
+interface ClientesResponse {
+  clientes: Cliente[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+// Interface para estatísticas
+interface ClientesStats {
+  total_clientes: number;
+  clientes_ativos: number;
+  clientes_vip: number;
+  receita_total: number;
+}
 
 export default function Clientes() {
   const [termoBusca, setTermoBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(1);
   const navigate = useNavigate();
 
-  const clientes = [
-    {
-      id: 1,
-      nome: "João Silva",
-      email: "joao.silva@email.com",
-      telefone: "(11) 99999-8888",
-      endereco: "Rua das Flores, 123 - São Paulo, SP",
-      dataCadastro: "2024-01-15",
-      totalCompras: "R$ 2.847,50",
-      ultimaCompra: "2024-01-18",
-      status: "ativo",
-      vip: true,
-      compras: 8,
-      avaliacao: 5
-    },
-    {
-      id: 2,
-      nome: "Maria Santos",
-      email: "maria.santos@email.com", 
-      telefone: "(11) 98888-7777",
-      endereco: "Av. Paulista, 456 - São Paulo, SP",
-      dataCadastro: "2024-01-10",
-      totalCompras: "R$ 1.299,80",
-      ultimaCompra: "2024-01-17",
-      status: "ativo",
-      vip: false,
-      compras: 4,
-      avaliacao: 4
-    },
-    {
-      id: 3,
-      nome: "Carlos Lima",
-      email: "carlos.lima@email.com",
-      telefone: "(11) 97777-6666", 
-      endereco: "Rua Augusta, 789 - São Paulo, SP",
-      dataCadastro: "2023-12-20",
-      totalCompras: "R$ 567,30",
-      ultimaCompra: "2024-01-16",
-      status: "ativo",
-      vip: false,
-      compras: 3,
-      avaliacao: 4
-    },
-    {
-      id: 4,
-      nome: "Ana Costa",
-      email: "ana.costa@email.com",
-      telefone: "(11) 96666-5555",
-      endereco: "Rua da Consolação, 321 - São Paulo, SP", 
-      dataCadastro: "2023-11-05",
-      totalCompras: "R$ 189,50",
-      ultimaCompra: "2023-12-28",
-      status: "inativo",
-      vip: false,
-      compras: 1,
-      avaliacao: 3
+  // Hooks para API
+  const clientesApi = useCrudApi<ClientesResponse>(API_ENDPOINTS.CLIENTS.LIST);
+  const statsApi = useCrudApi<{ stats: ClientesStats }>(API_ENDPOINTS.CLIENTS.STATS);
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    carregarClientes();
+    carregarEstatisticas();
+  }, [paginaAtual, termoBusca, filtroStatus]);
+
+  // Função para carregar clientes
+  const carregarClientes = async () => {
+    try {
+      const params: Record<string, any> = {
+        page: paginaAtual,
+        limit: 12,
+      };
+
+      if (termoBusca) {
+        params.q = termoBusca;
+      }
+
+      if (filtroStatus) {
+        params.status = filtroStatus;
+      }
+
+      await clientesApi.list(params);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
     }
-  ];
+  };
+
+  // Função para carregar estatísticas
+  const carregarEstatisticas = async () => {
+    try {
+      await statsApi.makeRequest(API_ENDPOINTS.CLIENTS.STATS);
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
+
+  // Função para recarregar dados
+  const recarregarDados = () => {
+    carregarClientes();
+    carregarEstatisticas();
+  };
+
+  // Função para deletar cliente
+  const deletarCliente = async (id: number) => {
+    if (!confirm('Tem certeza que deseja deletar este cliente?')) {
+      return;
+    }
+
+    try {
+      await clientesApi.remove(id);
+      recarregarDados();
+    } catch (error) {
+      console.error('Erro ao deletar cliente:', error);
+    }
+  };
 
   const obterBadgeStatus = (status: string) => {
     switch (status) {
@@ -94,18 +152,33 @@ export default function Clientes() {
     }
   };
 
-  const clientesFiltrados = clientes.filter(cliente =>
-    cliente.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
-    cliente.email.toLowerCase().includes(termoBusca.toLowerCase()) ||
-    cliente.telefone.includes(termoBusca)
-  );
+  // Dados dos clientes
+  const clientes = clientesApi.data?.clientes || [];
+  const pagination = clientesApi.data?.pagination;
+  const stats = statsApi.data?.stats;
 
-  const clientesAtivos = clientes.filter(c => c.status === "ativo").length;
-  const clientesVip = clientes.filter(c => c.vip).length;
-  const receitaTotal = clientes.reduce((acc, cliente) => {
-    const valor = parseFloat(cliente.totalCompras.replace("R$ ", "").replace(".", "").replace(",", "."));
-    return acc + valor;
-  }, 0);
+  // Função para formatar endereço completo
+  const formatarEndereco = (cliente: Cliente) => {
+    const partes = [];
+    if (cliente.endereco) partes.push(cliente.endereco);
+    if (cliente.cidade) partes.push(cliente.cidade);
+    if (cliente.estado) partes.push(cliente.estado);
+    if (cliente.cep) partes.push(cliente.cep);
+    return partes.join(', ') || 'Endereço não informado';
+  };
+
+  // Função para formatar data
+  const formatarData = (data: string) => {
+    return new Date(data).toLocaleDateString("pt-BR");
+  };
+
+  // Função para formatar moeda
+  const formatarMoeda = (valor: number) => {
+    return valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -130,7 +203,11 @@ export default function Clientes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total de Clientes</p>
-                <p className="text-2xl font-bold">{clientes.length}</p>
+                {statsApi.loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats?.total_clientes || 0}</p>
+                )}
               </div>
               <div className="p-2 rounded-lg bg-primary/10">
                 <Users className="h-5 w-5 text-primary" />
@@ -144,7 +221,11 @@ export default function Clientes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Clientes Ativos</p>
-                <p className="text-2xl font-bold">{clientesAtivos}</p>
+                {statsApi.loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats?.clientes_ativos || 0}</p>
+                )}
               </div>
               <div className="p-2 rounded-lg bg-success/10">
                 <UserPlus className="h-5 w-5 text-success" />
@@ -158,7 +239,11 @@ export default function Clientes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Clientes VIP</p>
-                <p className="text-2xl font-bold">{clientesVip}</p>
+                {statsApi.loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats?.clientes_vip || 0}</p>
+                )}
               </div>
               <div className="p-2 rounded-lg bg-warning/10">
                 <Star className="h-5 w-5 text-warning" />
@@ -172,12 +257,13 @@ export default function Clientes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
-                <p className="text-2xl font-bold">
-                  {receitaTotal.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                  })}
-                </p>
+                {statsApi.loading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <p className="text-2xl font-bold">
+                    {formatarMoeda(stats?.receita_total || 0)}
+                  </p>
+                )}
               </div>
               <div className="p-2 rounded-lg bg-accent/10">
                 <ShoppingBag className="h-5 w-5 text-accent" />
@@ -186,6 +272,25 @@ export default function Clientes() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tratamento de Erro */}
+      {(clientesApi.error || statsApi.error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {clientesApi.error || statsApi.error}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-2"
+              onClick={recarregarDados}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Tentar Novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filtros */}
       <Card className="bg-gradient-card shadow-card">
@@ -196,110 +301,220 @@ export default function Clientes() {
               <Input
                 placeholder="Buscar por nome, email ou telefone..."
                 value={termoBusca}
-                onChange={(e) => setTermoBusca(e.target.value)}
+                onChange={(e) => {
+                  setTermoBusca(e.target.value);
+                  setPaginaAtual(1); // Reset para primeira página ao buscar
+                }}
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filtros
-            </Button>
+            <div className="flex space-x-2">
+              <select
+                value={filtroStatus}
+                onChange={(e) => {
+                  setFiltroStatus(e.target.value);
+                  setPaginaAtual(1); // Reset para primeira página ao filtrar
+                }}
+                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="">Todos os status</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+              <Button variant="outline" onClick={recarregarDados}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Lista de Clientes */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {clientesFiltrados.map((cliente) => (
-          <Card key={cliente.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+      {clientesApi.loading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="bg-gradient-card shadow-card">
+              <CardHeader className="pb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <span className="text-lg font-bold text-white">
-                      {cliente.nome.charAt(0).toUpperCase()}
-                    </span>
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold flex items-center space-x-2">
-                      <span>{cliente.nome}</span>
-                      {cliente.vip && <Star className="h-4 w-4 text-warning fill-warning" />}
-                    </h3>
-                    <div className="flex items-center space-x-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star 
-                          key={i} 
-                          className={`h-3 w-3 ${i < cliente.avaliacao ? 'text-warning fill-warning' : 'text-muted-foreground'}`} 
-                        />
-                      ))}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+                <div className="flex space-x-2 pt-2">
+                  <Skeleton className="h-8 flex-1" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {clientes.map((cliente) => (
+            <Card key={cliente.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center">
+                      <span className="text-lg font-bold text-white">
+                        {cliente.nome.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold flex items-center space-x-2">
+                        <span>{cliente.nome}</span>
+                        {cliente.vip && <Star className="h-4 w-4 text-warning fill-warning" />}
+                      </h3>
+                      <div className="text-sm text-muted-foreground">
+                        {cliente.tipo_pessoa === 'juridica' ? 'Pessoa Jurídica' : 'Pessoa Física'}
+                      </div>
                     </div>
                   </div>
+                  {obterBadgeStatus(cliente.status)}
                 </div>
-                {obterBadgeStatus(cliente.status)}
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                  <span className="truncate">{cliente.email}</span>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm">
+                  {cliente.email && (
+                    <div className="flex items-center space-x-2 text-muted-foreground">
+                      <Mail className="h-4 w-4" />
+                      <span className="truncate">{cliente.email}</span>
+                    </div>
+                  )}
+                  {cliente.telefone && (
+                    <div className="flex items-center space-x-2 text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      <span>{cliente.telefone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span className="truncate">{formatarEndereco(cliente)}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Cliente desde {formatarData(cliente.data_criacao)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span>{cliente.telefone}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span className="truncate">{cliente.endereco}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>Cliente desde {new Date(cliente.dataCadastro).toLocaleDateString("pt-BR")}</span>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Total Gasto</p>
-                  <p className="font-semibold text-primary">{cliente.totalCompras}</p>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Total Gasto</p>
+                    <p className="font-semibold text-primary">{formatarMoeda(cliente.total_compras)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Limite Crédito</p>
+                    <p className="font-semibold">{formatarMoeda(cliente.limite_credito)}</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Compras</p>
-                  <p className="font-semibold">{cliente.compras}</p>
+
+                {cliente.cpf_cnpj && (
+                  <div className="text-xs text-muted-foreground">
+                    {cliente.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}: {cliente.cpf_cnpj}
+                  </div>
+                )}
+
+                <div className="flex space-x-2 pt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => navigate(`/dashboard/editar-cliente/${cliente.id}`)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => deletarCliente(cliente.id)}
+                    disabled={clientesApi.loading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-              <div className="text-xs text-muted-foreground">
-                Última compra: {new Date(cliente.ultimaCompra).toLocaleDateString("pt-BR")}
-              </div>
-
-              <div className="flex space-x-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {clientesFiltrados.length === 0 && (
+      {/* Estado Vazio */}
+      {!clientesApi.loading && clientes.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
             <p className="text-muted-foreground mb-4">
-              {termoBusca ? "Tente ajustar sua busca" : "Adicione seu primeiro cliente"}
+              {termoBusca || filtroStatus ? "Tente ajustar sua busca ou filtros" : "Adicione seu primeiro cliente"}
             </p>
             <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Cliente
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Paginação */}
+      {pagination && pagination.totalPages > 1 && (
+        <Card className="bg-gradient-card shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} clientes
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaginaAtual(paginaAtual - 1)}
+                  disabled={!pagination.hasPrev || clientesApi.loading}
+                >
+                  Anterior
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === paginaAtual ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPaginaAtual(pageNum)}
+                        disabled={clientesApi.loading}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaginaAtual(paginaAtual + 1)}
+                  disabled={!pagination.hasNext || clientesApi.loading}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

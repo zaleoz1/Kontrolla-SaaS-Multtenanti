@@ -37,15 +37,13 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     }
 
     // Buscar produtos com informações da categoria
-    const limitInt = parseInt(limit);
-    const offsetInt = parseInt(offset);
     const produtos = await query(
       `SELECT p.*, c.nome as categoria_nome 
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        ${whereClause} 
        ORDER BY p.nome ASC 
-       LIMIT ${limitInt} OFFSET ${offsetInt}`,
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
        params
     );
 
