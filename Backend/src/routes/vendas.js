@@ -157,8 +157,18 @@ router.post('/', validateVenda, async (req, res) => {
       total,
       forma_pagamento,
       parcelas = 1,
-      observacoes
+      observacoes,
+      status = 'pendente'
     } = req.body;
+
+    // Debug: verificar dados recebidos
+    console.log('Dados recebidos na criação da venda:', {
+      cliente_id,
+      total,
+      forma_pagamento,
+      status,
+      usarPagamentoPrazo: req.body.pagamento_prazo ? true : false
+    });
 
     // Verificar se cliente existe (se fornecido)
     if (cliente_id) {
@@ -209,11 +219,11 @@ router.post('/', validateVenda, async (req, res) => {
     const result = await queryWithResult(
       `INSERT INTO vendas (
         tenant_id, cliente_id, usuario_id, numero_venda, subtotal, desconto, total,
-        forma_pagamento, parcelas, observacoes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        forma_pagamento, parcelas, observacoes, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, cliente_id, req.user.id, numeroVenda, subtotal,
-        desconto, total, forma_pagamento, parcelas, observacoes
+        desconto, total, forma_pagamento, parcelas, observacoes, status
       ]
     );
 

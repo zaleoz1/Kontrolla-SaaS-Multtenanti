@@ -363,6 +363,7 @@ export default function NovaVenda() {
       }));
       
       // Preparar dados da venda
+      const statusVenda: 'pendente' | 'pago' = usarPagamentoPrazo ? 'pendente' : 'pago';
       const dadosVenda = {
         cliente_id: clienteSelecionado?.id || null,
         itens: itensVenda,
@@ -373,8 +374,14 @@ export default function NovaVenda() {
         total: parseFloat(totalFinal.toString()),
         forma_pagamento: metodosFinais[0]?.metodo || metodoPagamentoUnico,
         parcelas: parseInt(parcelas.toString()) || 1,
-        observacoes: observacao
+        observacoes: observacao,
+        status: statusVenda
       };
+
+      // Debug: verificar dados antes de enviar
+      console.log('Dados da venda:', dadosVenda);
+      console.log('Usar pagamento a prazo:', usarPagamentoPrazo);
+      console.log('Status definido:', statusVenda);
 
       
       // Salvar venda via API
