@@ -25,6 +25,16 @@ router.post('/signup', validateSignup, async (req, res) => {
       email, 
       phone, 
       company, 
+      tipoPessoa,
+      cpfCnpj,
+      cep,
+      endereco,
+      cidade,
+      estado,
+      razaoSocial,
+      nomeFantasia,
+      inscricaoEstadual,
+      inscricaoMunicipal,
       password, 
       confirmPassword, 
       selectedPlan,
@@ -75,9 +85,18 @@ router.post('/signup', validateSignup, async (req, res) => {
     // Criar tenant
     console.log('💾 Inserindo tenant no banco...');
     const tenantResult = await queryWithResult(
-      `INSERT INTO tenants (nome, slug, email, telefone, status, plano) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [company, finalSlug, email, phone, 'ativo', selectedPlan]
+      `INSERT INTO tenants (
+        nome, slug, email, telefone, status, plano, tipo_pessoa, 
+        cnpj, cpf, endereco, cidade, estado, cep, 
+        razao_social, nome_fantasia, inscricao_estadual, inscricao_municipal
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        company, finalSlug, email, phone, 'ativo', selectedPlan, tipoPessoa,
+        tipoPessoa === 'juridica' ? cpfCnpj : null,
+        tipoPessoa === 'fisica' ? cpfCnpj : null,
+        endereco, cidade, estado, cep,
+        razaoSocial, nomeFantasia, inscricaoEstadual, inscricaoMunicipal
+      ]
     );
 
     const tenantId = tenantResult.insertId;
@@ -229,7 +248,7 @@ router.post('/login', validateLogin, async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const usuarios = await query(
-      'SELECT u.id, u.nome, u.email, u.telefone, u.avatar, u.role, u.ultimo_login, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.id = ?',
+      'SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.avatar, u.role, u.ultimo_login, u.tenant_id, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.id = ?',
       [req.user.id]
     );
 
@@ -330,6 +349,56 @@ router.get('/verify', authenticateToken, (req, res) => {
     valid: true,
     user: req.user
   });
+});
+
+// Rota para buscar dados do CEP
+router.get('/cep/:cep', async (req, res) => {
+  try {
+    const { cep } = req.params;
+    const cepLimpo = cep.replace(/\D/g, '');
+    
+    console.log('🔍 Buscando CEP no backend:', cepLimpo);
+    
+    if (cepLimpo.length !== 8) {
+      console.log('❌ CEP inválido:', cepLimpo);
+      return res.status(400).json({
+        error: 'CEP deve ter 8 dígitos'
+      });
+    }
+
+    // Usar a API ViaCEP para buscar dados do CEP
+    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+    const data = await response.json();
+
+    console.log('📦 Resposta da ViaCEP:', data);
+
+    if (data.erro) {
+      console.log('❌ CEP não encontrado na ViaCEP');
+      return res.status(404).json({
+        error: 'CEP não encontrado'
+      });
+    }
+
+    console.log('✅ CEP encontrado:', data.localidade, data.uf);
+
+    res.json({
+      cep: data.cep,
+      logradouro: data.logradouro,
+      complemento: data.complemento,
+      bairro: data.bairro,
+      localidade: data.localidade,
+      uf: data.uf,
+      ibge: data.ibge,
+      gia: data.gia,
+      ddd: data.ddd,
+      siafi: data.siafi
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar CEP:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
 });
 
 export default router;

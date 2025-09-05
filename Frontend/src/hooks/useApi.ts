@@ -48,10 +48,18 @@ export function useApi<T = any>() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+      // Se o body for FormData, não stringify e não definir Content-Type
+      const isFormData = body instanceof FormData;
+      const requestBody = isFormData ? body : (body ? JSON.stringify(body) : undefined);
+      
+      if (isFormData) {
+        delete defaultHeaders['Content-Type'];
+      }
+
       const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
         method,
         headers: defaultHeaders,
-        body: body ? JSON.stringify(body) : undefined,
+        body: requestBody,
         signal: controller.signal,
       });
 

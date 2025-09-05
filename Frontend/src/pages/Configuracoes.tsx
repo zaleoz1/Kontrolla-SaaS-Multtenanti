@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Settings, 
   User, 
@@ -41,85 +43,249 @@ import {
 } from "lucide-react";
 
 export default function Configuracoes() {
-  const [dadosConta, setDadosConta] = useState({
-    nome: "João Silva",
-    email: "joao@minhaloja.com",
-    telefone: "(11) 99999-8888",
-    empresa: "Minha Loja Ltda",
-    cnpj: "12.345.678/0001-90",
-    endereco: "Rua das Flores, 123 - São Paulo, SP",
-    dataCriacao: "2024-01-01",
-    plano: "Pro",
-    status: "ativo"
-  });
+  const { 
+    dadosConta, 
+    dadosTenant, 
+    configuracoes, 
+    dadosContaEditando,
+    dadosTenantEditando,
+    configuracoesEditando,
+    setDadosContaEditando,
+    setDadosTenantEditando,
+    setConfiguracoesEditando,
+    loading, 
+    error,
+    atualizarDadosConta,
+    atualizarDadosTenant,
+    atualizarConfiguracoes,
+    alterarSenha,
+    uploadAvatar,
+    uploadLogo
+  } = useConfiguracoes();
 
-  const [configuracoes, setConfiguracoes] = useState({
-    tema: "sistema",
-    idioma: "pt-BR",
-    fusoHorario: "America/Sao_Paulo",
-    moeda: "BRL",
-    formatoData: "DD/MM/YYYY",
-    notificacoes: {
-      email: true,
-      push: true,
-      sms: false,
-      vendas: true,
-      estoque: true,
-      financeiro: true,
-      clientes: false
-    },
-    seguranca: {
-      autenticacao2FA: false,
-      sessaoLonga: true,
-      logAtividade: true,
-      backupAutomatico: true
-    }
-  });
-
+  const { toast } = useToast();
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [mostrarSenhas, setMostrarSenhas] = useState(false);
+  const [salvando, setSalvando] = useState(false);
 
-  const atualizarDadosConta = (campo: string, valor: string) => {
-    setDadosConta(prev => ({ ...prev, [campo]: valor }));
+  const handleSalvarDadosConta = async () => {
+    if (!dadosContaEditando) return;
+    
+    setSalvando(true);
+    try {
+      await atualizarDadosConta({
+        nome: dadosContaEditando.nome,
+        sobrenome: dadosContaEditando.sobrenome,
+        email: dadosContaEditando.email,
+        telefone: dadosContaEditando.telefone
+      });
+      
+      toast({
+        title: "Sucesso",
+        description: "Dados da conta atualizados com sucesso!",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar dados da conta",
+        variant: "destructive"
+      });
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const atualizarConfiguracao = (categoria: string, campo: string, valor: any) => {
-    setConfiguracoes(prev => ({
-      ...prev,
-      [categoria]: {
-        ...prev[categoria as keyof typeof prev],
-        [campo]: valor
-      }
-    }));
+  const handleSalvarDadosTenant = async () => {
+    if (!dadosTenantEditando) return;
+    
+    setSalvando(true);
+    try {
+      await atualizarDadosTenant({
+        nome: dadosTenantEditando.nome,
+        cnpj: dadosTenantEditando.cnpj,
+        cpf: dadosTenantEditando.cpf,
+        tipo_pessoa: dadosTenantEditando.tipo_pessoa,
+        email: dadosTenantEditando.email,
+        telefone: dadosTenantEditando.telefone,
+        endereco: dadosTenantEditando.endereco,
+        cidade: dadosTenantEditando.cidade,
+        estado: dadosTenantEditando.estado,
+        cep: dadosTenantEditando.cep,
+        razao_social: dadosTenantEditando.razao_social,
+        nome_fantasia: dadosTenantEditando.nome_fantasia,
+        inscricao_estadual: dadosTenantEditando.inscricao_estadual,
+        inscricao_municipal: dadosTenantEditando.inscricao_municipal
+      });
+      
+      toast({
+        title: "Sucesso",
+        description: "Dados da empresa atualizados com sucesso!",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar dados da empresa",
+        variant: "destructive"
+      });
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const salvarDadosConta = () => {
-    // Implementar salvamento
-    console.log("Salvando dados da conta:", dadosConta);
+  const handleSalvarConfiguracoes = async () => {
+    if (!configuracoesEditando) return;
+    
+    setSalvando(true);
+    try {
+      await atualizarConfiguracoes(configuracoesEditando);
+      
+      toast({
+        title: "Sucesso",
+        description: "Configurações atualizadas com sucesso!",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar configurações",
+        variant: "destructive"
+      });
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const salvarConfiguracoes = () => {
-    // Implementar salvamento
-    console.log("Salvando configurações:", configuracoes);
-  };
-
-  const alterarSenha = () => {
+  const handleAlterarSenha = async () => {
     if (novaSenha !== confirmarSenha) {
-      alert("As senhas não coincidem");
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem",
+        variant: "destructive"
+      });
       return;
     }
-    // Implementar alteração de senha
-    console.log("Alterando senha...");
+
+    if (novaSenha.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A nova senha deve ter pelo menos 6 caracteres",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      await alterarSenha(senhaAtual, novaSenha);
+      
+      toast({
+        title: "Sucesso",
+        description: "Senha alterada com sucesso!",
+        variant: "default"
+      });
+      
+      setSenhaAtual("");
+      setNovaSenha("");
+      setConfirmarSenha("");
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar senha",
+        variant: "destructive"
+      });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erro",
+        description: "Apenas arquivos de imagem são permitidos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "O arquivo deve ter no máximo 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await uploadAvatar(file);
+      toast({
+        title: "Sucesso",
+        description: "Avatar atualizado com sucesso!",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer upload do avatar",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUploadLogo = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erro",
+        description: "Apenas arquivos de imagem são permitidos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "O arquivo deve ter no máximo 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await uploadLogo(file);
+      toast({
+        title: "Sucesso",
+        description: "Logo da empresa atualizada com sucesso!",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer upload da logo",
+        variant: "destructive"
+      });
+    }
   };
 
   const obterBadgePlano = (plano: string) => {
     switch (plano) {
-      case "Pro":
-        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"><Crown className="h-3 w-3 mr-1" /> Pro</Badge>;
-      case "Premium":
-        return <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white"><Star className="h-3 w-3 mr-1" /> Premium</Badge>;
+      case "premium":
+        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"><Crown className="h-3 w-3 mr-1" /> Premium</Badge>;
+      case "professional":
+        return <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white"><Star className="h-3 w-3 mr-1" /> Professional</Badge>;
+      case "enterprise":
+        return <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white"><Star className="h-3 w-3 mr-1" /> Enterprise</Badge>;
       default:
         return <Badge variant="secondary">Básico</Badge>;
     }
@@ -128,13 +294,50 @@ export default function Configuracoes() {
   const obterBadgeStatus = (status: string) => {
     switch (status) {
       case "ativo":
-        return <Badge className="bg-success hover:bg-success/90">Ativo</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Ativo</Badge>;
       case "suspenso":
         return <Badge variant="destructive">Suspenso</Badge>;
+      case "inativo":
+        return <Badge variant="secondary">Inativo</Badge>;
       default:
         return <Badge variant="secondary">Desconhecido</Badge>;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando configurações...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Tentar Novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dadosConta || !dadosTenant || !configuracoes || !dadosContaEditando || !dadosTenantEditando || !configuracoesEditando) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-muted-foreground">Dados não encontrados</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -166,7 +369,7 @@ export default function Configuracoes() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Plano Atual</p>
                 <div className="flex items-center space-x-2 mt-1">
-                  {obterBadgePlano(dadosConta.plano)}
+                  {obterBadgePlano(dadosTenant.plano)}
                 </div>
               </div>
               <div className="p-2 rounded-lg bg-primary/10">
@@ -182,11 +385,11 @@ export default function Configuracoes() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Status da Conta</p>
                 <div className="flex items-center space-x-2 mt-1">
-                  {obterBadgeStatus(dadosConta.status)}
+                  {obterBadgeStatus(dadosTenant.status)}
                 </div>
               </div>
-              <div className="p-2 rounded-lg bg-success/10">
-                <CheckCircle className="h-5 w-5 text-success" />
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
             </div>
           </CardContent>
@@ -197,7 +400,7 @@ export default function Configuracoes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Membro Desde</p>
-                <p className="text-lg font-bold">{new Date(dadosConta.dataCriacao).toLocaleDateString("pt-BR")}</p>
+                <p className="text-lg font-bold">{new Date(dadosTenant.data_criacao).toLocaleDateString("pt-BR")}</p>
               </div>
               <div className="p-2 rounded-lg bg-accent/10">
                 <Calendar className="h-5 w-5 text-accent" />
@@ -243,11 +446,23 @@ export default function Configuracoes() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo</Label>
+                  <Label htmlFor="nome">Nome</Label>
                   <Input
                     id="nome"
-                    value={dadosConta.nome}
-                    onChange={(e) => atualizarDadosConta("nome", e.target.value)}
+                    value={dadosContaEditando?.nome || ''}
+                    onChange={(e) => {
+                      setDadosContaEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sobrenome">Sobrenome</Label>
+                  <Input
+                    id="sobrenome"
+                    value={dadosContaEditando?.sobrenome || ''}
+                    onChange={(e) => {
+                      setDadosContaEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -255,30 +470,25 @@ export default function Configuracoes() {
                   <Input
                     id="email"
                     type="email"
-                    value={dadosConta.email}
-                    onChange={(e) => atualizarDadosConta("email", e.target.value)}
+                    value={dadosContaEditando?.email || ''}
+                    onChange={(e) => {
+                      setDadosContaEditando(prev => prev ? { ...prev, email: e.target.value } : null);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
                   <Input
                     id="telefone"
-                    value={dadosConta.telefone}
-                    onChange={(e) => atualizarDadosConta("telefone", e.target.value)}
+                    value={dadosContaEditando?.telefone || ''}
+                    onChange={(e) => {
+                      setDadosContaEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
+                    }}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endereco">Endereço</Label>
-                  <Textarea
-                    id="endereco"
-                    value={dadosConta.endereco}
-                    onChange={(e) => atualizarDadosConta("endereco", e.target.value)}
-                    rows={3}
-                  />
-                </div>
-                <Button onClick={salvarDadosConta} className="w-full">
+                <Button onClick={handleSalvarDadosConta} className="w-full" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Informações
+                  {salvando ? 'Salvando...' : 'Salvar Informações'}
                 </Button>
               </CardContent>
             </Card>
@@ -292,36 +502,72 @@ export default function Configuracoes() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="empresa">Razão Social</Label>
+                  <Label htmlFor="nome">Nome da Empresa</Label>
                   <Input
-                    id="empresa"
-                    value={dadosConta.empresa}
-                    onChange={(e) => atualizarDadosConta("empresa", e.target.value)}
+                    id="nome"
+                    value={dadosTenantEditando?.nome || ''}
+                    onChange={(e) => {
+                      setDadosTenantEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Label htmlFor="razao_social">Razão Social</Label>
+                  <Input
+                    id="razao_social"
+                    value={dadosTenantEditando?.razao_social || ''}
+                    onChange={(e) => {
+                      setDadosTenantEditando(prev => prev ? { ...prev, razao_social: e.target.value } : null);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cnpj">CNPJ/CPF</Label>
                   <Input
                     id="cnpj"
-                    value={dadosConta.cnpj}
-                    onChange={(e) => atualizarDadosConta("cnpj", e.target.value)}
+                    value={dadosTenantEditando?.cnpj || dadosTenantEditando?.cpf || ''}
+                    onChange={(e) => {
+                      setDadosTenantEditando(prev => prev ? { ...prev, cnpj: e.target.value } : null);
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Logo da Empresa</Label>
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Clique para fazer upload da logo
-                    </p>
-                    <Button variant="outline" size="sm">
-                      Selecionar Arquivo
+                    {dadosTenantEditando?.logo ? (
+                      <div className="space-y-2">
+                        <img 
+                          src={dadosTenantEditando?.logo} 
+                          alt="Logo da empresa" 
+                          className="h-16 w-16 mx-auto object-contain"
+                        />
+                        <p className="text-sm text-muted-foreground">Logo atual</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Clique para fazer upload da logo
+                        </p>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleUploadLogo}
+                      className="hidden"
+                      id="logo-upload"
+                    />
+                    <Button variant="outline" size="sm" asChild>
+                      <label htmlFor="logo-upload">
+                        {dadosTenantEditando?.logo ? 'Alterar Logo' : 'Selecionar Arquivo'}
+                      </label>
                     </Button>
                   </div>
                 </div>
-                <Button onClick={salvarDadosConta} className="w-full">
+                <Button onClick={handleSalvarDadosTenant} className="w-full" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Empresa
+                  {salvando ? 'Salvando...' : 'Salvar Empresa'}
                 </Button>
               </CardContent>
             </Card>
@@ -376,9 +622,9 @@ export default function Configuracoes() {
                   />
                 </div>
               </div>
-              <Button onClick={alterarSenha} className="w-full md:w-auto">
+              <Button onClick={handleAlterarSenha} className="w-full md:w-auto" disabled={salvando}>
                 <Key className="h-4 w-4 mr-2" />
-                Alterar Senha
+                {salvando ? 'Alterando...' : 'Alterar Senha'}
               </Button>
             </CardContent>
           </Card>
@@ -397,7 +643,7 @@ export default function Configuracoes() {
               <CardContent className="space-y-4">
                 <div className="text-center p-6 bg-muted/30 rounded-lg">
                   <div className="flex items-center justify-center mb-4">
-                    {obterBadgePlano(dadosConta.plano)}
+                    {obterBadgePlano(dadosTenant.plano)}
                   </div>
                   <h3 className="text-2xl font-bold mb-2">R$ 97,00/mês</h3>
                   <p className="text-muted-foreground mb-4">
@@ -504,7 +750,12 @@ export default function Configuracoes() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Tema</Label>
-                  <Select value={configuracoes.tema} onValueChange={(value) => setConfiguracoes(prev => ({ ...prev, tema: value }))}>
+                  <Select 
+                    value={configuracoesEditando?.tema || 'sistema'} 
+                    onValueChange={(value: 'claro' | 'escuro' | 'sistema') => {
+                      setConfiguracoesEditando(prev => prev ? { ...prev, tema: value } : null);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -542,9 +793,9 @@ export default function Configuracoes() {
                     ))}
                   </div>
                 </div>
-                <Button onClick={salvarConfiguracoes} className="w-full">
+                <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Tema
+                  {salvando ? 'Salvando...' : 'Salvar Tema'}
                 </Button>
               </CardContent>
             </Card>
@@ -559,7 +810,12 @@ export default function Configuracoes() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Idioma</Label>
-                  <Select value={configuracoes.idioma} onValueChange={(value) => setConfiguracoes(prev => ({ ...prev, idioma: value }))}>
+                  <Select 
+                    value={configuracoesEditando?.idioma || 'pt-BR'} 
+                    onValueChange={(value) => {
+                      setConfiguracoesEditando(prev => prev ? { ...prev, idioma: value } : null);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -572,7 +828,12 @@ export default function Configuracoes() {
                 </div>
                 <div className="space-y-2">
                   <Label>Fuso Horário</Label>
-                  <Select value={configuracoes.fusoHorario} onValueChange={(value) => setConfiguracoes(prev => ({ ...prev, fusoHorario: value }))}>
+                  <Select 
+                    value={configuracoesEditando?.fuso_horario || 'America/Sao_Paulo'} 
+                    onValueChange={(value) => {
+                      setConfiguracoesEditando(prev => prev ? { ...prev, fuso_horario: value } : null);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -585,7 +846,12 @@ export default function Configuracoes() {
                 </div>
                 <div className="space-y-2">
                   <Label>Moeda</Label>
-                  <Select value={configuracoes.moeda} onValueChange={(value) => setConfiguracoes(prev => ({ ...prev, moeda: value }))}>
+                  <Select 
+                    value={configuracoesEditando?.moeda || 'BRL'} 
+                    onValueChange={(value) => {
+                      setConfiguracoesEditando(prev => prev ? { ...prev, moeda: value } : null);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -596,9 +862,9 @@ export default function Configuracoes() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={salvarConfiguracoes} className="w-full">
+                <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Localização
+                  {salvando ? 'Salvando...' : 'Salvar Localização'}
                 </Button>
               </CardContent>
             </Card>
@@ -624,8 +890,16 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Receber notificações por email</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.email}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "email", checked)}
+                      checked={configuracoesEditando?.notificacoes.email || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            email: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -634,8 +908,16 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Notificações no navegador</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.push}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "push", checked)}
+                      checked={configuracoesEditando?.notificacoes.push || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            push: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -644,8 +926,16 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Notificações por SMS</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.sms}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "sms", checked)}
+                      checked={configuracoesEditando?.notificacoes.sms || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            sms: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                 </div>
@@ -660,8 +950,16 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Novas vendas e pedidos</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.vendas}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "vendas", checked)}
+                      checked={configuracoesEditando?.notificacoes.vendas || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            vendas: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -670,8 +968,16 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Produtos com estoque baixo</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.estoque}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "estoque", checked)}
+                      checked={configuracoesEditando?.notificacoes.estoque || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            estoque: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -680,8 +986,16 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Pagamentos e recebimentos</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.financeiro}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "financeiro", checked)}
+                      checked={configuracoesEditando?.notificacoes.financeiro || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            financeiro: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -690,16 +1004,24 @@ export default function Configuracoes() {
                       <p className="text-sm text-muted-foreground">Novos clientes e atualizações</p>
                     </div>
                     <Switch
-                      checked={configuracoes.notificacoes.clientes}
-                      onCheckedChange={(checked) => atualizarConfiguracao("notificacoes", "clientes", checked)}
+                      checked={configuracoesEditando?.notificacoes.clientes || false}
+                      onCheckedChange={(checked) => {
+                        setConfiguracoesEditando(prev => prev ? {
+                          ...prev,
+                          notificacoes: {
+                            ...prev.notificacoes,
+                            clientes: checked
+                          }
+                        } : null);
+                      }}
                     />
                   </div>
                 </div>
               </div>
 
-              <Button onClick={salvarConfiguracoes} className="w-full">
+              <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Notificações
+                {salvando ? 'Salvando...' : 'Salvar Notificações'}
               </Button>
             </CardContent>
           </Card>
@@ -722,8 +1044,16 @@ export default function Configuracoes() {
                     <p className="text-sm text-muted-foreground">Adicionar camada extra de segurança</p>
                   </div>
                   <Switch
-                    checked={configuracoes.seguranca.autenticacao2FA}
-                    onCheckedChange={(checked) => atualizarConfiguracao("seguranca", "autenticacao2FA", checked)}
+                    checked={configuracoesEditando?.seguranca.autenticacao_2fa || false}
+                    onCheckedChange={(checked) => {
+                      setConfiguracoesEditando(prev => prev ? {
+                        ...prev,
+                        seguranca: {
+                          ...prev.seguranca,
+                          autenticacao_2fa: checked
+                        }
+                      } : null);
+                    }}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -732,8 +1062,16 @@ export default function Configuracoes() {
                     <p className="text-sm text-muted-foreground">Manter login por mais tempo</p>
                   </div>
                   <Switch
-                    checked={configuracoes.seguranca.sessaoLonga}
-                    onCheckedChange={(checked) => atualizarConfiguracao("seguranca", "sessaoLonga", checked)}
+                    checked={configuracoesEditando?.seguranca.sessao_longa || false}
+                    onCheckedChange={(checked) => {
+                      setConfiguracoesEditando(prev => prev ? {
+                        ...prev,
+                        seguranca: {
+                          ...prev.seguranca,
+                          sessao_longa: checked
+                        }
+                      } : null);
+                    }}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -742,8 +1080,16 @@ export default function Configuracoes() {
                     <p className="text-sm text-muted-foreground">Registrar ações na conta</p>
                   </div>
                   <Switch
-                    checked={configuracoes.seguranca.logAtividade}
-                    onCheckedChange={(checked) => atualizarConfiguracao("seguranca", "logAtividade", checked)}
+                    checked={configuracoesEditando?.seguranca.log_atividade || false}
+                    onCheckedChange={(checked) => {
+                      setConfiguracoesEditando(prev => prev ? {
+                        ...prev,
+                        seguranca: {
+                          ...prev.seguranca,
+                          log_atividade: checked
+                        }
+                      } : null);
+                    }}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -752,13 +1098,21 @@ export default function Configuracoes() {
                     <p className="text-sm text-muted-foreground">Backup diário dos dados</p>
                   </div>
                   <Switch
-                    checked={configuracoes.seguranca.backupAutomatico}
-                    onCheckedChange={(checked) => atualizarConfiguracao("seguranca", "backupAutomatico", checked)}
+                    checked={configuracoesEditando?.seguranca.backup_automatico || false}
+                    onCheckedChange={(checked) => {
+                      setConfiguracoesEditando(prev => prev ? {
+                        ...prev,
+                        seguranca: {
+                          ...prev.seguranca,
+                          backup_automatico: checked
+                        }
+                      } : null);
+                    }}
                   />
                 </div>
-                <Button onClick={salvarConfiguracoes} className="w-full">
+                <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Segurança
+                  {salvando ? 'Salvando...' : 'Salvar Segurança'}
                 </Button>
               </CardContent>
             </Card>

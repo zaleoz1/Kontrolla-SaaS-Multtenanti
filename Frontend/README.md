@@ -1,5 +1,9 @@
 # 🚀 KontrollaPro - Sistema SaaS Multitenant para Gestão de Lojas
 
+
+Get-Content "C:\Users\Isaléo Guimarães\OneDrive\Documentos\Projetos\Kontrolla-SaaS-Multtenanti\Backend\src\database\schema.sql" | mysql -u root -p
+
+
 Sistema completo e profissional para gestão de lojas físicas e online, desenvolvido com React, TypeScript e Tailwind CSS. Oferece controle total sobre produtos, vendas, clientes, financeiro e emissão de NF-e.
 
 ## ✨ Funcionalidades Principais

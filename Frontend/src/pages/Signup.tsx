@@ -40,6 +40,16 @@ export default function Signup() {
     email: "",
     phone: "",
     company: "",
+    tipoPessoa: "juridica",
+    cpfCnpj: "",
+    cep: "",
+    endereco: "",
+    cidade: "",
+    estado: "",
+    razaoSocial: "",
+    nomeFantasia: "",
+    inscricaoEstadual: "",
+    inscricaoMunicipal: "",
     password: "",
     confirmPassword: "",
     acceptTerms: false,
@@ -49,15 +59,31 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    
+    let processedValue = value;
+    
+    // Formatação específica para cada campo
+    if (name === 'cpfCnpj') {
+      processedValue = formatarCpfCnpj(value, formData.tipoPessoa);
+    } else if (name === 'cep') {
+      processedValue = formatarCep(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : processedValue
     }));
+
+    // Buscar CEP automaticamente quando completar 8 dígitos
+    if (name === 'cep' && value.replace(/\D/g, '').length === 8) {
+      buscarCep(value);
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,6 +102,64 @@ export default function Signup() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const buscarCep = async (cep: string) => {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length === 8) {
+      setIsLoadingCep(true);
+      try {
+        console.log('🔍 Buscando CEP:', cepLimpo);
+        const response = await fetch(`/api/auth/cep/${cepLimpo}`);
+        const data = await response.json();
+        
+        console.log('📦 Resposta da API:', data);
+        
+        if (response.ok && !data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            endereco: data.logradouro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || ''
+          }));
+          console.log('✅ CEP encontrado e preenchido automaticamente');
+        } else {
+          console.log('❌ CEP não encontrado:', data.error || 'CEP inválido');
+          // Limpar campos se CEP não for encontrado
+          setFormData(prev => ({
+            ...prev,
+            endereco: '',
+            cidade: '',
+            estado: ''
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar CEP:', error);
+        // Limpar campos em caso de erro
+        setFormData(prev => ({
+          ...prev,
+          endereco: '',
+          cidade: '',
+          estado: ''
+        }));
+      } finally {
+        setIsLoadingCep(false);
+      }
+    }
+  };
+
+  const formatarCpfCnpj = (value: string, tipoPessoa: string) => {
+    const numeros = value.replace(/\D/g, '');
+    if (tipoPessoa === 'fisica') {
+      return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else {
+      return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+  };
+
+  const formatarCep = (value: string) => {
+    const numeros = value.replace(/\D/g, '');
+    return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,6 +190,16 @@ export default function Signup() {
           email: formData.email,
           phone: formData.phone,
           company: formData.company,
+          tipoPessoa: formData.tipoPessoa,
+          cpfCnpj: formData.cpfCnpj,
+          cep: formData.cep,
+          endereco: formData.endereco,
+          cidade: formData.cidade,
+          estado: formData.estado,
+          razaoSocial: formData.razaoSocial,
+          nomeFantasia: formData.nomeFantasia,
+          inscricaoEstadual: formData.inscricaoEstadual,
+          inscricaoMunicipal: formData.inscricaoMunicipal,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
           selectedPlan: formData.selectedPlan,
@@ -135,7 +229,7 @@ export default function Signup() {
   };
 
   const nextStep = () => {
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -249,10 +343,11 @@ export default function Signup() {
   ];
 
   const steps = [
-    { number: 1, title: "Informações Pessoais", desc: "Seus dados básicos" },
-    { number: 2, title: "Empresa", desc: "Dados da sua empresa" },
-    { number: 3, title: "Segurança", desc: "Crie sua senha" },
-    { number: 4, title: "Plano", desc: "Escolha seu plano" }
+    { number: 1, title: "", desc: "Dados básicos" },
+    { number: 2, title: "", desc: "Informações" },
+    { number: 3, title: "", desc: "Localização" },
+    { number: 4, title: "", desc: "Senha" },
+    { number: 5, title: "", desc: "Escolha" }
   ];
 
   return (
@@ -356,18 +451,18 @@ export default function Signup() {
                 
                 {/* Progress Steps */}
                 <div className="flex justify-center mt-6">
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2 max-w-full overflow-hidden">
                     {steps.map((step, index) => (
-                      <div key={step.number} className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      <div key={step.number} className="flex items-center flex-shrink-0">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
                           currentStep >= step.number 
                             ? 'bg-emerald-500 text-white' 
                             : 'bg-slate-600 text-slate-300'
                         }`}>
-                          {currentStep > step.number ? <Check className="h-4 w-4" /> : step.number}
+                          {currentStep > step.number ? <Check className="h-3 w-3" /> : step.number}
                         </div>
                         {index < steps.length - 1 && (
-                          <div className={`w-12 h-0.5 mx-2 ${
+                          <div className={`w-8 h-0.5 mx-1 ${
                             currentStep > step.number ? 'bg-emerald-500' : 'bg-slate-600'
                           }`} />
                         )}
@@ -477,9 +572,61 @@ export default function Signup() {
                       variants={fadeInUp}
                       className="space-y-6"
                     >
+                      {/* Tipo de Pessoa */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-200">
+                          Tipo de Pessoa
+                        </Label>
+                        <div className="flex space-x-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="tipoPessoa"
+                              value="fisica"
+                              checked={formData.tipoPessoa === 'fisica'}
+                              onChange={handleInputChange}
+                              className="text-emerald-500 focus:ring-emerald-500"
+                            />
+                            <span className="text-slate-300">Pessoa Física</span>
+                          </label>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="tipoPessoa"
+                              value="juridica"
+                              checked={formData.tipoPessoa === 'juridica'}
+                              onChange={handleInputChange}
+                              className="text-emerald-500 focus:ring-emerald-500"
+                            />
+                            <span className="text-slate-300">Pessoa Jurídica</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* CPF/CNPJ */}
+                      <div className="space-y-2">
+                        <Label htmlFor="cpfCnpj" className="text-sm font-medium text-slate-200">
+                          {formData.tipoPessoa === 'fisica' ? 'CPF' : 'CNPJ'}
+                        </Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            id="cpfCnpj"
+                            name="cpfCnpj"
+                            type="text"
+                            placeholder={formData.tipoPessoa === 'fisica' ? '000.000.000-00' : '00.000.000/0000-00'}
+                            value={formData.cpfCnpj}
+                            onChange={handleInputChange}
+                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Nome da Empresa */}
                       <div className="space-y-2">
                         <Label htmlFor="company" className="text-sm font-medium text-slate-200">
-                          Nome da Empresa
+                          {formData.tipoPessoa === 'fisica' ? 'Nome Completo' : 'Nome da Empresa'}
                         </Label>
                         <div className="relative">
                           <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -487,7 +634,7 @@ export default function Signup() {
                             id="company"
                             name="company"
                             type="text"
-                            placeholder="Nome da sua empresa"
+                            placeholder={formData.tipoPessoa === 'fisica' ? 'Seu nome completo' : 'Nome da sua empresa'}
                             value={formData.company}
                             onChange={handleInputChange}
                             className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
@@ -495,6 +642,88 @@ export default function Signup() {
                           />
                         </div>
                       </div>
+
+                      {/* Razão Social e Nome Fantasia (apenas para PJ) */}
+                      {formData.tipoPessoa === 'juridica' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="razaoSocial" className="text-sm font-medium text-slate-200">
+                              Razão Social
+                            </Label>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input
+                                id="razaoSocial"
+                                name="razaoSocial"
+                                type="text"
+                                placeholder="Razão social da empresa"
+                                value={formData.razaoSocial}
+                                onChange={handleInputChange}
+                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="nomeFantasia" className="text-sm font-medium text-slate-200">
+                              Nome Fantasia
+                            </Label>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input
+                                id="nomeFantasia"
+                                name="nomeFantasia"
+                                type="text"
+                                placeholder="Nome fantasia da empresa"
+                                value={formData.nomeFantasia}
+                                onChange={handleInputChange}
+                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Inscrições (apenas para PJ) */}
+                      {formData.tipoPessoa === 'juridica' && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="inscricaoEstadual" className="text-sm font-medium text-slate-200">
+                              Inscrição Estadual
+                            </Label>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input
+                                id="inscricaoEstadual"
+                                name="inscricaoEstadual"
+                                type="text"
+                                placeholder="Inscrição Estadual"
+                                value={formData.inscricaoEstadual}
+                                onChange={handleInputChange}
+                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="inscricaoMunicipal" className="text-sm font-medium text-slate-200">
+                              Inscrição Municipal
+                            </Label>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input
+                                id="inscricaoMunicipal"
+                                name="inscricaoMunicipal"
+                                type="text"
+                                placeholder="Inscrição Municipal"
+                                value={formData.inscricaoMunicipal}
+                                onChange={handleInputChange}
+                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Logo Upload */}
                       <div className="space-y-2">
@@ -538,8 +767,109 @@ export default function Signup() {
                     </motion.div>
                   )}
 
-                  {/* Step 3: Security */}
+                  {/* Step 3: Address Information */}
                   {currentStep === 3 && (
+                    <motion.div
+                      variants={fadeInUp}
+                      className="space-y-6"
+                    >
+                      {/* CEP */}
+                      <div className="space-y-2">
+                        <Label htmlFor="cep" className="text-sm font-medium text-slate-200">
+                          CEP
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            id="cep"
+                            name="cep"
+                            type="text"
+                            placeholder="00000-000"
+                            value={formData.cep}
+                            onChange={handleInputChange}
+                            className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            required
+                          />
+                          {isLoadingCep && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <motion.div
+                                className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {isLoadingCep && (
+                          <p className="text-xs text-emerald-400">Buscando endereço...</p>
+                        )}
+                      </div>
+
+                      {/* Endereço */}
+                      <div className="space-y-2">
+                        <Label htmlFor="endereco" className="text-sm font-medium text-slate-200">
+                          Endereço
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            id="endereco"
+                            name="endereco"
+                            type="text"
+                            placeholder="Rua, número, bairro"
+                            value={formData.endereco}
+                            onChange={handleInputChange}
+                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Cidade e Estado */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="cidade" className="text-sm font-medium text-slate-200">
+                            Cidade
+                          </Label>
+                          <div className="relative">
+                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                              id="cidade"
+                              name="cidade"
+                              type="text"
+                              placeholder="Cidade"
+                              value={formData.cidade}
+                              onChange={handleInputChange}
+                              className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="estado" className="text-sm font-medium text-slate-200">
+                            Estado
+                          </Label>
+                          <div className="relative">
+                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                              id="estado"
+                              name="estado"
+                              type="text"
+                              placeholder="UF"
+                              value={formData.estado}
+                              onChange={handleInputChange}
+                              className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 4: Security */}
+                  {currentStep === 4 && (
                     <motion.div
                       variants={fadeInUp}
                       className="space-y-6"
@@ -636,8 +966,8 @@ export default function Signup() {
                     </motion.div>
                   )}
 
-                  {/* Step 4: Plan Selection */}
-                  {currentStep === 4 && (
+                  {/* Step 5: Plan Selection */}
+                  {currentStep === 5 && (
                     <motion.div
                       variants={fadeInUp}
                       className="space-y-6"
@@ -754,12 +1084,12 @@ export default function Signup() {
                       <div />
                     )}
 
-                    {currentStep < 4 ? (
+                    {currentStep < 5 ? (
                       <Button
                         type="button"
                         onClick={nextStep}
                         className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
-                        disabled={currentStep === 3 && !formData.acceptTerms}
+                        disabled={currentStep === 4 && !formData.acceptTerms}
                       >
                         Próximo
                         <ArrowRight className="ml-2 h-4 w-4" />
