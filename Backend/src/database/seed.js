@@ -15,8 +15,11 @@ async function seedDatabase() {
     // Criar tenant de exemplo
     console.log('🏢 Criando tenant de exemplo...');
     const [tenantResult] = await query(
-      `INSERT INTO tenants (nome, slug, cnpj, email, telefone, endereco, cidade, estado, cep, status, plano) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tenants (
+        nome, slug, cnpj, email, telefone, endereco, cidade, estado, cep, 
+        status, plano, tipo_pessoa, razao_social, nome_fantasia, 
+        inscricao_estadual, inscricao_municipal
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         'Loja Exemplo Ltda',
         'loja-exemplo',
@@ -28,7 +31,12 @@ async function seedDatabase() {
         'SP',
         '01234-567',
         'ativo',
-        'premium'
+        'premium',
+        'juridica',
+        'Loja Exemplo Ltda',
+        'Loja Exemplo',
+        '123456789',
+        '987654321'
       ]
     );
 

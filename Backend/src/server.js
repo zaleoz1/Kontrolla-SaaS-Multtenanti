@@ -18,6 +18,7 @@ import nfeRoutes from './routes/nfe.js';
 import relatoriosRoutes from './routes/relatorios.js';
 import dashboardRoutes from './routes/dashboard.js';
 import catalogoRoutes from './routes/catalogo.js';
+import configuracoesRoutes from './routes/configuracoes.js';
 
 // Importar middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -107,6 +108,7 @@ app.use('/api/nfe', nfeRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/catalogo', catalogoRoutes);
+app.use('/api/configuracoes', configuracoesRoutes);
 
 // Middleware para rotas não encontradas
 app.use(notFound);

@@ -38,6 +38,44 @@ export const validateSignup = [
   body('email').isEmail().withMessage('Email deve ser válido'),
   body('phone').optional(),
   body('company').notEmpty().withMessage('Nome da empresa é obrigatório'),
+  body('tipoPessoa').isIn(['fisica', 'juridica']).withMessage('Tipo de pessoa deve ser física ou jurídica'),
+  body('cpfCnpj').custom((value, { req }) => {
+    if (!value) {
+      throw new Error('CPF/CNPJ é obrigatório');
+    }
+    const tipoPessoa = req.body.tipoPessoa;
+    if (tipoPessoa === 'fisica') {
+      // Validação básica de CPF (11 dígitos)
+      const cpf = value.replace(/\D/g, '');
+      if (cpf.length !== 11) {
+        throw new Error('CPF deve ter 11 dígitos');
+      }
+    } else if (tipoPessoa === 'juridica') {
+      // Validação básica de CNPJ (14 dígitos)
+      const cnpj = value.replace(/\D/g, '');
+      if (cnpj.length !== 14) {
+        throw new Error('CNPJ deve ter 14 dígitos');
+      }
+    }
+    return true;
+  }),
+  body('cep').custom((value) => {
+    if (!value) {
+      throw new Error('CEP é obrigatório');
+    }
+    const cep = value.replace(/\D/g, '');
+    if (cep.length !== 8) {
+      throw new Error('CEP deve ter 8 dígitos');
+    }
+    return true;
+  }),
+  body('endereco').notEmpty().withMessage('Endereço é obrigatório'),
+  body('cidade').notEmpty().withMessage('Cidade é obrigatória'),
+  body('estado').isLength({ min: 2, max: 2 }).withMessage('Estado deve ter 2 caracteres'),
+  body('razaoSocial').optional(),
+  body('nomeFantasia').optional(),
+  body('inscricaoEstadual').optional(),
+  body('inscricaoMunicipal').optional(),
   body('password').isLength({ min: 8 }).withMessage('Senha deve ter pelo menos 8 caracteres'),
   body('confirmPassword').custom((value, { req }) => {
     if (value !== req.body.password) {
@@ -383,6 +421,21 @@ export const validateVenda = [
     .optional()
     .isInt({ min: 1 })
     .withMessage('ID do cliente deve ser um número inteiro positivo'),
+  body('itens')
+    .isArray({ min: 1 })
+    .withMessage('Venda deve ter pelo menos um item'),
+  body('itens.*.produto_id')
+    .isInt({ min: 1 })
+    .withMessage('ID do produto deve ser um número inteiro positivo'),
+  body('itens.*.quantidade')
+    .isInt({ min: 1 })
+    .withMessage('Quantidade deve ser um número inteiro positivo'),
+  body('itens.*.preco_unitario')
+    .isFloat({ min: 0 })
+    .withMessage('Preço unitário deve ser um número positivo'),
+  body('itens.*.preco_total')
+    .isFloat({ min: 0 })
+    .withMessage('Preço total deve ser um número positivo'),
   body('subtotal')
     .isFloat({ min: 0 })
     .withMessage('Subtotal deve ser um número positivo'),
@@ -404,6 +457,38 @@ export const validateVenda = [
     .optional()
     .isIn(['pendente', 'pago', 'cancelado', 'devolvido'])
     .withMessage('Status inválido'),
+  body('metodos_pagamento')
+    .optional()
+    .isArray()
+    .withMessage('Métodos de pagamento deve ser um array'),
+  body('metodos_pagamento.*.metodo')
+    .optional()
+    .isIn(['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque'])
+    .withMessage('Método de pagamento inválido'),
+  body('metodos_pagamento.*.valor')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Valor do método de pagamento deve ser um número positivo'),
+  body('pagamento_prazo')
+    .optional()
+    .isObject()
+    .withMessage('Pagamento a prazo deve ser um objeto'),
+  body('pagamento_prazo.dias')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Dias para pagamento deve ser um número inteiro positivo'),
+  body('pagamento_prazo.juros')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Juros deve ser um número positivo'),
+  body('pagamento_prazo.valorComJuros')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Valor com juros deve ser um número positivo'),
+  body('pagamento_prazo.dataVencimento')
+    .optional()
+    .isISO8601()
+    .withMessage('Data de vencimento deve ser uma data válida'),
   handleValidationErrors
 ];
 
