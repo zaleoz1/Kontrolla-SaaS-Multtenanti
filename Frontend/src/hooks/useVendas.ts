@@ -339,6 +339,7 @@ export const useCriarVenda = () => {
     forma_pagamento: string;
     parcelas: number;
     observacoes?: string;
+    status?: 'pendente' | 'pago' | 'cancelado' | 'devolvido';
   }) => {
     try {
       setLoading(true);
