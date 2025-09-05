@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useApi } from "@/hooks/useApi";
+import { API_ENDPOINTS } from "@/config/api";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Save, 
   X, 
@@ -17,58 +20,51 @@ import {
   Star,
   AlertCircle,
   CheckCircle,
-  UserPlus
+  UserPlus,
+  Loader2
 } from "lucide-react";
 
 interface Cliente {
   nome: string;
-  email: string;
-  telefone: string;
-  cpfCnpj: string;
-  tipoPessoa: "fisica" | "juridica";
-  endereco: {
-    cep: string;
-    logradouro: string;
-    numero: string;
-    complemento: string;
-    bairro: string;
-    cidade: string;
-    estado: string;
-  };
-  observacoes: string;
+  email?: string;
+  telefone?: string;
+  cpf_cnpj?: string;
+  tipo_pessoa: "fisica" | "juridica";
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  data_nascimento?: string;
+  sexo?: "masculino" | "feminino" | "outro";
+  razao_social?: string;
+  inscricao_estadual?: string;
+  inscricao_municipal?: string;
+  nome_fantasia?: string;
+  observacoes?: string;
   status: "ativo" | "inativo";
   vip: boolean;
-  limiteCredito: number;
-  dataNascimento?: string;
-  sexo?: "masculino" | "feminino" | "outro";
-  razaoSocial?: string;
-  inscricaoEstadual?: string;
-  inscricaoMunicipal?: string;
-  nomeFantasia?: string;
+  limite_credito: number;
 }
 
 export default function NovoCliente() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const api = useApi();
   const [abaAtiva, setAbaAtiva] = useState("basico");
   const [cliente, setCliente] = useState<Cliente>({
     nome: "",
     email: "",
     telefone: "",
-    cpfCnpj: "",
-    tipoPessoa: "fisica",
-    endereco: {
-      cep: "",
-      logradouro: "",
-      numero: "",
-      complemento: "",
-      bairro: "",
-      cidade: "",
-      estado: ""
-    },
+    cpf_cnpj: "",
+    tipo_pessoa: "fisica",
+    endereco: "",
+    cidade: "",
+    estado: "",
+    cep: "",
     observacoes: "",
     status: "ativo",
     vip: false,
-    limiteCredito: 0
+    limite_credito: 0
   });
 
   const estados = [
@@ -81,32 +77,97 @@ export default function NovoCliente() {
     setCliente(prev => ({ ...prev, [campo]: valor }));
   };
 
-  const atualizarEndereco = (campo: keyof Cliente["endereco"], valor: string) => {
+  const atualizarEndereco = (campo: keyof Cliente, valor: string) => {
     setCliente(prev => ({
       ...prev,
-      endereco: { ...prev.endereco, [campo]: valor }
+      [campo]: valor
     }));
   };
 
   const buscarCep = async (cep: string) => {
     if (cep.length === 8) {
       try {
-        // Simular busca de CEP
-        console.log("Buscando CEP:", cep);
-        // Aqui seria feita a chamada para a API de CEP
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setCliente(prev => ({
+            ...prev,
+            endereco: `${data.logradouro}, ${data.bairro}`,
+            cidade: data.localidade,
+            estado: data.uf,
+            cep: data.cep
+          }));
+          
+          toast({
+            title: "CEP encontrado",
+            description: "Endereço preenchido automaticamente",
+          });
+        } else {
+          toast({
+            title: "CEP não encontrado",
+            description: "Verifique o CEP digitado",
+            variant: "destructive",
+          });
+        }
       } catch (error) {
         console.error("Erro ao buscar CEP:", error);
+        toast({
+          title: "Erro ao buscar CEP",
+          description: "Tente novamente mais tarde",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const salvarCliente = () => {
-    // Aqui seria implementada a lógica para salvar o cliente
-    console.log("Cliente salvo:", cliente);
-    navigate("/dashboard/clientes");
+  const salvarCliente = async () => {
+    try {
+      // Preparar dados para envio
+      const dadosCliente = {
+        nome: cliente.nome,
+        email: cliente.email || null,
+        telefone: cliente.telefone || null,
+        cpf_cnpj: cliente.cpf_cnpj || null,
+        tipo_pessoa: cliente.tipo_pessoa,
+        endereco: cliente.endereco || null,
+        cidade: cliente.cidade || null,
+        estado: cliente.estado || null,
+        cep: cliente.cep || null,
+        data_nascimento: cliente.data_nascimento || null,
+        sexo: cliente.sexo || null,
+        razao_social: cliente.razao_social || null,
+        inscricao_estadual: cliente.inscricao_estadual || null,
+        inscricao_municipal: cliente.inscricao_municipal || null,
+        nome_fantasia: cliente.nome_fantasia || null,
+        observacoes: cliente.observacoes || null,
+        status: cliente.status,
+        vip: cliente.vip,
+        limite_credito: cliente.limite_credito
+      };
+
+      await api.makeRequest(API_ENDPOINTS.CLIENTS.CREATE, {
+        method: 'POST',
+        body: dadosCliente
+      });
+
+      toast({
+        title: "Cliente salvo",
+        description: "Cliente cadastrado com sucesso!",
+      });
+
+      navigate("/dashboard/clientes");
+    } catch (error: any) {
+      console.error("Erro ao salvar cliente:", error);
+      toast({
+        title: "Erro ao salvar cliente",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    }
   };
 
-  const formularioValido = cliente.nome && cliente.cpfCnpj && cliente.telefone;
+  const formularioValido = cliente.nome && cliente.cpf_cnpj && cliente.telefone;
 
   return (
     <div className="space-y-6">
@@ -126,10 +187,14 @@ export default function NovoCliente() {
           <Button 
             className="bg-gradient-primary" 
             onClick={salvarCliente}
-            disabled={!formularioValido}
+            disabled={!formularioValido || api.loading}
           >
-            <Save className="h-4 w-4 mr-2" />
-            Salvar Cliente
+            {api.loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {api.loading ? "Salvando..." : "Salvar Cliente"}
           </Button>
         </div>
       </div>
@@ -167,10 +232,10 @@ export default function NovoCliente() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name="tipoPessoa"
+                          name="tipo_pessoa"
                           value="fisica"
-                          checked={cliente.tipoPessoa === "fisica"}
-                          onChange={(e) => atualizarCliente("tipoPessoa", e.target.value)}
+                          checked={cliente.tipo_pessoa === "fisica"}
+                          onChange={(e) => atualizarCliente("tipo_pessoa", e.target.value)}
                           className="rounded"
                         />
                         <span className="text-sm">Pessoa Física</span>
@@ -178,10 +243,10 @@ export default function NovoCliente() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name="tipoPessoa"
+                          name="tipo_pessoa"
                           value="juridica"
-                          checked={cliente.tipoPessoa === "juridica"}
-                          onChange={(e) => atualizarCliente("tipoPessoa", e.target.value)}
+                          checked={cliente.tipo_pessoa === "juridica"}
+                          onChange={(e) => atualizarCliente("tipo_pessoa", e.target.value)}
                           className="rounded"
                         />
                         <span className="text-sm">Pessoa Jurídica</span>
@@ -192,10 +257,10 @@ export default function NovoCliente() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="text-sm font-medium">
-                        {cliente.tipoPessoa === "fisica" ? "Nome Completo *" : "Razão Social *"}
+                        {cliente.tipo_pessoa === "fisica" ? "Nome Completo *" : "Razão Social *"}
                       </label>
                       <Input
-                        placeholder={cliente.tipoPessoa === "fisica" ? "Nome completo" : "Razão social"}
+                        placeholder={cliente.tipo_pessoa === "fisica" ? "Nome completo" : "Razão social"}
                         value={cliente.nome}
                         onChange={(e) => atualizarCliente("nome", e.target.value)}
                         className="mt-1"
@@ -204,25 +269,25 @@ export default function NovoCliente() {
 
                     <div>
                       <label className="text-sm font-medium">
-                        {cliente.tipoPessoa === "fisica" ? "CPF *" : "CNPJ *"}
+                        {cliente.tipo_pessoa === "fisica" ? "CPF *" : "CNPJ *"}
                       </label>
                       <Input
-                        placeholder={cliente.tipoPessoa === "fisica" ? "000.000.000-00" : "00.000.000/0000-00"}
-                        value={cliente.cpfCnpj}
-                        onChange={(e) => atualizarCliente("cpfCnpj", e.target.value)}
+                        placeholder={cliente.tipo_pessoa === "fisica" ? "000.000.000-00" : "00.000.000/0000-00"}
+                        value={cliente.cpf_cnpj}
+                        onChange={(e) => atualizarCliente("cpf_cnpj", e.target.value)}
                         className="mt-1"
                       />
                     </div>
                   </div>
 
-                  {cliente.tipoPessoa === "juridica" && (
+                  {cliente.tipo_pessoa === "juridica" && (
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label className="text-sm font-medium">Nome Fantasia</label>
                         <Input
                           placeholder="Nome fantasia"
-                          value={cliente.nomeFantasia || ""}
-                          onChange={(e) => atualizarCliente("nomeFantasia", e.target.value)}
+                          value={cliente.nome_fantasia || ""}
+                          onChange={(e) => atualizarCliente("nome_fantasia", e.target.value)}
                           className="mt-1"
                         />
                       </div>
@@ -231,22 +296,22 @@ export default function NovoCliente() {
                         <label className="text-sm font-medium">Inscrição Estadual</label>
                         <Input
                           placeholder="Inscrição estadual"
-                          value={cliente.inscricaoEstadual || ""}
-                          onChange={(e) => atualizarCliente("inscricaoEstadual", e.target.value)}
+                          value={cliente.inscricao_estadual || ""}
+                          onChange={(e) => atualizarCliente("inscricao_estadual", e.target.value)}
                           className="mt-1"
                         />
                       </div>
                     </div>
                   )}
 
-                  {cliente.tipoPessoa === "fisica" && (
+                  {cliente.tipo_pessoa === "fisica" && (
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label className="text-sm font-medium">Data de Nascimento</label>
                         <Input
                           type="date"
-                          value={cliente.dataNascimento || ""}
-                          onChange={(e) => atualizarCliente("dataNascimento", e.target.value)}
+                          value={cliente.data_nascimento || ""}
+                          onChange={(e) => atualizarCliente("data_nascimento", e.target.value)}
                           className="mt-1"
                         />
                       </div>
@@ -315,7 +380,7 @@ export default function NovoCliente() {
                       <label className="text-sm font-medium">CEP</label>
                       <Input
                         placeholder="00000-000"
-                        value={cliente.endereco.cep}
+                        value={cliente.cep}
                         onChange={(e) => {
                           atualizarEndereco("cep", e.target.value);
                           if (e.target.value.length === 8) {
@@ -327,74 +392,42 @@ export default function NovoCliente() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Logradouro</label>
+                      <label className="text-sm font-medium">Endereço</label>
                       <Input
-                        placeholder="Rua, Avenida, etc."
-                        value={cliente.endereco.logradouro}
-                        onChange={(e) => atualizarEndereco("logradouro", e.target.value)}
+                        placeholder="Rua, Avenida, número, bairro"
+                        value={cliente.endereco}
+                        onChange={(e) => atualizarEndereco("endereco", e.target.value)}
                         className="mt-1"
                       />
                     </div>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium">Número</label>
-                      <Input
-                        placeholder="123"
-                        value={cliente.endereco.numero}
-                        onChange={(e) => atualizarEndereco("numero", e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Complemento</label>
-                      <Input
-                        placeholder="Apto, Casa, etc."
-                        value={cliente.endereco.complemento}
-                        onChange={(e) => atualizarEndereco("complemento", e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium">Bairro</label>
-                      <Input
-                        placeholder="Nome do bairro"
-                        value={cliente.endereco.bairro}
-                        onChange={(e) => atualizarEndereco("bairro", e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-
                     <div>
                       <label className="text-sm font-medium">Cidade</label>
                       <Input
                         placeholder="Nome da cidade"
-                        value={cliente.endereco.cidade}
+                        value={cliente.cidade}
                         onChange={(e) => atualizarEndereco("cidade", e.target.value)}
                         className="mt-1"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-sm font-medium">Estado</label>
-                    <select
-                      value={cliente.endereco.estado}
-                      onChange={(e) => atualizarEndereco("estado", e.target.value)}
-                      className="w-full mt-1 p-2 border rounded-md bg-background"
-                    >
-                      <option value="">Selecione o estado</option>
-                      {estados.map(estado => (
-                        <option key={estado} value={estado}>
-                          {estado}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="text-sm font-medium">Estado</label>
+                      <select
+                        value={cliente.estado}
+                        onChange={(e) => atualizarEndereco("estado", e.target.value)}
+                        className="w-full mt-1 p-2 border rounded-md bg-background"
+                      >
+                        <option value="">Selecione o estado</option>
+                        {estados.map(estado => (
+                          <option key={estado} value={estado}>
+                            {estado}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -427,8 +460,8 @@ export default function NovoCliente() {
                         step="0.01"
                         min="0"
                         placeholder="0,00"
-                        value={cliente.limiteCredito}
-                        onChange={(e) => atualizarCliente("limiteCredito", parseFloat(e.target.value) || 0)}
+                        value={cliente.limite_credito}
+                        onChange={(e) => atualizarCliente("limite_credito", parseFloat(e.target.value) || 0)}
                         className="mt-1"
                       />
                     </div>
@@ -505,26 +538,26 @@ export default function NovoCliente() {
                         <span>{cliente.telefone}</span>
                       </div>
                     )}
-                    {cliente.cpfCnpj && (
+                    {cliente.cpf_cnpj && (
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <User className="h-4 w-4" />
-                        <span>{cliente.cpfCnpj}</span>
+                        <span>{cliente.cpf_cnpj}</span>
                       </div>
                     )}
-                    {cliente.endereco.cidade && cliente.endereco.estado && (
+                    {cliente.cidade && cliente.estado && (
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />
-                        <span>{cliente.endereco.cidade}, {cliente.endereco.estado}</span>
+                        <span>{cliente.cidade}, {cliente.estado}</span>
                       </div>
                     )}
                   </div>
 
-                  {cliente.limiteCredito > 0 && (
+                  {cliente.limite_credito > 0 && (
                     <div className="pt-2 border-t">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Limite de Crédito:</span>
                         <span className="font-medium text-primary">
-                          {cliente.limiteCredito.toLocaleString("pt-BR", {
+                          {cliente.limite_credito.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
                           })}
@@ -558,13 +591,13 @@ export default function NovoCliente() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {cliente.cpfCnpj ? (
+                {cliente.cpf_cnpj ? (
                   <CheckCircle className="h-4 w-4 text-success" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className="text-sm">
-                  {cliente.tipoPessoa === "fisica" ? "CPF" : "CNPJ"}
+                  {cliente.tipo_pessoa === "fisica" ? "CPF" : "CNPJ"}
                 </span>
               </div>
 
