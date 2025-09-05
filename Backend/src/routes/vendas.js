@@ -53,6 +53,26 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
       params
     );
 
+    // Buscar itens para cada venda
+    const vendasComItens = await Promise.all(
+      vendas.map(async (venda) => {
+        const itens = await query(
+          `SELECT vi.*, p.nome as produto_nome, p.codigo_barras, p.sku
+           FROM venda_itens vi
+           JOIN produtos p ON vi.produto_id = p.id
+           WHERE vi.venda_id = ?
+           ORDER BY vi.id`,
+          [venda.id]
+        );
+        
+        
+        return {
+          ...venda,
+          itens
+        };
+      })
+    );
+
     // Contar total de registros
     const [totalResult] = await query(
       `SELECT COUNT(*) as total FROM vendas v ${whereClause}`,
@@ -63,7 +83,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     const totalPages = Math.ceil(total / limit);
 
     res.json({
-      vendas,
+      vendas: vendasComItens,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),

@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from "@/components/ui/dialog";
 import { 
   Plus, 
   Search, 
@@ -15,96 +22,93 @@ import {
   Eye,
   CreditCard,
   Banknote,
-  Smartphone
+  Smartphone,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useVendas, VendasFilters } from "@/hooks/useVendas";
 
 export default function Vendas() {
   const [termoBusca, setTermoBusca] = useState("");
+  const [filtros, setFiltros] = useState<VendasFilters>({
+    page: 1,
+    limit: 10,
+    q: "",
+    status: ""
+  });
+  const [stats, setStats] = useState<any>(null);
+  const [vendaSelecionada, setVendaSelecionada] = useState<any>(null);
+  const [modalAberto, setModalAberto] = useState(false);
   const navigate = useNavigate();
 
-  const vendas = [
-    {
-      id: "VD001",
-      cliente: "João Silva",
-      data: "2024-01-18",
-      hora: "14:30",
-      itens: 3,
-      total: "R$ 847,90",
-      pagamento: "PIX",
-      status: "concluida",
-      produtos: ["Smartphone Galaxy", "Fone Bluetooth", "Carregador"]
-    },
-    {
-      id: "VD002", 
-      cliente: "Maria Santos",
-      data: "2024-01-18",
-      hora: "13:45",
-      itens: 1,
-      total: "R$ 299,90",
-      pagamento: "Cartão",
-      status: "concluida",
-      produtos: ["Fone Bluetooth Premium"]
-    },
-    {
-      id: "VD003",
-      cliente: "Carlos Lima", 
-      data: "2024-01-18",
-      hora: "12:20",
-      itens: 2,
-      total: "R$ 189,80",
-      pagamento: "Dinheiro",
-      status: "concluida",
-      produtos: ["Carregador USB-C", "Cabo Lightning"]
-    },
-    {
-      id: "VD004",
-      cliente: "Ana Costa",
-      data: "2024-01-18", 
-      hora: "11:15",
-      itens: 1,
-      total: "R$ 2.499,00",
-      pagamento: "PIX",
-      status: "pendente",
-      produtos: ["Smartphone Galaxy S24"]
-    }
-  ];
+  const {
+    vendas,
+    loading,
+    error,
+    pagination,
+    fetchVendas,
+    fetchVendasStats,
+    formatCurrency,
+    formatDateTime,
+    getStatusBadge,
+    getPaymentIcon,
+    getPaymentText
+  } = useVendas();
 
-  const obterBadgeStatus = (status: string) => {
-    switch (status) {
-      case "concluida":
-        return <Badge className="bg-success hover:bg-success/90">Concluída</Badge>;
-      case "pendente":
-        return <Badge className="bg-warning/80 text-warning-foreground">Pendente</Badge>;
-      case "cancelada":
-        return <Badge variant="destructive">Cancelada</Badge>;
-      default:
-        return <Badge variant="secondary">Desconhecido</Badge>;
-    }
+  // Carregar dados iniciais
+  useEffect(() => {
+    fetchVendas(filtros);
+    loadStats();
+  }, []);
+
+  // Carregar estatísticas
+  const loadStats = async () => {
+    const statsData = await fetchVendasStats('hoje');
+    setStats(statsData);
   };
 
-  const obterIconePagamento = (pagamento: string) => {
-    switch (pagamento.toLowerCase()) {
-      case "pix":
-        return <Smartphone className="h-4 w-4" />;
-      case "cartão":
-        return <CreditCard className="h-4 w-4" />;
-      case "dinheiro":
-        return <Banknote className="h-4 w-4" />;
-      default:
-        return <DollarSign className="h-4 w-4" />;
-    }
+  // Buscar vendas com filtros
+  const handleSearch = () => {
+    const novosFiltros = {
+      ...filtros,
+      q: termoBusca,
+      page: 1
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
   };
 
-  const vendasFiltradas = vendas.filter(venda =>
-    venda.cliente.toLowerCase().includes(termoBusca.toLowerCase()) ||
-    venda.id.toLowerCase().includes(termoBusca.toLowerCase())
-  );
+  // Mudar página
+  const handlePageChange = (newPage: number) => {
+    const novosFiltros = {
+      ...filtros,
+      page: newPage
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  };
 
-  const totalVendas = vendas.reduce((acc, venda) => {
-    const valor = parseFloat(venda.total.replace("R$ ", "").replace(".", "").replace(",", "."));
-    return acc + valor;
-  }, 0);
+  // Filtrar por status
+  const handleStatusFilter = (status: string) => {
+    const novosFiltros = {
+      ...filtros,
+      status: status,
+      page: 1
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  };
+
+  // Calcular totais
+  const totalVendas = vendas.reduce((acc, venda) => acc + venda.total, 0);
+  const totalClientes = new Set(vendas.map(v => v.cliente_id).filter(Boolean)).size;
+
+  // Abrir modal com detalhes da venda
+  const abrirDetalhesVenda = (venda: any) => {
+    setVendaSelecionada(venda);
+    setModalAberto(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -130,10 +134,7 @@ export default function Vendas() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Hoje</p>
                 <p className="text-2xl font-bold">
-                  {totalVendas.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                  })}
+                  {stats ? formatCurrency(stats.receita_total) : formatCurrency(totalVendas)}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-primary/10">
@@ -148,7 +149,9 @@ export default function Vendas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Vendas</p>
-                <p className="text-2xl font-bold">{vendas.length}</p>
+                <p className="text-2xl font-bold">
+                  {stats ? stats.total_vendas : vendas.length}
+                </p>
               </div>
               <div className="p-2 rounded-lg bg-secondary/10">
                 <ShoppingCart className="h-5 w-5 text-secondary" />
@@ -163,10 +166,9 @@ export default function Vendas() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
                 <p className="text-2xl font-bold">
-                  {(totalVendas / vendas.length).toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                  })}
+                  {stats ? formatCurrency(stats.ticket_medio) : 
+                   vendas.length > 0 ? formatCurrency(totalVendas / vendas.length) : 
+                   formatCurrency(0)}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-accent/10">
@@ -181,7 +183,7 @@ export default function Vendas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Clientes</p>
-                <p className="text-2xl font-bold">{new Set(vendas.map(v => v.cliente)).size}</p>
+                <p className="text-2xl font-bold">{totalClientes}</p>
               </div>
               <div className="p-2 rounded-lg bg-info/10">
                 <User className="h-5 w-5 text-info" />
@@ -198,80 +200,136 @@ export default function Vendas() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cliente ou ID da venda..."
+                placeholder="Buscar por cliente ou número da venda..."
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Período
+            <Button variant="outline" onClick={handleSearch}>
+              <Search className="h-4 w-4 mr-2" />
+              Buscar
             </Button>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filtros
-            </Button>
+            <div className="flex space-x-2">
+              <Button 
+                variant={filtros.status === '' ? "default" : "outline"}
+                onClick={() => handleStatusFilter('')}
+                size="sm"
+              >
+                Todas
+              </Button>
+              <Button 
+                variant={filtros.status === 'pago' ? "default" : "outline"}
+                onClick={() => handleStatusFilter('pago')}
+                size="sm"
+              >
+                Pagas
+              </Button>
+              <Button 
+                variant={filtros.status === 'pendente' ? "default" : "outline"}
+                onClick={() => handleStatusFilter('pendente')}
+                size="sm"
+              >
+                Pendentes
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Loading e Error States */}
+      {loading && (
+        <Card className="bg-gradient-card shadow-card">
+          <CardContent className="p-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando vendas...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {error && (
+        <Card className="bg-gradient-card shadow-card">
+          <CardContent className="p-12 text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={() => fetchVendas(filtros)}>
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Lista de Vendas */}
-      <div className="space-y-4">
-        {vendasFiltradas.map((venda) => (
-          <Card key={venda.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-lg bg-primary/10">
-                    <ShoppingCart className="h-6 w-6 text-primary" />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold">#{venda.id}</h3>
-                      {obterBadgeStatus(venda.status)}
+      {!loading && !error && (
+        <div className="space-y-4">
+          {vendas.map((venda) => {
+            const statusBadge = getStatusBadge(venda.status);
+            const paymentIcon = getPaymentIcon(venda.forma_pagamento);
+            const paymentText = getPaymentText(venda.forma_pagamento);
+            
+            return (
+              <Card key={venda.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="p-6">
+                  <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-lg bg-primary/10">
+                        <ShoppingCart className="h-6 w-6 text-primary" />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-semibold">#{venda.numero_venda}</h3>
+                          <Badge className={statusBadge.className}>
+                            {statusBadge.text}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {venda.cliente_nome || 'Cliente não informado'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDateTime(venda.data_venda)} • {venda.itens?.length || 0} {venda.itens?.length === 1 ? 'item' : 'itens'}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{venda.cliente}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {venda.data} às {venda.hora} • {venda.itens} {venda.itens === 1 ? 'item' : 'itens'}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">{venda.total}</p>
-                    <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                      {obterIconePagamento(venda.pagamento)}
-                      <span>{venda.pagamento}</span>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">
+                          {formatCurrency(venda.total)}
+                        </p>
+                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                          <span>{paymentIcon}</span>
+                          <span>{paymentText}</span>
+                        </div>
+                      </div>
+
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => abrirDetalhesVenda(venda)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ver Detalhes
+                      </Button>
                     </div>
                   </div>
 
-                  <Button variant="outline" size="sm">
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver Detalhes
-                  </Button>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-              <div className="mt-4 pt-4 border-t border-border/50">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Produtos:</strong> {venda.produtos.join(", ")}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {vendasFiltradas.length === 0 && (
+      {/* Estado vazio */}
+      {!loading && !error && vendas.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
             <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhuma venda encontrada</h3>
             <p className="text-muted-foreground mb-4">
-              {termoBusca ? "Tente ajustar sua busca" : "Registre sua primeira venda"}
+              {termoBusca || filtros.status ? "Tente ajustar sua busca ou filtros" : "Registre sua primeira venda"}
             </p>
             <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
               <Plus className="h-4 w-4 mr-2" />
@@ -280,6 +338,189 @@ export default function Vendas() {
           </CardContent>
         </Card>
       )}
+
+      {/* Paginação */}
+      {!loading && !error && vendas.length > 0 && pagination.totalPages > 1 && (
+        <Card className="bg-gradient-card shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} vendas
+              </p>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrev}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNext}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modal de Detalhes da Venda */}
+      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Receipt className="h-5 w-5" />
+              <span>Detalhes da Venda #{vendaSelecionada?.numero_venda}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Informações completas da venda e itens
+            </DialogDescription>
+          </DialogHeader>
+
+          {vendaSelecionada && (
+            <div className="space-y-6">
+              {/* Informações da Venda */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Informações da Venda</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Número:</span>
+                      <span className="font-medium">#{vendaSelecionada.numero_venda}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Data:</span>
+                      <span className="font-medium">{formatDateTime(vendaSelecionada.data_venda)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Status:</span>
+                      <Badge className={getStatusBadge(vendaSelecionada.status).className}>
+                        {getStatusBadge(vendaSelecionada.status).text}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Forma de Pagamento:</span>
+                      <div className="flex items-center space-x-1">
+                        <span>{getPaymentIcon(vendaSelecionada.forma_pagamento)}</span>
+                        <span className="font-medium">{getPaymentText(vendaSelecionada.forma_pagamento)}</span>
+                      </div>
+                    </div>
+                    {vendaSelecionada.parcelas > 1 && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Parcelas:</span>
+                        <span className="font-medium">{vendaSelecionada.parcelas}x</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Cliente</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Nome:</span>
+                      <span className="font-medium">{vendaSelecionada.cliente_nome || 'Cliente não informado'}</span>
+                    </div>
+                    {vendaSelecionada.cliente_email && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Email:</span>
+                        <span className="font-medium">{vendaSelecionada.cliente_email}</span>
+                      </div>
+                    )}
+                    {vendaSelecionada.vendedor_nome && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Vendedor:</span>
+                        <span className="font-medium">{vendaSelecionada.vendedor_nome}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Itens da Venda */}
+              {vendaSelecionada.itens && vendaSelecionada.itens.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Itens da Venda ({vendaSelecionada.itens.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {vendaSelecionada.itens.map((item: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.produto_nome}</p>
+                            <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
+                              <span>Qtd: {item.quantidade}</span>
+                              <span>•</span>
+                              <span>Unit: {formatCurrency(item.preco_unitario)}</span>
+                              {item.desconto > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-green-600">Desc: {formatCurrency(item.desconto)}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-primary">
+                              {formatCurrency(item.preco_total)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Resumo Financeiro */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Subtotal:</span>
+                    <span className="font-medium">{formatCurrency(vendaSelecionada.subtotal)}</span>
+                  </div>
+                  {vendaSelecionada.desconto > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span className="text-sm">Desconto:</span>
+                      <span className="font-medium">-{formatCurrency(vendaSelecionada.desconto)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                    <span>Total:</span>
+                    <span className="text-primary">{formatCurrency(vendaSelecionada.total)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Observações */}
+              {vendaSelecionada.observacoes && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Observações</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{vendaSelecionada.observacoes}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
