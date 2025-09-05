@@ -13,6 +13,7 @@ export const routes = {
   financeiro: "/financeiro",
   novaTransacao: "/nova-transacao",
   nfe: "/nfe",
+  configuracoes: "/configuracoes",
   login: "/login",
   signup: "/signup",
   esqueciSenha: "/esqueci-senha",
@@ -33,6 +34,7 @@ export const navigationItems = [
   { name: "Relatórios", href: routes.relatorios, icon: "BarChart3" },
   { name: "Financeiro", href: routes.financeiro, icon: "TrendingUp" },
   { name: "NF-e", href: routes.nfe, icon: "Receipt" },
+  { name: "Configurações", href: routes.configuracoes, icon: "Settings" },
 ] as const;
 
 // Botões de ação rápida

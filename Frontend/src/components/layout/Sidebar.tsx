@@ -155,13 +155,27 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
           </div>
           
           {/* Botão de configurações */}
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+          <NavLink
+            to="/dashboard/configuracoes"
+            onClick={() => {
+              // Fecha o sidebar em mobile ao clicar em um item
+              if (window.innerWidth < 1024) {
+                onClose();
+              }
+            }}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 w-full justify-start",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isActive 
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                  : "text-sidebar-foreground"
+              )
+            }
           >
             <Settings className="mr-3 h-4 w-4" />
             Configurações
-          </Button>
+          </NavLink>
           
           {/* Botão de sair */}
           <Button 
