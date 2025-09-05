@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Plus, 
   Search, 
@@ -24,7 +25,12 @@ import {
   Clock,
   Percent,
   Minus,
-  Loader2
+  Loader2,
+  Printer,
+  Building2,
+  Calendar,
+  MapPin,
+  Phone
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { useBuscaProdutos } from "@/hooks/useBuscaProdutos";
@@ -49,7 +55,7 @@ export default function NovaVenda() {
   const { clientesFiltrados, termoBuscaCliente, setTermoBuscaCliente, carregando: carregandoClientes } = useBuscaClientes();
   const { produtosFiltrados, termoBusca, setTermoBusca, carregando: carregandoProdutos } = useBuscaProdutos();
   const { buscarPorCodigo, carregando: carregandoCodigoBarras } = useBuscaCodigoBarras();
-  const { criar: criarVenda, carregando: salvandoVenda } = useCriarVenda();
+  const { criar: criarVenda, loading: salvandoVenda } = useCriarVenda();
   
   const [abaAtiva, setAbaAtiva] = useState("venda-rapida");
   const [cliente, setCliente] = useState<Cliente>({
@@ -86,6 +92,10 @@ export default function NovaVenda() {
     dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   });
   const [usarPagamentoPrazo, setUsarPagamentoPrazo] = useState(false);
+
+  // Estados para modal de nota de venda
+  const [mostrarModalNota, setMostrarModalNota] = useState(false);
+  const [vendaFinalizada, setVendaFinalizada] = useState<any>(null);
 
   // Função para calcular valor com juros e data de vencimento
   const calcularPagamentoPrazo = (dias: string, juros: string) => {
@@ -369,16 +379,27 @@ export default function NovaVenda() {
       // Salvar venda via API
       const vendaCriada = await criarVenda(dadosVenda);
       
+      // Preparar dados para o modal da nota
+      const dadosNota = {
+        ...vendaCriada,
+        cliente: clienteSelecionado,
+        itens: carrinho,
+        metodos_pagamento: metodosFinais,
+        pagamento_prazo: usarPagamentoPrazo ? pagamentoPrazo : undefined,
+        subtotal: subtotal,
+        desconto: valorDesconto,
+        total: totalFinal,
+        data_hora: new Date()
+      };
+      
+      // Mostrar modal da nota
+      setVendaFinalizada(dadosNota);
+      setMostrarModalNota(true);
+      
       toast({
         title: "Venda realizada com sucesso!",
         description: `Venda #${vendaCriada.numero_venda} foi criada`,
       });
-      
-      // Limpar formulário
-      limparVendaRapida();
-      
-      // Navegar para lista de vendas ou dashboard
-      navigate("/dashboard/vendas");
       
     } catch (error: any) {
       toast({
@@ -428,6 +449,52 @@ export default function NovaVenda() {
     // Limpar busca de cliente
     setTermoBuscaCliente("");
     setMostrarSelecaoCliente(false);
+  };
+
+  const fecharModalNota = () => {
+    setMostrarModalNota(false);
+    setVendaFinalizada(null);
+    // Limpar formulário após fechar modal
+    limparVendaRapida();
+    // Navegar para lista de vendas
+    navigate("/dashboard/vendas");
+  };
+
+  const imprimirNota = () => {
+    const conteudoImpressao = document.getElementById('nota-venda-impressao');
+    if (conteudoImpressao) {
+      const janelaImpressao = window.open('', '_blank');
+      if (janelaImpressao) {
+        janelaImpressao.document.write(`
+          <html>
+            <head>
+              <title>Nota de Venda #${vendaFinalizada?.numero_venda || ''}</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                .loja-info { margin-bottom: 15px; }
+                .cliente-info { margin-bottom: 15px; }
+                .itens { margin-bottom: 15px; }
+                .itens table { width: 100%; border-collapse: collapse; }
+                .itens th, .itens td { border: 1px solid #000; padding: 8px; text-align: left; }
+                .itens th { background-color: #f0f0f0; }
+                .totais { margin-top: 15px; }
+                .totais table { width: 100%; }
+                .totais td { padding: 5px; }
+                .total-final { font-weight: bold; font-size: 1.2em; border-top: 2px solid #000; }
+                .footer { margin-top: 20px; text-align: center; font-size: 0.9em; }
+                @media print { body { margin: 0; } }
+              </style>
+            </head>
+            <body>
+              ${conteudoImpressao.innerHTML}
+            </body>
+          </html>
+        `);
+        janelaImpressao.document.close();
+        janelaImpressao.print();
+      }
+    }
   };
 
   return (
@@ -1675,6 +1742,237 @@ export default function NovaVenda() {
           </Card>
         </div>
       </div>
+
+      {/* Modal da Nota de Venda */}
+      <Dialog open={mostrarModalNota} onOpenChange={setMostrarModalNota}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-xl">
+              <Receipt className="h-6 w-6 mr-2" />
+              Nota de Venda #{vendaFinalizada?.numero_venda || ''}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div id="nota-venda-impressao" className="space-y-6">
+            {/* Cabeçalho da Loja */}
+            <div className="text-center border-b pb-4">
+              <div className="flex items-center justify-center mb-2">
+                <Building2 className="h-8 w-8 mr-2 text-primary" />
+                <h2 className="text-2xl font-bold">Kontrolla</h2>
+              </div>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <div className="flex items-center justify-center">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>Rua das Flores, 123 - Centro</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <Phone className="h-4 w-4 mr-1" />
+                  <span>(11) 99999-9999</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <span>CNPJ: 12.345.678/0001-90</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Informações da Venda */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="font-medium">Data:</span>
+                  <span className="ml-2">{vendaFinalizada?.data_hora?.toLocaleDateString('pt-BR') || ''}</span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="font-medium">Horário:</span>
+                  <span className="ml-2">{vendaFinalizada?.data_hora?.toLocaleTimeString('pt-BR') || ''}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Receipt className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="font-medium">Venda:</span>
+                  <span className="ml-2">#{vendaFinalizada?.numero_venda || ''}</span>
+                </div>
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="font-medium">Vendedor:</span>
+                  <span className="ml-2">Sistema</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Informações do Cliente */}
+            {vendaFinalizada?.cliente && (
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-2 flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  Dados do Cliente
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="font-medium">Nome:</span> {vendaFinalizada.cliente.nome}
+                  </div>
+                  <div>
+                    <span className="font-medium">CPF/CNPJ:</span> {vendaFinalizada.cliente.cpf_cnpj}
+                  </div>
+                  {vendaFinalizada.cliente.telefone && (
+                    <div>
+                      <span className="font-medium">Telefone:</span> {vendaFinalizada.cliente.telefone}
+                    </div>
+                  )}
+                  {vendaFinalizada.cliente.email && (
+                    <div>
+                      <span className="font-medium">Email:</span> {vendaFinalizada.cliente.email}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Itens da Venda */}
+            <div className="border rounded-lg">
+              <h3 className="font-medium p-4 border-b flex items-center">
+                <Package className="h-4 w-4 mr-2" />
+                Itens da Venda
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium">Produto</th>
+                      <th className="text-center p-3 text-sm font-medium">Qtd</th>
+                      <th className="text-right p-3 text-sm font-medium">Preço Unit.</th>
+                      <th className="text-right p-3 text-sm font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendaFinalizada?.itens?.map((item: ItemCarrinho, index: number) => (
+                      <tr key={index} className="border-b">
+                        <td className="p-3 text-sm">{item.produto.nome}</td>
+                        <td className="p-3 text-center text-sm">{item.quantidade}</td>
+                        <td className="p-3 text-right text-sm">
+                          {item.precoUnitario.toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          })}
+                        </td>
+                        <td className="p-3 text-right text-sm font-medium">
+                          {item.precoTotal.toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Resumo Financeiro */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-medium mb-3 flex items-center">
+                <Calculator className="h-4 w-4 mr-2" />
+                Resumo Financeiro
+              </h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>{vendaFinalizada?.subtotal?.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  }) || 'R$ 0,00'}</span>
+                </div>
+                
+                {vendaFinalizada?.desconto > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Desconto:</span>
+                    <span>-{vendaFinalizada.desconto.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}</span>
+                  </div>
+                )}
+
+                {/* Métodos de Pagamento */}
+                {vendaFinalizada?.metodos_pagamento?.map((metodo: any, index: number) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="capitalize">{metodo.metodo?.replace('_', ' ')}:</span>
+                    <span>{parseFloat(metodo.valor || 0).toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}</span>
+                  </div>
+                ))}
+
+                {/* Pagamento a Prazo */}
+                {vendaFinalizada?.pagamento_prazo && (
+                  <div className="border-t pt-2 mt-2 space-y-1">
+                    <div className="flex justify-between text-sm text-warning">
+                      <span>Juros ({vendaFinalizada.pagamento_prazo.juros}%):</span>
+                      <span>+{(vendaFinalizada.pagamento_prazo.valorComJuros - vendaFinalizada.total).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium text-warning">
+                      <span>Valor a Prazo:</span>
+                      <span>{vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Vencimento:</span>
+                      <span>{new Date(vendaFinalizada.pagamento_prazo.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-primary">
+                      {vendaFinalizada?.total?.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      }) || 'R$ 0,00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Observações */}
+            {vendaFinalizada?.observacoes && (
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-2">Observações</h3>
+                <p className="text-sm text-muted-foreground">{vendaFinalizada.observacoes}</p>
+              </div>
+            )}
+
+            {/* Rodapé */}
+            <div className="text-center text-sm text-muted-foreground border-t pt-4">
+              <p>Obrigado pela sua compra!</p>
+              <p>Volte sempre!</p>
+            </div>
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={fecharModalNota}>
+              <X className="h-4 w-4 mr-2" />
+              Fechar
+            </Button>
+            <Button onClick={imprimirNota} className="bg-gradient-primary">
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir Nota
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
