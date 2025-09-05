@@ -54,8 +54,8 @@ router.get('/produtos', validatePagination, validateSearch, handleValidationErro
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        ${whereClause} 
        ORDER BY p.destaque DESC, p.nome ASC 
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
     // Contar total de registros

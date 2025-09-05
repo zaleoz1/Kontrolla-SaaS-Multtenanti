@@ -49,8 +49,8 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
        LEFT JOIN usuarios u ON v.usuario_id = u.id
        ${whereClause} 
        ORDER BY v.data_venda DESC 
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
     // Contar total de registros

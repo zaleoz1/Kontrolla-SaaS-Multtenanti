@@ -54,8 +54,8 @@ router.get('/transacoes', validatePagination, validateSearch, handleValidationEr
        LEFT JOIN clientes c ON t.cliente_id = c.id 
        ${whereClause} 
        ORDER BY t.data_transacao DESC, t.data_criacao DESC 
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
     // Contar total de registros
@@ -326,8 +326,8 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
        LEFT JOIN clientes c ON cr.cliente_id = c.id 
        ${whereClause} 
        ORDER BY cr.data_vencimento ASC 
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
     // Contar total de registros
@@ -389,8 +389,8 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
       `SELECT * FROM contas_pagar cp 
        ${whereClause} 
        ORDER BY cp.data_vencimento ASC 
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
     // Contar total de registros

@@ -48,8 +48,8 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
        LEFT JOIN clientes c ON n.cliente_id = c.id 
        ${whereClause} 
        ORDER BY n.data_emissao DESC 
-       LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
     // Contar total de registros
