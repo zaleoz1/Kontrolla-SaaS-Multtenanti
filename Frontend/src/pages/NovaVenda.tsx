@@ -23,17 +23,16 @@ import {
   Barcode,
   Clock,
   Percent,
-  Minus
+  Minus,
+  Loader2
 } from "lucide-react";
-
-interface Produto {
-  id: number;
-  nome: string;
-  preco: number;
-  estoque: number;
-  categoria: string;
-  codigoBarras: string;
-}
+import { useBuscaClientes } from "@/hooks/useBuscaClientes";
+import { useBuscaProdutos } from "@/hooks/useBuscaProdutos";
+import { useBuscaCodigoBarras } from "@/hooks/useProdutos";
+import { Cliente } from "@/hooks/useClientes";
+import { Produto } from "@/hooks/useProdutos";
+import { useCriarVenda, ItemVenda, MetodoPagamento, PagamentoPrazo } from "@/hooks/useVendas";
+import { useToast } from "@/hooks/use-toast";
 
 interface ItemCarrinho {
   produto: Produto;
@@ -42,43 +41,36 @@ interface ItemCarrinho {
   precoTotal: number;
 }
 
-interface Cliente {
-  id?: number;
-  nome: string;
-  email: string;
-  telefone: string;
-  cpfCnpj: string;
-  endereco: string;
-}
-
-interface PagamentoPrazo {
-  dias: string;
-  juros: string;
-  valorComJuros: number;
-  dataVencimento: Date;
-}
-
 export default function NovaVenda() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Hooks para integração com API
+  const { clientesFiltrados, termoBuscaCliente, setTermoBuscaCliente, carregando: carregandoClientes } = useBuscaClientes();
+  const { produtosFiltrados, termoBusca, setTermoBusca, carregando: carregandoProdutos } = useBuscaProdutos();
+  const { buscarPorCodigo, carregando: carregandoCodigoBarras } = useBuscaCodigoBarras();
+  const { criar: criarVenda, carregando: salvandoVenda } = useCriarVenda();
+  
   const [abaAtiva, setAbaAtiva] = useState("venda-rapida");
   const [cliente, setCliente] = useState<Cliente>({
+    id: 0,
     nome: "",
     email: "",
     telefone: "",
-    cpfCnpj: "",
-    endereco: ""
+    cpf_cnpj: "",
+    endereco: "",
+    tipo_pessoa: "fisica",
+    status: "ativo",
+    vip: false,
+    limite_credito: 0,
+    total_compras: 0,
+    data_criacao: "",
+    data_atualizacao: ""
   });
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
-  const [termoBusca, setTermoBusca] = useState("");
   const [codigoBarras, setCodigoBarras] = useState("");
-  const [produtosSelecionados, setProdutosSelecionados] = useState<Produto[]>([]);
-  const [metodosPagamento, setMetodosPagamento] = useState<Array<{
-    metodo: string;
-    valor: string;
-    parcelas?: number;
-    troco?: number;
-  }>>([]);
+  const [metodosPagamento, setMetodosPagamento] = useState<MetodoPagamento[]>([]);
   const [metodoPagamentoUnico, setMetodoPagamentoUnico] = useState("");
   const [parcelas, setParcelas] = useState("");
   const [desconto, setDesconto] = useState("");
@@ -94,9 +86,6 @@ export default function NovaVenda() {
     dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   });
   const [usarPagamentoPrazo, setUsarPagamentoPrazo] = useState(false);
-
-  // Estado para busca de cliente
-  const [termoBuscaCliente, setTermoBuscaCliente] = useState("");
 
   // Função para calcular valor com juros e data de vencimento
   const calcularPagamentoPrazo = (dias: string, juros: string) => {
@@ -155,35 +144,34 @@ export default function NovaVenda() {
     }
   };
 
-  // Dados mockados para demonstração
-  const produtosDisponiveis: Produto[] = [
-    { id: 1, nome: "Smartphone Galaxy S24", preco: 2499.00, estoque: 15, categoria: "Eletrônicos", codigoBarras: "7891234567890" },
-    { id: 2, nome: "Fone Bluetooth Premium", preco: 299.90, estoque: 8, categoria: "Acessórios", codigoBarras: "7891234567891" },
-    { id: 3, nome: "Carregador USB-C 65W", preco: 89.90, estoque: 25, categoria: "Acessórios", codigoBarras: "7891234567892" },
-    { id: 4, nome: "Tablet Android 11", preco: 1299.00, estoque: 12, categoria: "Eletrônicos", codigoBarras: "7891234567893" },
-    { id: 5, nome: "Cabo Lightning", preco: 29.90, estoque: 50, categoria: "Acessórios", codigoBarras: "7891234567894" }
-  ];
+  // Usar produtos filtrados da API
+  const produtosDisponiveis = produtosFiltrados;
 
-  // Clientes mockados para demonstração
-  const clientesCadastrados: Cliente[] = [
-    { id: 1, nome: "João Silva", email: "joao@email.com", telefone: "(11) 99999-9999", cpfCnpj: "123.456.789-00", endereco: "Rua A, 123" },
-    { id: 2, nome: "Maria Santos", email: "maria@email.com", telefone: "(11) 88888-8888", cpfCnpj: "987.654.321-00", endereco: "Rua B, 456" },
-    { id: 3, nome: "Empresa XYZ Ltda", email: "contato@xyz.com", telefone: "(11) 77777-7777", cpfCnpj: "12.345.678/0001-90", endereco: "Av. C, 789" }
-  ];
-
-  const produtosFiltrados = produtosDisponiveis.filter(produto =>
-    produto.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
-    produto.codigoBarras.includes(termoBusca) ||
-    produto.categoria.toLowerCase().includes(termoBusca.toLowerCase())
-  );
-
-  const buscarPorCodigoBarras = () => {
+  const buscarPorCodigoBarras = async () => {
     if (!codigoBarras.trim()) return;
     
-    const produto = produtosDisponiveis.find(p => p.codigoBarras === codigoBarras.trim());
-    if (produto) {
-      adicionarAoCarrinho(produto, 1);
-      setCodigoBarras("");
+    try {
+      const produto = await buscarPorCodigo(codigoBarras.trim());
+      if (produto) {
+        adicionarAoCarrinho(produto, 1);
+        setCodigoBarras("");
+        toast({
+          title: "Produto encontrado",
+          description: `${produto.nome} adicionado ao carrinho`,
+        });
+      } else {
+        toast({
+          title: "Produto não encontrado",
+          description: "Nenhum produto encontrado com este código de barras",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro na busca",
+        description: "Erro ao buscar produto por código de barras",
+        variant: "destructive",
+      });
     }
   };
 
@@ -308,74 +296,97 @@ export default function NovaVenda() {
     }
   }, [usarPagamentoPrazo, metodosPagamento.length]);
 
-  const salvarVenda = () => {
-    // Determinar os métodos de pagamento finais
-    let metodosFinais = metodosPagamento;
-    
-    // Se não há métodos configurados, mas há um método único selecionado, usar o padrão
-    if (metodosPagamento.length === 0 && metodoPagamentoUnico) {
-             if (metodoPagamentoUnico === "dinheiro") {
-         const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
-         metodosFinais = [{ 
-           metodo: metodoPagamentoUnico, 
-           valor: valorDinheiro,
-           troco: Math.max(0, (parseFloat(valorDinheiro) || 0) - valorAlvo)
-         }];
-       } else {
-         const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
-         metodosFinais = [{ metodo: metodoPagamentoUnico, valor: valorAlvo.toString() }];
-       }
-    } else if (metodosPagamento.length > 0) {
-             // Processar métodos múltiplos para calcular troco se houver dinheiro
-       const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
-       metodosFinais = metodosPagamento.map(metodo => {
-         if (metodo.metodo === "dinheiro") {
-           return {
-             ...metodo,
-             troco: Math.max(0, parseFloat(metodo.valor) - (valorAlvo - metodosPagamento.reduce((sum, m) => 
-               m.metodo !== "dinheiro" ? sum + parseFloat(m.valor) : sum, 0)))
-           };
-         }
-         return metodo;
-       });
+  const salvarVenda = async () => {
+    try {
+      // Determinar os métodos de pagamento finais
+      let metodosFinais = metodosPagamento;
+      
+      // Se não há métodos configurados, mas há um método único selecionado, usar o padrão
+      if (metodosPagamento.length === 0 && metodoPagamentoUnico) {
+        if (metodoPagamentoUnico === "dinheiro") {
+          const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
+          metodosFinais = [{ 
+            metodo: metodoPagamentoUnico, 
+            valor: valorDinheiro,
+            troco: Math.max(0, (parseFloat(valorDinheiro) || 0) - valorAlvo)
+          }];
+        } else {
+          const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
+          metodosFinais = [{ metodo: metodoPagamentoUnico, valor: valorAlvo.toString() }];
+        }
+      } else if (metodosPagamento.length > 0) {
+        // Processar métodos múltiplos para calcular troco se houver dinheiro
+        const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
+        metodosFinais = metodosPagamento.map(metodo => {
+          if (metodo.metodo === "dinheiro") {
+            return {
+              ...metodo,
+              troco: Math.max(0, parseFloat(metodo.valor) - (valorAlvo - metodosPagamento.reduce((sum, m) => 
+                m.metodo !== "dinheiro" ? sum + parseFloat(m.valor) : sum, 0)))
+            };
+          }
+          return metodo;
+        });
+      }
+      
+      // Calcular o total final da venda
+      let totalFinal = total;
+      if (metodosPagamento.length > 0 && usarPagamentoPrazo) {
+        const totalPago = metodosPagamento.reduce((sum, m) => sum + parseFloat(m.valor), 0);
+        const valorRestante = total - totalPago;
+        if (valorRestante > 0) {
+          // O total final é a soma do que foi pago + o valor restante com juros
+          totalFinal = totalPago + pagamentoPrazo.valorComJuros;
+        }
+      } else if (usarPagamentoPrazo && metodosPagamento.length === 0) {
+        // Se não há métodos múltiplos, mas há pagamento a prazo, usar o valor com juros
+        totalFinal = pagamentoPrazo.valorComJuros;
+      }
+      
+      // Preparar itens da venda
+      const itensVenda: ItemVenda[] = carrinho.map(item => ({
+        produto_id: item.produto.id,
+        quantidade: item.quantidade,
+        preco_unitario: item.precoUnitario,
+        preco_total: item.precoTotal,
+        desconto: 0
+      }));
+      
+      // Preparar dados da venda
+      const dadosVenda = {
+        cliente_id: clienteSelecionado?.id || null,
+        itens: itensVenda,
+        metodos_pagamento: metodosFinais,
+        pagamento_prazo: usarPagamentoPrazo ? pagamentoPrazo : undefined,
+        subtotal: subtotal,
+        desconto: valorDesconto,
+        total: totalFinal,
+        forma_pagamento: metodosFinais[0]?.metodo || metodoPagamentoUnico,
+        parcelas: parseFloat(parcelas) || 1,
+        observacoes: observacao
+      };
+      
+      // Salvar venda via API
+      const vendaCriada = await criarVenda(dadosVenda);
+      
+      toast({
+        title: "Venda realizada com sucesso!",
+        description: `Venda #${vendaCriada.numero_venda} foi criada`,
+      });
+      
+      // Limpar formulário
+      limparVendaRapida();
+      
+      // Navegar para lista de vendas ou dashboard
+      navigate("/dashboard/vendas");
+      
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar venda",
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
     }
-    
-         // Calcular o total final da venda
-     let totalFinal = total;
-     if (metodosPagamento.length > 0 && usarPagamentoPrazo) {
-       const totalPago = metodosPagamento.reduce((sum, m) => sum + parseFloat(m.valor), 0);
-       const valorRestante = total - totalPago;
-       if (valorRestante > 0) {
-         // O total final é a soma do que foi pago + o valor restante com juros
-         totalFinal = totalPago + pagamentoPrazo.valorComJuros;
-       }
-     } else if (usarPagamentoPrazo && metodosPagamento.length === 0) {
-       // Se não há métodos múltiplos, mas há pagamento a prazo, usar o valor com juros
-       totalFinal = pagamentoPrazo.valorComJuros;
-     }
-     
-     // Aqui seria implementada a lógica para salvar a venda
-     console.log("Venda salva:", {
-       cliente: clienteSelecionado || cliente,
-       carrinho,
-       metodosPagamento: metodosFinais,
-       parcelas,
-       desconto,
-       total,
-       totalFinal,
-       observacao,
-       valorDinheiro: metodoPagamentoUnico === "dinheiro" ? valorDinheiro : undefined,
-       troco: metodoPagamentoUnico === "dinheiro" ? Math.max(0, (parseFloat(valorDinheiro) || 0) - total) : undefined,
-       pagamentoPrazo: usarPagamentoPrazo ? {
-         ...pagamentoPrazo,
-         valorOriginal: metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total,
-         valorComJuros: pagamentoPrazo.valorComJuros,
-         dataVencimento: pagamentoPrazo.dataVencimento,
-         valorRestante: metodosPagamento.length > 0 ? 
-           Math.max(0, pagamentoPrazo.valorComJuros - metodosPagamento.reduce((sum, m) => sum + parseFloat(m.valor), 0)) : 
-           pagamentoPrazo.valorComJuros
-       } : undefined
-     });
   };
 
   const formularioValido = carrinho.length > 0 && (
@@ -437,10 +448,14 @@ export default function NovaVenda() {
           <Button 
             className="w-full md:w-auto bg-gradient-primary" 
             onClick={salvarVenda}
-            disabled={!formularioValido}
+            disabled={!formularioValido || salvandoVenda}
           >
-            <Save className="h-4 w-4 mr-2" />
-            Finalizar Venda
+            {salvandoVenda ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {salvandoVenda ? "Salvando..." : "Finalizar Venda"}
           </Button>
         </div>
       </div>
@@ -514,8 +529,12 @@ export default function NovaVenda() {
                           className="pl-10"
                         />
                       </div>
-                      <Button onClick={buscarPorCodigoBarras} disabled={!codigoBarras.trim()}>
-                        <Search className="h-4 w-4" />
+                      <Button onClick={buscarPorCodigoBarras} disabled={!codigoBarras.trim() || carregandoCodigoBarras}>
+                        {carregandoCodigoBarras ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -582,10 +601,14 @@ export default function NovaVenda() {
                            
                            {/* Lista de Clientes Existentes */}
                            {(() => {
-                             const clientesFiltrados = clientesCadastrados.filter(cliente => 
-                               cliente.nome.toLowerCase().includes(termoBuscaCliente.toLowerCase()) ||
-                               cliente.cpfCnpj.includes(termoBuscaCliente)
-                             );
+                             if (carregandoClientes) {
+                               return (
+                                 <div className="p-3 text-center text-muted-foreground">
+                                   <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                                   <p className="text-sm">Buscando clientes...</p>
+                                 </div>
+                               );
+                             }
                              
                              if (clientesFiltrados.length === 0 && termoBuscaCliente.trim()) {
                                return (
@@ -597,14 +620,14 @@ export default function NovaVenda() {
                              }
                              
                              // Se não há termo de busca, mostrar todos os clientes
-                             const clientesParaMostrar = termoBuscaCliente.trim() ? clientesFiltrados : clientesCadastrados;
+                             const clientesParaMostrar = clientesFiltrados;
                              
                              // Se não há clientes cadastrados
-                             if (clientesParaMostrar.length === 0) {
+                             if (clientesParaMostrar.length === 0 && !carregandoClientes) {
                                return (
                                  <div className="p-3 text-center text-muted-foreground">
-                                   <p className="text-sm">Nenhum cliente cadastrado</p>
-                                   <p className="text-xs">Clique em "Novo Cliente" para adicionar o primeiro cliente</p>
+                                   <p className="text-sm">Nenhum cliente encontrado</p>
+                                   <p className="text-xs">Digite para buscar ou clique em "Novo Cliente" para adicionar</p>
                                  </div>
                                );
                              }
@@ -624,7 +647,7 @@ export default function NovaVenda() {
                                  }}
                                >
                                  <p className="font-medium text-sm">{cliente.nome}</p>
-                                 <p className="text-xs text-muted-foreground">{cliente.cpfCnpj}</p>
+                                 <p className="text-xs text-muted-foreground">{cliente.cpf_cnpj}</p>
                                </div>
                              ));
                            })()}
@@ -637,7 +660,7 @@ export default function NovaVenda() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
-                            <p className="text-xs text-muted-foreground">{clienteSelecionado.cpfCnpj}</p>
+                            <p className="text-xs text-muted-foreground">{clienteSelecionado.cpf_cnpj}</p>
                           </div>
                           <Button
                             variant="outline"
@@ -728,66 +751,78 @@ export default function NovaVenda() {
 
                   {/* Lista de Produtos */}
                   <div className="max-h-80 md:max-h-96 overflow-y-auto space-y-2">
-                    {produtosFiltrados.map((produto) => (
-                      <div key={produto.id} className="flex flex-col space-y-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm md:text-base">{produto.nome}</h4>
-                          <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4 text-xs md:text-sm text-muted-foreground">
-                            <span>{produto.categoria}</span>
-                            <span className="hidden sm:inline">•</span>
-                            <span>Estoque: {produto.estoque} un.</span>
-                            <span className="hidden sm:inline">•</span>
-                            <span className="font-medium text-primary">
-                              {produto.preco.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}
-                            </span>
+                    {carregandoProdutos ? (
+                      <div className="p-3 text-center text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                        <p className="text-sm">Buscando produtos...</p>
+                      </div>
+                    ) : produtosFiltrados.length === 0 ? (
+                      <div className="p-3 text-center text-muted-foreground">
+                        <p className="text-sm">Nenhum produto encontrado</p>
+                        <p className="text-xs">Digite para buscar produtos ou adicione um novo</p>
+                      </div>
+                    ) : (
+                      produtosFiltrados.map((produto) => (
+                        <div key={produto.id} className="flex flex-col space-y-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm md:text-base">{produto.nome}</h4>
+                            <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4 text-xs md:text-sm text-muted-foreground">
+                              <span>{produto.categoria_nome || 'Sem categoria'}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span>Estoque: {produto.estoque} un.</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="font-medium text-primary">
+                                {produto.preco.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                const itemExistente = carrinho.find(item => item.produto.id === produto.id);
+                                if (itemExistente && itemExistente.quantidade > 1) {
+                                  atualizarQuantidade(produto.id, itemExistente.quantidade - 1);
+                                } else if (itemExistente && itemExistente.quantidade === 1) {
+                                  removerDoCarrinho(produto.id);
+                                }
+                              }}
+                              disabled={produto.estoque === 0}
+                              className="px-2 md:px-3 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            
+                            <Input
+                              type="text"
+                              placeholder="0"
+                              value={(() => {
+                                const itemExistente = carrinho.find(item => item.produto.id === produto.id);
+                                return itemExistente ? itemExistente.quantidade : "";
+                              })()}
+                              onChange={(e) => {
+                                const quantidade = parseInt(e.target.value) || 0;
+                                definirQuantidadeCarrinho(produto, quantidade);
+                              }}
+                              className="w-16 md:w-20 text-sm text-center"
+                            />
+                            
+                            <Button 
+                              size="sm" 
+                              onClick={() => adicionarAoCarrinho(produto, 1)}
+                              disabled={produto.estoque === 0}
+                              className="px-2 md:px-3"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              const itemExistente = carrinho.find(item => item.produto.id === produto.id);
-                              if (itemExistente && itemExistente.quantidade > 1) {
-                                atualizarQuantidade(produto.id, itemExistente.quantidade - 1);
-                              } else if (itemExistente && itemExistente.quantidade === 1) {
-                                removerDoCarrinho(produto.id);
-                              }
-                            }}
-                            disabled={produto.estoque === 0}
-                            className="px-2 md:px-3 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          
-                          <Input
-                            type="text"
-                            placeholder="0"
-                            value={(() => {
-                              const itemExistente = carrinho.find(item => item.produto.id === produto.id);
-                              return itemExistente ? itemExistente.quantidade : "";
-                            })()}
-                            onChange={(e) => {
-                              const quantidade = parseInt(e.target.value) || 0;
-                              definirQuantidadeCarrinho(produto, quantidade);
-                            }}
-                            className="w-16 md:w-20 text-sm text-center"
-                          />
-                          
-                          <Button 
-                            size="sm" 
-                            onClick={() => adicionarAoCarrinho(produto, 1)}
-                            disabled={produto.estoque === 0}
-                            className="px-2 md:px-3"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
 
                   {/* Resumo do Carrinho */}
@@ -1348,13 +1383,13 @@ export default function NovaVenda() {
                   {clienteSelecionado ? (
                     <div>
                       <p className="text-sm">{clienteSelecionado.nome}</p>
-                      <p className="text-xs text-muted-foreground">{clienteSelecionado.cpfCnpj}</p>
+                      <p className="text-xs text-muted-foreground">{clienteSelecionado.cpf_cnpj}</p>
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm">{cliente.nome}</p>
-                      {cliente.cpfCnpj && (
-                        <p className="text-xs text-muted-foreground">{cliente.cpfCnpj}</p>
+                      {cliente.cpf_cnpj && (
+                        <p className="text-xs text-muted-foreground">{cliente.cpf_cnpj}</p>
                       )}
                     </div>
                   )}
@@ -1546,10 +1581,14 @@ export default function NovaVenda() {
                 <Button 
                   className="w-full bg-gradient-primary" 
                   onClick={salvarVenda}
-                  disabled={!formularioValido}
+                  disabled={!formularioValido || salvandoVenda}
                 >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Finalizar Venda
+                  {salvandoVenda ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  {salvandoVenda ? "Salvando..." : "Finalizar Venda"}
                 </Button>
                 
                                  {!formularioValido && (
