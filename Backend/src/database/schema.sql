@@ -190,6 +190,33 @@ CREATE TABLE IF NOT EXISTS venda_itens (
     FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
 );
 
+-- Tabela de métodos de pagamento das vendas
+CREATE TABLE IF NOT EXISTS venda_pagamentos (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    venda_id INT NOT NULL,
+    metodo ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque') NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    troco DECIMAL(10,2) DEFAULT 0.00,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
+);
+
+-- Tabela de pagamentos a prazo
+CREATE TABLE IF NOT EXISTS venda_pagamentos_prazo (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    venda_id INT NOT NULL,
+    dias INT NOT NULL,
+    juros DECIMAL(5,2) NOT NULL,
+    valor_original DECIMAL(10,2) NOT NULL,
+    valor_com_juros DECIMAL(10,2) NOT NULL,
+    data_vencimento DATE NOT NULL,
+    status ENUM('pendente', 'pago', 'vencido', 'cancelado') DEFAULT 'pendente',
+    data_pagamento DATE NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
+);
+
 -- Tabela de transações financeiras
 CREATE TABLE IF NOT EXISTS transacoes (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -317,3 +344,7 @@ CREATE INDEX idx_produtos_nome ON produtos(nome);
 CREATE INDEX idx_produtos_codigo_barras ON produtos(codigo_barras);
 CREATE INDEX idx_vendas_numero ON vendas(numero_venda);
 CREATE INDEX idx_vendas_data ON vendas(data_venda);
+CREATE INDEX idx_venda_pagamentos_venda ON venda_pagamentos(venda_id);
+CREATE INDEX idx_venda_pagamentos_prazo_venda ON venda_pagamentos_prazo(venda_id);
+CREATE INDEX idx_venda_pagamentos_prazo_status ON venda_pagamentos_prazo(status);
+CREATE INDEX idx_venda_pagamentos_prazo_vencimento ON venda_pagamentos_prazo(data_vencimento);

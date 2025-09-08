@@ -424,6 +424,13 @@ export const validateVenda = [
   body('itens')
     .isArray({ min: 1 })
     .withMessage('Venda deve ter pelo menos um item'),
+  body('itens')
+    .custom((value) => {
+      if (!Array.isArray(value) || value.length === 0) {
+        throw new Error('Venda deve ter pelo menos um item');
+      }
+      return true;
+    }),
   body('itens.*.produto_id')
     .isInt({ min: 1 })
     .withMessage('ID do produto deve ser um número inteiro positivo'),
@@ -447,8 +454,17 @@ export const validateVenda = [
     .isFloat({ min: 0 })
     .withMessage('Total deve ser um número positivo'),
   body('forma_pagamento')
-    .isIn(['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque'])
-    .withMessage('Forma de pagamento inválida'),
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Permitir null/undefined/vazio
+      }
+      const validMethods = ['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque'];
+      if (!validMethods.includes(value)) {
+        throw new Error('Forma de pagamento inválida');
+      }
+      return true;
+    }),
   body('parcelas')
     .optional()
     .isInt({ min: 1, max: 12 })
@@ -469,6 +485,10 @@ export const validateVenda = [
     .optional()
     .isFloat({ min: 0 })
     .withMessage('Valor do método de pagamento deve ser um número positivo'),
+  body('metodos_pagamento.*.troco')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Troco deve ser um número positivo'),
   body('pagamento_prazo')
     .optional()
     .isObject()
@@ -487,8 +507,40 @@ export const validateVenda = [
     .withMessage('Valor com juros deve ser um número positivo'),
   body('pagamento_prazo.dataVencimento')
     .optional()
-    .isISO8601()
+    .custom((value) => {
+      if (!value) return true;
+      const date = new Date(value);
+      return !isNaN(date.getTime());
+    })
     .withMessage('Data de vencimento deve ser uma data válida'),
+  // Validação customizada para garantir que pelo menos um método de pagamento seja fornecido
+  body()
+    .custom((value) => {
+      const { forma_pagamento, metodos_pagamento, pagamento_prazo } = value;
+      
+      // Se há pagamento a prazo, não precisa validar métodos de pagamento
+      if (pagamento_prazo && pagamento_prazo.dias && pagamento_prazo.juros !== undefined) {
+        return true;
+      }
+      
+      // Se há métodos múltiplos, validar se pelo menos um tem valor
+      if (metodos_pagamento && metodos_pagamento.length > 0) {
+        const temValorValido = metodos_pagamento.some(metodo => 
+          metodo.metodo && metodo.valor && parseFloat(metodo.valor) > 0
+        );
+        if (!temValorValido) {
+          throw new Error('Pelo menos um método de pagamento deve ter valor válido');
+        }
+        return true;
+      }
+      
+      // Se há forma de pagamento única, validar
+      if (forma_pagamento && forma_pagamento !== null) {
+        return true;
+      }
+      
+      throw new Error('É necessário fornecer pelo menos um método de pagamento ou configurar pagamento a prazo');
+    }),
   handleValidationErrors
 ];
 

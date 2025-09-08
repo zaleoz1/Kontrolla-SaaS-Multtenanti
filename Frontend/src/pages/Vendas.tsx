@@ -53,7 +53,8 @@ export default function Vendas() {
     formatDateTime,
     getStatusBadge,
     getPaymentIcon,
-    getPaymentText
+    getPaymentText,
+    getDisplayPaymentMethod
   } = useVendas();
 
   // Carregar dados iniciais
@@ -101,7 +102,16 @@ export default function Vendas() {
   };
 
   // Calcular totais
-  const totalVendas = vendas.reduce((acc, venda) => acc + venda.total, 0);
+  const totalVendas = vendas.reduce((acc, venda) => {
+    // Se a venda tem pagamentos à vista, somar apenas esses valores
+    if (venda.metodos_pagamento && venda.metodos_pagamento.length > 0) {
+      return acc + venda.metodos_pagamento.reduce((sum: number, metodo: any) => 
+        sum + parseFloat(metodo.valor), 0
+      );
+    }
+    // Caso contrário, usar o total da venda (para compatibilidade)
+    return acc + venda.total;
+  }, 0);
   const totalClientes = new Set(vendas.map(v => v.cliente_id).filter(Boolean)).size;
 
   // Abrir modal com detalhes da venda
@@ -265,8 +275,7 @@ export default function Vendas() {
         <div className="space-y-4">
           {vendas.map((venda) => {
             const statusBadge = getStatusBadge(venda.status);
-            const paymentIcon = getPaymentIcon(venda.forma_pagamento);
-            const paymentText = getPaymentText(venda.forma_pagamento);
+            const paymentMethod = getDisplayPaymentMethod(venda);
             
             return (
               <Card key={venda.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
@@ -296,11 +305,32 @@ export default function Vendas() {
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
                         <p className="text-2xl font-bold text-primary">
-                          {formatCurrency(venda.total)}
+                          {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
                         </p>
-                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                          <span>{paymentIcon}</span>
-                          <span>{paymentText}</span>
+                        <div className="text-sm text-muted-foreground">
+                          {/* Exibir múltiplos métodos de pagamento se disponível */}
+                          {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              {venda.metodos_pagamento.map((metodo: any, index: number) => (
+                                <div key={index} className="flex items-center space-x-1">
+                                  <span>{getPaymentIcon(metodo.metodo)}</span>
+                                  <span>{getPaymentText(metodo.metodo)}</span>
+                                </div>
+                              ))}
+                              {/* Exibir pagamento a prazo se houver */}
+                              {venda.pagamento_prazo && (
+                                <div className="flex items-center space-x-1 text-warning">
+                                  <span>⏰</span>
+                                  <span>A Prazo</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1">
+                              <span>{paymentMethod.icon}</span>
+                              <span>{paymentMethod.text}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -385,66 +415,18 @@ export default function Vendas() {
 
           {vendaSelecionada && (
             <div className="space-y-6">
-              {/* Informações da Venda */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Informações da Venda</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Número:</span>
-                      <span className="font-medium">#{vendaSelecionada.numero_venda}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Data:</span>
-                      <span className="font-medium">{formatDateTime(vendaSelecionada.data_venda)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Status:</span>
-                      <Badge className={getStatusBadge(vendaSelecionada.status).className}>
-                        {getStatusBadge(vendaSelecionada.status).text}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Forma de Pagamento:</span>
-                      <div className="flex items-center space-x-1">
-                        <span>{getPaymentIcon(vendaSelecionada.forma_pagamento)}</span>
-                        <span className="font-medium">{getPaymentText(vendaSelecionada.forma_pagamento)}</span>
-                      </div>
-                    </div>
-                    {vendaSelecionada.parcelas > 1 && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Parcelas:</span>
-                        <span className="font-medium">{vendaSelecionada.parcelas}x</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Cliente</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Nome:</span>
-                      <span className="font-medium">{vendaSelecionada.cliente_nome || 'Cliente não informado'}</span>
-                    </div>
-                    {vendaSelecionada.cliente_email && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Email:</span>
-                        <span className="font-medium">{vendaSelecionada.cliente_email}</span>
-                      </div>
-                    )}
-                    {vendaSelecionada.vendedor_nome && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Vendedor:</span>
-                        <span className="font-medium">{vendaSelecionada.vendedor_nome}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Informações Básicas */}
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Cliente:</span>
+                  <span className="font-medium">{vendaSelecionada.cliente_nome || 'Cliente não informado'}</span>
+                </div>
+                {vendaSelecionada.vendedor_nome && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Vendedor:</span>
+                    <span className="font-medium">{vendaSelecionada.vendedor_nome}</span>
+                  </div>
+                )}
               </div>
 
               {/* Itens da Venda */}
@@ -499,12 +481,77 @@ export default function Vendas() {
                       <span className="font-medium">-{formatCurrency(vendaSelecionada.desconto)}</span>
                     </div>
                   )}
+                  
+                  {/* Exibir métodos de pagamento detalhados */}
+                  {vendaSelecionada.metodos_pagamento && vendaSelecionada.metodos_pagamento.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <h4 className="text-sm font-medium mb-2">Métodos de Pagamento:</h4>
+                      <div className="space-y-1">
+                        {vendaSelecionada.metodos_pagamento.map((metodo: any, index: number) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span className="flex items-center space-x-1">
+                              <span>{getPaymentIcon(metodo.metodo)}</span>
+                              <span>{getPaymentText(metodo.metodo)}</span>
+                              {metodo.troco > 0 && (
+                                <span className="text-green-600">(Troco: {formatCurrency(metodo.troco)})</span>
+                              )}
+                            </span>
+                            <span className="font-medium">{formatCurrency(metodo.valor)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-lg font-bold pt-2 border-t">
                     <span>Total:</span>
-                    <span className="text-primary">{formatCurrency(vendaSelecionada.total)}</span>
+                    <span className="text-primary">
+                      {vendaSelecionada.pagamento_prazo ? formatCurrency(vendaSelecionada.pagamento_prazo.valor_com_juros) : formatCurrency(vendaSelecionada.total)}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Pagamento a Prazo */}
+              {vendaSelecionada.pagamento_prazo && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg text-warning">Pagamento a Prazo</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Valor Original:</span>
+                      <span className="font-medium">{formatCurrency(vendaSelecionada.pagamento_prazo.valor_original)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Juros ({vendaSelecionada.pagamento_prazo.juros}%):</span>
+                      <span className="font-medium text-warning">
+                        +{formatCurrency(vendaSelecionada.pagamento_prazo.valor_com_juros - vendaSelecionada.pagamento_prazo.valor_original)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Prazo:</span>
+                      <span className="font-medium">{vendaSelecionada.pagamento_prazo.dias} dias</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Vencimento:</span>
+                      <span className="font-medium">
+                        {new Date(vendaSelecionada.pagamento_prazo.data_vencimento).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                      <span>Total a Pagar:</span>
+                      <span className="text-warning">{formatCurrency(vendaSelecionada.pagamento_prazo.valor_com_juros)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Status:</span>
+                      <Badge className={vendaSelecionada.pagamento_prazo.status === 'pago' ? 'bg-success' : 'bg-warning'}>
+                        {vendaSelecionada.pagamento_prazo.status === 'pago' ? 'Pago' : 'Pendente'}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Observações */}
               {vendaSelecionada.observacoes && (
