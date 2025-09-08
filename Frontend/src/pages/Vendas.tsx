@@ -24,7 +24,9 @@ import {
   Banknote,
   Smartphone,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  CheckCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVendas, VendasFilters } from "@/hooks/useVendas";
@@ -44,6 +46,10 @@ export default function Vendas() {
   const [stats, setStats] = useState<any>(null);
   const [vendaSelecionada, setVendaSelecionada] = useState<any>(null);
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false);
+  const [modalPagarAberto, setModalPagarAberto] = useState(false);
+  const [excluindoVenda, setExcluindoVenda] = useState(false);
+  const [marcandoComoPaga, setMarcandoComoPaga] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -53,6 +59,8 @@ export default function Vendas() {
     pagination,
     fetchVendas,
     fetchVendasStats,
+    deleteVenda,
+    updateVendaStatus,
     formatCurrency,
     formatDateTime,
     getStatusBadge,
@@ -136,10 +144,10 @@ export default function Vendas() {
 
   // Calcular totais
   const totalVendas = vendas.reduce((acc, venda) => {
-    // Se a venda tem pagamentos à vista, somar apenas esses valores
+    // Se a venda tem pagamentos à vista, somar apenas esses valores (excluindo troco)
     if (venda.metodos_pagamento && venda.metodos_pagamento.length > 0) {
       return acc + venda.metodos_pagamento.reduce((sum: number, metodo: any) => 
-        sum + parseFloat(metodo.valor), 0
+        sum + (parseFloat(metodo.valor) - (metodo.troco || 0)), 0
       );
     }
     // Caso contrário, usar o total da venda (para compatibilidade)
@@ -157,6 +165,82 @@ export default function Vendas() {
   const abrirDetalhesVenda = (venda: any) => {
     setVendaSelecionada(venda);
     setModalAberto(true);
+  };
+
+  // Abrir modal de confirmação de exclusão
+  const abrirModalExclusao = () => {
+    setModalExclusaoAberto(true);
+  };
+
+  // Fechar modal de confirmação de exclusão
+  const fecharModalExclusao = () => {
+    setModalExclusaoAberto(false);
+  };
+
+  // Excluir venda
+  const handleExcluirVenda = async () => {
+    if (!vendaSelecionada) return;
+
+    try {
+      setExcluindoVenda(true);
+      await deleteVenda(vendaSelecionada.id);
+      
+      // Fechar modais
+      setModalAberto(false);
+      setModalExclusaoAberto(false);
+      setVendaSelecionada(null);
+      
+      // Recarregar dados
+      await fetchVendas(filtros);
+      await loadStats();
+      
+      // Mostrar mensagem de sucesso
+      // Aqui você pode adicionar um toast de sucesso se tiver implementado
+      console.log('Venda excluída com sucesso');
+    } catch (error) {
+      console.error('Erro ao excluir venda:', error);
+      // Aqui você pode adicionar um toast de erro se tiver implementado
+    } finally {
+      setExcluindoVenda(false);
+    }
+  };
+
+  // Abrir modal de confirmação para marcar como paga
+  const abrirModalPagar = () => {
+    setModalPagarAberto(true);
+  };
+
+  // Fechar modal de confirmação para marcar como paga
+  const fecharModalPagar = () => {
+    setModalPagarAberto(false);
+  };
+
+  // Marcar venda como paga
+  const handleMarcarComoPaga = async () => {
+    if (!vendaSelecionada) return;
+
+    try {
+      setMarcandoComoPaga(true);
+      await updateVendaStatus(vendaSelecionada.id, 'pago');
+      
+      // Fechar modais
+      setModalAberto(false);
+      setModalPagarAberto(false);
+      setVendaSelecionada(null);
+      
+      // Recarregar dados
+      await fetchVendas(filtros);
+      await loadStats();
+      
+      // Mostrar mensagem de sucesso
+      // Aqui você pode adicionar um toast de sucesso se tiver implementado
+      console.log('Venda marcada como paga com sucesso');
+    } catch (error) {
+      console.error('Erro ao marcar venda como paga:', error);
+      // Aqui você pode adicionar um toast de erro se tiver implementado
+    } finally {
+      setMarcandoComoPaga(false);
+    }
   };
 
   return (
@@ -646,8 +730,125 @@ export default function Vendas() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Ações */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex justify-end space-x-2">
+                    {vendaSelecionada.status === 'pendente' && (
+                      <Button 
+                        variant="default" 
+                        onClick={abrirModalPagar}
+                        disabled={marcandoComoPaga}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Marcar como Paga
+                      </Button>
+                    )}
+                    <Button 
+                      variant="destructive" 
+                      onClick={abrirModalExclusao}
+                      disabled={vendaSelecionada.status !== 'pendente'}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Venda
+                    </Button>
+                  </div>
+                  {vendaSelecionada.status !== 'pendente' && (
+                    <p className="text-xs text-muted-foreground mt-2 text-right">
+                      Apenas vendas pendentes podem ser excluídas
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={modalExclusaoAberto} onOpenChange={setModalExclusaoAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              <span>Confirmar Exclusão</span>
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir a venda #{vendaSelecionada?.numero_venda}? 
+              Esta ação não pode ser desfeita e o estoque dos produtos será restaurado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={fecharModalExclusao}
+              disabled={excluindoVenda}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleExcluirVenda}
+              disabled={excluindoVenda}
+            >
+              {excluindoVenda ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação para Marcar como Paga */}
+      <Dialog open={modalPagarAberto} onOpenChange={setModalPagarAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <span>Confirmar Pagamento</span>
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja marcar a venda #{vendaSelecionada?.numero_venda} como paga? 
+              Esta ação alterará o status da venda e afetará as estatísticas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={fecharModalPagar}
+              disabled={marcandoComoPaga}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleMarcarComoPaga}
+              disabled={marcandoComoPaga}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {marcandoComoPaga ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Marcando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Marcar como Paga
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

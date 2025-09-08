@@ -366,10 +366,14 @@ export const useVendas = () => {
           return acc + valorPrazo;
         }
         
-        // Se a venda tem métodos de pagamento, calcular o que ainda está pendente
+        // Se a venda tem métodos de pagamento, calcular o que ainda está pendente (excluindo troco)
         if (venda.metodos_pagamento && venda.metodos_pagamento.length > 0) {
+          const totalPago = venda.metodos_pagamento.reduce((sum: number, metodo: any) => 
+            sum + (parseFloat(metodo.valor) - (metodo.troco || 0)), 0
+          );
           const total = typeof venda.total === 'number' ? venda.total : parseFloat(venda.total) || 0;
-          return acc + total;
+          const valorPendente = total - totalPago;
+          return acc + Math.max(0, valorPendente);
         }
         
         // Caso contrário, usar o total da venda

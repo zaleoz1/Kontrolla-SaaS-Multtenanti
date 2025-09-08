@@ -558,7 +558,7 @@ router.get('/stats/overview', async (req, res) => {
               WHERE vp.venda_id = v.id
             ) THEN 
               COALESCE(
-                (SELECT SUM(vp.valor) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
+                (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
                 v.total
               )
             ELSE 0 
@@ -571,7 +571,7 @@ router.get('/stats/overview', async (req, res) => {
               WHERE vp.venda_id = v.id
             ) THEN 
               COALESCE(
-                (SELECT SUM(vp.valor) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
+                (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
                 v.total
               )
             ELSE NULL 
