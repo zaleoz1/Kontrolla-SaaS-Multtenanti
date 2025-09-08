@@ -272,22 +272,22 @@ export const useVendas = () => {
   const getPaymentIcon = (forma_pagamento: Venda['forma_pagamento']) => {
     switch (forma_pagamento) {
       case 'pix':
-        return '📱';
+        return '';
       case 'cartao_credito':
       case 'cartao_debito':
-        return '💳';
+        return '';
       case 'dinheiro':
-        return '💵';
+        return '';
       case 'transferencia':
-        return '🏦';
+        return '';
       case 'boleto':
-        return '📄';
+        return '';
       case 'cheque':
-        return '📝';
+        return '';
       case 'prazo':
-        return '⏰';
+        return '';
       default:
-        return '💰';
+        return '';
     }
   };
 
@@ -309,9 +309,19 @@ export const useVendas = () => {
       case 'cheque':
         return 'Cheque';
       case 'prazo':
-        return 'A Prazo';
+        return 'Prazo';
       default:
         return 'Outro';
+    }
+  };
+
+  // Obter cor da forma de pagamento
+  const getPaymentColor = (forma_pagamento: Venda['forma_pagamento']) => {
+    switch (forma_pagamento) {
+      case 'prazo':
+        return 'text-yellow-600';
+      default:
+        return 'text-muted-foreground';
     }
   };
 
@@ -324,13 +334,63 @@ export const useVendas = () => {
   const getDisplayPaymentMethod = (venda: Venda) => {
     if (isVendaPrazo(venda)) {
       return {
-        icon: '⏰',
-        text: 'A Prazo'
+        icon: '',
+        text: 'Prazo',
+        color: 'text-yellow-600'
       };
     }
     return {
       icon: getPaymentIcon(venda.forma_pagamento),
-      text: getPaymentText(venda.forma_pagamento)
+      text: getPaymentText(venda.forma_pagamento),
+      color: 'text-muted-foreground'
+    };
+  };
+
+  // Calcular saldo pendente total
+  const calcularSaldoPendente = (vendasList: Venda[]) => {
+    if (!vendasList || !Array.isArray(vendasList)) {
+      return 0;
+    }
+    
+    const resultado = vendasList.reduce((acc, venda) => {
+      if (!venda || typeof venda.status !== 'string') {
+        return acc;
+      }
+      
+      if (venda.status === 'pendente') {
+        // Se a venda tem pagamento a prazo pendente, usar esse valor
+        if (venda.pagamento_prazo && venda.pagamento_prazo.status === 'pendente') {
+          const valorPrazo = typeof venda.pagamento_prazo.valor_com_juros === 'number' 
+            ? venda.pagamento_prazo.valor_com_juros 
+            : parseFloat(venda.pagamento_prazo.valor_com_juros) || 0;
+          return acc + valorPrazo;
+        }
+        
+        // Se a venda tem métodos de pagamento, calcular o que ainda está pendente
+        if (venda.metodos_pagamento && venda.metodos_pagamento.length > 0) {
+          const total = typeof venda.total === 'number' ? venda.total : parseFloat(venda.total) || 0;
+          return acc + total;
+        }
+        
+        // Caso contrário, usar o total da venda
+        const total = typeof venda.total === 'number' ? venda.total : parseFloat(venda.total) || 0;
+        return acc + total;
+      }
+      return acc;
+    }, 0);
+    
+    return resultado;
+  };
+
+  // Calcular estatísticas de vendas pendentes
+  const calcularEstatisticasPendentes = (vendasList: Venda[]) => {
+    const vendasPendentes = vendasList.filter(venda => venda.status === 'pendente');
+    const saldoPendente = calcularSaldoPendente(vendasList);
+    
+    return {
+      quantidade: vendasPendentes.length,
+      valorTotal: saldoPendente,
+      valorMedio: vendasPendentes.length > 0 ? saldoPendente / vendasPendentes.length : 0
     };
   };
 
@@ -351,8 +411,11 @@ export const useVendas = () => {
     getStatusBadge,
     getPaymentIcon,
     getPaymentText,
+    getPaymentColor,
     isVendaPrazo,
-    getDisplayPaymentMethod
+    getDisplayPaymentMethod,
+    calcularSaldoPendente,
+    calcularEstatisticasPendentes
   };
 };
 

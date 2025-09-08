@@ -163,6 +163,17 @@ export default function NovaVenda() {
     try {
       const produto = await buscarPorCodigo(codigoBarras.trim());
       if (produto) {
+        // Verificar se o produto está esgotado antes de adicionar
+        if (produto.estoque === 0) {
+          toast({
+            title: "Produto sem estoque",
+            description: `${produto.nome} não está disponível para venda`,
+            variant: "destructive",
+          });
+          setCodigoBarras("");
+          return;
+        }
+        
         adicionarAoCarrinho(produto, 1);
         setCodigoBarras("");
         toast({
@@ -186,6 +197,16 @@ export default function NovaVenda() {
   };
 
   const adicionarAoCarrinho = (produto: Produto, quantidade: number = 1) => {
+    // Verificar se o produto está esgotado
+    if (produto.estoque === 0) {
+      toast({
+        title: "Produto sem estoque",
+        description: `${produto.nome} não está disponível para venda`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const itemExistente = carrinho.find(item => item.produto.id === produto.id);
     
     if (itemExistente) {
@@ -212,6 +233,16 @@ export default function NovaVenda() {
   };
 
   const definirQuantidadeCarrinho = (produto: Produto, quantidade: number) => {
+    // Verificar se o produto está esgotado
+    if (produto.estoque === 0) {
+      toast({
+        title: "Produto sem estoque",
+        description: `${produto.nome} não está disponível para venda`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const itemExistente = carrinho.find(item => item.produto.id === produto.id);
     
     if (quantidade <= 0) {
@@ -1072,13 +1103,19 @@ export default function NovaVenda() {
                       </div>
                     ) : (
                       produtosFiltrados.map((produto) => (
-                        <div key={produto.id} className="flex flex-col space-y-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                        <div key={produto.id} className={`flex flex-col space-y-3 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between sm:space-y-0 ${
+                          produto.estoque === 0 
+                            ? 'bg-red-50 border-red-200 hover:bg-red-100' 
+                            : 'bg-muted/30 hover:bg-muted/50'
+                        }`}>
                           <div className="flex-1">
                             <h4 className="font-medium text-sm md:text-base">{produto.nome}</h4>
                             <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4 text-xs md:text-sm text-muted-foreground">
                               <span>{produto.categoria_nome || 'Sem categoria'}</span>
                               <span className="hidden sm:inline">•</span>
-                              <span>Estoque: {produto.estoque} un.</span>
+                              <span className={produto.estoque === 0 ? 'text-red-600 font-medium' : ''}>
+                                Estoque: {produto.estoque} un.
+                              </span>
                               <span className="hidden sm:inline">•</span>
                               <span className="font-medium text-primary">
                                 {produto.preco.toLocaleString("pt-BR", {
@@ -1101,7 +1138,7 @@ export default function NovaVenda() {
                                 }
                               }}
                               disabled={produto.estoque === 0}
-                              className="px-2 md:px-3 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
+                              className="px-2 md:px-3 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
@@ -1117,14 +1154,15 @@ export default function NovaVenda() {
                                 const quantidade = parseInt(e.target.value) || 0;
                                 definirQuantidadeCarrinho(produto, quantidade);
                               }}
-                              className="w-16 md:w-20 text-sm text-center"
+                              disabled={produto.estoque === 0}
+                              className="w-16 md:w-20 text-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             
                             <Button 
                               size="sm" 
                               onClick={() => adicionarAoCarrinho(produto, 1)}
                               disabled={produto.estoque === 0}
-                              className="px-2 md:px-3"
+                              className="px-2 md:px-3 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
