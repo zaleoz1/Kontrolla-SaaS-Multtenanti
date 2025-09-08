@@ -31,11 +31,15 @@ import { useVendas, VendasFilters } from "@/hooks/useVendas";
 
 export default function Vendas() {
   const [termoBusca, setTermoBusca] = useState("");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
   const [filtros, setFiltros] = useState<VendasFilters>({
     page: 1,
     limit: 10,
     q: "",
-    status: ""
+    status: "",
+    data_inicio: "",
+    data_fim: ""
   });
   const [stats, setStats] = useState<any>(null);
   const [vendaSelecionada, setVendaSelecionada] = useState<any>(null);
@@ -54,7 +58,10 @@ export default function Vendas() {
     getStatusBadge,
     getPaymentIcon,
     getPaymentText,
-    getDisplayPaymentMethod
+    getPaymentColor,
+    getDisplayPaymentMethod,
+    calcularSaldoPendente,
+    calcularEstatisticasPendentes
   } = useVendas();
 
   // Carregar dados iniciais
@@ -101,6 +108,32 @@ export default function Vendas() {
     fetchVendas(novosFiltros);
   };
 
+  // Filtrar por data
+  const handleDataFilter = () => {
+    const novosFiltros = {
+      ...filtros,
+      data_inicio: dataInicio,
+      data_fim: dataFim,
+      page: 1
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  };
+
+  // Limpar filtros de data
+  const limparFiltrosData = () => {
+    setDataInicio("");
+    setDataFim("");
+    const novosFiltros = {
+      ...filtros,
+      data_inicio: "",
+      data_fim: "",
+      page: 1
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  };
+
   // Calcular totais
   const totalVendas = vendas.reduce((acc, venda) => {
     // Se a venda tem pagamentos à vista, somar apenas esses valores
@@ -112,6 +145,12 @@ export default function Vendas() {
     // Caso contrário, usar o total da venda (para compatibilidade)
     return acc + venda.total;
   }, 0);
+  
+  // Calcular estatísticas de vendas pendentes
+  const estatisticasPendentes = calcularEstatisticasPendentes(vendas);
+  const saldoPendente = estatisticasPendentes.valorTotal;
+  
+  
   const totalClientes = new Set(vendas.map(v => v.cliente_id).filter(Boolean)).size;
 
   // Abrir modal com detalhes da venda
@@ -174,15 +213,16 @@ export default function Vendas() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
-                <p className="text-2xl font-bold">
-                  {stats ? formatCurrency(stats.ticket_medio) : 
-                   vendas.length > 0 ? formatCurrency(totalVendas / vendas.length) : 
-                   formatCurrency(0)}
+                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {formatCurrency(saldoPendente || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {estatisticasPendentes.quantidade} {estatisticasPendentes.quantidade === 1 ? 'venda' : 'vendas'} pendente{estatisticasPendentes.quantidade !== 1 ? 's' : ''}
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-accent/10">
-                <Receipt className="h-5 w-5 text-accent" />
+              <div className="p-2 rounded-lg bg-yellow-100">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
@@ -206,43 +246,90 @@ export default function Vendas() {
       {/* Filtros */}
       <Card className="bg-gradient-card shadow-card">
         <CardContent className="p-6">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por cliente ou número da venda..."
-                value={termoBusca}
-                onChange={(e) => setTermoBusca(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10"
-              />
+          <div className="space-y-4">
+            {/* Busca e Status */}
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por cliente ou número da venda..."
+                  value={termoBusca}
+                  onChange={(e) => setTermoBusca(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="pl-10"
+                />
+              </div>
+              <Button variant="outline" onClick={handleSearch}>
+                <Search className="h-4 w-4 mr-2" />
+                Buscar
+              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  variant={filtros.status === '' ? "default" : "outline"}
+                  onClick={() => handleStatusFilter('')}
+                  size="sm"
+                >
+                  Todas
+                </Button>
+                <Button 
+                  variant={filtros.status === 'pago' ? "default" : "outline"}
+                  onClick={() => handleStatusFilter('pago')}
+                  size="sm"
+                >
+                  Pagas
+                </Button>
+                <Button 
+                  variant={filtros.status === 'pendente' ? "default" : "outline"}
+                  onClick={() => handleStatusFilter('pendente')}
+                  size="sm"
+                >
+                  Pendentes
+                </Button>
+              </div>
             </div>
-            <Button variant="outline" onClick={handleSearch}>
-              <Search className="h-4 w-4 mr-2" />
-              Buscar
-            </Button>
-            <div className="flex space-x-2">
-              <Button 
-                variant={filtros.status === '' ? "default" : "outline"}
-                onClick={() => handleStatusFilter('')}
-                size="sm"
-              >
-                Todas
-              </Button>
-              <Button 
-                variant={filtros.status === 'pago' ? "default" : "outline"}
-                onClick={() => handleStatusFilter('pago')}
-                size="sm"
-              >
-                Pagas
-              </Button>
-              <Button 
-                variant={filtros.status === 'pendente' ? "default" : "outline"}
-                onClick={() => handleStatusFilter('pendente')}
-                size="sm"
-              >
-                Pendentes
-              </Button>
+
+            {/* Filtros de Data */}
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+              <div className="flex space-x-2">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">De:</span>
+                </div>
+                <Input
+                  type="date"
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">Até:</span>
+                <Input
+                  type="date"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleDataFilter}
+                  disabled={!dataInicio || !dataFim}
+                  size="sm"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Filtrar Data
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={limparFiltrosData}
+                  disabled={!dataInicio && !dataFim}
+                  size="sm"
+                >
+                  Limpar
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -261,8 +348,7 @@ export default function Vendas() {
       {error && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
-            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-muted-foreground mb-4">Venda não encontrada, atualize ou tente mais tarde!</p>
             <Button onClick={() => fetchVendas(filtros)}>
               Tentar Novamente
             </Button>
@@ -307,28 +393,25 @@ export default function Vendas() {
                         <p className="text-2xl font-bold text-primary">
                           {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
                         </p>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-muted-foreground text-right">
                           {/* Exibir múltiplos métodos de pagamento se disponível */}
                           {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               {venda.metodos_pagamento.map((metodo: any, index: number) => (
                                 <div key={index} className="flex items-center space-x-1">
-                                  <span>{getPaymentIcon(metodo.metodo)}</span>
-                                  <span>{getPaymentText(metodo.metodo)}</span>
+                                  <span className={getPaymentColor(metodo.metodo)}>{getPaymentText(metodo.metodo)}</span>
                                 </div>
                               ))}
                               {/* Exibir pagamento a prazo se houver */}
                               {venda.pagamento_prazo && (
-                                <div className="flex items-center space-x-1 text-warning">
-                                  <span>⏰</span>
-                                  <span>A Prazo</span>
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-yellow-600">Prazo</span>
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center space-x-1">
-                              <span>{paymentMethod.icon}</span>
-                              <span>{paymentMethod.text}</span>
+                            <div className="flex items-center justify-end space-x-1">
+                              <span className={paymentMethod.color}>{paymentMethod.text}</span>
                             </div>
                           )}
                         </div>
@@ -490,8 +573,7 @@ export default function Vendas() {
                         {vendaSelecionada.metodos_pagamento.map((metodo: any, index: number) => (
                           <div key={index} className="flex justify-between text-sm">
                             <span className="flex items-center space-x-1">
-                              <span>{getPaymentIcon(metodo.metodo)}</span>
-                              <span>{getPaymentText(metodo.metodo)}</span>
+                              <span className={getPaymentColor(metodo.metodo)}>{getPaymentText(metodo.metodo)}</span>
                               {metodo.troco > 0 && (
                                 <span className="text-green-600">(Troco: {formatCurrency(metodo.troco)})</span>
                               )}
@@ -516,7 +598,7 @@ export default function Vendas() {
               {vendaSelecionada.pagamento_prazo && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg text-warning">Pagamento a Prazo</CardTitle>
+                    <CardTitle className="text-lg text-yellow-600">Pagamento a Prazo</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between">
@@ -525,7 +607,7 @@ export default function Vendas() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Juros ({vendaSelecionada.pagamento_prazo.juros}%):</span>
-                      <span className="font-medium text-warning">
+                      <span className="font-medium text-yellow-600">
                         +{formatCurrency(vendaSelecionada.pagamento_prazo.valor_com_juros - vendaSelecionada.pagamento_prazo.valor_original)}
                       </span>
                     </div>
@@ -541,7 +623,7 @@ export default function Vendas() {
                     </div>
                     <div className="flex justify-between text-lg font-bold pt-2 border-t">
                       <span>Total a Pagar:</span>
-                      <span className="text-warning">{formatCurrency(vendaSelecionada.pagamento_prazo.valor_com_juros)}</span>
+                      <span className="text-yellow-600">{formatCurrency(vendaSelecionada.pagamento_prazo.valor_com_juros)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Status:</span>
