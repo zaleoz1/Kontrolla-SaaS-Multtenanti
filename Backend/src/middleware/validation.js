@@ -419,8 +419,16 @@ export const validateProduto = [
 export const validateVenda = [
   body('cliente_id')
     .optional()
-    .isInt({ min: 1 })
-    .withMessage('ID do cliente deve ser um número inteiro positivo'),
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Permitir null/undefined/vazio
+      }
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 1) {
+        throw new Error('ID do cliente deve ser um número inteiro positivo');
+      }
+      return true;
+    }),
   body('itens')
     .isArray({ min: 1 })
     .withMessage('Venda deve ter pelo menos um item'),
