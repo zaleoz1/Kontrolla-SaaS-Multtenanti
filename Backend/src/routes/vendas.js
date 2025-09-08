@@ -53,7 +53,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
       params
     );
 
-    // Buscar itens para cada venda
+    // Buscar itens e métodos de pagamento para cada venda
     const vendasComItens = await Promise.all(
       vendas.map(async (venda) => {
         const itens = await query(
@@ -64,11 +64,30 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
            ORDER BY vi.id`,
           [venda.id]
         );
-        
+
+        // Buscar métodos de pagamento
+        const metodosPagamento = await query(
+          `SELECT metodo, valor, troco
+           FROM venda_pagamentos
+           WHERE venda_id = ?
+           ORDER BY id`,
+          [venda.id]
+        );
+
+        // Buscar pagamento a prazo (se houver)
+        const pagamentoPrazo = await query(
+          `SELECT dias, juros, valor_original, valor_com_juros, data_vencimento, status
+           FROM venda_pagamentos_prazo
+           WHERE venda_id = ?
+           ORDER BY id`,
+          [venda.id]
+        );
         
         return {
           ...venda,
-          itens
+          itens,
+          metodos_pagamento: metodosPagamento,
+          pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null
         };
       })
     );
@@ -132,10 +151,30 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
       [id]
     );
 
+    // Buscar métodos de pagamento
+    const metodosPagamento = await query(
+      `SELECT metodo, valor, troco
+       FROM venda_pagamentos
+       WHERE venda_id = ?
+       ORDER BY id`,
+      [id]
+    );
+
+    // Buscar pagamento a prazo (se houver)
+    const pagamentoPrazo = await query(
+      `SELECT dias, juros, valor_original, valor_com_juros, data_vencimento, status
+       FROM venda_pagamentos_prazo
+       WHERE venda_id = ?
+       ORDER BY id`,
+      [id]
+    );
+
     res.json({
       venda: {
         ...vendas[0],
-        itens
+        itens,
+        metodos_pagamento: metodosPagamento,
+        pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null
       }
     });
   } catch (error) {
@@ -156,6 +195,8 @@ router.post('/', validateVenda, async (req, res) => {
       desconto = 0,
       total,
       forma_pagamento,
+      metodos_pagamento = [],
+      pagamento_prazo,
       parcelas = 1,
       observacoes,
       status = 'pendente'
@@ -166,9 +207,21 @@ router.post('/', validateVenda, async (req, res) => {
       cliente_id,
       total,
       forma_pagamento,
+      metodos_pagamento,
+      pagamento_prazo,
       status,
       usarPagamentoPrazo: req.body.pagamento_prazo ? true : false
     });
+    
+    // Debug: verificar estrutura dos métodos de pagamento
+    if (metodos_pagamento && metodos_pagamento.length > 0) {
+      console.log('Métodos de pagamento detalhados:', metodos_pagamento);
+    }
+    
+    // Debug: verificar estrutura do pagamento a prazo
+    if (pagamento_prazo) {
+      console.log('Pagamento a prazo detalhado:', pagamento_prazo);
+    }
 
     // Verificar se cliente existe (se fornecido)
     if (cliente_id) {
@@ -215,6 +268,15 @@ router.post('/', validateVenda, async (req, res) => {
     // Gerar número da venda
     const numeroVenda = await gerarNumeroVenda(req.user.tenant_id);
 
+    // Determinar forma de pagamento principal (para compatibilidade)
+    let formaPagamentoPrincipal = forma_pagamento;
+    if (metodos_pagamento && metodos_pagamento.length > 0) {
+      formaPagamentoPrincipal = metodos_pagamento[0].metodo;
+    } else if (pagamento_prazo) {
+      // Se há pagamento a prazo mas não há métodos de pagamento, usar um valor padrão
+      formaPagamentoPrincipal = 'pix'; // Valor padrão para pagamento a prazo
+    }
+
     // Iniciar transação
     const result = await queryWithResult(
       `INSERT INTO vendas (
@@ -223,7 +285,7 @@ router.post('/', validateVenda, async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, cliente_id, req.user.id, numeroVenda, subtotal,
-        desconto, total, forma_pagamento, parcelas, observacoes, status
+        desconto, total, formaPagamentoPrincipal, parcelas, observacoes, status
       ]
     );
 
@@ -248,6 +310,42 @@ router.post('/', validateVenda, async (req, res) => {
       );
     }
 
+    // Salvar métodos de pagamento (se houver)
+    if (metodos_pagamento && metodos_pagamento.length > 0) {
+      for (const metodo of metodos_pagamento) {
+        await query(
+          `INSERT INTO venda_pagamentos (venda_id, metodo, valor, troco)
+           VALUES (?, ?, ?, ?)`,
+          [vendaId, metodo.metodo, metodo.valor, metodo.troco || 0]
+        );
+      }
+    } else if (forma_pagamento && !pagamento_prazo) {
+      // Fallback para método único (compatibilidade) - apenas se não há pagamento a prazo
+      await query(
+        `INSERT INTO venda_pagamentos (venda_id, metodo, valor, troco)
+         VALUES (?, ?, ?, ?)`,
+        [vendaId, forma_pagamento, total, 0]
+      );
+    }
+
+    // Salvar pagamento a prazo (se houver)
+    if (pagamento_prazo) {
+      await query(
+        `INSERT INTO venda_pagamentos_prazo (
+          venda_id, dias, juros, valor_original, valor_com_juros, data_vencimento, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          vendaId,
+          pagamento_prazo.dias,
+          pagamento_prazo.juros,
+          pagamento_prazo.valorOriginal || pagamento_prazo.valor_original || total,
+          pagamento_prazo.valorComJuros,
+          new Date(pagamento_prazo.dataVencimento).toISOString().split('T')[0], // Converter para formato YYYY-MM-DD
+          'pendente'
+        ]
+      );
+    }
+
     // Atualizar total de compras do cliente (se houver)
     if (cliente_id) {
       await query(
@@ -256,7 +354,7 @@ router.post('/', validateVenda, async (req, res) => {
       );
     }
 
-    // Buscar venda criada
+    // Buscar venda criada com métodos de pagamento
     const [venda] = await query(
       `SELECT v.*, c.nome as cliente_nome, c.email as cliente_email, u.nome as vendedor_nome
        FROM vendas v 
@@ -266,9 +364,31 @@ router.post('/', validateVenda, async (req, res) => {
       [vendaId]
     );
 
+    // Buscar métodos de pagamento da venda criada
+    const metodosPagamento = await query(
+      `SELECT metodo, valor, troco
+       FROM venda_pagamentos
+       WHERE venda_id = ?
+       ORDER BY id`,
+      [vendaId]
+    );
+
+    // Buscar pagamento a prazo (se houver)
+    const pagamentoPrazo = await query(
+      `SELECT dias, juros, valor_original, valor_com_juros, data_vencimento, status
+       FROM venda_pagamentos_prazo
+       WHERE venda_id = ?
+       ORDER BY id`,
+      [vendaId]
+    );
+
     res.status(201).json({
       message: 'Venda criada com sucesso',
-      venda
+      venda: {
+        ...venda,
+        metodos_pagamento: metodosPagamento,
+        pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null
+      }
     });
   } catch (error) {
     console.error('Erro ao criar venda:', error);
@@ -419,11 +539,45 @@ router.get('/stats/overview', async (req, res) => {
     const stats = await query(
       `SELECT 
         COUNT(*) as total_vendas,
-        COUNT(CASE WHEN status = 'pago' THEN 1 END) as vendas_pagas,
-        COUNT(CASE WHEN status = 'pendente' THEN 1 END) as vendas_pendentes,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_total,
-        COALESCE(AVG(CASE WHEN status = 'pago' THEN total ELSE NULL END), 0) as ticket_medio
-      FROM vendas 
+        COUNT(CASE 
+          WHEN status = 'pago' OR EXISTS(
+            SELECT 1 FROM venda_pagamentos vp 
+            WHERE vp.venda_id = v.id
+          ) THEN 1 
+        END) as vendas_pagas,
+        COUNT(CASE 
+          WHEN status = 'pendente' AND NOT EXISTS(
+            SELECT 1 FROM venda_pagamentos vp 
+            WHERE vp.venda_id = v.id
+          ) THEN 1 
+        END) as vendas_pendentes,
+        COALESCE(
+          SUM(CASE 
+            WHEN status = 'pago' OR EXISTS(
+              SELECT 1 FROM venda_pagamentos vp 
+              WHERE vp.venda_id = v.id
+            ) THEN 
+              COALESCE(
+                (SELECT SUM(vp.valor) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
+                v.total
+              )
+            ELSE 0 
+          END), 0
+        ) as receita_total,
+        COALESCE(
+          AVG(CASE 
+            WHEN status = 'pago' OR EXISTS(
+              SELECT 1 FROM venda_pagamentos vp 
+              WHERE vp.venda_id = v.id
+            ) THEN 
+              COALESCE(
+                (SELECT SUM(vp.valor) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
+                v.total
+              )
+            ELSE NULL 
+          END), 0
+        ) as ticket_medio
+      FROM vendas v
       ${whereClause}`,
       params
     );

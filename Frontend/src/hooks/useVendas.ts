@@ -31,7 +31,7 @@ export interface Venda {
   subtotal: number;
   desconto: number;
   total: number;
-  forma_pagamento: 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'pix' | 'transferencia' | 'boleto' | 'cheque';
+  forma_pagamento: 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'pix' | 'transferencia' | 'boleto' | 'cheque' | 'prazo';
   parcelas: number;
   observacoes?: string;
   cliente_id?: number;
@@ -39,6 +39,15 @@ export interface Venda {
   cliente_email?: string;
   vendedor_nome?: string;
   itens?: VendaItem[];
+  metodos_pagamento?: MetodoPagamento[];
+  pagamento_prazo?: {
+    dias: number;
+    juros: number;
+    valor_original: number;
+    valor_com_juros: number;
+    data_vencimento: string;
+    status: 'pendente' | 'pago';
+  };
 }
 
 export interface VendaItem {
@@ -275,6 +284,8 @@ export const useVendas = () => {
         return '📄';
       case 'cheque':
         return '📝';
+      case 'prazo':
+        return '⏰';
       default:
         return '💰';
     }
@@ -297,9 +308,30 @@ export const useVendas = () => {
         return 'Boleto';
       case 'cheque':
         return 'Cheque';
+      case 'prazo':
+        return 'A Prazo';
       default:
         return 'Outro';
     }
+  };
+
+  // Verificar se uma venda é a prazo
+  const isVendaPrazo = (venda: Venda) => {
+    return venda.pagamento_prazo !== null && venda.pagamento_prazo !== undefined;
+  };
+
+  // Obter forma de pagamento para exibição (considera pagamento a prazo)
+  const getDisplayPaymentMethod = (venda: Venda) => {
+    if (isVendaPrazo(venda)) {
+      return {
+        icon: '⏰',
+        text: 'A Prazo'
+      };
+    }
+    return {
+      icon: getPaymentIcon(venda.forma_pagamento),
+      text: getPaymentText(venda.forma_pagamento)
+    };
   };
 
   return {
@@ -318,7 +350,9 @@ export const useVendas = () => {
     formatDateTime,
     getStatusBadge,
     getPaymentIcon,
-    getPaymentText
+    getPaymentText,
+    isVendaPrazo,
+    getDisplayPaymentMethod
   };
 };
 

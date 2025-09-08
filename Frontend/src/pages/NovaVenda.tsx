@@ -368,11 +368,14 @@ export default function NovaVenda() {
         cliente_id: clienteSelecionado?.id || null,
         itens: itensVenda,
         metodos_pagamento: metodosFinais,
-        pagamento_prazo: usarPagamentoPrazo ? pagamentoPrazo : undefined,
+        pagamento_prazo: usarPagamentoPrazo ? {
+          ...pagamentoPrazo,
+          valorOriginal: metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total
+        } : undefined,
         subtotal: parseFloat(subtotal.toString()),
         desconto: parseFloat(valorDesconto.toString()),
         total: parseFloat(totalFinal.toString()),
-        forma_pagamento: metodosFinais[0]?.metodo || metodoPagamentoUnico,
+        forma_pagamento: metodosFinais.length > 0 ? metodosFinais[0]?.metodo : (metodoPagamentoUnico || null),
         parcelas: parseInt(parcelas.toString()) || 1,
         observacoes: observacao,
         status: statusVenda
@@ -393,12 +396,19 @@ export default function NovaVenda() {
         cliente: clienteSelecionado,
         itens: carrinho,
         metodos_pagamento: metodosFinais,
-        pagamento_prazo: usarPagamentoPrazo ? pagamentoPrazo : undefined,
+        pagamento_prazo: usarPagamentoPrazo ? {
+          ...pagamentoPrazo,
+          valorOriginal: metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total
+        } : undefined,
         subtotal: subtotal,
         desconto: valorDesconto,
         total: totalFinal,
         data_hora: new Date()
       };
+      
+      // Debug: verificar dados da nota
+      console.log('Dados da nota:', dadosNota);
+      console.log('Pagamento a prazo na nota:', dadosNota.pagamento_prazo);
       
       // Salvar dados da venda finalizada
       setVendaFinalizada(dadosNota);
@@ -679,7 +689,11 @@ export default function NovaVenda() {
 
               ${vendaFinalizada?.pagamento_prazo ? `
                 <div>
-                  <div>Juros (${vendaFinalizada.pagamento_prazo.juros}%): +${(vendaFinalizada.pagamento_prazo.valorComJuros - vendaFinalizada.total).toLocaleString('pt-BR', {
+                  <div>Valor Original: ${(vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}</div>
+                  <div>Juros (${vendaFinalizada.pagamento_prazo.juros}%): +${(vendaFinalizada.pagamento_prazo.valorComJuros - (vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total)).toLocaleString('pt-BR', {
                     style: 'currency',
                     currency: 'BRL'
                   })}</div>
@@ -693,10 +707,16 @@ export default function NovaVenda() {
 
               <div class="separator"></div>
               <div class="total-final">
-                TOTAL: ${vendaFinalizada?.total?.toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                }) || 'R$ 0,00'}
+                TOTAL: ${vendaFinalizada?.pagamento_prazo ? 
+                  vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  }) : 
+                  vendaFinalizada?.total?.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  }) || 'R$ 0,00'
+                }
               </div>
             </div>
 
