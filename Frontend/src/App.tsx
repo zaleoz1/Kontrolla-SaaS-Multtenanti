@@ -51,11 +51,13 @@ function AppContent() {
             <Route index element={<Dashboard />} />
             <Route path="produtos" element={<Produtos />} />
             <Route path="novo-produto" element={<NovoProduto />} />
-            <Route path="vendas" element={<Vendas />} />
+            <Route path="novo-produto/:id" element={<NovoProduto />} />
+             <Route path="vendas" element={<Vendas />} />
             <Route path="nova-venda" element={<NovaVenda />} />
             <Route path="catalogo" element={<Catalogo />} />
             <Route path="clientes" element={<Clientes />} />
             <Route path="novo-cliente" element={<NovoCliente />} />
+            <Route path="novo-cliente/:id" element={<NovoCliente />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="nova-transacao" element={<NovaTransacao />} />

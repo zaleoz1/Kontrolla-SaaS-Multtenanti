@@ -312,7 +312,7 @@ export default function Produtos() {
                     variant="outline" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => navigate(`/dashboard/editar-produto/${produto.id}`)}
+                    onClick={() => navigate(`/dashboard/novo-produto/${produto.id}`)}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Editar

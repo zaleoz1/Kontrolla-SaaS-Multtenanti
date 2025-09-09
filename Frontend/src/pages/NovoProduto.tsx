@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,13 +55,18 @@ interface Categoria {
 
 export default function NovoProduto() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const [abaAtiva, setAbaAtiva] = useState("basico");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [novaCategoria, setNovaCategoria] = useState("");
   const [mostrarInputNovaCategoria, setMostrarInputNovaCategoria] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const [carregandoProduto, setCarregandoProduto] = useState(false);
   const { makeRequest, loading, error } = useApi();
+  
+  // Determinar se é modo de edição
+  const isEditMode = Boolean(id);
   
   const [produto, setProduto] = useState<Produto>({
     nome: "",
@@ -89,10 +94,13 @@ export default function NovoProduto() {
 
 
 
-  // Carregar categorias ao montar o componente
+  // Carregar categorias e produto (se editando) ao montar o componente
   useEffect(() => {
     carregarCategorias();
-  }, []);
+    if (isEditMode && id) {
+      carregarProduto(parseInt(id));
+    }
+  }, [isEditMode, id]);
 
   const carregarCategorias = async () => {
     try {
@@ -101,6 +109,58 @@ export default function NovoProduto() {
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
       toast.error('Erro ao carregar categorias');
+    }
+  };
+
+  const carregarProduto = async (produtoId: number) => {
+    try {
+      setCarregandoProduto(true);
+      const response = await makeRequest(API_ENDPOINTS.PRODUCTS.GET(produtoId));
+      const produtoData = response.produto;
+      
+      // Converter imagens de string JSON para array se necessário
+      let imagens = [];
+      if (produtoData.imagens) {
+        try {
+          imagens = typeof produtoData.imagens === 'string' 
+            ? JSON.parse(produtoData.imagens) 
+            : produtoData.imagens;
+        } catch (e) {
+          console.warn('Erro ao parsear imagens:', e);
+          imagens = [];
+        }
+      }
+
+      // Mapear dados do produto para o estado
+      setProduto({
+        nome: produtoData.nome || "",
+        descricao: produtoData.descricao || "",
+        categoria: produtoData.categoria_nome || "",
+        categoria_id: produtoData.categoria_id || undefined,
+        preco: produtoData.preco || null,
+        preco_promocional: produtoData.preco_promocional || null,
+        codigo_barras: produtoData.codigo_barras || "",
+        sku: produtoData.sku || "",
+        estoque: produtoData.estoque || null,
+        estoque_minimo: produtoData.estoque_minimo || null,
+        peso: produtoData.peso || null,
+        largura: produtoData.largura || null,
+        altura: produtoData.altura || null,
+        comprimento: produtoData.comprimento || null,
+        fornecedor: produtoData.fornecedor || "",
+        marca: produtoData.marca || "",
+        modelo: produtoData.modelo || "",
+        garantia: produtoData.garantia || "",
+        status: produtoData.status || "ativo",
+        destaque: produtoData.destaque || false,
+        imagens: imagens
+      });
+    } catch (error) {
+      console.error('Erro ao carregar produto:', error);
+      toast.error('Erro ao carregar produto para edição');
+      navigate("/dashboard/produtos");
+    } finally {
+      setCarregandoProduto(false);
     }
   };
 
@@ -346,16 +406,27 @@ export default function NovoProduto() {
 
       console.log('📦 Enviando dados do produto:', dadosProduto);
 
-      const response = await makeRequest(API_ENDPOINTS.PRODUCTS.CREATE, {
-        method: 'POST',
-        body: dadosProduto
-      });
+      let response;
+      if (isEditMode && id) {
+        // Modo de edição - fazer PUT
+        response = await makeRequest(API_ENDPOINTS.PRODUCTS.UPDATE(parseInt(id)), {
+          method: 'PUT',
+          body: dadosProduto
+        });
+        toast.success('Produto atualizado com sucesso!');
+      } else {
+        // Modo de criação - fazer POST
+        response = await makeRequest(API_ENDPOINTS.PRODUCTS.CREATE, {
+          method: 'POST',
+          body: dadosProduto
+        });
+        toast.success('Produto criado com sucesso!');
+      }
 
-      toast.success('Produto criado com sucesso!');
       navigate("/dashboard/produtos");
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
-      toast.error('Erro ao salvar produto. Tente novamente.');
+      toast.error(`Erro ao ${isEditMode ? 'atualizar' : 'criar'} produto. Tente novamente.`);
     }
   };
 
@@ -366,9 +437,14 @@ export default function NovoProduto() {
       {/* Header */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">Novo Produto</h1>
+          <h1 className="text-3xl font-bold">
+            {isEditMode ? 'Editar Produto' : 'Novo Produto'}
+          </h1>
           <p className="text-muted-foreground">
-            Adicione um novo produto ao seu catálogo
+            {isEditMode 
+              ? 'Edite as informações do produto' 
+              : 'Adicione um novo produto ao seu catálogo'
+            }
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -379,20 +455,34 @@ export default function NovoProduto() {
           <Button 
             className="bg-gradient-primary" 
             onClick={salvarProduto}
-            disabled={!formularioValido || loading}
+            disabled={!formularioValido || loading || carregandoProduto}
           >
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            {loading ? 'Salvando...' : 'Salvar Produto'}
+            {loading 
+              ? (isEditMode ? 'Atualizando...' : 'Salvando...') 
+              : (isEditMode ? 'Atualizar Produto' : 'Salvar Produto')
+            }
           </Button>
         </div>
       </div>
 
+      {/* Loading State para Edição */}
+      {carregandoProduto && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Carregando produto para edição...</p>
+          </div>
+        </div>
+      )}
+
       {/* Conteúdo Principal */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {!carregandoProduto && (
+        <div className="grid gap-6 lg:grid-cols-3">
         {/* Coluna Esquerda - Formulário */}
         <div className="lg:col-span-2">
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
@@ -613,13 +703,13 @@ export default function NovoProduto() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Economia:</span>
                         <span className="font-medium text-success">
-                          {((produto.preco - produto.preco_promocional) / produto.preco * 100).toFixed(1)}%
+                          {(((Number(produto.preco) - Number(produto.preco_promocional)) / Number(produto.preco) * 100)).toFixed(1)}%
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Valor economizado:</span>
                         <span className="font-medium text-success">
-                          R$ {(produto.preco - produto.preco_promocional).toFixed(2)}
+                          R$ {(Number(produto.preco) - Number(produto.preco_promocional)).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -812,15 +902,15 @@ export default function NovoProduto() {
                     {produto.preco_promocional && produto.preco_promocional > 0 ? (
                       <div className="flex items-center space-x-2">
                         <span className="text-lg font-bold text-primary">
-                          R$ {produto.preco_promocional.toFixed(2)}
+                          R$ {Number(produto.preco_promocional).toFixed(2)}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
-                          R$ {produto.preco?.toFixed(2) || "0,00"}
+                          R$ {produto.preco ? Number(produto.preco).toFixed(2) : "0,00"}
                         </span>
                       </div>
                     ) : (
                       <span className="text-lg font-bold text-primary">
-                        R$ {produto.preco?.toFixed(2) || "0,00"}
+                        R$ {produto.preco ? Number(produto.preco).toFixed(2) : "0,00"}
                       </span>
                     )}
                   </div>
@@ -1030,6 +1120,7 @@ export default function NovoProduto() {
           </Card>
         </div>
       </div>
+      )}
 
       {/* Modal de Preview da Imagem */}
       {imagemPreview && (
