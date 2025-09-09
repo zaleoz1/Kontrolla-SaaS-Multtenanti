@@ -434,7 +434,7 @@ export default function Clientes() {
                     variant="outline" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => navigate(`/dashboard/editar-cliente/${cliente.id}`)}
+                    onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Editar

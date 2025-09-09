@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,9 +48,14 @@ interface Cliente {
 
 export default function NovoCliente() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const { toast } = useToast();
   const api = useApi();
   const [abaAtiva, setAbaAtiva] = useState("basico");
+  const [carregandoCliente, setCarregandoCliente] = useState(false);
+  
+  // Determinar se é modo de edição
+  const isEditMode = Boolean(id);
   const [cliente, setCliente] = useState<Cliente>({
     nome: "",
     email: "",
@@ -72,6 +77,52 @@ export default function NovoCliente() {
     "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", 
     "RS", "RO", "RR", "SC", "SP", "SE", "TO"
   ];
+
+  // Carregar dados do cliente se estiver em modo de edição
+  useEffect(() => {
+    if (isEditMode && id) {
+      carregarCliente(parseInt(id));
+    }
+  }, [isEditMode, id]);
+
+  const carregarCliente = async (clienteId: number) => {
+    try {
+      setCarregandoCliente(true);
+      const response = await api.makeRequest(API_ENDPOINTS.CLIENTS.GET(clienteId));
+      const clienteData = response.cliente;
+      
+      setCliente({
+        nome: clienteData.nome || "",
+        email: clienteData.email || "",
+        telefone: clienteData.telefone || "",
+        cpf_cnpj: clienteData.cpf_cnpj || "",
+        tipo_pessoa: clienteData.tipo_pessoa || "fisica",
+        endereco: clienteData.endereco || "",
+        cidade: clienteData.cidade || "",
+        estado: clienteData.estado || "",
+        cep: clienteData.cep || "",
+        data_nascimento: clienteData.data_nascimento || "",
+        sexo: clienteData.sexo || "",
+        razao_social: clienteData.razao_social || "",
+        inscricao_estadual: clienteData.inscricao_estadual || "",
+        inscricao_municipal: clienteData.inscricao_municipal || "",
+        nome_fantasia: clienteData.nome_fantasia || "",
+        observacoes: clienteData.observacoes || "",
+        status: clienteData.status || "ativo",
+        vip: clienteData.vip || false,
+        limite_credito: clienteData.limite_credito || 0
+      });
+    } catch (error) {
+      console.error('Erro ao carregar cliente:', error);
+      toast({
+        title: "Erro ao carregar cliente",
+        description: "Não foi possível carregar os dados do cliente",
+        variant: "destructive",
+      });
+    } finally {
+      setCarregandoCliente(false);
+    }
+  };
 
   const atualizarCliente = (campo: keyof Cliente, valor: any) => {
     setCliente(prev => ({ ...prev, [campo]: valor }));
@@ -146,14 +197,24 @@ export default function NovoCliente() {
         limite_credito: cliente.limite_credito
       };
 
-      await api.makeRequest(API_ENDPOINTS.CLIENTS.CREATE, {
-        method: 'POST',
-        body: dadosCliente
-      });
+      let response;
+      if (isEditMode && id) {
+        // Modo de edição - fazer PUT
+        response = await api.makeRequest(API_ENDPOINTS.CLIENTS.UPDATE(parseInt(id)), {
+          method: 'PUT',
+          body: dadosCliente
+        });
+      } else {
+        // Modo de criação - fazer POST
+        response = await api.makeRequest(API_ENDPOINTS.CLIENTS.CREATE, {
+          method: 'POST',
+          body: dadosCliente
+        });
+      }
 
       toast({
-        title: "Cliente salvo",
-        description: "Cliente cadastrado com sucesso!",
+        title: isEditMode ? "Cliente atualizado" : "Cliente salvo",
+        description: isEditMode ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!",
       });
 
       navigate("/dashboard/clientes");
@@ -174,9 +235,14 @@ export default function NovoCliente() {
       {/* Header */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">Novo Cliente</h1>
+          <h1 className="text-3xl font-bold">
+            {isEditMode ? 'Editar Cliente' : 'Novo Cliente'}
+          </h1>
           <p className="text-muted-foreground">
-            Cadastre um novo cliente no sistema
+            {isEditMode 
+              ? 'Edite as informações do cliente' 
+              : 'Cadastre um novo cliente no sistema'
+            }
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -187,20 +253,31 @@ export default function NovoCliente() {
           <Button 
             className="bg-gradient-primary" 
             onClick={salvarCliente}
-            disabled={!formularioValido || api.loading}
+            disabled={!formularioValido || api.loading || carregandoCliente}
           >
             {api.loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            {api.loading ? "Salvando..." : "Salvar Cliente"}
+            {api.loading 
+              ? (isEditMode ? 'Atualizando...' : 'Salvando...') 
+              : (isEditMode ? 'Atualizar Cliente' : 'Salvar Cliente')
+            }
           </Button>
         </div>
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {carregandoCliente ? (
+        <div className="flex items-center justify-center p-12">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando dados do cliente...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
         {/* Coluna Esquerda - Formulário */}
         <div className="lg:col-span-2">
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
@@ -644,6 +721,7 @@ export default function NovoCliente() {
           </Card>
         </div>
       </div>
+      )}
     </div>
   );
 }
