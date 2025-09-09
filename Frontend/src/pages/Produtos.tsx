@@ -7,6 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useCrudApi } from "@/hooks/useApi";
 import { API_ENDPOINTS } from "@/config/api";
@@ -43,6 +53,13 @@ interface Produto {
   data_atualizacao: string;
 }
 
+interface Categoria {
+  id: number;
+  nome: string;
+  descricao: string;
+  total_produtos: number;
+}
+
 interface ProdutosResponse {
   produtos: Produto[];
   pagination: {
@@ -59,28 +76,44 @@ export default function Produtos() {
   const [termoBusca, setTermoBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
-  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [filtroEstoque, setFiltroEstoque] = useState("");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState<{id: number, nome: string} | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const produtosApi = useCrudApi<ProdutosResponse>(API_ENDPOINTS.PRODUCTS.LIST);
   const deleteApi = useCrudApi(API_ENDPOINTS.PRODUCTS.LIST);
+  const categoriasApi = useCrudApi<{categorias: Categoria[]}>(API_ENDPOINTS.CATALOG.CATEGORIES);
 
-  // Carregar produtos
+  // Carregar categorias e produtos
   useEffect(() => {
+    carregarCategorias();
     carregarProdutos();
-  }, [paginaAtual, termoBusca, filtroStatus, filtroCategoria]);
+  }, [termoBusca, filtroStatus, filtroCategoria]);
+  // filtroEstoque não precisa recarregar a API pois é filtrado no frontend
+
+  const carregarCategorias = async () => {
+    try {
+      const response = await categoriasApi.list();
+      setCategorias(response.categorias || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+      // Não mostrar toast de erro para categorias pois não é crítico
+    }
+  };
 
   const carregarProdutos = async () => {
     try {
       const params: Record<string, any> = {
-        page: paginaAtual,
-        limit: 12,
+        limit: 100, // Limite máximo permitido pelo backend
       };
 
       if (termoBusca) params.q = termoBusca;
       if (filtroStatus) params.status = filtroStatus;
       if (filtroCategoria) params.categoria_id = filtroCategoria;
+      // Removido filtroEstoque da API - será filtrado no frontend
 
       await produtosApi.list(params);
     } catch (error) {
@@ -93,13 +126,16 @@ export default function Produtos() {
     }
   };
 
-  const handleExcluirProduto = async (id: number, nome: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o produto "${nome}"?`)) {
-      return;
-    }
+  const handleExcluirProduto = (id: number, nome: string) => {
+    setProdutoParaExcluir({ id, nome });
+    setShowDeleteDialog(true);
+  };
+
+  const confirmarExclusao = async () => {
+    if (!produtoParaExcluir) return;
 
     try {
-      await deleteApi.remove(id);
+      await deleteApi.remove(produtoParaExcluir.id);
       toast({
         title: "Sucesso",
         description: "Produto excluído com sucesso!",
@@ -112,7 +148,15 @@ export default function Produtos() {
         description: "Não foi possível excluir o produto. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setShowDeleteDialog(false);
+      setProdutoParaExcluir(null);
     }
+  };
+
+  const cancelarExclusao = () => {
+    setShowDeleteDialog(false);
+    setProdutoParaExcluir(null);
   };
 
   const obterBadgeStatus = (produto: Produto) => {
@@ -138,8 +182,37 @@ export default function Produtos() {
     }).format(preco);
   };
 
-  const produtos = produtosApi.data?.produtos || [];
-  const pagination = produtosApi.data?.pagination;
+  const todosProdutos = produtosApi.data?.produtos || [];
+
+  // Filtrar produtos baseado no filtro de estoque
+  const filtrarProdutosPorEstoque = (produtos: Produto[]) => {
+    if (!filtroEstoque) return produtos;
+
+    switch (filtroEstoque) {
+      case 'disponivel':
+        return produtos.filter(p => p.estoque > p.estoque_minimo);
+      case 'estoque_baixo':
+        return produtos.filter(p => p.estoque > 0 && p.estoque <= p.estoque_minimo);
+      case 'sem_estoque':
+        return produtos.filter(p => p.estoque === 0);
+      default:
+        return produtos;
+    }
+  };
+
+  const produtos = filtrarProdutosPorEstoque(todosProdutos);
+
+  // Calcular métricas dos produtos (usando todos os produtos, não apenas os filtrados)
+  const calcularMetricas = () => {
+    const total = todosProdutos.length;
+    const semEstoque = todosProdutos.filter(p => p.estoque === 0).length;
+    const estoqueBaixo = todosProdutos.filter(p => p.estoque > 0 && p.estoque <= p.estoque_minimo).length;
+    const disponiveis = todosProdutos.filter(p => p.estoque > p.estoque_minimo).length;
+    
+    return { total, semEstoque, estoqueBaixo, disponiveis };
+  };
+
+  const metricas = calcularMetricas();
 
   return (
     <div className="space-y-6">
@@ -156,6 +229,67 @@ export default function Produtos() {
           Novo Produto
         </Button>
       </div>
+
+      {/* Card de Métricas */}
+      {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Produtos</p>
+                  <p className="text-2xl font-bold text-primary">{metricas.total}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Package className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Disponíveis</p>
+                  <p className="text-2xl font-bold text-success">{metricas.disponiveis}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-success/10">
+                  <CheckCircle className="h-6 w-6 text-success" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Estoque Baixo</p>
+                  <p className="text-2xl font-bold text-warning">{metricas.estoqueBaixo}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-warning/10">
+                  <AlertTriangle className="h-6 w-6 text-warning" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Sem Estoque</p>
+                  <p className="text-2xl font-bold text-destructive">{metricas.semEstoque}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-destructive/10">
+                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filtros */}
       <Card className="bg-gradient-card shadow-card">
@@ -181,6 +315,29 @@ export default function Produtos() {
                 <option value="inativo">Inativo</option>
                 <option value="rascunho">Rascunho</option>
               </select>
+              <select
+                value={filtroCategoria}
+                onChange={(e) => setFiltroCategoria(e.target.value)}
+                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+                disabled={categoriasApi.loading}
+              >
+                <option value="">Todas as categorias</option>
+                {categorias.map((categoria) => (
+                  <option key={categoria.id} value={categoria.id}>
+                    {categoria.nome} ({categoria.total_produtos})
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filtroEstoque}
+                onChange={(e) => setFiltroEstoque(e.target.value)}
+                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="">Todos os estoques</option>
+                <option value="disponivel">Disponíveis</option>
+                <option value="estoque_baixo">Estoque Baixo</option>
+                <option value="sem_estoque">Sem Estoque</option>
+              </select>
               <Button 
                 variant="outline" 
                 onClick={carregarProdutos}
@@ -199,7 +356,7 @@ export default function Produtos() {
       </Card>
 
       {/* Loading State */}
-      {produtosApi.loading && (
+      {(produtosApi.loading || categoriasApi.loading) && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
             <Card key={index} className="bg-gradient-card shadow-card">
@@ -245,7 +402,7 @@ export default function Produtos() {
       )}
 
       {/* Grid de Produtos */}
-      {!produtosApi.loading && !produtosApi.error && (
+      {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {produtos.map((produto) => (
             <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
@@ -337,13 +494,13 @@ export default function Produtos() {
       )}
 
       {/* Empty State */}
-      {!produtosApi.loading && !produtosApi.error && produtos.length === 0 && (
+      {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && produtos.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhum produto encontrado</h3>
             <p className="text-muted-foreground mb-4">
-              {termoBusca || filtroStatus || filtroCategoria 
+              {termoBusca || filtroStatus || filtroCategoria || filtroEstoque
                 ? "Tente ajustar sua busca ou filtros" 
                 : "Adicione seu primeiro produto"
               }
@@ -359,35 +516,47 @@ export default function Produtos() {
         </Card>
       )}
 
-      {/* Paginação */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} produtos
-          </div>
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPaginaAtual(paginaAtual - 1)}
-              disabled={!pagination.hasPrev || produtosApi.loading}
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Confirmar Exclusão
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o produto <strong>"{produtoParaExcluir?.nome}"</strong>?
+              <br />
+              <span className="text-sm text-muted-foreground mt-2 block">
+                Esta ação não pode ser desfeita.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelarExclusao} disabled={deleteApi.loading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarExclusao}
+              disabled={deleteApi.loading}
+              className="bg-destructive hover:bg-destructive/90"
             >
-              Anterior
-            </Button>
-            <span className="px-3 py-2 text-sm">
-              Página {pagination.page} de {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPaginaAtual(paginaAtual + 1)}
-              disabled={!pagination.hasNext || produtosApi.loading}
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
-      )}
+              {deleteApi.loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

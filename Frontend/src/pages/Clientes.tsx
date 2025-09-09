@@ -174,9 +174,12 @@ export default function Clientes() {
 
   // Função para formatar moeda
   const formatarMoeda = (valor: number) => {
-    return valor.toLocaleString("pt-BR", {
+    const valorNumerico = Number(valor) || 0;
+    return valorNumerico.toLocaleString("pt-BR", {
       style: "currency",
-      currency: "BRL"
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   };
 
@@ -261,7 +264,7 @@ export default function Clientes() {
                   <Skeleton className="h-8 w-24" />
                 ) : (
                   <p className="text-2xl font-bold">
-                    {formatarMoeda(stats?.receita_total || 0)}
+                    {formatarMoeda(Number(stats?.receita_total) || 0)}
                   </p>
                 )}
               </div>
@@ -415,11 +418,11 @@ export default function Clientes() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Total Gasto</p>
-                    <p className="font-semibold text-primary">{formatarMoeda(cliente.total_compras)}</p>
+                    <p className="font-semibold text-primary">{formatarMoeda(Number(cliente.total_compras) || 0)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Limite Crédito</p>
-                    <p className="font-semibold">{formatarMoeda(cliente.limite_credito)}</p>
+                    <p className="font-semibold">{formatarMoeda(Number(cliente.limite_credito) || 0)}</p>
                   </div>
                 </div>
 
