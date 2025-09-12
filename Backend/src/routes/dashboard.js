@@ -132,6 +132,7 @@ router.get('/metricas', async (req, res) => {
 router.get('/vendas-recentes', async (req, res) => {
   try {
     const { limit = 5 } = req.query;
+    const limitValue = parseInt(limit);
 
     const vendas = await query(
       `SELECT v.id, v.numero_venda, v.data_venda, v.total, v.status, v.forma_pagamento,
@@ -141,8 +142,8 @@ router.get('/vendas-recentes', async (req, res) => {
        LEFT JOIN usuarios u ON v.usuario_id = u.id
        WHERE v.tenant_id = ? 
        ORDER BY v.data_venda DESC 
-       LIMIT ?`,
-      [req.user.tenant_id, parseInt(limit)]
+       LIMIT ${limitValue}`,
+      [req.user.tenant_id]
     );
 
     res.json({
@@ -160,6 +161,7 @@ router.get('/vendas-recentes', async (req, res) => {
 router.get('/estoque-baixo', async (req, res) => {
   try {
     const { limit = 10 } = req.query;
+    const limitValue = parseInt(limit);
 
     const produtos = await query(
       `SELECT p.id, p.nome, p.estoque, p.estoque_minimo, p.preco, c.nome as categoria_nome
@@ -167,8 +169,8 @@ router.get('/estoque-baixo', async (req, res) => {
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.tenant_id = ? AND p.estoque <= p.estoque_minimo AND p.status = 'ativo'
        ORDER BY p.estoque ASC 
-       LIMIT ?`,
-      [req.user.tenant_id, parseInt(limit)]
+       LIMIT ${limitValue}`,
+      [req.user.tenant_id]
     );
 
     res.json({
@@ -208,16 +210,17 @@ router.get('/grafico-vendas', async (req, res) => {
         dateFormat = '%Y-%m-%d';
     }
 
+    const diasValue = parseInt(dias);
     const vendas = await query(
       `SELECT 
         ${groupBy} as periodo,
         COUNT(*) as total_vendas,
         COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_total
        FROM vendas 
-       WHERE tenant_id = ? AND data_venda >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+       WHERE tenant_id = ? AND data_venda >= DATE_SUB(CURDATE(), INTERVAL ${diasValue} DAY)
        GROUP BY ${groupBy}
        ORDER BY periodo ASC`,
-      [req.user.tenant_id, parseInt(dias)]
+      [req.user.tenant_id]
     );
 
     res.json({
@@ -237,6 +240,8 @@ router.get('/grafico-vendas', async (req, res) => {
 router.get('/top-produtos', async (req, res) => {
   try {
     const { limit = 10, periodo = 30 } = req.query;
+    const limitValue = parseInt(limit);
+    const periodoValue = parseInt(periodo);
 
     const produtos = await query(
       `SELECT 
@@ -249,16 +254,16 @@ router.get('/top-produtos', async (req, res) => {
        LEFT JOIN categorias c ON p.categoria_id = c.id
        JOIN vendas v ON vi.venda_id = v.id
        WHERE v.tenant_id = ? AND v.status = 'pago' 
-         AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+         AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL ${periodoValue} DAY)
        GROUP BY p.id, p.nome, p.preco, c.nome
        ORDER BY total_vendido DESC
-       LIMIT ?`,
-      [req.user.tenant_id, parseInt(periodo), parseInt(limit)]
+       LIMIT ${limitValue}`,
+      [req.user.tenant_id]
     );
 
     res.json({
       produtos,
-      periodo: parseInt(periodo)
+      periodo: periodoValue
     });
   } catch (error) {
     console.error('Erro ao buscar top produtos:', error);
@@ -272,6 +277,7 @@ router.get('/top-produtos', async (req, res) => {
 router.get('/resumo-financeiro', async (req, res) => {
   try {
     const { periodo = 30 } = req.query;
+    const periodoValue = parseInt(periodo);
 
     // Transações do período
     const transacoes = await query(
@@ -280,8 +286,8 @@ router.get('/resumo-financeiro', async (req, res) => {
         COALESCE(SUM(CASE WHEN tipo = 'entrada' AND status = 'concluida' THEN valor ELSE 0 END), 0) as entradas,
         COALESCE(SUM(CASE WHEN tipo = 'saida' AND status = 'concluida' THEN valor ELSE 0 END), 0) as saidas
        FROM transacoes 
-       WHERE tenant_id = ? AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
-      [req.user.tenant_id, parseInt(periodo)]
+       WHERE tenant_id = ? AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL ${periodoValue} DAY)`,
+      [req.user.tenant_id]
     );
 
     // Contas a receber
@@ -315,7 +321,7 @@ router.get('/resumo-financeiro', async (req, res) => {
         contas_pagar: contasPagar[0],
         saldo
       },
-      periodo: parseInt(periodo)
+      periodo: periodoValue
     });
   } catch (error) {
     console.error('Erro ao buscar resumo financeiro:', error);
