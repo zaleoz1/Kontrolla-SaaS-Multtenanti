@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useTransacoes, Transacao } from "@/hooks/useTransacoes";
+import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { 
   Save, 
   X, 
@@ -19,39 +22,32 @@ import {
   AlertCircle,
   CheckCircle,
   Plus,
-  Minus
+  Minus,
+  Loader2
 } from "lucide-react";
 
-interface Transacao {
-  tipo: "entrada" | "saida";
-  categoria: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  metodoPagamento: string;
-  conta: string;
-  fornecedor?: string;
-  cliente?: string;
-  observacoes: string;
-  anexos: string[];
-  status: "pendente" | "concluida" | "cancelada";
-}
+// Removido interface Transacao duplicada - usando a do hook
 
 export default function NovaTransacao() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { criarTransacao, loading } = useTransacoes();
+  const { clientesFiltrados: clientes, carregando: loadingClientes } = useBuscaClientes();
   const [abaAtiva, setAbaAtiva] = useState("basico");
-  const [transacao, setTransacao] = useState<Transacao>({
+  const [transacao, setTransacao] = useState<Partial<Transacao>>({
     tipo: "entrada",
     categoria: "",
     descricao: "",
     valor: 0,
-    data: new Date().toISOString().split('T')[0],
-    metodoPagamento: "pix",
+    data_transacao: new Date().toISOString().split('T')[0],
+    metodo_pagamento: "pix",
     conta: "caixa",
     observacoes: "",
     anexos: [],
     status: "pendente"
   });
+  const [clienteSelecionado, setClienteSelecionado] = useState<string>("");
+  const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string>("");
 
   const categoriasEntrada = [
     "Vendas",
@@ -73,21 +69,21 @@ export default function NovaTransacao() {
   ];
 
   const metodosPagamento = [
-    "PIX",
-    "Cartão de Crédito",
-    "Cartão de Débito",
-    "Dinheiro",
-    "Transferência",
-    "Boleto",
-    "Cheque"
+    { label: "PIX", value: "pix" },
+    { label: "Cartão de Crédito", value: "cartao_credito" },
+    { label: "Cartão de Débito", value: "cartao_debito" },
+    { label: "Dinheiro", value: "dinheiro" },
+    { label: "Transferência", value: "transferencia" },
+    { label: "Boleto", value: "boleto" },
+    { label: "Cheque", value: "cheque" }
   ];
 
   const contas = [
-    "Caixa",
-    "Banco Principal",
-    "Banco Secundário",
-    "Poupança",
-    "Investimentos"
+    { label: "Caixa", value: "caixa" },
+    { label: "Banco Principal", value: "banco_principal" },
+    { label: "Banco Secundário", value: "banco_secundario" },
+    { label: "Poupança", value: "poupanca" },
+    { label: "Investimentos", value: "investimentos" }
   ];
 
   const fornecedores = [
@@ -100,14 +96,7 @@ export default function NovaTransacao() {
     "Outros"
   ];
 
-  const clientes = [
-    "João Silva",
-    "Maria Santos",
-    "Carlos Lima",
-    "Ana Costa",
-    "Empresa XYZ Ltda",
-    "Outros"
-  ];
+  // Os clientes são carregados automaticamente pelo hook useBuscaClientes
 
   const atualizarTransacao = (campo: keyof Transacao, valor: any) => {
     setTransacao(prev => ({ ...prev, [campo]: valor }));
@@ -127,13 +116,61 @@ export default function NovaTransacao() {
     }));
   };
 
-  const salvarTransacao = () => {
-    // Aqui seria implementada a lógica para salvar a transação
-    console.log("Transação salva:", transacao);
-    navigate("/dashboard/financeiro");
+  const salvarTransacao = async () => {
+    try {
+      // Mapear dados do frontend para o formato da API
+      const dadosTransacao: Partial<Transacao> = {
+        tipo: transacao.tipo,
+        categoria: transacao.categoria,
+        descricao: transacao.descricao,
+        valor: transacao.valor,
+        data_transacao: transacao.data_transacao,
+        metodo_pagamento: transacao.metodo_pagamento,
+        conta: transacao.conta,
+        observacoes: transacao.observacoes || null,
+        anexos: transacao.anexos || [],
+        status: transacao.status,
+        // Campos opcionais - usar null em vez de undefined
+        cliente_id: null,
+        fornecedor: null
+      };
+
+      // Adicionar cliente ou fornecedor baseado no tipo
+      if (transacao.tipo === "entrada" && clienteSelecionado) {
+        dadosTransacao.cliente_id = parseInt(clienteSelecionado);
+      } else if (transacao.tipo === "saida" && fornecedorSelecionado) {
+        dadosTransacao.fornecedor = fornecedorSelecionado;
+      }
+
+      // Converter campos vazios para null
+      Object.keys(dadosTransacao).forEach(key => {
+        const value = dadosTransacao[key as keyof Transacao];
+        if (value === "" || value === undefined) {
+          (dadosTransacao as any)[key] = null;
+        }
+      });
+
+      console.log("📤 Dados da transação a serem enviados:", dadosTransacao);
+
+      await criarTransacao(dadosTransacao);
+      
+      toast({
+        title: "Sucesso!",
+        description: "Transação criada com sucesso.",
+      });
+      
+      navigate("/dashboard/financeiro");
+    } catch (error) {
+      console.error("Erro ao salvar transação:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar transação. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const formularioValido = transacao.categoria && transacao.descricao && transacao.valor > 0;
+  const formularioValido = transacao.categoria && transacao.descricao && transacao.valor && transacao.valor > 0;
 
   return (
     <div className="space-y-6">
@@ -153,10 +190,14 @@ export default function NovaTransacao() {
           <Button 
             className="bg-gradient-primary" 
             onClick={salvarTransacao}
-            disabled={!formularioValido}
+            disabled={!formularioValido || loading}
           >
-            <Save className="h-4 w-4 mr-2" />
-            Salvar Transação
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {loading ? "Salvando..." : "Salvar Transação"}
           </Button>
         </div>
       </div>
@@ -268,8 +309,8 @@ export default function NovaTransacao() {
                       <label className="text-sm font-medium">Data</label>
                       <Input
                         type="date"
-                        value={transacao.data}
-                        onChange={(e) => atualizarTransacao("data", e.target.value)}
+                        value={transacao.data_transacao}
+                        onChange={(e) => atualizarTransacao("data_transacao", e.target.value)}
                         className="mt-1"
                       />
                     </div>
@@ -277,13 +318,13 @@ export default function NovaTransacao() {
                     <div>
                       <label className="text-sm font-medium">Método de Pagamento</label>
                       <select
-                        value={transacao.metodoPagamento}
-                        onChange={(e) => atualizarTransacao("metodoPagamento", e.target.value)}
+                        value={transacao.metodo_pagamento}
+                        onChange={(e) => atualizarTransacao("metodo_pagamento", e.target.value)}
                         className="w-full mt-1 p-2 border rounded-md bg-background"
                       >
                         {metodosPagamento.map(metodo => (
-                          <option key={metodo} value={metodo}>
-                            {metodo}
+                          <option key={metodo.value} value={metodo.value}>
+                            {metodo.label}
                           </option>
                         ))}
                       </select>
@@ -298,8 +339,8 @@ export default function NovaTransacao() {
                       className="w-full mt-1 p-2 border rounded-md bg-background"
                     >
                       {contas.map(conta => (
-                        <option key={conta} value={conta.toLowerCase()}>
-                          {conta}
+                        <option key={conta.value} value={conta.value}>
+                          {conta.label}
                         </option>
                       ))}
                     </select>
@@ -319,8 +360,8 @@ export default function NovaTransacao() {
                     <div>
                       <label className="text-sm font-medium">Fornecedor</label>
                       <select
-                        value={transacao.fornecedor || ""}
-                        onChange={(e) => atualizarTransacao("fornecedor", e.target.value)}
+                        value={fornecedorSelecionado}
+                        onChange={(e) => setFornecedorSelecionado(e.target.value)}
                         className="w-full mt-1 p-2 border rounded-md bg-background"
                       >
                         <option value="">Selecione um fornecedor</option>
@@ -337,17 +378,24 @@ export default function NovaTransacao() {
                     <div>
                       <label className="text-sm font-medium">Cliente</label>
                       <select
-                        value={transacao.cliente || ""}
-                        onChange={(e) => atualizarTransacao("cliente", e.target.value)}
+                        value={clienteSelecionado}
+                        onChange={(e) => setClienteSelecionado(e.target.value)}
                         className="w-full mt-1 p-2 border rounded-md bg-background"
+                        disabled={loadingClientes}
                       >
                         <option value="">Selecione um cliente</option>
                         {clientes.map(cliente => (
-                          <option key={cliente} value={cliente}>
-                            {cliente}
+                          <option key={cliente.id} value={cliente.id}>
+                            {cliente.nome}
                           </option>
                         ))}
                       </select>
+                      {loadingClientes && (
+                        <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Carregando clientes...
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -459,30 +507,30 @@ export default function NovaTransacao() {
 
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>Data:</span>
-                      <span>{new Date(transacao.data).toLocaleDateString("pt-BR")}</span>
+                      <span>{transacao.data_transacao ? new Date(transacao.data_transacao).toLocaleDateString("pt-BR") : ""}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>Método:</span>
-                      <span>{transacao.metodoPagamento}</span>
+                      <span>{metodosPagamento.find(m => m.value === transacao.metodo_pagamento)?.label || transacao.metodo_pagamento}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>Conta:</span>
-                      <span className="capitalize">{transacao.conta}</span>
+                      <span>{contas.find(c => c.value === transacao.conta)?.label || transacao.conta}</span>
                     </div>
 
-                    {transacao.fornecedor && (
+                    {fornecedorSelecionado && (
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>Fornecedor:</span>
-                        <span>{transacao.fornecedor}</span>
+                        <span>{fornecedorSelecionado}</span>
                       </div>
                     )}
 
-                    {transacao.cliente && (
+                    {clienteSelecionado && (
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>Cliente:</span>
-                        <span>{transacao.cliente}</span>
+                        <span>{clientes.find(c => c.id === parseInt(clienteSelecionado))?.nome || ""}</span>
                       </div>
                     )}
                   </div>
@@ -538,7 +586,7 @@ export default function NovaTransacao() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {transacao.data ? (
+                {transacao.data_transacao ? (
                   <CheckCircle className="h-4 w-4 text-success" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />

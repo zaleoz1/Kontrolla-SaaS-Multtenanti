@@ -68,13 +68,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Middleware de rate limiting
+// Middleware de rate limiting (mais permissivo para desenvolvimento)
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limite de 100 requests por IP
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 1 * 60 * 1000, // 1 minuto
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limite de 1000 requests por IP
   message: {
     error: 'Muitas tentativas. Tente novamente em alguns minutos.'
-  }
+  },
+  // Pular rate limiting em desenvolvimento
+  skip: (req) => process.env.NODE_ENV === 'development'
 });
 app.use('/api/', limiter);
 
