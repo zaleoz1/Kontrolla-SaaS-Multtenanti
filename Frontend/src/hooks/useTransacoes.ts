@@ -85,7 +85,7 @@ export function useTransacoes() {
       console.error('Erro ao buscar transações:', error);
       throw error;
     }
-  }, [api]);
+  }, [api.list]);
 
   const buscarTransacao = useCallback(async (id: number) => {
     try {
@@ -95,7 +95,7 @@ export function useTransacoes() {
       console.error('Erro ao buscar transação:', error);
       throw error;
     }
-  }, [api]);
+  }, [api.get]);
 
   const criarTransacao = useCallback(async (dados: Partial<Transacao>) => {
     try {
@@ -107,7 +107,7 @@ export function useTransacoes() {
       console.error('Erro ao criar transação:', error);
       throw error;
     }
-  }, [api, buscarTransacoes]);
+  }, [api.create, buscarTransacoes]);
 
   const atualizarTransacao = useCallback(async (id: number, dados: Partial<Transacao>) => {
     try {
@@ -119,7 +119,7 @@ export function useTransacoes() {
       console.error('Erro ao atualizar transação:', error);
       throw error;
     }
-  }, [api, buscarTransacoes]);
+  }, [api.update, buscarTransacoes]);
 
   const deletarTransacao = useCallback(async (id: number) => {
     try {
@@ -130,7 +130,7 @@ export function useTransacoes() {
       console.error('Erro ao deletar transação:', error);
       throw error;
     }
-  }, [api, buscarTransacoes]);
+  }, [api.remove, buscarTransacoes]);
 
   return {
     ...api,

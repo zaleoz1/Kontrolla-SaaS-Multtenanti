@@ -299,48 +299,148 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
     const { page = 1, limit = 10, status = '', data_inicio = '', data_fim = '' } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE cr.tenant_id = ?';
-    let params = [req.user.tenant_id];
+    // Construir query para buscar contas a receber tradicionais
+    let whereClauseContas = 'WHERE cr.tenant_id = ?';
+    let paramsContas = [req.user.tenant_id];
 
     // Adicionar filtro de status
     if (status) {
-      whereClause += ' AND cr.status = ?';
-      params.push(status);
+      whereClauseContas += ' AND cr.status = ?';
+      paramsContas.push(status);
     }
 
     // Adicionar filtro de data
     if (data_inicio) {
-      whereClause += ' AND cr.data_vencimento >= ?';
-      params.push(data_inicio);
+      whereClauseContas += ' AND cr.data_vencimento >= ?';
+      paramsContas.push(data_inicio);
     }
 
     if (data_fim) {
-      whereClause += ' AND cr.data_vencimento <= ?';
-      params.push(data_fim);
+      whereClauseContas += ' AND cr.data_vencimento <= ?';
+      paramsContas.push(data_fim);
     }
 
-    // Buscar contas a receber
-    const contas = await query(
-      `SELECT cr.*, c.nome as cliente_nome, c.email as cliente_email
+    // Construir query para buscar vendas pendentes
+    let whereClauseVendas = 'WHERE v.tenant_id = ? AND v.status = ?';
+    let paramsVendas = [req.user.tenant_id, 'pendente'];
+
+    // Adicionar filtro de data para vendas
+    if (data_inicio) {
+      whereClauseVendas += ' AND DATE(v.data_venda) >= ?';
+      paramsVendas.push(data_inicio);
+    }
+
+    if (data_fim) {
+      whereClauseVendas += ' AND DATE(v.data_venda) <= ?';
+      paramsVendas.push(data_fim);
+    }
+
+    // Construir query para buscar transações de entrada pendentes/vencidas
+    let whereClauseTransacoes = 'WHERE t.tenant_id = ? AND t.tipo = ? AND t.status IN (?, ?)';
+    let paramsTransacoes = [req.user.tenant_id, 'entrada', 'pendente', 'vencido'];
+
+    // Adicionar filtro de data para transações
+    if (data_inicio) {
+      whereClauseTransacoes += ' AND t.data_transacao >= ?';
+      paramsTransacoes.push(data_inicio);
+    }
+
+    if (data_fim) {
+      whereClauseTransacoes += ' AND t.data_transacao <= ?';
+      paramsTransacoes.push(data_fim);
+    }
+
+    // Buscar contas a receber tradicionais
+    const contasReceber = await query(
+      `SELECT 
+        cr.id,
+        cr.cliente_id,
+        cr.venda_id,
+        cr.descricao,
+        cr.valor,
+        cr.data_vencimento,
+        cr.data_pagamento,
+        cr.status,
+        cr.parcela,
+        cr.observacoes,
+        cr.data_criacao,
+        cr.data_atualizacao,
+        c.nome as cliente_nome,
+        c.email as cliente_email,
+        'conta_receber' as tipo_origem
        FROM contas_receber cr 
        LEFT JOIN clientes c ON cr.cliente_id = c.id 
-       ${whereClause} 
-       ORDER BY cr.data_vencimento ASC 
-       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-      params
+       ${whereClauseContas} 
+       ORDER BY cr.data_vencimento ASC`,
+      paramsContas
     );
 
-    // Contar total de registros
-    const [totalResult] = await query(
-      `SELECT COUNT(*) as total FROM contas_receber cr ${whereClause}`,
-      params
+    // Buscar vendas pendentes
+    const vendasPendentes = await query(
+      `SELECT 
+        v.id,
+        v.cliente_id,
+        v.id as venda_id,
+        CONCAT('Venda #', v.numero_venda) as descricao,
+        v.total as valor,
+        DATE(v.data_venda) as data_vencimento,
+        NULL as data_pagamento,
+        CASE 
+          WHEN v.status = 'pendente' AND DATE(v.data_venda) < CURDATE() THEN 'vencido'
+          ELSE v.status
+        END as status,
+        CONCAT('1/', v.parcelas) as parcela,
+        v.observacoes,
+        v.data_criacao,
+        v.data_atualizacao,
+        c.nome as cliente_nome,
+        c.email as cliente_email,
+        'venda' as tipo_origem
+       FROM vendas v 
+       LEFT JOIN clientes c ON v.cliente_id = c.id 
+       ${whereClauseVendas} 
+       ORDER BY v.data_venda ASC`,
+      paramsVendas
     );
 
-    const total = totalResult.total;
+    // Buscar transações de entrada pendentes/vencidas
+    const transacoesEntrada = await query(
+      `SELECT 
+        t.id,
+        t.cliente_id,
+        NULL as venda_id,
+        t.descricao,
+        t.valor,
+        t.data_transacao as data_vencimento,
+        NULL as data_pagamento,
+        CASE 
+          WHEN t.status = 'pendente' AND t.data_transacao < CURDATE() THEN 'vencido'
+          ELSE t.status
+        END as status,
+        '1/1' as parcela,
+        t.observacoes,
+        t.data_criacao,
+        t.data_atualizacao,
+        c.nome as cliente_nome,
+        c.email as cliente_email,
+        'transacao_entrada' as tipo_origem
+       FROM transacoes t 
+       LEFT JOIN clientes c ON t.cliente_id = c.id 
+       ${whereClauseTransacoes} 
+       ORDER BY t.data_transacao ASC`,
+      paramsTransacoes
+    );
+
+    // Combinar os resultados
+    const contas = [...contasReceber, ...vendasPendentes, ...transacoesEntrada];
+
+    // Aplicar paginação no resultado combinado
+    const total = contas.length;
     const totalPages = Math.ceil(total / limit);
+    const contasPaginadas = contas.slice(offset, offset + Number(limit));
 
     res.json({
-      contas,
+      contas: contasPaginadas,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -364,46 +464,94 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
     const { page = 1, limit = 10, status = '', data_inicio = '', data_fim = '' } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE cp.tenant_id = ?';
-    let params = [req.user.tenant_id];
+    // Construir query para buscar contas a pagar tradicionais
+    let whereClauseContas = 'WHERE cp.tenant_id = ?';
+    let paramsContas = [req.user.tenant_id];
 
     // Adicionar filtro de status
     if (status) {
-      whereClause += ' AND cp.status = ?';
-      params.push(status);
+      whereClauseContas += ' AND cp.status = ?';
+      paramsContas.push(status);
     }
 
     // Adicionar filtro de data
     if (data_inicio) {
-      whereClause += ' AND cp.data_vencimento >= ?';
-      params.push(data_inicio);
+      whereClauseContas += ' AND cp.data_vencimento >= ?';
+      paramsContas.push(data_inicio);
     }
 
     if (data_fim) {
-      whereClause += ' AND cp.data_vencimento <= ?';
-      params.push(data_fim);
+      whereClauseContas += ' AND cp.data_vencimento <= ?';
+      paramsContas.push(data_fim);
     }
 
-    // Buscar contas a pagar
-    const contas = await query(
-      `SELECT * FROM contas_pagar cp 
-       ${whereClause} 
-       ORDER BY cp.data_vencimento ASC 
-       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-      params
+    // Construir query para buscar transações pendentes do tipo saída
+    let whereClauseTransacoes = 'WHERE t.tenant_id = ? AND t.tipo = ? AND t.status = ?';
+    let paramsTransacoes = [req.user.tenant_id, 'saida', 'pendente'];
+
+    // Adicionar filtro de data para transações
+    if (data_inicio) {
+      whereClauseTransacoes += ' AND t.data_transacao >= ?';
+      paramsTransacoes.push(data_inicio);
+    }
+
+    if (data_fim) {
+      whereClauseTransacoes += ' AND t.data_transacao <= ?';
+      paramsTransacoes.push(data_fim);
+    }
+
+    // Buscar contas a pagar tradicionais
+    const contasPagar = await query(
+      `SELECT 
+        cp.id,
+        cp.fornecedor,
+        cp.descricao,
+        cp.valor,
+        cp.data_vencimento,
+        cp.data_pagamento,
+        cp.status,
+        cp.categoria,
+        cp.observacoes,
+        cp.data_criacao,
+        cp.data_atualizacao,
+        'conta_pagar' as tipo_origem
+       FROM contas_pagar cp 
+       ${whereClauseContas} 
+       ORDER BY cp.data_vencimento ASC`,
+      paramsContas
     );
 
-    // Contar total de registros
-    const [totalResult] = await query(
-      `SELECT COUNT(*) as total FROM contas_pagar cp ${whereClause}`,
-      params
+    // Buscar transações pendentes do tipo saída
+    const transacoesPendentes = await query(
+      `SELECT 
+        t.id,
+        COALESCE(t.fornecedor, 'Fornecedor não informado') as fornecedor,
+        t.descricao,
+        t.valor,
+        t.data_transacao as data_vencimento,
+        NULL as data_pagamento,
+        t.status,
+        t.categoria,
+        t.observacoes,
+        t.data_criacao,
+        t.data_atualizacao,
+        'transacao' as tipo_origem
+       FROM transacoes t 
+       ${whereClauseTransacoes} 
+       ORDER BY t.data_transacao ASC`,
+      paramsTransacoes
     );
 
-    const total = totalResult.total;
+    // Combinar os resultados
+    const contas = [...contasPagar, ...transacoesPendentes];
+
+    // Aplicar paginação no resultado combinado
+    const total = contas.length;
     const totalPages = Math.ceil(total / limit);
+    const contasPaginadas = contas.slice(offset, offset + Number(limit));
 
     res.json({
-      contas,
+      contas: contasPaginadas,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -415,6 +563,498 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
     });
   } catch (error) {
     console.error('Erro ao listar contas a pagar:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Criar conta a receber
+router.post('/contas-receber', async (req, res) => {
+  try {
+    const {
+      cliente_id,
+      venda_id,
+      descricao,
+      valor,
+      data_vencimento,
+      parcela,
+      observacoes
+    } = req.body;
+
+    const result = await queryWithResult(
+      `INSERT INTO contas_receber (
+        tenant_id, cliente_id, venda_id, descricao, valor, data_vencimento, parcela, observacoes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.tenant_id, cliente_id, venda_id, descricao, valor, data_vencimento, parcela, observacoes
+      ]
+    );
+
+    // Buscar conta criada
+    const [conta] = await query(
+      `SELECT cr.*, c.nome as cliente_nome, c.email as cliente_email
+       FROM contas_receber cr 
+       LEFT JOIN clientes c ON cr.cliente_id = c.id 
+       WHERE cr.id = ?`,
+      [result.insertId]
+    );
+
+    res.status(201).json({
+      message: 'Conta a receber criada com sucesso',
+      conta
+    });
+  } catch (error) {
+    console.error('Erro ao criar conta a receber:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Atualizar conta a receber
+router.put('/contas-receber/:id', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      cliente_id,
+      venda_id,
+      descricao,
+      valor,
+      data_vencimento,
+      data_pagamento,
+      status,
+      parcela,
+      observacoes,
+      tipo_origem
+    } = req.body;
+
+    // Verificar se é uma conta a receber tradicional, uma venda ou uma transação de entrada
+    if (tipo_origem === 'venda') {
+      // Atualizar venda
+      const existingVendas = await query(
+        'SELECT id FROM vendas WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingVendas.length === 0) {
+        return res.status(404).json({
+          error: 'Venda não encontrada'
+        });
+      }
+
+      await query(
+        `UPDATE vendas SET 
+          status = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [status, observacoes, id, req.user.tenant_id]
+      );
+
+      // Buscar venda atualizada
+      const [conta] = await query(
+        `SELECT 
+          v.id,
+          v.cliente_id,
+          v.id as venda_id,
+          CONCAT('Venda #', v.numero_venda) as descricao,
+          v.total as valor,
+          DATE(v.data_venda) as data_vencimento,
+          NULL as data_pagamento,
+          CASE 
+            WHEN v.status = 'pendente' AND DATE(v.data_venda) < CURDATE() THEN 'vencido'
+            ELSE v.status
+          END as status,
+          CONCAT('1/', v.parcelas) as parcela,
+          v.observacoes,
+          v.data_criacao,
+          v.data_atualizacao,
+          c.nome as cliente_nome,
+          c.email as cliente_email,
+          'venda' as tipo_origem
+         FROM vendas v 
+         LEFT JOIN clientes c ON v.cliente_id = c.id 
+         WHERE v.id = ?`,
+        [id]
+      );
+
+      res.json({
+        message: 'Venda atualizada com sucesso',
+        conta
+      });
+    } else if (tipo_origem === 'transacao_entrada') {
+      // Atualizar transação de entrada
+      const existingTransacoes = await query(
+        'SELECT id FROM transacoes WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingTransacoes.length === 0) {
+        return res.status(404).json({
+          error: 'Transação não encontrada'
+        });
+      }
+
+      await query(
+        `UPDATE transacoes SET 
+          status = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [status, observacoes, id, req.user.tenant_id]
+      );
+
+      // Buscar transação atualizada
+      const [conta] = await query(
+        `SELECT 
+          t.id,
+          t.cliente_id,
+          NULL as venda_id,
+          t.descricao,
+          t.valor,
+          t.data_transacao as data_vencimento,
+          NULL as data_pagamento,
+          CASE 
+            WHEN t.status = 'pendente' AND t.data_transacao < CURDATE() THEN 'vencido'
+            ELSE t.status
+          END as status,
+          '1/1' as parcela,
+          t.observacoes,
+          t.data_criacao,
+          t.data_atualizacao,
+          c.nome as cliente_nome,
+          c.email as cliente_email,
+          'transacao_entrada' as tipo_origem
+         FROM transacoes t 
+         LEFT JOIN clientes c ON t.cliente_id = c.id 
+         WHERE t.id = ?`,
+        [id]
+      );
+
+      res.json({
+        message: 'Transação atualizada com sucesso',
+        conta
+      });
+    } else {
+      // Atualizar conta a receber tradicional
+      const existingContas = await query(
+        'SELECT id FROM contas_receber WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingContas.length === 0) {
+        return res.status(404).json({
+          error: 'Conta a receber não encontrada'
+        });
+      }
+
+      await query(
+        `UPDATE contas_receber SET 
+          cliente_id = ?, venda_id = ?, descricao = ?, valor = ?, data_vencimento = ?,
+          data_pagamento = ?, status = ?, parcela = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          cliente_id, venda_id, descricao, valor, data_vencimento, data_pagamento,
+          status, parcela, observacoes, id, req.user.tenant_id
+        ]
+      );
+
+      // Buscar conta atualizada
+      const [conta] = await query(
+        `SELECT cr.*, c.nome as cliente_nome, c.email as cliente_email
+         FROM contas_receber cr 
+         LEFT JOIN clientes c ON cr.cliente_id = c.id 
+         WHERE cr.id = ?`,
+        [id]
+      );
+
+      res.json({
+        message: 'Conta a receber atualizada com sucesso',
+        conta
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar conta a receber:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Deletar conta a receber
+router.delete('/contas-receber/:id', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo_origem } = req.body;
+
+    // Verificar se é uma conta a receber tradicional, uma venda ou uma transação de entrada
+    if (tipo_origem === 'venda') {
+      // Deletar venda
+      const existingVendas = await query(
+        'SELECT id FROM vendas WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingVendas.length === 0) {
+        return res.status(404).json({
+          error: 'Venda não encontrada'
+        });
+      }
+
+      await query(
+        'DELETE FROM vendas WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      res.json({
+        message: 'Venda deletada com sucesso'
+      });
+    } else if (tipo_origem === 'transacao_entrada') {
+      // Deletar transação de entrada
+      const existingTransacoes = await query(
+        'SELECT id FROM transacoes WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingTransacoes.length === 0) {
+        return res.status(404).json({
+          error: 'Transação não encontrada'
+        });
+      }
+
+      await query(
+        'DELETE FROM transacoes WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      res.json({
+        message: 'Transação deletada com sucesso'
+      });
+    } else {
+      // Deletar conta a receber tradicional
+      const existingContas = await query(
+        'SELECT id FROM contas_receber WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingContas.length === 0) {
+        return res.status(404).json({
+          error: 'Conta a receber não encontrada'
+        });
+      }
+
+      await query(
+        'DELETE FROM contas_receber WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      res.json({
+        message: 'Conta a receber deletada com sucesso'
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao deletar conta a receber:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Criar conta a pagar
+router.post('/contas-pagar', async (req, res) => {
+  try {
+    const {
+      fornecedor,
+      descricao,
+      valor,
+      data_vencimento,
+      categoria,
+      observacoes
+    } = req.body;
+
+    const result = await queryWithResult(
+      `INSERT INTO contas_pagar (
+        tenant_id, fornecedor, descricao, valor, data_vencimento, categoria, observacoes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.tenant_id, fornecedor, descricao, valor, data_vencimento, categoria, observacoes
+      ]
+    );
+
+    // Buscar conta criada
+    const [conta] = await query(
+      'SELECT * FROM contas_pagar WHERE id = ?',
+      [result.insertId]
+    );
+
+    res.status(201).json({
+      message: 'Conta a pagar criada com sucesso',
+      conta
+    });
+  } catch (error) {
+    console.error('Erro ao criar conta a pagar:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Atualizar conta a pagar
+router.put('/contas-pagar/:id', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      fornecedor,
+      descricao,
+      valor,
+      data_vencimento,
+      data_pagamento,
+      status,
+      categoria,
+      observacoes,
+      tipo_origem
+    } = req.body;
+
+    // Verificar se é uma conta a pagar tradicional ou uma transação
+    if (tipo_origem === 'transacao') {
+      // Atualizar transação
+      const existingTransacoes = await query(
+        'SELECT id FROM transacoes WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingTransacoes.length === 0) {
+        return res.status(404).json({
+          error: 'Transação não encontrada'
+        });
+      }
+
+      await query(
+        `UPDATE transacoes SET 
+          descricao = ?, valor = ?, data_transacao = ?,
+          status = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          descricao, valor, data_vencimento, status, observacoes, id, req.user.tenant_id
+        ]
+      );
+
+      // Buscar transação atualizada
+      const [conta] = await query(
+        `SELECT 
+          t.id,
+          COALESCE(t.fornecedor, 'Fornecedor não informado') as fornecedor,
+          t.descricao,
+          t.valor,
+          t.data_transacao as data_vencimento,
+          NULL as data_pagamento,
+          t.status,
+          t.categoria,
+          t.observacoes,
+          t.data_criacao,
+          t.data_atualizacao,
+          'transacao' as tipo_origem
+         FROM transacoes t 
+         WHERE t.id = ?`,
+        [id]
+      );
+
+      res.json({
+        message: 'Transação atualizada com sucesso',
+        conta
+      });
+    } else {
+      // Atualizar conta a pagar tradicional
+      const existingContas = await query(
+        'SELECT id FROM contas_pagar WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingContas.length === 0) {
+        return res.status(404).json({
+          error: 'Conta a pagar não encontrada'
+        });
+      }
+
+      await query(
+        `UPDATE contas_pagar SET 
+          fornecedor = ?, descricao = ?, valor = ?, data_vencimento = ?,
+          data_pagamento = ?, status = ?, categoria = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          fornecedor, descricao, valor, data_vencimento, data_pagamento,
+          status, categoria, observacoes, id, req.user.tenant_id
+        ]
+      );
+
+      // Buscar conta atualizada
+      const [conta] = await query(
+        'SELECT * FROM contas_pagar WHERE id = ?',
+        [id]
+      );
+
+      res.json({
+        message: 'Conta a pagar atualizada com sucesso',
+        conta
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar conta a pagar:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Deletar conta a pagar
+router.delete('/contas-pagar/:id', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo_origem } = req.body;
+
+    // Verificar se é uma conta a pagar tradicional ou uma transação
+    if (tipo_origem === 'transacao') {
+      // Deletar transação
+      const existingTransacoes = await query(
+        'SELECT id FROM transacoes WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingTransacoes.length === 0) {
+        return res.status(404).json({
+          error: 'Transação não encontrada'
+        });
+      }
+
+      await query(
+        'DELETE FROM transacoes WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      res.json({
+        message: 'Transação deletada com sucesso'
+      });
+    } else {
+      // Deletar conta a pagar tradicional
+      const existingContas = await query(
+        'SELECT id FROM contas_pagar WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      if (existingContas.length === 0) {
+        return res.status(404).json({
+          error: 'Conta a pagar não encontrada'
+        });
+      }
+
+      await query(
+        'DELETE FROM contas_pagar WHERE id = ? AND tenant_id = ?',
+        [id, req.user.tenant_id]
+      );
+
+      res.json({
+        message: 'Conta a pagar deletada com sucesso'
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao deletar conta a pagar:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
@@ -458,26 +1098,46 @@ router.get('/stats/overview', async (req, res) => {
       params
     );
 
-    // Contas a receber
+    // Contas a receber (incluindo vendas pendentes e transações de entrada pendentes/vencidas)
     const contasReceber = await query(
       `SELECT 
         COUNT(*) as total_contas,
         COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor ELSE 0 END), 0) as valor_pendente,
         COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido
-      FROM contas_receber 
-      WHERE tenant_id = ?`,
-      [req.user.tenant_id]
+      FROM (
+        SELECT status, valor FROM contas_receber WHERE tenant_id = ?
+        UNION ALL
+        SELECT 
+          CASE 
+            WHEN status = 'pendente' AND DATE(data_venda) < CURDATE() THEN 'vencido'
+            ELSE status
+          END as status, 
+          total as valor 
+        FROM vendas WHERE tenant_id = ? AND status = 'pendente'
+        UNION ALL
+        SELECT 
+          CASE 
+            WHEN status = 'pendente' AND data_transacao < CURDATE() THEN 'vencido'
+            ELSE status
+          END as status, 
+          valor 
+        FROM transacoes WHERE tenant_id = ? AND tipo = 'entrada' AND status IN ('pendente', 'vencido')
+      ) as contas_combineadas`,
+      [req.user.tenant_id, req.user.tenant_id, req.user.tenant_id]
     );
 
-    // Contas a pagar
+    // Contas a pagar (incluindo transações pendentes do tipo saída)
     const contasPagar = await query(
       `SELECT 
         COUNT(*) as total_contas,
         COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor ELSE 0 END), 0) as valor_pendente,
         COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido
-      FROM contas_pagar 
-      WHERE tenant_id = ?`,
-      [req.user.tenant_id]
+      FROM (
+        SELECT status, valor FROM contas_pagar WHERE tenant_id = ?
+        UNION ALL
+        SELECT status, valor FROM transacoes WHERE tenant_id = ? AND tipo = 'saida' AND status = 'pendente'
+      ) as contas_combineadas`,
+      [req.user.tenant_id, req.user.tenant_id]
     );
 
     const fluxoCaixa = transacoesStats[0].total_entradas - transacoesStats[0].total_saidas;

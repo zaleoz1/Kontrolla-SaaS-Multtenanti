@@ -1,4 +1,4 @@
--- Schema do banco de dados para o sistema KontrollaPro (SaaS Multitenanti)
+ -- Schema do banco de dados para o sistema KontrollaPro (SaaS Multitenanti)
 
 -- Criar banco de dados se não existir
 CREATE DATABASE IF NOT EXISTS kontrollapro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
