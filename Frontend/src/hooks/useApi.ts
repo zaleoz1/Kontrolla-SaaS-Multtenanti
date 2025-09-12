@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { API_CONFIG, API_ENDPOINTS, HTTP_STATUS, ERROR_MESSAGES } from '@/config/api';
 
 interface ApiResponse<T = any> {
@@ -130,38 +130,38 @@ export function useCrudApi<T = any>(endpoint: string) {
   const list = useCallback(async (params?: Record<string, any>) => {
     const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
     return api.makeRequest(`${endpoint}${queryString}`);
-  }, [api, endpoint]);
+  }, [api.makeRequest, endpoint]);
 
   const get = useCallback(async (id: number) => {
     return api.makeRequest(`${endpoint}/${id}`);
-  }, [api, endpoint]);
+  }, [api.makeRequest, endpoint]);
 
   const create = useCallback(async (data: any) => {
     return api.makeRequest(endpoint, {
       method: 'POST',
       body: data,
     });
-  }, [api, endpoint]);
+  }, [api.makeRequest, endpoint]);
 
   const update = useCallback(async (id: number, data: any) => {
     return api.makeRequest(`${endpoint}/${id}`, {
       method: 'PUT',
       body: data,
     });
-  }, [api, endpoint]);
+  }, [api.makeRequest, endpoint]);
 
   const remove = useCallback(async (id: number) => {
     return api.makeRequest(`${endpoint}/${id}`, {
       method: 'DELETE',
     });
-  }, [api, endpoint]);
+  }, [api.makeRequest, endpoint]);
 
-  return {
+  return useMemo(() => ({
     ...api,
     list,
     get,
     create,
     update,
     remove,
-  };
+  }), [api, list, get, create, update, remove]);
 }
