@@ -25,8 +25,7 @@ import {
   Smartphone,
   Loader2,
   AlertCircle,
-  Trash2,
-  CheckCircle
+  Trash2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVendas, VendasFilters } from "@/hooks/useVendas";
@@ -47,9 +46,7 @@ export default function Vendas() {
   const [vendaSelecionada, setVendaSelecionada] = useState<any>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false);
-  const [modalPagarAberto, setModalPagarAberto] = useState(false);
   const [excluindoVenda, setExcluindoVenda] = useState(false);
-  const [marcandoComoPaga, setMarcandoComoPaga] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -60,7 +57,6 @@ export default function Vendas() {
     fetchVendas,
     fetchVendasStats,
     deleteVenda,
-    updateVendaStatus,
     formatCurrency,
     formatDateTime,
     getStatusBadge,
@@ -205,43 +201,6 @@ export default function Vendas() {
     }
   };
 
-  // Abrir modal de confirmação para marcar como paga
-  const abrirModalPagar = () => {
-    setModalPagarAberto(true);
-  };
-
-  // Fechar modal de confirmação para marcar como paga
-  const fecharModalPagar = () => {
-    setModalPagarAberto(false);
-  };
-
-  // Marcar venda como paga
-  const handleMarcarComoPaga = async () => {
-    if (!vendaSelecionada) return;
-
-    try {
-      setMarcandoComoPaga(true);
-      await updateVendaStatus(vendaSelecionada.id, 'pago');
-      
-      // Fechar modais
-      setModalAberto(false);
-      setModalPagarAberto(false);
-      setVendaSelecionada(null);
-      
-      // Recarregar dados
-      await fetchVendas(filtros);
-      await loadStats();
-      
-      // Mostrar mensagem de sucesso
-      // Aqui você pode adicionar um toast de sucesso se tiver implementado
-      console.log('Venda marcada como paga com sucesso');
-    } catch (error) {
-      console.error('Erro ao marcar venda como paga:', error);
-      // Aqui você pode adicionar um toast de erro se tiver implementado
-    } finally {
-      setMarcandoComoPaga(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -735,17 +694,6 @@ export default function Vendas() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex justify-end space-x-2">
-                    {vendaSelecionada.status === 'pendente' && (
-                      <Button 
-                        variant="default" 
-                        onClick={abrirModalPagar}
-                        disabled={marcandoComoPaga}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Marcar como Paga
-                      </Button>
-                    )}
                     <Button 
                       variant="destructive" 
                       onClick={abrirModalExclusao}
@@ -809,48 +757,6 @@ export default function Vendas() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Confirmação para Marcar como Paga */}
-      <Dialog open={modalPagarAberto} onOpenChange={setModalPagarAberto}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span>Confirmar Pagamento</span>
-            </DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja marcar a venda #{vendaSelecionada?.numero_venda} como paga? 
-              Esta ação alterará o status da venda e afetará as estatísticas.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={fecharModalPagar}
-              disabled={marcandoComoPaga}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="default" 
-              onClick={handleMarcarComoPaga}
-              disabled={marcandoComoPaga}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {marcandoComoPaga ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Marcando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Marcar como Paga
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
