@@ -29,7 +29,17 @@ import {
   Building2,
   Calendar,
   MapPin,
-  Phone
+  Phone,
+  ScanLine,
+  DollarSign,
+  ShoppingBag,
+  Monitor,
+  Keyboard,
+  MousePointer,
+  ArrowRight,
+  ArrowLeft,
+  RefreshCw,
+  Settings
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { useBuscaProdutos } from "@/hooks/useBuscaProdutos";
@@ -771,751 +781,654 @@ export default function NovaVenda() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Nova Venda</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Registre uma nova venda para seu cliente
+          <h1 className="text-3xl font-bold">Nova Venda</h1>
+          <p className="text-muted-foreground">
+            Sistema de caixa - Processe vendas rapidamente
           </p>
         </div>
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-2">
-          <Button variant="outline" onClick={() => window.history.back()} className="w-full md:w-auto">
-            <X className="h-4 w-4 mr-2" />
-            Cancelar
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => window.history.back()}
+            className="border-slate-300 text-slate-600 hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
           </Button>
           <Button 
-            className="w-full md:w-auto bg-gradient-primary" 
             onClick={salvarVenda}
             disabled={!formularioValido || salvandoVenda}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
             {salvandoVenda ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Save className="h-4 w-4 mr-2" />
+              <CheckCircle className="h-4 w-4 mr-2" />
             )}
-            {salvandoVenda ? "Salvando..." : "Finalizar Venda"}
+            {salvandoVenda ? "Processando..." : "Finalizar Venda"}
           </Button>
         </div>
       </div>
 
-      {/* Conteúdo Principal */}
-      <div className="grid gap-4 lg:gap-6 lg:grid-cols-3">
-        {/* Coluna Esquerda - Formulário */}
-        <div className="lg:col-span-2">
-          <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-              <TabsTrigger value="venda-rapida" className="flex flex-col items-center space-y-1 p-2 text-xs md:text-sm md:flex-row md:space-y-0 md:space-x-2">
-                <Zap className="h-4 w-4" />
-                <span className="hidden sm:inline">Venda Rápida</span>
-              </TabsTrigger>
-              <TabsTrigger value="produtos" className="flex flex-col items-center space-y-1 p-2 text-xs md:text-sm md:flex-row md:space-y-0 md:space-x-2">
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Produtos</span>
-                {carrinho.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {carrinho.length}
-                  </Badge>
+      {/* Layout Principal - Estilo Caixa de Supermercado */}
+      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-150px)]">
+        {/* Painel Esquerdo - Terminal de Produtos */}
+        <Card className="flex-1 flex flex-col min-h-0">
+          <CardHeader className="flex-shrink-0">
+            <CardTitle className="flex items-center space-x-2">
+              <Package className="h-5 w-5" />
+              <span>Produtos</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+            {/* Barra de Busca e Scanner */}
+            <div className="bg-muted/30 border-b p-4 flex-shrink-0">
+              <div className="flex space-x-3">
+                <div className="flex-1 relative">
+                  <ScanLine className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Digite o código de barras ou nome do produto..."
+                    value={codigoBarras}
+                    onChange={(e) => setCodigoBarras(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && buscarPorCodigoBarras()}
+                    className="pl-10 h-12 text-lg"
+                  />
+                </div>
+                <Button 
+                  onClick={buscarPorCodigoBarras} 
+                  disabled={!codigoBarras.trim() || carregandoCodigoBarras}
+                  className="h-12 px-6 bg-green-600 hover:bg-green-700"
+                >
+                  {carregandoCodigoBarras ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Search className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
+              
+              {/* Busca por Nome */}
+              <div className="mt-3 relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar produtos por nome..."
+                  value={termoBusca}
+                  onChange={(e) => setTermoBusca(e.target.value)}
+                  className="pl-10 h-10"
+                />
+              </div>
+            </div>
+
+            {/* Grid de Produtos com Scroll Interno */}
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                {carregandoProdutos ? (
+                  <div className="col-span-full flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : produtosFiltrados.length === 0 ? (
+                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p>Nenhum produto encontrado</p>
+                  </div>
+                ) : (
+                  produtosFiltrados.map((produto) => (
+                    <div 
+                      key={produto.id} 
+                      className={`bg-card rounded-lg border-2 p-3 cursor-pointer transition-all hover:shadow-lg h-32 flex flex-col justify-between ${
+                        produto.estoque === 0 
+                          ? 'opacity-60' 
+                          : 'border-border hover:border-green-300'
+                      }`}
+                      onClick={() => produto.estoque > 0 && adicionarAoCarrinho(produto, 1)}
+                    >
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm line-clamp-2 mb-1">
+                          {produto.nome}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {produto.categoria_nome || 'Sem categoria'}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-bold ${
+                          produto.estoque === 0 ? 'text-gray-500' : 'text-green-600'
+                        }`}>
+                          {produto.preco.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                          })}
+                        </span>
+                        <span className={`text-xs ${
+                          produto.estoque === 0 ? 'text-gray-500' : 'text-muted-foreground'
+                        }`}>
+                          {produto.estoque} un.
+                        </span>
+                      </div>
+                      {produto.estoque === 0 && (
+                        <div className="mt-1 text-xs text-gray-500 font-medium text-center">
+                          Sem estoque
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="pagamento" className="flex flex-col items-center space-y-1 p-2 text-xs md:text-sm md:flex-row md:space-y-0 md:space-x-2">
-                <CreditCard className="h-4 w-4" />
-                <span className="hidden sm:inline">Pagamento</span>
-              </TabsTrigger>
-            </TabsList>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Aba Venda Rápida */}
-            <TabsContent value="venda-rapida" className="space-y-4">
-              <Card className="bg-gradient-card shadow-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center text-lg md:text-xl">
-                      <Zap className="h-5 w-5 mr-2" />
-                      Venda Rápida
-                    </CardTitle>
-                    {carrinho.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="outline"
-                          onClick={limparVendaRapida}
+        {/* Painel Direito - Display do Caixa */}
+        <Card className="w-full lg:w-96 flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[calc(100vh-150px)] min-h-0">
+          <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center space-x-2 text-slate-800">
+                <ShoppingCart className="h-5 w-5" />
+                <span>Carrinho de Compras</span>
+              </CardTitle>
+              <Badge variant="secondary" className="bg-green-600 text-white">
+                {carrinho.length} itens
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col p-0 bg-slate-50 min-h-0">
+            {/* Área de Cliente */}
+            <div className="p-4 border-b flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-muted-foreground">Cliente</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMostrarSelecaoCliente(!mostrarSelecaoCliente)}
+                >
+                  <User className="h-4 w-4 mr-1" />
+                  {clienteSelecionado ? 'Alterar' : 'Selecionar'}
+                </Button>
+              </div>
+              
+              {clienteSelecionado ? (
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
+                  <p className="text-muted-foreground text-xs">{clienteSelecionado.cpf_cnpj}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setClienteSelecionado(null)}
+                    className="mt-2 text-red-500 hover:text-red-600 p-0 h-auto"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Remover
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <p className="text-muted-foreground text-sm">Cliente não selecionado</p>
+                </div>
+              )}
+
+              {/* Lista de Clientes */}
+              {mostrarSelecaoCliente && (
+                <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
+                  <div
+                    className="p-2 rounded border border-dashed border-green-400 cursor-pointer hover:bg-green-50"
+                    onClick={() => {
+                      setMostrarSelecaoCliente(false);
+                      irParaNovoCliente();
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Plus className="h-4 w-4 text-green-600" />
+                      <p className="text-green-600 text-sm font-medium">Novo Cliente</p>
+                    </div>
+                  </div>
+                  
+                  {clientesFiltrados.map((cliente) => (
+                    <div
+                      key={cliente.id}
+                      className={`p-2 rounded cursor-pointer transition-colors ${
+                        clienteSelecionado?.id === cliente.id
+                          ? "bg-green-600 text-white"
+                          : "bg-muted hover:bg-muted/80"
+                      }`}
+                      onClick={() => {
+                        setClienteSelecionado(cliente);
+                        setMostrarSelecaoCliente(false);
+                      }}
+                    >
+                      <p className="font-medium text-sm">{cliente.nome}</p>
+                      <p className="text-xs opacity-75">{cliente.cpf_cnpj}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Lista de Itens do Carrinho */}
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
+              {carrinho.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Carrinho vazio</p>
+                  <p className="text-muted-foreground/60 text-sm">Adicione produtos para começar</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {carrinho.map((item) => (
+                    <div key={item.produto.id} className="bg-muted rounded-lg p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm line-clamp-2">
+                            {item.produto.nome}
+                          </h4>
+                          <p className="text-muted-foreground text-xs">
+                            {item.precoUnitario.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })} x {item.quantidade}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removerDoCarrinho(item.produto.id)}
+                          className="text-red-500 hover:text-red-600 p-1 h-auto"
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Limpar
-                        </Button>
-                        <Button 
-                          onClick={() => setAbaAtiva("pagamento")}
-                          className="bg-gradient-primary"
-                        >
-                          Continuar para Pagamento
-                          <CreditCard className="h-4 w-4 ml-2" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Busca por Código de Barras */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Código de Barras</label>
-                    <div className="flex space-x-2">
-                      <div className="relative flex-1">
-                        <Barcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Digite ou escaneie o código de barras"
-                          value={codigoBarras}
-                          onChange={(e) => setCodigoBarras(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && buscarPorCodigoBarras()}
-                          className="pl-10"
-                        />
-                      </div>
-                      <Button onClick={buscarPorCodigoBarras} disabled={!codigoBarras.trim() || carregandoCodigoBarras}>
-                        {carregandoCodigoBarras ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Search className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Botão para ir para aba de Produtos */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Produtos</label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAbaAtiva("produtos")}
-                      >
-                        Buscar Produtos
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Seleção de Cliente (Opcional) */}
-                  <div className="space-y-3 pt-4 border-t">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Cliente (Opcional)</label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (mostrarSelecaoCliente) {
-                            setMostrarSelecaoCliente(false);
-                            setTermoBuscaCliente("");
-                          } else {
-                            setMostrarSelecaoCliente(true);
-                          }
-                        }}
-                      >
-                        {mostrarSelecaoCliente ? "Ocultar" : "Selecionar Cliente"}
-                      </Button>
-                    </div>
-                    
-                    {mostrarSelecaoCliente && (
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => atualizarQuantidade(item.produto.id, item.quantidade - 1)}
+                            className="w-6 h-6 p-0"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
                           <Input
-                            placeholder="Digite o nome, CPF ou CNPJ do cliente..."
-                            value={termoBuscaCliente}
-                            onChange={(e) => setTermoBuscaCliente(e.target.value)}
-                            className="pl-10"
+                            type="text"
+                            value={item.quantidade}
+                            onChange={(e) => atualizarQuantidade(item.produto.id, parseInt(e.target.value) || 1)}
+                            className="w-12 h-6 text-center text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => atualizarQuantidade(item.produto.id, item.quantidade + 1)}
+                            className="w-6 h-6 p-0"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <span className="text-green-600 font-bold text-sm">
+                          {item.precoTotal.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Resumo Financeiro */}
+            <div className="p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal:</span>
+                  <span>{subtotal.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                  })}</span>
+                </div>
+                
+                {parseFloat(desconto) > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Desconto ({desconto}%):</span>
+                    <span>-{valorDesconto.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL"
+                    })}</span>
+                  </div>
+                )}
+
+                <div className="border-t pt-2">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>TOTAL:</span>
+                    <span className="text-green-600">
+                      {total.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão de Pagamento */}
+              <Button 
+                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white h-12 text-lg font-bold"
+                onClick={() => setAbaAtiva("pagamento")}
+                disabled={carrinho.length === 0}
+              >
+                <CreditCard className="h-5 w-5 mr-2" />
+                Ir para Pagamento
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Modal de Pagamento */}
+      {abaAtiva === "pagamento" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Terminal de Pagamento</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAbaAtiva("venda-rapida")}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              {/* Resumo da Venda */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Resumo da Venda</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Itens:</span>
+                      <span className="ml-2 font-bold">{carrinho.length}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total:</span>
+                      <span className="ml-2 font-bold text-green-600">
+                        {total.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL"
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Formas de Pagamento */}
+              <div className="space-y-6">
+                {/* Método de Pagamento Único */}
+                {metodosPagamento.length === 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Forma de Pagamento</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Método
+                          </label>
+                          <select
+                            value={metodoPagamentoUnico}
+                            onChange={(e) => {
+                              setMetodoPagamentoUnico(e.target.value);
+                              if (e.target.value !== "dinheiro") {
+                                setValorDinheiro("");
+                              }
+                            }}
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          >
+                            <option value="">Selecione uma forma de pagamento</option>
+                            <option value="pix">PIX</option>
+                            <option value="cartao_credito">Cartão de Crédito</option>
+                            <option value="cartao_debito">Cartão de Débito</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="transferencia">Transferência</option>
+                            <option value="boleto">Boleto</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Valor
+                          </label>
+                          <Input
+                            type="text"
+                            value={(usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total).toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            })}
+                            disabled
+                            className="bg-muted text-muted-foreground"
                           />
                         </div>
-                                                 <div className="max-h-48 overflow-y-auto space-y-2">
-                           {/* Opção Novo Cliente */}
-                           <div
-                             className="p-2 rounded border cursor-pointer transition-colors border-dashed border-primary/50 hover:bg-primary/10 hover:border-primary"
-                             onClick={() => {
-                               setMostrarSelecaoCliente(false);
-                               irParaNovoCliente();
-                             }}
-                           >
-                             <div className="flex items-center space-x-2">
-                               <Plus className="h-4 w-4 text-primary" />
-                               <p className="font-medium text-sm text-primary">Novo Cliente</p>
-                             </div>
-                           </div>
-                           
-                           {/* Lista de Clientes Existentes */}
-                           {(() => {
-                             if (carregandoClientes) {
-                               return (
-                                 <div className="p-3 text-center text-muted-foreground">
-                                   <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                                   <p className="text-sm">Buscando clientes...</p>
-                                 </div>
-                               );
-                             }
-                             
-                             if (clientesFiltrados.length === 0 && termoBuscaCliente.trim()) {
-                               return (
-                                 <div className="p-3 text-center text-muted-foreground">
-                                   <p className="text-sm">Nenhum cliente encontrado</p>
-                                   <p className="text-xs">Tente buscar por outro termo ou adicione um novo cliente</p>
-                                 </div>
-                               );
-                             }
-                             
-                             // Se não há termo de busca, mostrar todos os clientes
-                             const clientesParaMostrar = clientesFiltrados;
-                             
-                             // Se não há clientes cadastrados
-                             if (clientesParaMostrar.length === 0 && !carregandoClientes) {
-                               return (
-                                 <div className="p-3 text-center text-muted-foreground">
-                                   <p className="text-sm">Nenhum cliente encontrado</p>
-                                   <p className="text-xs">Digite para buscar ou clique em "Novo Cliente" para adicionar</p>
-                                 </div>
-                               );
-                             }
-                             
-                             return clientesParaMostrar.map((cliente) => (
-                               <div
-                                 key={cliente.id}
-                                 className={`p-2 rounded border cursor-pointer transition-colors ${
-                                   clienteSelecionado?.id === cliente.id
-                                     ? "border-primary bg-primary/10"
-                                     : "hover:bg-muted/50"
-                                 }`}
-                                 onClick={() => {
-                                   setClienteSelecionado(cliente);
-                                   setMostrarSelecaoCliente(false);
-                                   setTermoBuscaCliente("");
-                                 }}
-                               >
-                                 <p className="font-medium text-sm">{cliente.nome}</p>
-                                 <p className="text-xs text-muted-foreground">{cliente.cpf_cnpj}</p>
-                               </div>
-                             ));
-                           })()}
-                         </div>
                       </div>
-                    )}
 
-                    {clienteSelecionado && (
-                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                        <div className="flex items-center justify-between">
+                      {/* Campo de Valor em Dinheiro */}
+                      {metodoPagamentoUnico === "dinheiro" && (
+                        <div className="grid grid-cols-2 gap-4 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                           <div>
-                            <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
-                            <p className="text-xs text-muted-foreground">{clienteSelecionado.cpf_cnpj}</p>
+                            <label className="block text-sm font-medium mb-2">
+                              Valor em Dinheiro
+                            </label>
+                            <Input
+                              type="text"
+                              value={valorDinheiro}
+                              onChange={(e) => setValorDinheiro(e.target.value)}
+                              placeholder="0,00"
+                              className="text-lg"
+                            />
                           </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              Troco
+                            </label>
+                            <Input
+                              type="text"
+                              value={Math.max(0, (parseFloat(valorDinheiro) || 0) - (usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total)).toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              })}
+                              disabled
+                              className="bg-muted text-muted-foreground text-lg font-bold"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setMetodosPagamento([{ metodo: "", valor: "" }]);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar Múltiplos Métodos
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Múltiplos Métodos de Pagamento */}
+                {metodosPagamento.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Métodos de Pagamento</CardTitle>
+                        <div className="flex space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setClienteSelecionado(null)}
+                            onClick={() => {
+                              setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "" }]);
+                            }}
+                            className="border-green-300 text-green-600 hover:bg-green-50"
                           >
-                            <X className="h-4 w-4" />
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar
                           </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Resumo do Carrinho */}
-                  {carrinho.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <h4 className="font-medium mb-3">Produtos Selecionados</h4>
-                      <div className="space-y-2">
-                        {carrinho.map((item) => (
-                          <div key={item.produto.id} className="flex flex-col space-y-2 p-2 rounded bg-muted/30 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{item.produto.nome}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.precoUnitario.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })} x {item.quantidade}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Input
-                                type="text"
-                                value={item.quantidade}
-                                onChange={(e) => atualizarQuantidade(item.produto.id, parseInt(e.target.value) || 1)}
-                                className="w-16 text-sm"
-                              />
-                              <span className="font-medium text-primary min-w-[70px] md:min-w-[80px] text-right text-sm">
-                                {item.precoTotal.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
-                              </span>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => removerDoCarrinho(item.produto.id)}
-                                className="px-2 md:px-3"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Aba Produtos */}
-            <TabsContent value="produtos" className="space-y-4">
-              <Card className="bg-gradient-card shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <span className="flex items-center text-lg md:text-xl">
-                      <Package className="h-5 w-5 mr-2" />
-                      Selecionar Produtos
-                    </span>
-                    <Badge variant="secondary" className="w-fit">
-                      {carrinho.length} produto(s) selecionado(s)
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Buscar Produtos */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar produtos por nome, código ou categoria..."
-                      value={termoBusca}
-                      onChange={(e) => setTermoBusca(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-
-                  {/* Lista de Produtos */}
-                  <div className="max-h-80 md:max-h-96 overflow-y-auto space-y-2">
-                    {carregandoProdutos ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                        <p className="text-sm">Buscando produtos...</p>
-                      </div>
-                    ) : produtosFiltrados.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        <p className="text-sm">Nenhum produto encontrado</p>
-                        <p className="text-xs">Digite para buscar produtos ou adicione um novo</p>
-                      </div>
-                    ) : (
-                      produtosFiltrados.map((produto) => (
-                        <div key={produto.id} className={`flex flex-col space-y-3 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between sm:space-y-0 ${
-                          produto.estoque === 0 
-                            ? 'bg-red-50 border-red-200 hover:bg-red-100' 
-                            : 'bg-muted/30 hover:bg-muted/50'
-                        }`}>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm md:text-base">{produto.nome}</h4>
-                            <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4 text-xs md:text-sm text-muted-foreground">
-                              <span>{produto.categoria_nome || 'Sem categoria'}</span>
-                              <span className="hidden sm:inline">•</span>
-                              <span className={produto.estoque === 0 ? 'text-red-600 font-medium' : ''}>
-                                Estoque: {produto.estoque} un.
-                              </span>
-                              <span className="hidden sm:inline">•</span>
-                              <span className="font-medium text-primary">
-                                {produto.preco.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                const itemExistente = carrinho.find(item => item.produto.id === produto.id);
-                                if (itemExistente && itemExistente.quantidade > 1) {
-                                  atualizarQuantidade(produto.id, itemExistente.quantidade - 1);
-                                } else if (itemExistente && itemExistente.quantidade === 1) {
-                                  removerDoCarrinho(produto.id);
-                                }
-                              }}
-                              disabled={produto.estoque === 0}
-                              className="px-2 md:px-3 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            
-                            <Input
-                              type="text"
-                              placeholder="0"
-                              value={(() => {
-                                const itemExistente = carrinho.find(item => item.produto.id === produto.id);
-                                return itemExistente ? itemExistente.quantidade : "";
-                              })()}
-                              onChange={(e) => {
-                                const quantidade = parseInt(e.target.value) || 0;
-                                definirQuantidadeCarrinho(produto, quantidade);
-                              }}
-                              disabled={produto.estoque === 0}
-                              className="w-16 md:w-20 text-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            
-                            <Button 
-                              size="sm" 
-                              onClick={() => adicionarAoCarrinho(produto, 1)}
-                              disabled={produto.estoque === 0}
-                              className="px-2 md:px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Resumo do Carrinho */}
-                  {carrinho.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <h4 className="font-medium mb-3">Produtos Selecionados</h4>
-                      <div className="space-y-2">
-                        {carrinho.map((item) => (
-                          <div key={item.produto.id} className="flex flex-col space-y-2 p-2 rounded bg-muted/30 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{item.produto.nome}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.precoUnitario.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })} x {item.quantidade}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Input
-                                type="text"
-                                placeholder="0"
-                                value={item.quantidade}
-                                onChange={(e) => atualizarQuantidade(item.produto.id, parseInt(e.target.value) || 1)}
-                                className="w-16 text-sm"
-                              />
-                              <span className="font-medium text-primary min-w-[70px] md:min-w-[80px] text-right text-sm">
-                                {item.precoTotal.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
-                              </span>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => removerDoCarrinho(item.produto.id)}
-                                className="px-2 md:px-3"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="flex justify-end pt-3">
-                        <Button 
-                          onClick={() => setAbaAtiva("pagamento")}
-                          className="bg-gradient-primary w-full md:w-auto"
-                        >
-                          Continuar para Pagamento
-                          <CreditCard className="h-4 w-4 ml-2" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-                        {/* Aba Pagamento */}
-            <TabsContent value="pagamento" className="space-y-4">
-              <Card className="bg-gradient-card shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-lg md:text-xl">
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    Forma de Pagamento
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                                     {/* Método de Pagamento Único (Padrão) */}
-                   {metodosPagamento.length === 0 && (
-                     <div className="space-y-3">
-                       <div className="flex items-center justify-between">
-                         <label className="text-sm font-medium">Método de Pagamento</label>
-                                                   <Button
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setMetodosPagamento([{ metodo: "", valor: "" }]);
+                              setMetodosPagamento([]);
                             }}
+                            className="border-red-300 text-red-600 hover:bg-red-50"
                           >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar Múltiplos
+                            <X className="h-4 w-4 mr-2" />
+                            Voltar ao Único
                           </Button>
-                       </div>
-                       
-                       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 p-3 border rounded-lg">
-                         <div>
-                           <label className="text-sm font-medium">Método</label>
-                           <select
-                             value={metodoPagamentoUnico}
-                             onChange={(e) => {
-                               setMetodoPagamentoUnico(e.target.value);
-                               if (e.target.value !== "dinheiro") {
-                                 setValorDinheiro("");
-                               }
-                             }}
-                             className="w-full mt-1 p-2 border rounded-md bg-background"
-                           >
-                             <option value="">Selecione uma forma de pagamento</option>
-                             <option value="pix">PIX</option>
-                             <option value="cartao_credito">Cartão de Crédito</option>
-                             <option value="cartao_debito">Cartão de Débito</option>
-                             <option value="dinheiro">Dinheiro</option>
-                             <option value="transferencia">Transferência</option>
-                             <option value="boleto">Boleto</option>
-                           </select>
-                         </div>
-                         
-                         <div>
-                           <label className="text-sm font-medium">Valor</label>
-                           <Input
-                             type="text"
-                             placeholder="0,00"
-                             value={(usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total).toLocaleString("pt-BR", {
-                               minimumFractionDigits: 2,
-                               maximumFractionDigits: 2
-                             })}
-                             disabled
-                             className="mt-1 bg-muted/50"
-                           />
-                         </div>
-                       </div>
-
-                       {/* Campo de Valor em Dinheiro e Cálculo de Troco */}
-                       {metodoPagamentoUnico === "dinheiro" && (
-                         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 p-3 border rounded-lg bg-muted/30">
-                           <div>
-                             <label className="text-sm font-medium">Valor em Dinheiro</label>
-                             <Input
-                               type="text"
-                               value={valorDinheiro}
-                               onChange={(e) => setValorDinheiro(e.target.value)}
-                               className="mt-1"
-                               placeholder="0,00"
-                             />
-                           </div>
-                           
-                           <div>
-                             <label className="text-sm font-medium">Troco</label>
-                             <Input
-                               type="text"
-                               value={Math.max(0, (parseFloat(valorDinheiro) || 0) - (usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total)).toLocaleString("pt-BR", {
-                                 minimumFractionDigits: 2,
-                                 maximumFractionDigits: 2
-                               })}
-                               disabled
-                               className="mt-1 bg-muted/50"
-                               placeholder="0,00"
-                             />
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   )}
-
-                   {/* Múltiplos Métodos de Pagamento */}
-                   {metodosPagamento.length > 0 && (
-                     <div className="space-y-3">
-                                               <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium">Métodos de Pagamento</label>
-                          <div className="flex space-x-2">
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                    
+                      {metodosPagamento.map((metodo, index) => (
+                        <div key={index} className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg border">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              Método
+                            </label>
+                            <select
+                              value={metodo.metodo}
+                              onChange={(e) => {
+                                const novosMetodos = [...metodosPagamento];
+                                novosMetodos[index].metodo = e.target.value;
+                                novosMetodos[index].valor = "";
+                                setMetodosPagamento(novosMetodos);
+                              }}
+                              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                            >
+                              <option value="">Selecione</option>
+                              <option value="pix">PIX</option>
+                              <option value="cartao_credito">Cartão de Crédito</option>
+                              <option value="cartao_debito">Cartão de Débito</option>
+                              <option value="dinheiro">Dinheiro</option>
+                              <option value="transferencia">Transferência</option>
+                              <option value="boleto">Boleto</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              Valor
+                            </label>
+                            <Input
+                              type="text"
+                              value={metodo.valor}
+                              onChange={(e) => {
+                                const novosMetodos = [...metodosPagamento];
+                                novosMetodos[index].valor = e.target.value;
+                                setMetodosPagamento(novosMetodos);
+                              }}
+                              placeholder="0,00"
+                            />
+                          </div>
+                          
+                          <div className="flex items-end">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "" }]);
+                                setMetodosPagamento(metodosPagamento.filter((_, i) => i !== index));
                               }}
+                              className="w-full border-red-300 text-red-600 hover:bg-red-50"
                             >
-                              <Plus className="h-4 w-4 mr-2" />
-                              Adicionar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setMetodosPagamento([]);
-                                // Não desativar automaticamente o pagamento a prazo
-                                // setUsarPagamentoPrazo(false);
-                              }}
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Voltar ao Único
+                              <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
-                       
-                       {metodosPagamento.map((metodo, index) => (
-                         <div key={index} className="grid gap-4 grid-cols-1 md:grid-cols-3 p-3 border rounded-lg">
-                           <div>
-                             <label className="text-sm font-medium">Método</label>
-                             <select
-                               value={metodo.metodo}
-                               onChange={(e) => {
-                                 const novosMetodos = [...metodosPagamento];
-                                 novosMetodos[index].metodo = e.target.value;
-                                 novosMetodos[index].valor = "";
-                                 setMetodosPagamento(novosMetodos);
-                               }}
-                               className="w-full mt-1 p-2 border rounded-md bg-background"
-                             >
-                               <option value="">Selecione</option>
-                               <option value="pix">PIX</option>
-                               <option value="cartao_credito">Cartão de Crédito</option>
-                               <option value="cartao_debito">Cartão de Débito</option>
-                               <option value="dinheiro">Dinheiro</option>
-                               <option value="transferencia">Transferência</option>
-                               <option value="boleto">Boleto</option>
-                             </select>
-                           </div>
-                           
-                           <div>
-                             <label className="text-sm font-medium">Valor</label>
-                             <Input
-                               type="text"
-                               value={metodo.valor}
-                               onChange={(e) => {
-                                 const novosMetodos = [...metodosPagamento];
-                                 novosMetodos[index].valor = e.target.value;
-                                 setMetodosPagamento(novosMetodos);
-                               }}
-                               className="mt-1"
-                               placeholder="0,00"
-                             />
-                           </div>
-                           
-                           <div className="flex items-end">
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => {
-                                 setMetodosPagamento(metodosPagamento.filter((_, i) => i !== index));
-                               }}
-                               className="w-full"
-                             >
-                               <X className="h-4 w-4" />
-                             </Button>
-                           </div>
-                         </div>
-                       ))}
+                      ))}
 
-                                               {/* Informação sobre valor restante */}
-                        {(() => {
-                          const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-                          const valorRestante = total - totalPago;
-                          
-                          // Verificar se há métodos com valores vazios ou zerados
-                          const temValoresVazios = metodosPagamento.some(m => !m.valor || parseFloat(m.valor) === 0);
-                          
-                          if (temValoresVazios) {
-                            return (
-                              <div className="p-3 border rounded-lg bg-warning/10 border-warning/20">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-warning font-medium">Falta Pagar:</span>
-                                  <span className="text-warning font-medium">
-                                    {valorRestante.toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-warning mt-1">Complete os valores dos métodos de pagamento</p>
-                              </div>
-                            );
-                          } else if (valorRestante > 0) {
-                            return (
-                              <div className="p-3 border rounded-lg bg-warning/10 border-warning/20">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-warning font-medium">Falta Pagar:</span>
-                                  <span className="text-warning font-medium">
-                                    {valorRestante.toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          } else if (valorRestante < 0) {
-                            return (
-                              <div className="p-3 border rounded-lg bg-success/10 border-success/20">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-success font-medium">Troco:</span>
-                                  <span className="text-success font-medium">
-                                    {Math.abs(valorRestante).toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="p-3 border rounded-lg bg-success/10 border-success/20">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-success font-medium">Pagamento Completo</span>
-                                  <span className="text-success">✓</span>
-                                </div>
-                              </div>
-                            );
-                          }
-                        })()}
-                     </div>
-                   )}
-
-                                       {/* Pagamento a Prazo (Opcional) */}
-                    <div className="space-y-3 pt-4 border-t">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Pagamento a Prazo</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="usarPagamentoPrazo"
-                            checked={usarPagamentoPrazo}
-                            onChange={(e) => setUsarPagamentoPrazo(e.target.checked)}
-                            disabled={!clienteSelecionado || (metodosPagamento.length > 0 && calcularValorRestantePrazo() <= 0)}
-                            className="h-4 w-4 text-primary focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                          />
-                          <label htmlFor="usarPagamentoPrazo" className={`text-sm ${(!clienteSelecionado || (metodosPagamento.length > 0 && calcularValorRestantePrazo() <= 0)) ? 'text-muted-foreground' : ''}`}>
-                            Usar pagamento a prazo
-                          </label>
+                      {/* Resumo dos Pagamentos */}
+                      <div className="bg-muted rounded-lg p-4">
+                        <h4 className="font-bold mb-3">Resumo dos Pagamentos</h4>
+                        <div className="space-y-2">
+                          {metodosPagamento.map((metodo, index) => (
+                            <div key={index} className="flex justify-between text-sm">
+                              <span className="capitalize text-muted-foreground">
+                                {metodo.metodo.replace('_', ' ')}:
+                              </span>
+                              <span className="font-medium">
+                                {(parseFloat(metodo.valor) || 0).toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t pt-2">
+                            <div className="flex justify-between font-bold">
+                              <span>Total Pago:</span>
+                              <span>
+                                {metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0).toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      
-                      {!clienteSelecionado && (
-                        <div className="p-3 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/30">
-                          <p className="text-sm text-muted-foreground text-center">
-                            Selecione um cliente para ativar o pagamento a prazo
-                          </p>
-                        </div>
-                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
-                      {metodosPagamento.length > 0 && calcularValorRestantePrazo() <= 0 && (
-                        <div className="p-3 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/30">
-                          <p className="text-sm text-muted-foreground text-center">
-                            Não há valor restante para configurar pagamento a prazo
-                          </p>
-                        </div>
-                      )}
-                      
-                      {usarPagamentoPrazo && clienteSelecionado && (
-                        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 p-3 border rounded-lg bg-muted/30">
+                {/* Pagamento a Prazo */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Pagamento a Prazo</CardTitle>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="usarPagamentoPrazo"
+                          checked={usarPagamentoPrazo}
+                          onChange={(e) => setUsarPagamentoPrazo(e.target.checked)}
+                          disabled={!clienteSelecionado || (metodosPagamento.length > 0 && calcularValorRestantePrazo() <= 0)}
+                          className="h-4 w-4 text-green-600 focus:ring-green-500 disabled:opacity-50"
+                        />
+                        <label htmlFor="usarPagamentoPrazo" className="text-sm font-medium">
+                          Usar pagamento a prazo
+                        </label>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    {!clienteSelecionado && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p className="text-yellow-800 text-sm text-center">
+                          Selecione um cliente para ativar o pagamento a prazo
+                        </p>
+                      </div>
+                    )}
+
+                    {usarPagamentoPrazo && clienteSelecionado && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="text-sm font-medium">Dias para Pagamento</label>
+                            <label className="block text-sm font-medium mb-2">
+                              Dias para Pagamento
+                            </label>
                             <Input
                               type="text"
                               placeholder="0"
@@ -1524,12 +1437,13 @@ export default function NovaVenda() {
                                 const dias = e.target.value;
                                 calcularPagamentoPrazo(dias, pagamentoPrazo.juros);
                               }}
-                              className="mt-1"
                             />
                           </div>
                           
                           <div>
-                            <label className="text-sm font-medium">Juros (%)</label>
+                            <label className="block text-sm font-medium mb-2">
+                              Juros (%)
+                            </label>
                             <Input
                               type="text"
                               placeholder="0"
@@ -1538,13 +1452,14 @@ export default function NovaVenda() {
                                 const juros = e.target.value;
                                 calcularPagamentoPrazo(pagamentoPrazo.dias, juros);
                               }}
-                              className="mt-1"
                             />
                           </div>
-                          
-                          {/* Informações do pagamento a prazo */}
-                          <div className="md:col-span-2 space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                            <div className="flex justify-between text-sm">
+                        </div>
+                        
+                        {/* Informações do pagamento a prazo */}
+                        <div className="bg-white rounded-lg p-4 border border-green-300">
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
                               <span className="text-muted-foreground">Valor Original:</span>
                               <span className="font-medium">
                                 {(metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total).toLocaleString("pt-BR", {
@@ -1554,509 +1469,177 @@ export default function NovaVenda() {
                               </span>
                             </div>
                             {parseFloat(pagamentoPrazo.juros) > 0 && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Juros ({pagamentoPrazo.juros}%):</span>
-                                <span className="font-medium text-warning">+{((metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total) * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}</span>
+                              <div className="flex justify-between text-orange-600">
+                                <span>Juros ({pagamentoPrazo.juros}%):</span>
+                                <span className="font-medium">
+                                  +{((metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total) * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })}
+                                </span>
                               </div>
                             )}
-                            <div className="flex justify-between text-sm font-medium border-t pt-2">
+                            <div className="flex justify-between font-bold text-green-600 border-t border-green-200 pt-2">
                               <span>Total a Pagar:</span>
-                              <span className="text-primary">{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
+                              <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}</span>
                             </div>
-                            <div className="flex justify-between text-sm text-muted-foreground">
+                            <div className="flex justify-between text-muted-foreground">
                               <span>Vencimento:</span>
                               <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
                             </div>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Desconto e Observações */}
+                <Card>
+                  <CardContent className="space-y-4 pt-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium">
+                        Desconto (%)
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="0"
+                        value={desconto}
+                        onChange={(e) => setDesconto(e.target.value)}
+                        className="max-w-xs"
+                      />
                     </div>
 
-                                                         {/* Resumo dos Pagamentos */}
-                    {metodosPagamento.length > 0 && (
-                      <div className="p-3 border rounded-lg bg-muted/30">
-                        <h4 className="font-medium text-sm mb-2">Resumo dos Pagamentos</h4>
-                        <div className="space-y-1">
-                          {metodosPagamento.map((metodo, index) => (
-                            <div key={index} className="flex justify-between text-sm">
-                              <span className="capitalize">{metodo.metodo.replace('_', ' ')}:</span>
-                              <span>{(parseFloat(metodo.valor) || 0).toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}</span>
-                            </div>
-                          ))}
-                          <div className="border-t pt-1 mt-2">
-                            <div className="flex justify-between text-sm font-medium">
-                              <span>Total Pago:</span>
-                              <span>{metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0).toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Valor da Venda:</span>
-                              <span>{total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}</span>
-                            </div>
-                            
-                            {/* Indicador de Valor Restante */}
-                            {(() => {
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium">
+                        Observações
+                      </label>
+                      <textarea
+                        value={observacao}
+                        onChange={(e) => setObservacao(e.target.value)}
+                        placeholder="Observações adicionais..."
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        rows={3}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Botões de Ação */}
+                <div className="flex space-x-4 pt-6 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setAbaAtiva("venda-rapida")}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={salvarVenda}
+                    disabled={!formularioValido || salvandoVenda}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12 text-lg font-bold"
+                  >
+                    {salvandoVenda ? (
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                    )}
+                    {salvandoVenda ? "Processando..." : "Finalizar Venda"}
+                  </Button>
+                </div>
+
+                {/* Validação do Formulário */}
+                {!formularioValido && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 text-red-800">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {(() => {
+                          if (!carrinho.length) return "Adicione produtos ao carrinho";
+                          
+                          if (usarPagamentoPrazo) {
+                            if (metodosPagamento.length > 0) {
                               const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
                               const valorRestante = total - totalPago;
-                              
-                              // Verificar se há métodos com valores vazios ou zerados
-                              const temValoresVazios = metodosPagamento.some(m => !m.valor || parseFloat(m.valor) === 0);
-                              
-                              if (temValoresVazios) {
-                                return (
-                                  <div className="flex justify-between text-sm font-medium text-warning border-t pt-1 mt-1">
-                                    <span>Falta Pagar:</span>
-                                    <span>{total.toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })}</span>
-                                  </div>
-                                );
-                              } else if (valorRestante > 0) {
-                                return (
-                                  <div className="flex justify-between text-sm font-medium text-warning border-t pt-1 mt-1">
-                                    <span>Falta Pagar:</span>
-                                    <span>{valorRestante.toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })}</span>
-                                  </div>
-                                );
-                              } else if (valorRestante < 0) {
-                                return (
-                                  <div className="flex justify-between text-sm font-medium text-success border-t pt-1 mt-1">
-                                    <span>Troco:</span>
-                                    <span>{Math.abs(valorRestante).toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })}</span>
-                                  </div>
-                                );
-                              } else {
-                                return (
-                                  <div className="flex justify-between text-sm font-medium text-success border-t pt-1 mt-1">
-                                    <span>Pagamento Completo</span>
-                                    <span>✓</span>
-                                  </div>
-                                );
+                              if (valorRestante > 0) {
+                                if (pagamentoPrazo.valorComJuros < valorRestante) {
+                                  return `O pagamento a prazo deve cobrir pelo menos R$ ${valorRestante.toFixed(2)}`;
+                                }
                               }
-                            })()}
-                            
-                            {/* Informações adicionais do pagamento a prazo */}
-                            {usarPagamentoPrazo && (() => {
-                              const valorRestante = total - metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-                              return valorRestante > 0;
-                            })() && (
-                              <div className="border-t pt-2 mt-2 space-y-1">
-                                {(() => {
-                                  const valorRestante = total - metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-                                  return (
-                                    <>
-                                      <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>Valor Original:</span>
-                                        <span>{valorRestante.toLocaleString("pt-BR", {
-                                          style: "currency",
-                                          currency: "BRL"
-                                        })}</span>
-                                      </div>
-                                      {parseFloat(pagamentoPrazo.juros) > 0 && (
-                                        <div className="flex justify-between text-xs text-warning">
-                                          <span>Juros ({pagamentoPrazo.juros}%):</span>
-                                          <span>+{(valorRestante * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
-                                            style: "currency",
-                                            currency: "BRL"
-                                          })}</span>
-                                        </div>
-                                      )}
-                                      <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>Vencimento:</span>
-                                        <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
-                                      </div>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                                     <div>
-                     <label className="text-sm font-medium">Desconto (%)</label>
-                     <Input
-                       type="text"
-                       placeholder="0"
-                       value={desconto}
-                       onChange={(e) => setDesconto(e.target.value)}
-                       className="mt-1"
-                     />
-                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Coluna Direita - Resumo do Pedido */}
-        <div className="space-y-4 order-first lg:order-last">
-          {/* Card de Resumo do Pedido */}
-          <Card className="bg-gradient-card shadow-card lg:sticky lg:top-4">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg md:text-xl">
-                <Receipt className="h-5 w-5 mr-2" />
-                Resumo da Venda
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Informações do Cliente */}
-              {clienteSelecionado || cliente.nome ? (
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <h4 className="font-medium text-sm mb-2">Cliente</h4>
-                  {clienteSelecionado ? (
-                    <div>
-                      <p className="text-sm">{clienteSelecionado.nome}</p>
-                      <p className="text-xs text-muted-foreground">{clienteSelecionado.cpf_cnpj}</p>
+                              const metodoIncompleto = metodosPagamento.find(m => !m.metodo || parseFloat(m.valor) <= 0);
+                              if (metodoIncompleto) {
+                                return "Complete todos os métodos de pagamento com valores válidos";
+                              }
+                            }
+                            return "Pagamento a prazo configurado";
+                          }
+                          
+                          if (metodosPagamento.length > 0) {
+                            const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
+                            if (totalPago < total) {
+                              return `Falta R$ ${(total - totalPago).toFixed(2)} para completar o pagamento`;
+                            }
+                            const metodoIncompleto = metodosPagamento.find(m => !m.metodo || parseFloat(m.valor) <= 0);
+                            if (metodoIncompleto) {
+                              return "Complete todos os métodos de pagamento com valores válidos";
+                            }
+                          }
+                          if (metodoPagamentoUnico === "dinheiro" && (parseFloat(valorDinheiro) || 0) < total) {
+                            return `Valor em dinheiro deve ser maior ou igual a R$ ${total.toFixed(2)}`;
+                          }
+                          if (!metodoPagamentoUnico && metodosPagamento.length === 0) return "Selecione uma forma de pagamento";
+                          return "Preencha todos os campos obrigatórios";
+                        })()}
+                      </span>
                     </div>
-                  ) : (
-                    <div>
-                      <p className="text-sm">{cliente.nome}</p>
-                      {cliente.cpf_cnpj && (
-                        <p className="text-xs text-muted-foreground">{cliente.cpf_cnpj}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-3 rounded-lg bg-muted/30 text-center text-muted-foreground">
-                  <p>Nenhum cliente selecionado.</p>
-                </div>
-              )}
-
-              {/* Itens do Carrinho */}
-              {carrinho.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Produtos ({carrinho.length})</h4>
-                  <div className="max-h-32 md:max-h-48 overflow-y-auto space-y-1">
-                    {carrinho.map((item) => (
-                      <div key={item.produto.id} className="flex justify-between text-sm">
-                        <span className="truncate flex-1">
-                          {item.quantidade}x {item.produto.nome}
-                        </span>
-                        <span className="font-medium ml-2">
-                          {item.precoTotal.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-                             {/* Resumo do Pagamento */}
-               <div className="space-y-2 pt-2 border-t">
-                 {/* Métodos de Pagamento */}
-                 {metodosPagamento.length > 0 && (
-                   <div className="space-y-1">
-                     <h4 className="font-medium text-sm">Formas de Pagamento</h4>
-                     {metodosPagamento.map((metodo, index) => (
-                       <div key={index} className="flex justify-between text-sm">
-                         <span className="capitalize">{metodo.metodo.replace('_', ' ')}:</span>
-                         <span>{(parseFloat(metodo.valor) || 0).toLocaleString("pt-BR", {
-                           style: "currency",
-                           currency: "BRL"
-                         })}</span>
-                       </div>
-                     ))}
-                     <div className="border-t pt-1 mt-1">
-                       <div className="flex justify-between text-sm font-medium">
-                         <span>Total Pago:</span>
-                         <span>{metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0).toLocaleString("pt-BR", {
-                           style: "currency",
-                           currency: "BRL"
-                         })}</span>
-                       </div>
-                     </div>
-                   </div>
-                 )}
-
-                 {/* Método Único de Pagamento */}
-                 {metodoPagamentoUnico && metodosPagamento.length === 0 && (
-                   <div className="space-y-1">
-                     <h4 className="font-medium text-sm">Forma de Pagamento</h4>
-                     <div className="flex justify-between text-sm">
-                       <span className="capitalize">{metodoPagamentoUnico.replace('_', ' ')}:</span>
-                       <span>{(usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total).toLocaleString("pt-BR", {
-                         style: "currency",
-                         currency: "BRL"
-                       })}</span>
-                     </div>
-                   </div>
-                 )}
-
-                 <div className="flex justify-between text-sm">
-                   <span>Subtotal:</span>
-                   <span>{subtotal.toLocaleString("pt-BR", {
-                     style: "currency",
-                     currency: "BRL"
-                   })}</span>
-                 </div>
-                
-                {parseFloat(desconto) > 0 && (
-                  <div className="flex justify-between text-sm text-success">
-                    <span>Desconto ({desconto}%):</span>
-                    <span>-{valorDesconto.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    })}</span>
                   </div>
                 )}
-
-                {parseFloat(parcelas) > 1 && (
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Parcelas:</span>
-                    <span>{parcelas}x de {(total / parseFloat(parcelas)).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    })}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                  <span>Total:</span>
-                  <span className="text-primary">
-                    {(() => {
-                      if (metodosPagamento.length > 0 && usarPagamentoPrazo) {
-                        // Se há métodos múltiplos com pagamento a prazo, mostrar a soma
-                        const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-                        const valorRestante = total - totalPago;
-                        if (valorRestante > 0) {
-                          return (totalPago + pagamentoPrazo.valorComJuros).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          });
-                        }
-                      } else if (usarPagamentoPrazo && metodosPagamento.length === 0) {
-                        // Se não há métodos múltiplos, mas há pagamento a prazo
-                        return pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL"
-                        });
-                      }
-                      
-                      // Caso padrão: mostrar o total normal
-                      return total.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL"
-                      });
-                    })()}
-                  </span>
-                </div>
-
-                                                   {/* Informações do Pagamento a Prazo */}
-                  {usarPagamentoPrazo && (
-                    <div className="pt-2 border-t">
-                      {parseFloat(pagamentoPrazo.juros) > 0 && (
-                        <div className="flex justify-between text-sm text-warning">
-                          <span>Juros ({pagamentoPrazo.juros}%):</span>
-                          <span>+{((metodosPagamento.length > 0 ? calcularValorRestantePrazo() : total) * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          })}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm font-medium text-warning">
-                        <span>Valor a Prazo:</span>
-                        <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL"
-                        })}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Prazo:</span>
-                        <span>{pagamentoPrazo.dias} dias</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Vencimento:</span>
-                        <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Informações de Pagamento em Dinheiro */}
-                {metodoPagamentoUnico === "dinheiro" && parseFloat(valorDinheiro) > 0 && (
-                  <>
-                    <div className="flex justify-between text-sm text-muted-foreground pt-2 border-t">
-                      <span>Valor em Dinheiro:</span>
-                                              <span>{(parseFloat(valorDinheiro) || 0).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL"
-                        })}</span>
-                    </div>
-                    
-                    {parseFloat(valorDinheiro) > total && (
-                      <div className="flex justify-between text-sm text-success font-medium">
-                        <span>Troco:</span>
-                        <span>{((parseFloat(valorDinheiro) || 0) - total).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL"
-                        })}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Botões de Ação */}
-              <div className="space-y-2 pt-4">
-                <Button 
-                  className="w-full bg-gradient-primary" 
-                  onClick={salvarVenda}
-                  disabled={!formularioValido || salvandoVenda}
-                >
-                  {salvandoVenda ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                  )}
-                  {salvandoVenda ? "Salvando..." : "Finalizar Venda"}
-                </Button>
-                
-                                 {!formularioValido && (
-                   <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                     <AlertCircle className="h-3 w-3" />
-                     <span>
-                       {(() => {
-                         if (!carrinho.length) return "Adicione produtos ao carrinho";
-                         
-                         // Se for pagamento a prazo, validar se os métodos cobrem o valor com juros
-                         if (usarPagamentoPrazo) {
-                           if (metodosPagamento.length > 0) {
-                             const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-                             const valorRestante = total - totalPago;
-                             if (valorRestante > 0) {
-                               // Se há valor restante, o pagamento a prazo deve cobrir esse valor
-                               if (pagamentoPrazo.valorComJuros < valorRestante) {
-                                 return `O pagamento a prazo deve cobrir pelo menos R$ ${valorRestante.toFixed(2)}`;
-                               }
-                             }
-                             // Verificar se todos os métodos têm valores válidos
-                             const metodoIncompleto = metodosPagamento.find(m => !m.metodo || parseFloat(m.valor) <= 0);
-                             if (metodoIncompleto) {
-                               return "Complete todos os métodos de pagamento com valores válidos";
-                             }
-                           }
-                           return "Pagamento a prazo configurado";
-                         }
-                         
-                         // Validação para pagamento normal (sem prazo)
-                         if (metodosPagamento.length > 0) {
-                           const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-                           if (totalPago < total) {
-                             return `Falta R$ ${(total - totalPago).toFixed(2)} para completar o pagamento`;
-                           }
-                           // Verificar se todos os métodos têm valores válidos
-                           const metodoIncompleto = metodosPagamento.find(m => !m.metodo || parseFloat(m.valor) <= 0);
-                           if (metodoIncompleto) {
-                             return "Complete todos os métodos de pagamento com valores válidos";
-                           }
-                         }
-                         if (metodoPagamentoUnico === "dinheiro" && (parseFloat(valorDinheiro) || 0) < total) {
-                           return `Valor em dinheiro deve ser maior ou igual a R$ ${total.toFixed(2)}`;
-                         }
-                         if (!metodoPagamentoUnico && metodosPagamento.length === 0) return "Selecione uma forma de pagamento";
-                         return "Preencha todos os campos obrigatórios";
-                       })()}
-                     </span>
-                   </div>
-                 )}
               </div>
             </CardContent>
           </Card>
-
-          {/* Ações Rápidas */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardHeader>
-              <CardTitle className="text-sm">Ações Rápidas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={irParaNovoCliente}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Cliente
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={irParaNovoProduto}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Adicionar Produto
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <Calculator className="h-4 w-4 mr-2" />
-                Calculadora
-              </Button>
-            </CardContent>
-          </Card>
         </div>
-      </div>
+      )}
 
-      {/* Botões de Ação após Venda */}
+      {/* Modal de Venda Finalizada */}
       {vendaFinalizada && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="text-center mb-6">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Venda Realizada com Sucesso!
+          <Card className="max-w-md w-full mx-4">
+            <CardContent className="pt-6">
+              <div className="text-center mb-6">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">
+                  Venda Realizada com Sucesso!
                 </h3>
-              <p className="text-sm text-gray-500">
-                Venda #{vendaFinalizada.numero_venda} foi criada
-              </p>
-                  </div>
-            
-            <div className="flex flex-col space-y-3">
-              <Button 
-                onClick={imprimirNota} 
-                className="w-full bg-gradient-primary"
-              >
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir Nota
-            </Button>
-              <Button 
-                variant="outline" 
-                onClick={fecharVenda}
-                className="w-full"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Fechar
-              </Button>
-          </div>
-          </div>
+                <p className="text-sm text-muted-foreground">
+                  Venda #{vendaFinalizada.numero_venda} foi criada
+                </p>
+              </div>
+              
+              <div className="flex flex-col space-y-3">
+                <Button 
+                  onClick={imprimirNota} 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Nota
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={fecharVenda}
+                  className="w-full"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Fechar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

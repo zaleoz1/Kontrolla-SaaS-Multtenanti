@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Search, Plus, Menu } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 interface PropsCabecalho {
@@ -16,6 +16,7 @@ interface PropsCabecalho {
  */
 export function Header({ onMenuClick }: PropsCabecalho) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -26,7 +27,15 @@ export function Header({ onMenuClick }: PropsCabecalho) {
     }
   }, []);
 
+  // Verificar se está na página de nova venda
+  const isNovaVendaPage = location.pathname === '/dashboard/nova-venda';
+
   
+  // Se estiver na página de nova venda, não renderizar o header
+  if (isNovaVendaPage) {
+    return null;
+  }
+
   return (
     // Header principal com fundo e borda inferior
     <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
