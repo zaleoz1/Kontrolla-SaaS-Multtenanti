@@ -23,6 +23,7 @@ import { useState } from "react";
 export default function Dashboard() {
   const navigate = useNavigate();
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('hoje');
+  const [mudandoPeriodo, setMudandoPeriodo] = useState(false);
   
   const { 
     data, 
@@ -41,8 +42,14 @@ export default function Dashboard() {
 
   // Atualizar dados quando o período mudar
   const handlePeriodoChange = (novoPeriodo: 'hoje' | 'semana' | 'mes' | 'ano') => {
+    if (novoPeriodo === periodo) return; // Evitar requisições desnecessárias
+    
+    setMudandoPeriodo(true);
     setPeriodo(novoPeriodo);
     refreshData(novoPeriodo);
+    
+    // Resetar estado de mudança após um tempo
+    setTimeout(() => setMudandoPeriodo(false), 1000);
   };
 
   // Dados das métricas baseados nos dados reais
@@ -170,11 +177,21 @@ export default function Dashboard() {
                 variant={periodo === p ? "default" : "ghost"}
                 size="sm"
                 onClick={() => handlePeriodoChange(p)}
+                disabled={mudandoPeriodo || loading}
                 className="text-xs"
               >
-                {p === 'hoje' ? 'Hoje' : 
-                 p === 'semana' ? 'Semana' : 
-                 p === 'mes' ? 'Mês' : 'Ano'}
+                {mudandoPeriodo && periodo === p ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    {p === 'hoje' ? 'Hoje' : 
+                     p === 'semana' ? 'Semana' : 
+                     p === 'mes' ? 'Mês' : 'Ano'}
+                  </>
+                ) : (
+                  p === 'hoje' ? 'Hoje' : 
+                  p === 'semana' ? 'Semana' : 
+                  p === 'mes' ? 'Mês' : 'Ano'
+                )}
               </Button>
             ))}
           </div>

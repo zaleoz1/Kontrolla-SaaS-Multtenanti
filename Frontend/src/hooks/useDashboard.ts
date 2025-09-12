@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from './useApi';
 import { API_ENDPOINTS } from '@/config/api';
 
@@ -103,8 +103,9 @@ export function useDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { makeRequest } = useApi();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchDashboardData = async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje') => {
+  const fetchDashboardData = useCallback(async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje') => {
     try {
       setLoading(true);
       setError(null);
@@ -143,15 +144,30 @@ export function useDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [makeRequest]);
 
-  const refreshData = (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje') => {
-    fetchDashboardData(periodo);
-  };
+  const refreshData = useCallback((periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje') => {
+    // Cancelar timeout anterior se existir
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Debounce de 300ms para evitar muitas requisições
+    debounceTimeoutRef.current = setTimeout(() => {
+      fetchDashboardData(periodo);
+    }, 300);
+  }, [fetchDashboardData]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+    
+    // Cleanup do timeout ao desmontar o componente
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [fetchDashboardData]);
 
   // Funções utilitárias para formatação
   const formatCurrency = (value: number) => {
