@@ -172,27 +172,6 @@ export const useVendas = () => {
     }
   };
 
-  // Atualizar status da venda
-  const updateVendaStatus = async (id: number, status: Venda['status']) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      await makeRequest(`/vendas/${id}/status`, {
-        method: 'PATCH',
-        body: { status }
-      });
-
-      // Atualizar lista de vendas
-      await fetchVendas({ page: pagination.page, limit: pagination.limit });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar status da venda');
-      console.error('Erro ao atualizar status da venda:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Deletar venda
   const deleteVenda = async (id: number) => {
@@ -406,7 +385,6 @@ export const useVendas = () => {
     fetchVendas,
     fetchVenda,
     createVenda,
-    updateVendaStatus,
     deleteVenda,
     fetchVendasStats,
     formatCurrency,

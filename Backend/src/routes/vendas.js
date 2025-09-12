@@ -398,63 +398,6 @@ router.post('/', validateVenda, async (req, res) => {
   }
 });
 
-// Atualizar status da venda
-router.patch('/:id/status', validateId, handleValidationErrors, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status || !['pendente', 'pago', 'cancelado', 'devolvido'].includes(status)) {
-      return res.status(400).json({
-        error: 'Status inválido'
-      });
-    }
-
-    // Verificar se venda existe
-    const existingVendas = await query(
-      'SELECT id, status as status_atual FROM vendas WHERE id = ? AND tenant_id = ?',
-      [id, req.user.tenant_id]
-    );
-
-    if (existingVendas.length === 0) {
-      return res.status(404).json({
-        error: 'Venda não encontrada'
-      });
-    }
-
-    const venda = existingVendas[0];
-
-    // Se cancelando ou devolvendo, restaurar estoque
-    if ((status === 'cancelado' || status === 'devolvido') && venda.status_atual !== 'cancelado' && venda.status_atual !== 'devolvido') {
-      const itens = await query(
-        'SELECT produto_id, quantidade FROM venda_itens WHERE venda_id = ?',
-        [id]
-      );
-
-      for (const item of itens) {
-        await query(
-          'UPDATE produtos SET estoque = estoque + ? WHERE id = ?',
-          [item.quantidade, item.produto_id]
-        );
-      }
-    }
-
-    // Atualizar status
-    await query(
-      'UPDATE vendas SET status = ? WHERE id = ? AND tenant_id = ?',
-      [status, id, req.user.tenant_id]
-    );
-
-    res.json({
-      message: 'Status da venda atualizado com sucesso'
-    });
-  } catch (error) {
-    console.error('Erro ao atualizar status da venda:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor'
-    });
-  }
-});
 
 // Deletar venda
 router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
