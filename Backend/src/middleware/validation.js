@@ -503,12 +503,28 @@ export const validateVenda = [
     .withMessage('Pagamento a prazo deve ser um objeto'),
   body('pagamento_prazo.dias')
     .optional()
-    .isInt({ min: 1 })
-    .withMessage('Dias para pagamento deve ser um número inteiro positivo'),
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Permitir vazio
+      }
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 1) {
+        throw new Error('Dias para pagamento deve ser um número inteiro positivo');
+      }
+      return true;
+    }),
   body('pagamento_prazo.juros')
     .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Juros deve ser um número positivo'),
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Permitir vazio
+      }
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Juros deve ser um número positivo');
+      }
+      return true;
+    }),
   body('pagamento_prazo.valorComJuros')
     .optional()
     .isFloat({ min: 0 })
@@ -527,7 +543,7 @@ export const validateVenda = [
       const { forma_pagamento, metodos_pagamento, pagamento_prazo } = value;
       
       // Se há pagamento a prazo, não precisa validar métodos de pagamento
-      if (pagamento_prazo && pagamento_prazo.dias && pagamento_prazo.juros !== undefined) {
+      if (pagamento_prazo && (pagamento_prazo.dias || pagamento_prazo.juros !== undefined)) {
         return true;
       }
       

@@ -183,6 +183,8 @@ export const usePagamentos = () => {
       metodos_pagamento: metodosFinais,
       pagamento_prazo: usarPagamentoPrazo ? {
         ...pagamentoPrazo,
+        juros: pagamentoPrazo.juros === "" ? null : pagamentoPrazo.juros,
+        dias: pagamentoPrazo.dias === "" ? null : pagamentoPrazo.dias,
         valorOriginal: metodosPagamento.length > 0 ? calcularValorRestantePrazo(metodosPagamento, total) : total
       } : undefined,
       subtotal: parseFloat(subtotal.toString()),
