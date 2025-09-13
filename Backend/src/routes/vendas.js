@@ -18,9 +18,9 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     let params = [req.user.tenant_id];
 
     // Adicionar filtro de busca
-    if (q) {
+    if (q && q.trim().length > 0) {
       whereClause += ' AND (v.numero_venda LIKE ? OR c.nome LIKE ? OR c.email LIKE ?)';
-      const searchTerm = `%${q}%`;
+      const searchTerm = `%${q.trim()}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
@@ -41,12 +41,17 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
       params.push(data_fim);
     }
 
-    // Buscar vendas com informações do cliente
+    // Buscar vendas com informações do cliente (otimizada)
     const vendas = await query(
-      `SELECT v.*, c.nome as cliente_nome, c.email as cliente_email, u.nome as vendedor_nome
+      `SELECT v.id, v.numero_venda, v.data_venda, v.status, 
+              CAST(v.subtotal AS DECIMAL(10,2)) as subtotal, 
+              CAST(v.desconto AS DECIMAL(10,2)) as desconto, 
+              CAST(v.total AS DECIMAL(10,2)) as total, 
+              v.forma_pagamento, v.parcelas, v.observacoes, v.cliente_id, v.usuario_id,
+              c.nome as cliente_nome, c.email as cliente_email, u.nome as vendedor_nome
        FROM vendas v 
-       LEFT JOIN clientes c ON v.cliente_id = c.id 
-       LEFT JOIN usuarios u ON v.usuario_id = u.id
+       LEFT JOIN clientes c ON v.cliente_id = c.id AND c.tenant_id = v.tenant_id
+       LEFT JOIN usuarios u ON v.usuario_id = u.id AND u.tenant_id = v.tenant_id
        ${whereClause} 
        ORDER BY v.data_venda DESC 
        LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
@@ -67,7 +72,9 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
         // Buscar métodos de pagamento
         const metodosPagamento = await query(
-          `SELECT metodo, valor, troco
+          `SELECT metodo, 
+                  CAST(valor AS DECIMAL(10,2)) as valor, 
+                  CAST(troco AS DECIMAL(10,2)) as troco
            FROM venda_pagamentos
            WHERE venda_id = ?
            ORDER BY id`,
@@ -76,7 +83,11 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
         // Buscar pagamento a prazo (se houver)
         const pagamentoPrazo = await query(
-          `SELECT dias, juros, valor_original, valor_com_juros, data_vencimento, status
+          `SELECT dias, 
+                  CAST(juros AS DECIMAL(5,2)) as juros, 
+                  CAST(valor_original AS DECIMAL(10,2)) as valor_original, 
+                  CAST(valor_com_juros AS DECIMAL(10,2)) as valor_com_juros, 
+                  data_vencimento, status
            FROM venda_pagamentos_prazo
            WHERE venda_id = ?
            ORDER BY id`,
@@ -92,14 +103,49 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
       })
     );
 
-    // Contar total de registros
+    // Contar total de registros (otimizada)
     const [totalResult] = await query(
-      `SELECT COUNT(*) as total FROM vendas v ${whereClause}`,
+      `SELECT COUNT(*) as total 
+       FROM vendas v 
+       LEFT JOIN clientes c ON v.cliente_id = c.id AND c.tenant_id = v.tenant_id
+       LEFT JOIN usuarios u ON v.usuario_id = u.id AND u.tenant_id = v.tenant_id
+       ${whereClause}`,
       params
     );
 
     const total = totalResult.total;
     const totalPages = Math.ceil(total / limit);
+
+    // Calcular saldo efetivo (soma dos pagamentos da tabela venda_pagamentos)
+    // Sempre calcular sem filtro de status para mostrar total de pagamentos recebidos
+    let saldoEfetivoWhereClause = 'WHERE v.tenant_id = ?';
+    let saldoEfetivoParams = [req.user.tenant_id];
+    
+    // Aplicar apenas filtros de busca e data, mas não de status
+    if (q && q.trim().length > 0) {
+      saldoEfetivoWhereClause += ' AND (v.numero_venda LIKE ? OR c.nome LIKE ? OR c.email LIKE ?)';
+      const searchTerm = `%${q.trim()}%`;
+      saldoEfetivoParams.push(searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (data_inicio) {
+      saldoEfetivoWhereClause += ' AND DATE(v.data_venda) >= ?';
+      saldoEfetivoParams.push(data_inicio);
+    }
+    
+    if (data_fim) {
+      saldoEfetivoWhereClause += ' AND DATE(v.data_venda) <= ?';
+      saldoEfetivoParams.push(data_fim);
+    }
+    
+    const [saldoEfetivoResult] = await query(
+      `SELECT COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as saldo_efetivo
+       FROM vendas v
+       LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+       LEFT JOIN clientes c ON v.cliente_id = c.id AND c.tenant_id = v.tenant_id
+       ${saldoEfetivoWhereClause}`,
+      saldoEfetivoParams
+    );
 
     res.json({
       vendas: vendasComItens,
@@ -110,7 +156,8 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
         totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1
-      }
+      },
+      saldoEfetivo: saldoEfetivoResult.saldo_efetivo
     });
   } catch (error) {
     console.error('Erro ao listar vendas:', error);
@@ -494,7 +541,7 @@ router.get('/stats/overview', async (req, res) => {
             WHERE vp.venda_id = v.id
           ) THEN 1 
         END) as vendas_pendentes,
-        COALESCE(
+        CAST(COALESCE(
           SUM(CASE 
             WHEN status = 'pago' OR EXISTS(
               SELECT 1 FROM venda_pagamentos vp 
@@ -506,8 +553,8 @@ router.get('/stats/overview', async (req, res) => {
               )
             ELSE 0 
           END), 0
-        ) as receita_total,
-        COALESCE(
+        ) AS DECIMAL(10,2)) as receita_total,
+        CAST(COALESCE(
           AVG(CASE 
             WHEN status = 'pago' OR EXISTS(
               SELECT 1 FROM venda_pagamentos vp 
@@ -519,7 +566,7 @@ router.get('/stats/overview', async (req, res) => {
               )
             ELSE NULL 
           END), 0
-        ) as ticket_medio
+        ) AS DECIMAL(10,2)) as ticket_medio
       FROM vendas v
       ${whereClause}`,
       params

@@ -89,6 +89,7 @@ export interface VendasResponse {
     hasNext: boolean;
     hasPrev: boolean;
   };
+  saldoEfetivo?: number;
 }
 
 export const useVendas = () => {
@@ -96,6 +97,7 @@ export const useVendas = () => {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saldoEfetivo, setSaldoEfetivo] = useState<number>(0);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -123,6 +125,7 @@ export const useVendas = () => {
       
       setVendas(response.vendas);
       setPagination(response.pagination);
+      setSaldoEfetivo(response.saldoEfetivo || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar vendas');
       console.error('Erro ao buscar vendas:', err);
@@ -382,6 +385,7 @@ export const useVendas = () => {
     loading,
     error,
     pagination,
+    saldoEfetivo,
     fetchVendas,
     fetchVenda,
     createVenda,
