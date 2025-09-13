@@ -31,16 +31,43 @@ router.get('/metricas', async (req, res) => {
         break;
     }
 
-    // Vendas do período
-    const vendasStats = await query(
-      `SELECT 
-        COUNT(*) as total_vendas,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_total,
-        COALESCE(AVG(CASE WHEN status = 'pago' THEN total ELSE NULL END), 0) as ticket_medio
-      FROM vendas 
-      ${whereClause}`,
-      params
-    );
+    // Vendas do período - contar todas as vendas e calcular receita efetiva
+    let vendasStats;
+    if (periodo === 'hoje') {
+      // Para hoje, contar todas as vendas mas usar valor efetivo dos pagamentos para receita
+      vendasStats = await query(
+        `SELECT 
+          COUNT(DISTINCT v.id) as total_vendas,
+          COALESCE(SUM(
+            CASE 
+              WHEN vp.valor IS NOT NULL THEN vp.valor - COALESCE(vp.troco, 0)
+              ELSE v.total
+            END
+          ), 0) as receita_total,
+          COALESCE(AVG(
+            CASE 
+              WHEN vp.valor IS NOT NULL THEN vp.valor - COALESCE(vp.troco, 0)
+              ELSE v.total
+            END
+          ), 0) as ticket_medio
+        FROM vendas v
+        LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+        WHERE v.tenant_id = ? AND DATE(v.data_venda) = CURDATE()`,
+        [req.user.tenant_id]
+      );
+    } else {
+      // Para outros períodos, usar valor efetivo dos pagamentos
+      vendasStats = await query(
+        `SELECT 
+          COUNT(DISTINCT v.id) as total_vendas,
+          COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as receita_total,
+          COALESCE(AVG(vp.valor - COALESCE(vp.troco, 0)), 0) as ticket_medio
+        FROM vendas v
+        LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+        ${whereClause}`,
+        params
+      );
+    }
 
     // Total de clientes
     const clientesStats = await query(
@@ -89,14 +116,35 @@ router.get('/metricas', async (req, res) => {
         break;
     }
 
-    const vendasAnteriores = await query(
-      `SELECT 
-        COUNT(*) as total_vendas_anterior,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_anterior
-      FROM vendas 
-      ${whereClauseAnterior}`,
-      paramsAnterior
-    );
+    // Comparação com período anterior - manter consistência na contagem
+    let vendasAnteriores;
+    if (periodo === 'hoje') {
+      // Para hoje, comparar com todas as vendas do dia anterior
+      vendasAnteriores = await query(
+        `SELECT 
+          COUNT(DISTINCT v.id) as total_vendas_anterior,
+          COALESCE(SUM(
+            CASE 
+              WHEN vp.valor IS NOT NULL THEN vp.valor - COALESCE(vp.troco, 0)
+              ELSE v.total
+            END
+          ), 0) as receita_anterior
+        FROM vendas v
+        LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+        WHERE v.tenant_id = ? AND DATE(v.data_venda) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`,
+        [req.user.tenant_id]
+      );
+    } else {
+      // Para outros períodos, usar a tabela vendas
+      vendasAnteriores = await query(
+        `SELECT 
+          COUNT(*) as total_vendas_anterior,
+          COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_anterior
+        FROM vendas 
+        ${whereClauseAnterior}`,
+        paramsAnterior
+      );
+    }
 
     const atual = vendasStats[0];
     const anterior = vendasAnteriores[0];
@@ -225,10 +273,11 @@ router.get('/grafico-vendas', async (req, res) => {
     const vendas = await query(
       `SELECT 
         ${groupBy} as periodo,
-        COUNT(*) as total_vendas,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_total
-       FROM vendas 
-       WHERE tenant_id = ? AND data_venda >= DATE_SUB(CURDATE(), INTERVAL ${diasValue} DAY)
+        COUNT(DISTINCT v.id) as total_vendas,
+        COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as receita_total
+       FROM vendas v
+       LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+       WHERE v.tenant_id = ? AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL ${diasValue} DAY)
        GROUP BY ${groupBy}
        ORDER BY periodo ASC`,
       [req.user.tenant_id]
