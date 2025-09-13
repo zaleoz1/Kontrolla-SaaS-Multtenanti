@@ -152,16 +152,13 @@ export const usePagamentos = () => {
     }
     
     // Calcular o total final da venda
+    // O valor total da venda deve ser sempre o valor real dos produtos (sem troco)
     let totalFinal = total;
-    if (metodosPagamento.length > 0 && usarPagamentoPrazo) {
-      const totalPago = metodosPagamento.reduce((sum, m) => sum + parseFloat(m.valor), 0);
-      const valorRestante = total - totalPago;
-      if (valorRestante > 0) {
-        totalFinal = totalPago + pagamentoPrazo.valorComJuros;
-      }
-    } else if (usarPagamentoPrazo && metodosPagamento.length === 0) {
+    if (usarPagamentoPrazo && metodosPagamento.length === 0) {
       totalFinal = pagamentoPrazo.valorComJuros;
     }
+    // Para pagamentos com troco, o total da venda permanece o valor dos produtos
+    // O troco é calculado e armazenado separadamente nos métodos de pagamento
     
     // Preparar itens da venda
     const itensVenda: ItemVenda[] = carrinho.map(item => ({

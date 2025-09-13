@@ -333,7 +333,7 @@ export default function Vendas() {
                   {pagination.total || 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Todas as vendas registradas
+                  {stats ? `${stats.total_vendas || 0} vendas hoje` : 'Carregando...'}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-secondary/10">
