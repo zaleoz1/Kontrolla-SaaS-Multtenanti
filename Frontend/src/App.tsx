@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
 import Vendas from "./pages/Vendas";
 import NovaVenda from "./pages/NovaVenda";
+import Pagamentos from "./pages/Pagamentos";
 import Catalogo from "./pages/Catalogo";
 import Clientes from "./pages/Clientes";
 import Relatorios from "./pages/Relatorios";
@@ -54,6 +55,7 @@ function AppContent() {
             <Route path="novo-produto/:id" element={<NovoProduto />} />
              <Route path="vendas" element={<Vendas />} />
             <Route path="nova-venda" element={<NovaVenda />} />
+            <Route path="pagamentos" element={<Pagamentos />} />
             <Route path="catalogo" element={<Catalogo />} />
             <Route path="clientes" element={<Clientes />} />
             <Route path="novo-cliente" element={<NovoCliente />} />
