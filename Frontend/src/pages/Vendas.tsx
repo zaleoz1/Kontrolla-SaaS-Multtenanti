@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,11 +49,16 @@ export default function Vendas() {
   const [excluindoVenda, setExcluindoVenda] = useState(false);
   const navigate = useNavigate();
 
+  // Debounce para busca automática
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [buscandoAuto, setBuscandoAuto] = useState(false);
+
   const {
     vendas,
     loading,
     error,
     pagination,
+    saldoEfetivo,
     fetchVendas,
     fetchVendasStats,
     deleteVenda,
@@ -81,7 +86,7 @@ export default function Vendas() {
   };
 
   // Buscar vendas com filtros
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     const novosFiltros = {
       ...filtros,
       q: termoBusca,
@@ -89,7 +94,83 @@ export default function Vendas() {
     };
     setFiltros(novosFiltros);
     fetchVendas(novosFiltros);
-  };
+  }, [termoBusca, filtros, fetchVendas]);
+
+  // Busca automática com debounce
+  const handleAutoSearch = useCallback((searchTerm: string) => {
+    // Limpar timer anterior
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    // Se o termo estiver vazio, buscar imediatamente
+    if (!searchTerm.trim()) {
+      setBuscandoAuto(false);
+      const novosFiltros = {
+        ...filtros,
+        q: "",
+        page: 1
+      };
+      setFiltros(novosFiltros);
+      fetchVendas(novosFiltros);
+      return;
+    }
+
+    // Se tiver pelo menos 2 caracteres, fazer busca com debounce
+    if (searchTerm.trim().length >= 2) {
+      setBuscandoAuto(true);
+      const timer = setTimeout(() => {
+        const novosFiltros = {
+          ...filtros,
+          q: searchTerm.trim(),
+          page: 1
+        };
+        setFiltros(novosFiltros);
+        fetchVendas(novosFiltros).finally(() => {
+          setBuscandoAuto(false);
+        });
+      }, 500); // 500ms de delay
+
+      setDebounceTimer(timer);
+    } else {
+      setBuscandoAuto(false);
+    }
+  }, [debounceTimer, filtros, fetchVendas]);
+
+  // Filtrar por data automaticamente
+  const handleDataFilter = useCallback(() => {
+    const novosFiltros = {
+      ...filtros,
+      data_inicio: dataInicio,
+      data_fim: dataFim,
+      page: 1
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  }, [dataInicio, dataFim, filtros, fetchVendas]);
+
+  // Limpar timer quando componente desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
+
+  // Busca automática por data (sem dependência de handleDataFilter para evitar loop)
+  useEffect(() => {
+    if (dataInicio || dataFim) {
+      const novosFiltros = {
+        ...filtros,
+        data_inicio: dataInicio,
+        data_fim: dataFim,
+        page: 1
+      };
+      setFiltros(novosFiltros);
+      fetchVendas(novosFiltros);
+    }
+  }, [dataInicio, dataFim]); // Removido handleDataFilter das dependências
 
   // Mudar página
   const handlePageChange = (newPage: number) => {
@@ -112,18 +193,6 @@ export default function Vendas() {
     fetchVendas(novosFiltros);
   };
 
-  // Filtrar por data
-  const handleDataFilter = () => {
-    const novosFiltros = {
-      ...filtros,
-      data_inicio: dataInicio,
-      data_fim: dataFim,
-      page: 1
-    };
-    setFiltros(novosFiltros);
-    fetchVendas(novosFiltros);
-  };
-
   // Limpar filtros de data
   const limparFiltrosData = () => {
     setDataInicio("");
@@ -138,6 +207,23 @@ export default function Vendas() {
     fetchVendas(novosFiltros);
   };
 
+  // Limpar pesquisa e filtros
+  const limparPesquisa = () => {
+    setTermoBusca("");
+    setDataInicio("");
+    setDataFim("");
+    const novosFiltros = {
+      page: 1,
+      limit: 10,
+      q: "",
+      status: "",
+      data_inicio: "",
+      data_fim: ""
+    };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  };
+
   // Calcular totais
   const totalVendas = vendas.reduce((acc, venda) => {
     // Se a venda tem pagamentos à vista, somar apenas esses valores (excluindo troco)
@@ -147,15 +233,14 @@ export default function Vendas() {
       );
     }
     // Caso contrário, usar o total da venda (para compatibilidade)
-    return acc + venda.total;
+    return acc + (typeof venda.total === 'number' ? venda.total : parseFloat(venda.total) || 0);
   }, 0);
   
   // Calcular estatísticas de vendas pendentes
   const estatisticasPendentes = calcularEstatisticasPendentes(vendas);
   const saldoPendente = estatisticasPendentes.valorTotal;
   
-  
-  const totalClientes = new Set(vendas.map(v => v.cliente_id).filter(Boolean)).size;
+
 
   // Abrir modal com detalhes da venda
   const abrirDetalhesVenda = (venda: any) => {
@@ -226,7 +311,10 @@ export default function Vendas() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Hoje</p>
                 <p className="text-2xl font-bold">
-                  {stats ? formatCurrency(stats.receita_total) : formatCurrency(totalVendas)}
+                  {stats ? formatCurrency(stats.receita_total || 0) : formatCurrency(totalVendas || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats ? `${stats.total_vendas || 0} vendas hoje` : `${vendas.length || 0} vendas hoje`}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-primary/10">
@@ -240,9 +328,12 @@ export default function Vendas() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Vendas</p>
+                <p className="text-sm font-medium text-muted-foreground">Total de Vendas</p>
                 <p className="text-2xl font-bold">
-                  {stats ? stats.total_vendas : vendas.length}
+                  {pagination.total || 0}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Todas as vendas registradas
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-secondary/10">
@@ -261,7 +352,7 @@ export default function Vendas() {
                   {formatCurrency(saldoPendente || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {estatisticasPendentes.quantidade} {estatisticasPendentes.quantidade === 1 ? 'venda' : 'vendas'} pendente{estatisticasPendentes.quantidade !== 1 ? 's' : ''}
+                  {estatisticasPendentes?.quantidade || 0} {(estatisticasPendentes?.quantidade || 0) === 1 ? 'venda' : 'vendas'} pendente{(estatisticasPendentes?.quantidade || 0) !== 1 ? 's' : ''}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-yellow-100">
@@ -275,11 +366,16 @@ export default function Vendas() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Clientes</p>
-                <p className="text-2xl font-bold">{totalClientes}</p>
+                <p className="text-sm font-medium text-muted-foreground">Saldo Efetivo</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(saldoEfetivo || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valores já recebidos
+                </p>
               </div>
-              <div className="p-2 rounded-lg bg-info/10">
-                <User className="h-5 w-5 text-info" />
+              <div className="p-2 rounded-lg bg-green-100">
+                <DollarSign className="h-5 w-5 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -294,17 +390,25 @@ export default function Vendas() {
             <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                {buscandoAuto && (
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                )}
                 <Input
-                  placeholder="Buscar por cliente ou número da venda..."
+                  placeholder="Buscar por nome do cliente, email ou código da venda..."
                   value={termoBusca}
-                  onChange={(e) => setTermoBusca(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  onChange={(e) => {
+                    setTermoBusca(e.target.value);
+                    handleAutoSearch(e.target.value);
+                  }}
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" onClick={handleSearch}>
-                <Search className="h-4 w-4 mr-2" />
-                Buscar
+              <Button 
+                variant="outline" 
+                onClick={limparPesquisa}
+                disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
+              >
+                Limpar
               </Button>
               <div className="flex space-x-2">
                 <Button 
@@ -355,15 +459,6 @@ export default function Vendas() {
                 />
               </div>
               <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleDataFilter}
-                  disabled={!dataInicio || !dataFim}
-                  size="sm"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Filtrar Data
-                </Button>
                 <Button 
                   variant="outline" 
                   onClick={limparFiltrosData}
@@ -485,7 +580,7 @@ export default function Vendas() {
             <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhuma venda encontrada</h3>
             <p className="text-muted-foreground mb-4">
-              {termoBusca || filtros.status ? "Tente ajustar sua busca ou filtros" : "Registre sua primeira venda"}
+              {termoBusca || filtros.status || dataInicio || dataFim ? "Tente ajustar sua busca ou filtros. A busca é automática conforme você digita ou seleciona datas." : "Registre sua primeira venda"}
             </p>
             <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
               <Plus className="h-4 w-4 mr-2" />
