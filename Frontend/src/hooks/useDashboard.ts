@@ -234,7 +234,9 @@ export function useDashboard() {
   };
 
   const calculateVariation = (atual: number, anterior: number) => {
-    if (anterior === 0) return 0;
+    if (anterior === 0) {
+      return atual > 0 ? 100 : 0; // Se não havia dados antes e agora há, 100% de crescimento
+    }
     return ((atual - anterior) / anterior) * 100;
   };
 
@@ -245,9 +247,14 @@ export function useDashboard() {
   };
 
   const getVariationIcon = (variacao: number) => {
-    if (variacao > 0) return '↗️';
-    if (variacao < 0) return '↘️';
-    return '→';
+    return '';
+  };
+
+  const formatVariation = (variacao: number) => {
+    if (variacao === 0) return '0%';
+    const absVariacao = Math.abs(variacao);
+    if (absVariacao < 0.1) return '<0.1%';
+    return `${absVariacao.toFixed(1)}%`;
   };
 
   return {
@@ -263,6 +270,7 @@ export function useDashboard() {
     getPaymentText,
     calculateVariation,
     getVariationColor,
-    getVariationIcon
+    getVariationIcon,
+    formatVariation
   };
 }

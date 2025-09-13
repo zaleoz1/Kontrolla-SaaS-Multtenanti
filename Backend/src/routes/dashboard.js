@@ -67,49 +67,60 @@ router.get('/metricas', async (req, res) => {
 
     // Comparação com período anterior
     let comparacaoVendas = null;
-    if (periodo !== 'hoje') {
-      let whereClauseAnterior = 'WHERE tenant_id = ?';
-      let paramsAnterior = [req.user.tenant_id];
+    let whereClauseAnterior = 'WHERE tenant_id = ?';
+    let paramsAnterior = [req.user.tenant_id];
 
-      switch (periodo) {
-        case 'semana':
-          whereClauseAnterior += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND data_venda < DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-          break;
-        case 'mes':
-          whereClauseAnterior += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 2 MONTH) AND data_venda < DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-          break;
-        case 'ano':
-          whereClauseAnterior += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 2 YEAR) AND data_venda < DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-          break;
-      }
-
-      const vendasAnteriores = await query(
-        `SELECT 
-          COUNT(*) as total_vendas_anterior,
-          COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_anterior
-        FROM vendas 
-        ${whereClauseAnterior}`,
-        paramsAnterior
-      );
-
-      const atual = vendasStats[0];
-      const anterior = vendasAnteriores[0];
-
-      comparacaoVendas = {
-        vendas: {
-          atual: atual.total_vendas,
-          anterior: anterior.total_vendas_anterior,
-          variacao: anterior.total_vendas_anterior > 0 ? 
-            ((atual.total_vendas - anterior.total_vendas_anterior) / anterior.total_vendas_anterior * 100) : 0
-        },
-        receita: {
-          atual: atual.receita_total,
-          anterior: anterior.receita_anterior,
-          variacao: anterior.receita_anterior > 0 ? 
-            ((atual.receita_total - anterior.receita_anterior) / anterior.receita_anterior * 100) : 0
-        }
-      };
+    switch (periodo) {
+      case 'hoje':
+        // Comparar com o dia anterior
+        whereClauseAnterior += ' AND DATE(data_venda) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+        break;
+      case 'semana':
+        // Comparar com a semana anterior
+        whereClauseAnterior += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND data_venda < DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        break;
+      case 'mes':
+        // Comparar com o mês anterior
+        whereClauseAnterior += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 2 MONTH) AND data_venda < DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        break;
+      case 'ano':
+        // Comparar com o ano anterior
+        whereClauseAnterior += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 2 YEAR) AND data_venda < DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        break;
     }
+
+    const vendasAnteriores = await query(
+      `SELECT 
+        COUNT(*) as total_vendas_anterior,
+        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_anterior
+      FROM vendas 
+      ${whereClauseAnterior}`,
+      paramsAnterior
+    );
+
+    const atual = vendasStats[0];
+    const anterior = vendasAnteriores[0];
+
+    // Calcular variação percentual com tratamento para divisão por zero
+    const calcularVariacao = (atual, anterior) => {
+      if (anterior === 0) {
+        return atual > 0 ? 100 : 0; // Se não havia dados antes e agora há, 100% de crescimento
+      }
+      return ((atual - anterior) / anterior) * 100;
+    };
+
+    comparacaoVendas = {
+      vendas: {
+        atual: atual.total_vendas,
+        anterior: anterior.total_vendas_anterior,
+        variacao: calcularVariacao(atual.total_vendas, anterior.total_vendas_anterior)
+      },
+      receita: {
+        atual: atual.receita_total,
+        anterior: anterior.receita_anterior,
+        variacao: calcularVariacao(atual.receita_total, anterior.receita_anterior)
+      }
+    };
 
     res.json({
       metricas: {

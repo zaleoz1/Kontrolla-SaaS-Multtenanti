@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Plus, 
   Search, 
@@ -34,23 +35,41 @@ interface ItemCarrinho {
 
 export default function NovaVenda() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // Dados da venda vindos do estado da navegação (quando volta da página Pagamentos)
+  const vendaData = location.state as {
+    carrinho: ItemCarrinho[];
+    clienteSelecionado: Cliente | null;
+    subtotal: number;
+    desconto: string;
+    total: number;
+  } | null;
   
   // Hooks para integração com API
   const { clientesFiltrados, termoBuscaCliente, setTermoBuscaCliente, carregando: carregandoClientes } = useBuscaClientes();
   const { produtosFiltrados, termoBusca, setTermoBusca, carregando: carregandoProdutos } = useBuscaProdutos();
   const { buscarPorCodigo, carregando: carregandoCodigoBarras } = useBuscaCodigoBarras();
   
-  const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
-  const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
+  const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData?.clienteSelecionado || null);
+  const [carrinho, setCarrinho] = useState<ItemCarrinho[]>(vendaData?.carrinho || []);
   const [codigoBarras, setCodigoBarras] = useState("");
-  const [desconto, setDesconto] = useState("");
-  const [mostrarSelecaoCliente, setMostrarSelecaoCliente] = useState(false);
+  const [desconto, setDesconto] = useState(vendaData?.desconto || "");
+  const [modalClienteAberto, setModalClienteAberto] = useState(false);
 
 
 
   // Usar produtos filtrados da API
   const produtosDisponiveis = produtosFiltrados;
+
+  // Limpar o estado da navegação após carregar os dados
+  useEffect(() => {
+    if (vendaData) {
+      // Limpar o estado da navegação para evitar que os dados sejam mantidos em navegações futuras
+      window.history.replaceState({}, document.title);
+    }
+  }, [vendaData]);
 
   const buscarPorCodigoBarras = async () => {
     if (!codigoBarras.trim()) return;
@@ -198,7 +217,7 @@ export default function NovaVenda() {
     setDesconto("");
     // Limpar busca de cliente
     setTermoBuscaCliente("");
-    setMostrarSelecaoCliente(false);
+    setModalClienteAberto(false);
   };
 
 
@@ -342,14 +361,87 @@ export default function NovaVenda() {
             <div className="p-4 border-b flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-muted-foreground">Cliente</h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setMostrarSelecaoCliente(!mostrarSelecaoCliente)}
-                >
-                  <User className="h-4 w-4 mr-1" />
-                  {clienteSelecionado ? 'Alterar' : 'Selecionar'}
-                </Button>
+                <Dialog open={modalClienteAberto} onOpenChange={setModalClienteAberto}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                    >
+                      <User className="h-4 w-4 mr-1" />
+                      {clienteSelecionado ? 'Alterar' : 'Selecionar'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh]">
+                    <DialogHeader>
+                      <DialogTitle>Selecionar Cliente</DialogTitle>
+                    </DialogHeader>
+                    
+                    {/* Busca de Clientes */}
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar cliente por nome ou CPF/CNPJ..."
+                          value={termoBuscaCliente}
+                          onChange={(e) => setTermoBuscaCliente(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      
+                      {/* Botão Novo Cliente */}
+                      <div
+                        className="p-3 rounded-lg border border-dashed border-green-400 cursor-pointer hover:bg-green-50 transition-colors"
+                        onClick={() => {
+                          setModalClienteAberto(false);
+                          irParaNovoCliente();
+                        }}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Plus className="h-5 w-5 text-green-600" />
+                          <p className="text-green-600 font-medium">Novo Cliente</p>
+                        </div>
+                      </div>
+                      
+                      {/* Lista de Clientes */}
+                      <div className="max-h-96 overflow-y-auto space-y-2">
+                        {carregandoClientes ? (
+                          <div className="text-center py-8">
+                            <p className="text-muted-foreground">Carregando clientes...</p>
+                          </div>
+                        ) : clientesFiltrados.length === 0 ? (
+                          <div className="text-center py-8">
+                            <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                            <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+                          </div>
+                        ) : (
+                          clientesFiltrados.map((cliente) => (
+                            <div
+                              key={cliente.id}
+                              className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                                clienteSelecionado?.id === cliente.id
+                                  ? "bg-green-600 text-white border-green-600"
+                                  : "bg-muted hover:bg-muted/80 border-border"
+                              }`}
+                              onClick={() => {
+                                setClienteSelecionado(cliente);
+                                setModalClienteAberto(false);
+                              }}
+                            >
+                              <p className="font-medium">{cliente.nome}</p>
+                              <p className={`text-sm ${
+                                clienteSelecionado?.id === cliente.id
+                                  ? "text-green-100"
+                                  : "text-muted-foreground"
+                              }`}>
+                                {cliente.cpf_cnpj}
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               
               {clienteSelecionado ? (
@@ -369,42 +461,6 @@ export default function NovaVenda() {
               ) : (
                 <div className="bg-muted rounded-lg p-3 text-center">
                   <p className="text-muted-foreground text-sm">Cliente não selecionado</p>
-                </div>
-              )}
-
-              {/* Lista de Clientes */}
-              {mostrarSelecaoCliente && (
-                <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
-                  <div
-                    className="p-2 rounded border border-dashed border-green-400 cursor-pointer hover:bg-green-50"
-                    onClick={() => {
-                      setMostrarSelecaoCliente(false);
-                      irParaNovoCliente();
-                    }}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Plus className="h-4 w-4 text-green-600" />
-                      <p className="text-green-600 text-sm font-medium">Novo Cliente</p>
-                    </div>
-                  </div>
-                  
-                  {clientesFiltrados.map((cliente) => (
-                    <div
-                      key={cliente.id}
-                      className={`p-2 rounded cursor-pointer transition-colors ${
-                        clienteSelecionado?.id === cliente.id
-                          ? "bg-green-600 text-white"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                      onClick={() => {
-                        setClienteSelecionado(cliente);
-                        setMostrarSelecaoCliente(false);
-                      }}
-                    >
-                      <p className="font-medium text-sm">{cliente.nome}</p>
-                      <p className="text-xs opacity-75">{cliente.cpf_cnpj}</p>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>

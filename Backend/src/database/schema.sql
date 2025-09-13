@@ -205,8 +205,8 @@ CREATE TABLE IF NOT EXISTS venda_pagamentos (
 CREATE TABLE IF NOT EXISTS venda_pagamentos_prazo (
     id INT PRIMARY KEY AUTO_INCREMENT,
     venda_id INT NOT NULL,
-    dias INT NOT NULL,
-    juros DECIMAL(5,2) NOT NULL,
+    dias INT NULL,
+    juros DECIMAL(5,2) NULL,
     valor_original DECIMAL(10,2) NOT NULL,
     valor_com_juros DECIMAL(10,2) NOT NULL,
     data_vencimento DATE NOT NULL,

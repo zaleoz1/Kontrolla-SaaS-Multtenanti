@@ -37,7 +37,8 @@ export default function Dashboard() {
     getPaymentText,
     calculateVariation,
     getVariationColor,
-    getVariationIcon
+    getVariationIcon,
+    formatVariation
   } = useDashboard();
 
   // Atualizar dados quando o período mudar
@@ -52,31 +53,43 @@ export default function Dashboard() {
     setTimeout(() => setMudandoPeriodo(false), 1000);
   };
 
+  // Função para determinar se há dados de comparação válidos
+  const hasValidComparison = (comparacao: any) => {
+    return comparacao && 
+           comparacao.receita && 
+           comparacao.vendas && 
+           (comparacao.receita.anterior > 0 || comparacao.vendas.anterior > 0);
+  };
+
   // Dados das métricas baseados nos dados reais
   const metricas = data ? [
     {
-      titulo: "Vendas Hoje",
+      titulo: periodo === 'hoje' ? "Vendas Hoje" : `Vendas ${periodo === 'semana' ? 'da Semana' : periodo === 'mes' ? 'do Mês' : 'do Ano'}`,
       valor: formatCurrency(data.metricas.vendas.receita_total),
-      mudanca: data.metricas.comparacao ? 
-        `${getVariationIcon(data.metricas.comparacao.receita.variacao)} ${Math.abs(data.metricas.comparacao.receita.variacao).toFixed(1)}%` : 
-        "N/A",
-      tipoMudanca: data.metricas.comparacao ? 
+      mudanca: hasValidComparison(data.metricas.comparacao) ? 
+        `${getVariationIcon(data.metricas.comparacao.receita.variacao)} ${formatVariation(data.metricas.comparacao.receita.variacao)}` : 
+        data.metricas.comparacao?.receita.anterior === 0 ? "Novo" : "N/A",
+      tipoMudanca: hasValidComparison(data.metricas.comparacao) ? 
         (data.metricas.comparacao.receita.variacao >= 0 ? "positiva" : "negativa") as "positiva" | "negativa" : 
-        "neutra" as "neutra",
+        data.metricas.comparacao?.receita.anterior === 0 ? "positiva" as "positiva" : "neutra" as "neutra",
       icone: DollarSign,
-      descricao: data.metricas.comparacao ? "vs. período anterior" : "sem comparação"
+      descricao: hasValidComparison(data.metricas.comparacao) ? 
+        `vs. ${periodo === 'hoje' ? 'ontem' : periodo === 'semana' ? 'semana anterior' : periodo === 'mes' ? 'mês anterior' : 'ano anterior'}` : 
+        data.metricas.comparacao?.receita.anterior === 0 ? "primeira vez" : "sem comparação"
     },
     {
-      titulo: "Pedidos",
+      titulo: periodo === 'hoje' ? "Pedidos Hoje" : `Pedidos ${periodo === 'semana' ? 'da Semana' : periodo === 'mes' ? 'do Mês' : 'do Ano'}`,
       valor: data.metricas.vendas.total_vendas.toString(),
-      mudanca: data.metricas.comparacao ? 
-        `${getVariationIcon(data.metricas.comparacao.vendas.variacao)} ${Math.abs(data.metricas.comparacao.vendas.variacao).toFixed(1)}%` : 
-        "N/A",
-      tipoMudanca: data.metricas.comparacao ? 
+      mudanca: hasValidComparison(data.metricas.comparacao) ? 
+        `${getVariationIcon(data.metricas.comparacao.vendas.variacao)} ${formatVariation(data.metricas.comparacao.vendas.variacao)}` : 
+        data.metricas.comparacao?.vendas.anterior === 0 ? "Novo" : "N/A",
+      tipoMudanca: hasValidComparison(data.metricas.comparacao) ? 
         (data.metricas.comparacao.vendas.variacao >= 0 ? "positiva" : "negativa") as "positiva" | "negativa" : 
-        "neutra" as "neutra",
+        data.metricas.comparacao?.vendas.anterior === 0 ? "positiva" as "positiva" : "neutra" as "neutra",
       icone: ShoppingCart,
-      descricao: `pedidos ${periodo === 'hoje' ? 'hoje' : `no ${periodo}`}`
+      descricao: hasValidComparison(data.metricas.comparacao) ? 
+        `vs. ${periodo === 'hoje' ? 'ontem' : periodo === 'semana' ? 'semana anterior' : periodo === 'mes' ? 'mês anterior' : 'ano anterior'}` : 
+        data.metricas.comparacao?.vendas.anterior === 0 ? "primeira vez" : "sem comparação"
     },
     {
       titulo: "Produtos",
