@@ -258,7 +258,15 @@ export default function Dashboard() {
                           {venda.numero_venda} • {formatDateTime(venda.data_venda)}
                         </p>
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <span>{getPaymentIcon(venda.forma_pagamento)}</span>
+                          {venda.forma_pagamento === 'pix' ? (
+                            <img 
+                              src={getPaymentIcon(venda.forma_pagamento)} 
+                              alt="PIX" 
+                              className="w-4 h-4"
+                            />
+                          ) : (
+                            <span>{getPaymentIcon(venda.forma_pagamento)}</span>
+                          )}
                           <span>{getPaymentText(venda.forma_pagamento)}</span>
                         </div>
                       </div>

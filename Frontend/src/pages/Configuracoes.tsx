@@ -163,6 +163,135 @@ export default function Configuracoes() {
     carregarUsuarios();
   }, []);
 
+  // Função para buscar dados do CEP
+  const buscarCep = async (cep: string) => {
+    // Remove caracteres não numéricos
+    const cepLimpo = cep.replace(/\D/g, '');
+    
+    // Verifica se o CEP tem 8 dígitos
+    if (cepLimpo.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          // Atualiza os dados do tenant com as informações do CEP
+          setDadosTenantEditando(prev => prev ? {
+            ...prev,
+            endereco: data.logradouro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || '',
+            cep: data.cep || cep
+          } : null);
+          
+          toast({
+            title: "Sucesso",
+            description: "Endereço preenchido automaticamente!",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Aviso",
+            description: "CEP não encontrado",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao buscar CEP",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  // Função para buscar dados do CEP do fornecedor
+  const buscarCepFornecedor = async (cep: string) => {
+    // Remove caracteres não numéricos
+    const cepLimpo = cep.replace(/\D/g, '');
+    
+    // Verifica se o CEP tem 8 dígitos
+    if (cepLimpo.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          // Atualiza os dados do fornecedor com as informações do CEP
+          setFornecedorEditando(prev => prev ? {
+            ...prev,
+            endereco: data.logradouro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || '',
+            cep: data.cep || cep
+          } : null);
+          
+          toast({
+            title: "Sucesso",
+            description: "Endereço preenchido automaticamente!",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Aviso",
+            description: "CEP não encontrado",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao buscar CEP",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  // Função para buscar dados do CEP do funcionário
+  const buscarCepFuncionario = async (cep: string) => {
+    // Remove caracteres não numéricos
+    const cepLimpo = cep.replace(/\D/g, '');
+    
+    // Verifica se o CEP tem 8 dígitos
+    if (cepLimpo.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          // Atualiza os dados do funcionário com as informações do CEP
+          setFuncionarioEditando(prev => prev ? {
+            ...prev,
+            endereco: data.logradouro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || '',
+            cep: data.cep || cep
+          } : null);
+          
+          toast({
+            title: "Sucesso",
+            description: "Endereço preenchido automaticamente!",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Aviso",
+            description: "CEP não encontrado",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao buscar CEP",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const handleSalvarDadosConta = async () => {
     if (!dadosContaEditando) return;
     
@@ -1105,395 +1234,513 @@ export default function Configuracoes() {
 
         {/* Dados da Conta */}
         {abaAtiva === "conta" && (
-          <div className="space-y-4">
-      {/* Cards de Resumo */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
+          <div className="space-y-8">
+            {/* Header da Página */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Plano Atual</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  {obterBadgePlano(dadosTenant.plano)}
-                </div>
+                <h1 className="text-3xl font-bold tracking-tight">Configurações da Conta</h1>
+                <p className="text-muted-foreground mt-2">
+                  Gerencie suas informações pessoais e da empresa
+                </p>
               </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Crown className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Status da Conta</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  {obterBadgeStatus(dadosTenant.status)}
-                </div>
-              </div>
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Membro Desde</p>
-                <p className="text-lg font-bold">{new Date(dadosTenant.data_criacao).toLocaleDateString("pt-BR")}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-accent/10">
-                <Calendar className="h-5 w-5 text-accent" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Tema Atual</p>
-                <p className="text-lg font-bold capitalize">{configuracoes.tema}</p>
-              </div>
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Palette className="h-5 w-5 text-warning" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Informações Pessoais
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome</Label>
-                  <Input
-                    id="nome"
-                    value={dadosContaEditando?.nome || ''}
-                    onChange={(e) => {
-                      setDadosContaEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sobrenome">Sobrenome</Label>
-                  <Input
-                    id="sobrenome"
-                    value={dadosContaEditando?.sobrenome || ''}
-                    onChange={(e) => {
-                      setDadosContaEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={dadosContaEditando?.email || ''}
-                    onChange={(e) => {
-                      setDadosContaEditando(prev => prev ? { ...prev, email: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    value={dadosContaEditando?.telefone || ''}
-                    onChange={(e) => {
-                      setDadosContaEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <Button onClick={handleSalvarDadosConta} className="w-full" disabled={salvando}>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  onClick={async () => {
+                    await handleSalvarDadosConta();
+                    await handleSalvarDadosTenant();
+                  }} 
+                  className="px-6 py-2" 
+                  disabled={salvando}
+                >
                   <Save className="h-4 w-4 mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Informações'}
+                  {salvando ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Building className="h-5 w-5 mr-2" />
-                  Dados da Empresa
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome da Empresa</Label>
-                  <Input
-                    id="nome"
-                    value={dadosTenantEditando?.nome || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="razao_social">Razão Social</Label>
-                  <Input
-                    id="razao_social"
-                    value={dadosTenantEditando?.razao_social || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, razao_social: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ/CPF</Label>
-                  <Input
-                    id="cnpj"
-                    value={dadosTenantEditando?.cnpj || dadosTenantEditando?.cpf || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, cnpj: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email_empresa">Email da Empresa</Label>
-                  <Input
-                    id="email_empresa"
-                    type="email"
-                    value={dadosTenantEditando?.email || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, email: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefone_empresa">Telefone da Empresa</Label>
-                  <Input
-                    id="telefone_empresa"
-                    value={dadosTenantEditando?.telefone || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
-                  <Input
-                    id="inscricao_estadual"
-                    value={dadosTenantEditando?.inscricao_estadual || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, inscricao_estadual: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inscricao_municipal">Inscrição Municipal</Label>
-                  <Input
-                    id="inscricao_municipal"
-                    value={dadosTenantEditando?.inscricao_municipal || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, inscricao_municipal: e.target.value } : null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Logo da Empresa</Label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                    {dadosTenantEditando?.logo ? (
-                      <div className="space-y-2">
-                        <img 
-                          src={dadosTenantEditando?.logo} 
-                          alt="Logo da empresa" 
-                          className="h-16 w-16 mx-auto object-contain"
-                        />
-                        <p className="text-sm text-muted-foreground">Logo atual</p>
+            {/* Cards de Resumo - Design Moderno */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Plano Atual</p>
+                      <div className="flex items-center space-x-2">
+                        {obterBadgePlano(dadosTenant.plano)}
                       </div>
-                    ) : (
-                      <>
-                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Clique para fazer upload da logo
-                        </p>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleUploadLogo}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <Button variant="outline" size="sm" asChild>
-                      <label htmlFor="logo-upload">
-                        {dadosTenantEditando?.logo ? 'Alterar Logo' : 'Selecionar Arquivo'}
-                      </label>
-                    </Button>
+                    </div>
+                    <div className="p-3 rounded-full bg-blue-500/20">
+                      <Crown className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
                   </div>
-                </div>
-                <Button onClick={handleSalvarDadosTenant} className="w-full" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Empresa'}
-                </Button>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Dados de Endereço */}
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPinIcon className="h-5 w-5 mr-2" />
-                  Endereço da Empresa
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400">Status da Conta</p>
+                      <div className="flex items-center space-x-2">
+                        {obterBadgeStatus(dadosTenant.status)}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-full bg-green-500/20">
+                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Membro Desde</p>
+                      <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                        {new Date(dadosTenant.data_criacao).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-full bg-purple-500/20">
+                      <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Tema Atual</p>
+                      <p className="text-lg font-bold text-orange-700 dark:text-orange-300 capitalize">
+                        {configuracoes.tema}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-full bg-orange-500/20">
+                      <Palette className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Seção Principal - Layout em 2 Colunas */}
+            <div className="grid gap-8 lg:grid-cols-2">
+              {/* Coluna Esquerda - Informações Pessoais */}
+              <div className="space-y-6">
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-xl">
+                      <div className="p-2 rounded-lg bg-blue-500/10 mr-3">
+                        <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      Informações Pessoais
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Atualize seus dados pessoais e de contato
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="nome" className="text-sm font-medium">Nome</Label>
+                        <Input
+                          id="nome"
+                          value={dadosContaEditando?.nome || ''}
+                          onChange={(e) => {
+                            setDadosContaEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
+                          }}
+                          className="h-11"
+                          placeholder="Seu nome"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sobrenome" className="text-sm font-medium">Sobrenome</Label>
+                        <Input
+                          id="sobrenome"
+                          value={dadosContaEditando?.sobrenome || ''}
+                          onChange={(e) => {
+                            setDadosContaEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null);
+                          }}
+                          className="h-11"
+                          placeholder="Seu sobrenome"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={dadosContaEditando?.email || ''}
+                        onChange={(e) => {
+                          setDadosContaEditando(prev => prev ? { ...prev, email: e.target.value } : null);
+                        }}
+                        className="h-11"
+                        placeholder="seu@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
+                      <Input
+                        id="telefone"
+                        value={dadosContaEditando?.telefone || ''}
+                        onChange={(e) => {
+                          setDadosContaEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
+                        }}
+                        className="h-11"
+                        placeholder="(11) 99999-9999"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Endereço da Empresa */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-xl">
+                      <div className="p-2 rounded-lg bg-green-500/10 mr-3">
+                        <MapPinIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      Endereço da Empresa
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Informações de localização da sua empresa
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="endereco_empresa" className="text-sm font-medium">Endereço Completo</Label>
+                      <Textarea
+                        id="endereco_empresa"
+                        value={dadosTenantEditando?.endereco || ''}
+                        onChange={(e) => {
+                          setDadosTenantEditando(prev => prev ? { ...prev, endereco: e.target.value } : null);
+                        }}
+                        placeholder="Rua, número, bairro, complemento"
+                        rows={3}
+                        className="resize-none"
+                      />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="cep_empresa" className="text-sm font-medium">CEP</Label>
+                        <Input
+                          id="cep_empresa"
+                          value={dadosTenantEditando?.cep || ''}
+                          onChange={(e) => {
+                            const valor = e.target.value;
+                            setDadosTenantEditando(prev => prev ? { ...prev, cep: valor } : null);
+                            buscarCep(valor);
+                          }}
+                          placeholder="00000-000"
+                          maxLength={9}
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cidade_empresa" className="text-sm font-medium">Cidade</Label>
+                        <Input
+                          id="cidade_empresa"
+                          value={dadosTenantEditando?.cidade || ''}
+                          onChange={(e) => {
+                            setDadosTenantEditando(prev => prev ? { ...prev, cidade: e.target.value } : null);
+                          }}
+                          placeholder="Nome da cidade"
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="estado_empresa" className="text-sm font-medium">Estado</Label>
+                        <Select 
+                          value={dadosTenantEditando?.estado || ''} 
+                          onValueChange={(value) => setDadosTenantEditando(prev => prev ? { ...prev, estado: value } : null)}
+                        >
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Selecione o estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AC">Acre</SelectItem>
+                            <SelectItem value="AL">Alagoas</SelectItem>
+                            <SelectItem value="AP">Amapá</SelectItem>
+                            <SelectItem value="AM">Amazonas</SelectItem>
+                            <SelectItem value="BA">Bahia</SelectItem>
+                            <SelectItem value="CE">Ceará</SelectItem>
+                            <SelectItem value="DF">Distrito Federal</SelectItem>
+                            <SelectItem value="ES">Espírito Santo</SelectItem>
+                            <SelectItem value="GO">Goiás</SelectItem>
+                            <SelectItem value="MA">Maranhão</SelectItem>
+                            <SelectItem value="MT">Mato Grosso</SelectItem>
+                            <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
+                            <SelectItem value="MG">Minas Gerais</SelectItem>
+                            <SelectItem value="PA">Pará</SelectItem>
+                            <SelectItem value="PB">Paraíba</SelectItem>
+                            <SelectItem value="PR">Paraná</SelectItem>
+                            <SelectItem value="PE">Pernambuco</SelectItem>
+                            <SelectItem value="PI">Piauí</SelectItem>
+                            <SelectItem value="RJ">Rio de Janeiro</SelectItem>
+                            <SelectItem value="RN">Rio Grande do Norte</SelectItem>
+                            <SelectItem value="RS">Rio Grande do Sul</SelectItem>
+                            <SelectItem value="RO">Rondônia</SelectItem>
+                            <SelectItem value="RR">Roraima</SelectItem>
+                            <SelectItem value="SC">Santa Catarina</SelectItem>
+                            <SelectItem value="SP">São Paulo</SelectItem>
+                            <SelectItem value="SE">Sergipe</SelectItem>
+                            <SelectItem value="TO">Tocantins</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Coluna Direita - Dados da Empresa */}
+              <div className="space-y-6">
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-xl">
+                      <div className="p-2 rounded-lg bg-purple-500/10 mr-3">
+                        <Building className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      Dados da Empresa
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Informações fiscais e comerciais da empresa
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="nome_empresa" className="text-sm font-medium">Nome da Empresa</Label>
+                      <Input
+                        id="nome_empresa"
+                        value={dadosTenantEditando?.nome || ''}
+                        onChange={(e) => {
+                          setDadosTenantEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
+                        }}
+                        className="h-11"
+                        placeholder="Nome fantasia da empresa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="razao_social" className="text-sm font-medium">Razão Social</Label>
+                      <Input
+                        id="razao_social"
+                        value={dadosTenantEditando?.razao_social || ''}
+                        onChange={(e) => {
+                          setDadosTenantEditando(prev => prev ? { ...prev, razao_social: e.target.value } : null);
+                        }}
+                        className="h-11"
+                        placeholder="Razão social completa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cnpj" className="text-sm font-medium">CNPJ/CPF</Label>
+                      <Input
+                        id="cnpj"
+                        value={dadosTenantEditando?.cnpj || dadosTenantEditando?.cpf || ''}
+                        onChange={(e) => {
+                          setDadosTenantEditando(prev => prev ? { ...prev, cnpj: e.target.value } : null);
+                        }}
+                        className="h-11"
+                        placeholder="00.000.000/0000-00"
+                      />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="email_empresa" className="text-sm font-medium">Email da Empresa</Label>
+                        <Input
+                          id="email_empresa"
+                          type="email"
+                          value={dadosTenantEditando?.email || ''}
+                          onChange={(e) => {
+                            setDadosTenantEditando(prev => prev ? { ...prev, email: e.target.value } : null);
+                          }}
+                          className="h-11"
+                          placeholder="contato@empresa.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="telefone_empresa" className="text-sm font-medium">Telefone da Empresa</Label>
+                        <Input
+                          id="telefone_empresa"
+                          value={dadosTenantEditando?.telefone || ''}
+                          onChange={(e) => {
+                            setDadosTenantEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
+                          }}
+                          className="h-11"
+                          placeholder="(11) 3333-4444"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="inscricao_estadual" className="text-sm font-medium">Inscrição Estadual</Label>
+                        <Input
+                          id="inscricao_estadual"
+                          value={dadosTenantEditando?.inscricao_estadual || ''}
+                          onChange={(e) => {
+                            setDadosTenantEditando(prev => prev ? { ...prev, inscricao_estadual: e.target.value } : null);
+                          }}
+                          className="h-11"
+                          placeholder="123.456.789.012"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inscricao_municipal" className="text-sm font-medium">Inscrição Municipal</Label>
+                        <Input
+                          id="inscricao_municipal"
+                          value={dadosTenantEditando?.inscricao_municipal || ''}
+                          onChange={(e) => {
+                            setDadosTenantEditando(prev => prev ? { ...prev, inscricao_municipal: e.target.value } : null);
+                          }}
+                          className="h-11"
+                          placeholder="12345678"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Upload da Logo */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center text-xl">
+                      <div className="p-2 rounded-lg bg-orange-500/10 mr-3">
+                        <Upload className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      Logo da Empresa
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Faça upload da logo da sua empresa (PNG, JPG até 2MB)
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                      {dadosTenantEditando?.logo ? (
+                        <div className="space-y-4">
+                          <div className="relative inline-block">
+                            <img 
+                              src={dadosTenantEditando?.logo} 
+                              alt="Logo da empresa" 
+                              className="h-20 w-20 mx-auto object-contain rounded-lg shadow-md"
+                            />
+                            <div className="absolute -top-2 -right-2 p-1 bg-green-500 rounded-full">
+                              <CheckCircle className="h-4 w-4 text-white" />
+                            </div>
+                          </div>
+                          <p className="text-sm font-medium text-green-600 dark:text-green-400">Logo carregada com sucesso</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                            <Upload className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Clique para fazer upload</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              ou arraste e solte o arquivo aqui
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadLogo}
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild
+                        className="mt-4"
+                      >
+                        <label htmlFor="logo-upload" className="cursor-pointer">
+                          {dadosTenantEditando?.logo ? 'Alterar Logo' : 'Selecionar Arquivo'}
+                        </label>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Seção de Segurança - Alteração de Senha */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-xl">
+                  <div className="p-2 rounded-lg bg-red-500/10 mr-3">
+                    <Lock className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  Segurança da Conta
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Mantenha sua conta segura alterando sua senha regularmente
+                </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="endereco_empresa">Endereço Completo</Label>
-                  <Textarea
-                    id="endereco_empresa"
-                    value={dadosTenantEditando?.endereco || ''}
-                    onChange={(e) => {
-                      setDadosTenantEditando(prev => prev ? { ...prev, endereco: e.target.value } : null);
-                    }}
-                    placeholder="Rua, número, bairro, complemento"
-                    rows={3}
-                  />
-                </div>
+              <CardContent className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="cep_empresa">CEP</Label>
+                    <Label htmlFor="senhaAtual" className="text-sm font-medium">Senha Atual</Label>
+                    <div className="relative">
+                      <Input
+                        id="senhaAtual"
+                        type={mostrarSenhas ? "text" : "password"}
+                        value={senhaAtual}
+                        onChange={(e) => setSenhaAtual(e.target.value)}
+                        className="h-11 pr-10"
+                        placeholder="Digite sua senha atual"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setMostrarSenhas(!mostrarSenhas)}
+                      >
+                        {mostrarSenhas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="novaSenha" className="text-sm font-medium">Nova Senha</Label>
                     <Input
-                      id="cep_empresa"
-                      value={dadosTenantEditando?.cep || ''}
-                      onChange={(e) => {
-                        setDadosTenantEditando(prev => prev ? { ...prev, cep: e.target.value } : null);
-                      }}
-                      placeholder="00000-000"
+                      id="novaSenha"
+                      type={mostrarSenhas ? "text" : "password"}
+                      value={novaSenha}
+                      onChange={(e) => setNovaSenha(e.target.value)}
+                      className="h-11"
+                      placeholder="Digite a nova senha"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cidade_empresa">Cidade</Label>
+                    <Label htmlFor="confirmarSenha" className="text-sm font-medium">Confirmar Senha</Label>
                     <Input
-                      id="cidade_empresa"
-                      value={dadosTenantEditando?.cidade || ''}
-                      onChange={(e) => {
-                        setDadosTenantEditando(prev => prev ? { ...prev, cidade: e.target.value } : null);
-                      }}
-                      placeholder="Nome da cidade"
+                      id="confirmarSenha"
+                      type={mostrarSenhas ? "text" : "password"}
+                      value={confirmarSenha}
+                      onChange={(e) => setConfirmarSenha(e.target.value)}
+                      className="h-11"
+                      placeholder="Confirme a nova senha"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="estado_empresa">Estado</Label>
-                    <Select 
-                      value={dadosTenantEditando?.estado || ''} 
-                      onValueChange={(value) => setDadosTenantEditando(prev => prev ? { ...prev, estado: value } : null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="AC">Acre</SelectItem>
-                        <SelectItem value="AL">Alagoas</SelectItem>
-                        <SelectItem value="AP">Amapá</SelectItem>
-                        <SelectItem value="AM">Amazonas</SelectItem>
-                        <SelectItem value="BA">Bahia</SelectItem>
-                        <SelectItem value="CE">Ceará</SelectItem>
-                        <SelectItem value="DF">Distrito Federal</SelectItem>
-                        <SelectItem value="ES">Espírito Santo</SelectItem>
-                        <SelectItem value="GO">Goiás</SelectItem>
-                        <SelectItem value="MA">Maranhão</SelectItem>
-                        <SelectItem value="MT">Mato Grosso</SelectItem>
-                        <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
-                        <SelectItem value="MG">Minas Gerais</SelectItem>
-                        <SelectItem value="PA">Pará</SelectItem>
-                        <SelectItem value="PB">Paraíba</SelectItem>
-                        <SelectItem value="PR">Paraná</SelectItem>
-                        <SelectItem value="PE">Pernambuco</SelectItem>
-                        <SelectItem value="PI">Piauí</SelectItem>
-                        <SelectItem value="RJ">Rio de Janeiro</SelectItem>
-                        <SelectItem value="RN">Rio Grande do Norte</SelectItem>
-                        <SelectItem value="RS">Rio Grande do Sul</SelectItem>
-                        <SelectItem value="RO">Rondônia</SelectItem>
-                        <SelectItem value="RR">Roraima</SelectItem>
-                        <SelectItem value="SC">Santa Catarina</SelectItem>
-                        <SelectItem value="SP">São Paulo</SelectItem>
-                        <SelectItem value="SE">Sergipe</SelectItem>
-                        <SelectItem value="TO">Tocantins</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
-                <Button onClick={handleSalvarDadosTenant} className="w-full" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Endereço'}
-                </Button>
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleAlterarSenha} 
+                    className="px-6 py-2" 
+                    disabled={salvando}
+                    variant="destructive"
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    {salvando ? 'Alterando...' : 'Alterar Senha'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Alteração de Senha */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Lock className="h-5 w-5 mr-2" />
-                Alterar Senha
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="senhaAtual">Senha Atual</Label>
-                  <div className="relative">
-                    <Input
-                      id="senhaAtual"
-                      type={mostrarSenhas ? "text" : "password"}
-                      value={senhaAtual}
-                      onChange={(e) => setSenhaAtual(e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setMostrarSenhas(!mostrarSenhas)}
-                    >
-                      {mostrarSenhas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="novaSenha">Nova Senha</Label>
-                  <Input
-                    id="novaSenha"
-                    type={mostrarSenhas ? "text" : "password"}
-                    value={novaSenha}
-                    onChange={(e) => setNovaSenha(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmarSenha">Confirmar Senha</Label>
-                  <Input
-                    id="confirmarSenha"
-                    type={mostrarSenhas ? "text" : "password"}
-                    value={confirmarSenha}
-                    onChange={(e) => setConfirmarSenha(e.target.value)}
-                  />
-                </div>
-              </div>
-              <Button onClick={handleAlterarSenha} className="w-full md:w-auto" disabled={salvando}>
-                <Key className="h-4 w-4 mr-2" />
-                {salvando ? 'Alterando...' : 'Alterar Senha'}
-              </Button>
-            </CardContent>
-          </Card>
           </div>
         )}
 
@@ -1667,73 +1914,76 @@ export default function Configuracoes() {
 
         {/* Administração */}
         {abaAtiva === "administracao" && (
-          <div className="space-y-4">
-            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div className="space-y-8">
+            {/* Header da Página */}
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Administração do Sistema</h2>
-                <p className="text-muted-foreground">
+                <h1 className="text-3xl font-bold tracking-tight">Administração do Sistema</h1>
+                <p className="text-muted-foreground mt-2">
                   Gerencie usuários, roles e permissões do sistema
                 </p>
               </div>
-              <Button onClick={handleNovoUsuario} className="bg-gradient-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button onClick={handleNovoUsuario} className="px-6 py-2">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              </div>
             </div>
 
-            {/* Estatísticas de Usuários */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card className="bg-gradient-card shadow-card">
+            {/* Cards de Resumo - Design Moderno */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total de Usuários</p>
-                      <p className="text-2xl font-bold">{usuarios.length}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total de Usuários</p>
+                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{usuarios.length}</p>
                     </div>
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Users className="h-5 w-5 text-primary" />
+                    <div className="p-3 rounded-full bg-blue-500/20">
+                      <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-card shadow-card">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/50">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Administradores</p>
-                      <p className="text-2xl font-bold">{usuarios.filter(u => u.role === "administrador").length}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-red-600 dark:text-red-400">Administradores</p>
+                      <p className="text-2xl font-bold text-red-700 dark:text-red-300">{usuarios.filter(u => u.role === "administrador").length}</p>
                     </div>
-                    <div className="p-2 rounded-lg bg-red-500/10">
-                      <Crown className="h-5 w-5 text-red-500" />
+                    <div className="p-3 rounded-full bg-red-500/20">
+                      <Crown className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-card shadow-card">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Gerentes</p>
-                      <p className="text-2xl font-bold">{usuarios.filter(u => u.role === "gerente").length}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Gerentes</p>
+                      <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{usuarios.filter(u => u.role === "gerente").length}</p>
                     </div>
-                    <div className="p-2 rounded-lg bg-blue-500/10">
-                      <Star className="h-5 w-5 text-blue-500" />
+                    <div className="p-3 rounded-full bg-purple-500/20">
+                      <Star className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-card shadow-card">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Vendedores</p>
-                      <p className="text-2xl font-bold">{usuarios.filter(u => u.role === "vendedor").length}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400">Vendedores</p>
+                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">{usuarios.filter(u => u.role === "vendedor").length}</p>
                     </div>
-                    <div className="p-2 rounded-lg bg-green-500/10">
-                      <UserCheck className="h-5 w-5 text-green-500" />
+                    <div className="p-3 rounded-full bg-green-500/20">
+                      <UserCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
                 </CardContent>
@@ -1741,8 +1991,8 @@ export default function Configuracoes() {
             </div>
 
             {/* Filtros e Busca */}
-            <Card className="bg-gradient-card shadow-card">
-              <CardContent className="p-4">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-6">
                 <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
                   <div className="flex-1">
                     <div className="relative">
@@ -1784,7 +2034,7 @@ export default function Configuracoes() {
             </Card>
 
             {/* Lista de Usuários */}
-            <Card className="bg-gradient-card shadow-card">
+            <Card className="border-0 shadow-lg">
               <CardContent className="p-0">
                 {carregandoUsuarios ? (
                   <div className="flex items-center justify-center h-32">
@@ -2970,8 +3220,14 @@ export default function Configuracoes() {
                   <Input
                     id="cep_fornecedor"
                     value={fornecedorEditando.cep || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, cep: e.target.value } : null)}
+                    onChange={(e) => {
+                      const valor = e.target.value;
+                      setFornecedorEditando(prev => prev ? { ...prev, cep: valor } : null);
+                      // Busca automaticamente quando o CEP tem 8 dígitos
+                      buscarCepFornecedor(valor);
+                    }}
                     placeholder="00000-000"
+                    maxLength={9}
                   />
                 </div>
                 <div className="space-y-2">
@@ -3562,8 +3818,14 @@ export default function Configuracoes() {
                       <Input
                         id="cep_funcionario"
                         value={funcionarioEditando.cep || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, cep: e.target.value } : null)}
+                        onChange={(e) => {
+                          const valor = e.target.value;
+                          setFuncionarioEditando(prev => prev ? { ...prev, cep: valor } : null);
+                          // Busca automaticamente quando o CEP tem 8 dígitos
+                          buscarCepFuncionario(valor);
+                        }}
                         placeholder="00000-000"
+                        maxLength={9}
                       />
                     </div>
                     <div className="space-y-2">
