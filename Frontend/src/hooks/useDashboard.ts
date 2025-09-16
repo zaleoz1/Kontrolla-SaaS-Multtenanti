@@ -210,7 +210,7 @@ export function useDashboard() {
       'dinheiro': '💵',
       'cartao_credito': '💳',
       'cartao_debito': '💳',
-      'pix': '📱',
+      'pix': '/logopix.png',
       'transferencia': '🏦',
       'boleto': '📄',
       'cheque': '📝',
