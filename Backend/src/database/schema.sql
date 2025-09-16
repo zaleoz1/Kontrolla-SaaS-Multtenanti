@@ -125,6 +125,65 @@ CREATE TABLE IF NOT EXISTS categorias (
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 );
 
+-- Tabela de fornecedores
+CREATE TABLE IF NOT EXISTS fornecedores (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    razao_social VARCHAR(255),
+    cnpj VARCHAR(18),
+    email VARCHAR(255),
+    telefone VARCHAR(20),
+    endereco TEXT,
+    cidade VARCHAR(100),
+    estado VARCHAR(2),
+    cep VARCHAR(10),
+    contato VARCHAR(255),
+    observacoes TEXT,
+    status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+
+-- Tabela de funcionários
+CREATE TABLE IF NOT EXISTS funcionarios (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    sobrenome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(14) NOT NULL,
+    rg VARCHAR(20),
+    email VARCHAR(255),
+    telefone VARCHAR(20),
+    endereco TEXT,
+    cidade VARCHAR(100),
+    estado VARCHAR(2),
+    cep VARCHAR(10),
+    data_nascimento DATE,
+    sexo ENUM('masculino', 'feminino', 'outro'),
+    estado_civil ENUM('solteiro', 'casado', 'divorciado', 'viuvo', 'uniao_estavel'),
+    cargo VARCHAR(100) NOT NULL,
+    departamento VARCHAR(100),
+    data_admissao DATE NOT NULL,
+    data_demissao DATE NULL,
+    salario DECIMAL(10,2) NOT NULL,
+    tipo_salario ENUM('mensal', 'horista', 'comissionado') DEFAULT 'mensal',
+    valor_hora DECIMAL(8,2),
+    comissao_percentual DECIMAL(5,2),
+    banco VARCHAR(100),
+    agencia VARCHAR(10),
+    conta VARCHAR(20),
+    digito VARCHAR(2),
+    tipo_conta ENUM('corrente', 'poupanca'),
+    pix VARCHAR(255),
+    observacoes TEXT,
+    status ENUM('ativo', 'inativo', 'afastado', 'demitido') DEFAULT 'ativo',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+
 -- Tabela de produtos
 CREATE TABLE IF NOT EXISTS produtos (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -142,7 +201,7 @@ CREATE TABLE IF NOT EXISTS produtos (
     largura DECIMAL(8,2),
     altura DECIMAL(8,2),
     comprimento DECIMAL(8,2),
-    fornecedor VARCHAR(255),
+    fornecedor_id INT,
     marca VARCHAR(100),
     modelo VARCHAR(100),
     garantia VARCHAR(100),
@@ -152,7 +211,8 @@ CREATE TABLE IF NOT EXISTS produtos (
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL,
+    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL
 );
 
 -- Tabela de vendas
@@ -228,7 +288,7 @@ CREATE TABLE IF NOT EXISTS transacoes (
     data_transacao DATE NOT NULL,
     metodo_pagamento ENUM('pix', 'cartao_credito', 'cartao_debito', 'dinheiro', 'transferencia', 'boleto', 'cheque') NOT NULL,
     conta VARCHAR(100) NOT NULL,
-    fornecedor VARCHAR(255),
+    fornecedor_id INT,
     cliente_id INT,
     observacoes TEXT,
     anexos JSON,
@@ -236,6 +296,7 @@ CREATE TABLE IF NOT EXISTS transacoes (
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
 );
 
@@ -263,7 +324,7 @@ CREATE TABLE IF NOT EXISTS contas_receber (
 CREATE TABLE IF NOT EXISTS contas_pagar (
     id INT PRIMARY KEY AUTO_INCREMENT,
     tenant_id INT NOT NULL,
-    fornecedor VARCHAR(255) NOT NULL,
+    fornecedor_id INT NOT NULL,
     descricao VARCHAR(255) NOT NULL,
     valor DECIMAL(10,2) NOT NULL,
     data_vencimento DATE NOT NULL,
@@ -273,7 +334,8 @@ CREATE TABLE IF NOT EXISTS contas_pagar (
     observacoes TEXT,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE CASCADE
 );
 
 -- Tabela de NF-e
@@ -333,13 +395,24 @@ CREATE INDEX idx_cadastros_pendentes_token ON cadastros_pendentes(token_verifica
 CREATE INDEX idx_sessoes_usuario ON sessoes_usuario(usuario_id);
 CREATE INDEX idx_sessoes_token ON sessoes_usuario(token_sessao);
 CREATE INDEX idx_clientes_tenant ON clientes(tenant_id);
+CREATE INDEX idx_fornecedores_tenant ON fornecedores(tenant_id);
+CREATE INDEX idx_funcionarios_tenant ON funcionarios(tenant_id);
 CREATE INDEX idx_produtos_tenant ON produtos(tenant_id);
+CREATE INDEX idx_produtos_fornecedor ON produtos(fornecedor_id);
 CREATE INDEX idx_vendas_tenant ON vendas(tenant_id);
 CREATE INDEX idx_transacoes_tenant ON transacoes(tenant_id);
+CREATE INDEX idx_transacoes_fornecedor ON transacoes(fornecedor_id);
+CREATE INDEX idx_contas_pagar_tenant ON contas_pagar(tenant_id);
+CREATE INDEX idx_contas_pagar_fornecedor ON contas_pagar(fornecedor_id);
 CREATE INDEX idx_nfe_tenant ON nfe(tenant_id);
 
 -- Índices para busca
 CREATE INDEX idx_clientes_nome ON clientes(nome);
+CREATE INDEX idx_fornecedores_nome ON fornecedores(nome);
+CREATE INDEX idx_fornecedores_cnpj ON fornecedores(cnpj);
+CREATE INDEX idx_funcionarios_nome ON funcionarios(nome);
+CREATE INDEX idx_funcionarios_cpf ON funcionarios(cpf);
+CREATE INDEX idx_funcionarios_cargo ON funcionarios(cargo);
 CREATE INDEX idx_produtos_nome ON produtos(nome);
 CREATE INDEX idx_produtos_codigo_barras ON produtos(codigo_barras);
 CREATE INDEX idx_vendas_numero ON vendas(numero_venda);

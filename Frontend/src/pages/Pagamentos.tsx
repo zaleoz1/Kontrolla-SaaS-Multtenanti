@@ -22,7 +22,12 @@ import {
   Loader2,
   ArrowLeft,
   ArrowRight,
-  Printer
+  Printer,
+  Zap,
+  Banknote,
+  Building2,
+  FileText,
+  Calendar
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { Cliente } from "@/hooks/useClientes";
@@ -463,7 +468,10 @@ export default function Pagamentos() {
       {/* Header */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">💳 Terminal de Pagamento</h1>
+          <h1 className="text-3xl font-bold flex items-center">
+            <CreditCard className="h-8 w-8 mr-3" />
+            Terminal de Pagamento
+          </h1>
           <p className="text-muted-foreground">
             Configure o pagamento da venda
           </p>
@@ -633,13 +641,13 @@ export default function Pagamentos() {
                     }}
                     className="w-full p-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg"
                   >
-                    <option value="">💳 Escolha uma forma de pagamento</option>
-                    <option value="pix">⚡ PIX</option>
-                    <option value="cartao_credito">💳 Cartão de Crédito</option>
-                    <option value="cartao_debito">💳 Cartão de Débito</option>
-                    <option value="dinheiro">💵 Dinheiro</option>
-                    <option value="transferencia">🏦 Transferência</option>
-                    <option value="boleto">📄 Boleto</option>
+                    <option value="">Escolha uma forma de pagamento</option>
+                    <option value="pix">PIX</option>
+                    <option value="cartao_credito">Cartão de Crédito</option>
+                    <option value="cartao_debito">Cartão de Débito</option>
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="transferencia">Transferência</option>
+                    <option value="boleto">Boleto</option>
                   </select>
                 </div>
 
@@ -649,7 +657,8 @@ export default function Pagamentos() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-2 text-yellow-800">
-                          💵 Valor recebido
+                          <Banknote className="h-4 w-4 inline mr-1" />
+                          Valor recebido
                         </label>
                         <Input
                           type="text"
@@ -662,7 +671,8 @@ export default function Pagamentos() {
                       
                       <div>
                         <label className="block text-sm font-medium mb-2 text-yellow-800">
-                          🔄 Troco
+                          <Calculator className="h-4 w-4 inline mr-1" />
+                          Troco
                         </label>
                         <Input
                           type="text"
@@ -745,12 +755,12 @@ export default function Pagamentos() {
                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                       >
                         <option value="">Selecione</option>
-                        <option value="pix">⚡ PIX</option>
-                        <option value="cartao_credito">💳 Crédito</option>
-                        <option value="cartao_debito">💳 Débito</option>
-                        <option value="dinheiro">💵 Dinheiro</option>
-                        <option value="transferencia">🏦 Transferência</option>
-                        <option value="boleto">📄 Boleto</option>
+                        <option value="pix">PIX</option>
+                        <option value="cartao_credito">Crédito</option>
+                        <option value="cartao_debito">Débito</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="transferencia">Transferência</option>
+                        <option value="boleto">Boleto</option>
                       </select>
                     </div>
                     
@@ -848,7 +858,8 @@ export default function Pagamentos() {
               {!clienteSelecionado && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <p className="text-yellow-800 text-sm text-center">
-                    ⚠️ Selecione um cliente para ativar o pagamento a prazo
+                    <AlertCircle className="h-4 w-4 inline mr-1" />
+                    Selecione um cliente para ativar o pagamento a prazo
                   </p>
                 </div>
               )}
@@ -858,7 +869,8 @@ export default function Pagamentos() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-purple-800">
-                        📅 Dias para Pagamento
+                        <Calendar className="h-4 w-4 inline mr-1" />
+                        Dias para Pagamento
                       </label>
                       <Input
                         type="text"
@@ -874,7 +886,8 @@ export default function Pagamentos() {
                     
                     <div>
                       <label className="block text-sm font-medium mb-2 text-purple-800">
-                        📈 Juros (%)
+                        <Percent className="h-4 w-4 inline mr-1" />
+                        Juros (%)
                       </label>
                       <Input
                         type="text"

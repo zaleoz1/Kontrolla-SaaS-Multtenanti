@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar"; 
 import { Header } from "./Header";
 import { useAuth } from "@/hooks/useAuth"; 
@@ -8,6 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
+  const location = useLocation();
+  
+  // Verificar se estamos na página de configurações
+  const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
 
   // Fecha o sidebar quando a tela é redimensionada para desktop
   useEffect(() => {
@@ -36,6 +40,15 @@ export function AppLayout() {
     slug: user.tenant_slug,
     logo: undefined // Pode ser adicionado posteriormente se necessário
   } : null;
+
+  // Se estivermos na página de configurações, renderizar layout sem sidebar e header
+  if (isConfiguracoesPage) {
+    return (
+      <div className="min-h-screen w-full bg-background">
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
     // Container principal usando flexbox, ocupando toda a altura da tela
