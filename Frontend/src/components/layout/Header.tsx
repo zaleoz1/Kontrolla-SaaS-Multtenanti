@@ -27,12 +27,14 @@ export function Header({ onMenuClick }: PropsCabecalho) {
     }
   }, []);
 
-  // Verificar se está na página de nova venda
+  // Verificar se está em páginas que não devem mostrar o header
   const isNovaVendaPage = location.pathname === '/dashboard/nova-venda';
-
+  const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
+  const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
+  const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/novo-fornecedor/');
   
-  // Se estiver na página de nova venda, não renderizar o header
-  if (isNovaVendaPage) {
+  // Se estiver em páginas que usam layout próprio, não renderizar o header
+  if (isNovaVendaPage || isNovoFuncionarioPage || isConfiguracoesPage || isNovoFornecedorPage) {
     return null;
   }
 

@@ -14,6 +14,8 @@ export const routes = {
   novaTransacao: "/nova-transacao",
   nfe: "/nfe",
   configuracoes: "/configuracoes",
+  novoFornecedor: "/novo-fornecedor",
+  novoFuncionario: "/novo-funcionario",
   login: "/login",
   signup: "/signup",
   esqueciSenha: "/esqueci-senha",

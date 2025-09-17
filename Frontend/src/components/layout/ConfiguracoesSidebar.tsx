@@ -49,13 +49,13 @@ const configuracoesTabs = [
   },
   { 
     id: "pagamentos", 
-    nome: "Pagamentos", 
+    nome: "Meu Plano", 
     icone: CreditCard, 
     descricao: "Planos e assinatura" 
   },
   { 
     id: "metodos-pagamento", 
-    nome: "Métodos", 
+    nome: "Métodos De Pagamentos", 
     icone: CreditCard, 
     descricao: "Formas de pagamento" 
   },

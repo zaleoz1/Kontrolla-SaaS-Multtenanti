@@ -10,8 +10,11 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   
-  // Verificar se estamos na página de configurações
+  // Verificar se estamos em páginas que usam ConfiguracoesSidebar
   const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
+  const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/editar-fornecedor/');
+  const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
+  const isConfiguracoesLayout = isConfiguracoesPage || isNovoFornecedorPage || isNovoFuncionarioPage;
 
   // Fecha o sidebar quando a tela é redimensionada para desktop
   useEffect(() => {
@@ -41,8 +44,8 @@ export function AppLayout() {
     logo: undefined // Pode ser adicionado posteriormente se necessário
   } : null;
 
-  // Se estivermos na página de configurações, renderizar layout sem sidebar e header
-  if (isConfiguracoesPage) {
+  // Se estivermos em páginas de configurações, renderizar layout sem sidebar e header
+  if (isConfiguracoesLayout) {
     return (
       <div className="min-h-screen w-full bg-background">
         <Outlet />

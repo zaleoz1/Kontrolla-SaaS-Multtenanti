@@ -130,16 +130,12 @@ export default function Configuracoes() {
 
   // Estados para fornecedores
   const [fornecedores, setFornecedores] = useState([]);
-  const [fornecedorEditando, setFornecedorEditando] = useState(null);
-  const [mostrarFormFornecedor, setMostrarFormFornecedor] = useState(false);
   const [buscaFornecedor, setBuscaFornecedor] = useState("");
   const [filtroStatusFornecedor, setFiltroStatusFornecedor] = useState("todos");
   const [carregandoFornecedores, setCarregandoFornecedores] = useState(false);
 
   // Estados para funcionários
   const [funcionarios, setFuncionarios] = useState([]);
-  const [funcionarioEditando, setFuncionarioEditando] = useState(null);
-  const [mostrarFormFuncionario, setMostrarFormFuncionario] = useState(false);
   const [buscaFuncionario, setBuscaFuncionario] = useState("");
   const [filtroStatusFuncionario, setFiltroStatusFuncionario] = useState("todos");
   const [filtroCargoFuncionario, setFiltroCargoFuncionario] = useState("todos");
@@ -206,91 +202,7 @@ export default function Configuracoes() {
     }
   };
 
-  // Função para buscar dados do CEP do fornecedor
-  const buscarCepFornecedor = async (cep: string) => {
-    // Remove caracteres não numéricos
-    const cepLimpo = cep.replace(/\D/g, '');
-    
-    // Verifica se o CEP tem 8 dígitos
-    if (cepLimpo.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const data = await response.json();
-        
-        if (!data.erro) {
-          // Atualiza os dados do fornecedor com as informações do CEP
-          setFornecedorEditando(prev => prev ? {
-            ...prev,
-            endereco: data.logradouro || '',
-            cidade: data.localidade || '',
-            estado: data.uf || '',
-            cep: data.cep || cep
-          } : null);
-          
-          toast({
-            title: "Sucesso",
-            description: "Endereço preenchido automaticamente!",
-            variant: "default"
-          });
-        } else {
-          toast({
-            title: "Aviso",
-            description: "CEP não encontrado",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao buscar CEP",
-          variant: "destructive"
-        });
-      }
-    }
-  };
 
-  // Função para buscar dados do CEP do funcionário
-  const buscarCepFuncionario = async (cep: string) => {
-    // Remove caracteres não numéricos
-    const cepLimpo = cep.replace(/\D/g, '');
-    
-    // Verifica se o CEP tem 8 dígitos
-    if (cepLimpo.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const data = await response.json();
-        
-        if (!data.erro) {
-          // Atualiza os dados do funcionário com as informações do CEP
-          setFuncionarioEditando(prev => prev ? {
-            ...prev,
-            endereco: data.logradouro || '',
-            cidade: data.localidade || '',
-            estado: data.uf || '',
-            cep: data.cep || cep
-          } : null);
-          
-          toast({
-            title: "Sucesso",
-            description: "Endereço preenchido automaticamente!",
-            variant: "default"
-          });
-        } else {
-          toast({
-            title: "Aviso",
-            description: "CEP não encontrado",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao buscar CEP",
-          variant: "destructive"
-        });
-      }
-    }
-  };
 
   const handleSalvarDadosConta = async () => {
     if (!dadosContaEditando) return;
@@ -666,59 +578,13 @@ export default function Configuracoes() {
   };
 
   const handleNovoFornecedor = () => {
-    setFornecedorEditando({
-      nome: "",
-      razao_social: "",
-      cnpj: "",
-      email: "",
-      telefone: "",
-      endereco: "",
-      cidade: "",
-      estado: "",
-      cep: "",
-      contato: "",
-      observacoes: "",
-      status: "ativo"
-    });
-    setMostrarFormFornecedor(true);
+    navigate('/dashboard/novo-fornecedor');
   };
 
   const handleEditarFornecedor = (fornecedor: any) => {
-    setFornecedorEditando(fornecedor);
-    setMostrarFormFornecedor(true);
+    navigate(`/dashboard/novo-fornecedor/${fornecedor.id}`);
   };
 
-  const handleSalvarFornecedor = async () => {
-    if (!fornecedorEditando) return;
-
-    setSalvando(true);
-    try {
-      // Aqui você implementaria a chamada para a API
-      // if (fornecedorEditando.id) {
-      //   await api.put(`/fornecedores/${fornecedorEditando.id}`, fornecedorEditando);
-      // } else {
-      //   await api.post('/fornecedores', fornecedorEditando);
-      // }
-      
-      toast({
-        title: "Sucesso",
-        description: fornecedorEditando.id ? "Fornecedor atualizado com sucesso!" : "Fornecedor criado com sucesso!",
-        variant: "default"
-      });
-      
-      setMostrarFormFornecedor(false);
-      setFornecedorEditando(null);
-      carregarFornecedores();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar fornecedor",
-        variant: "destructive"
-      });
-    } finally {
-      setSalvando(false);
-    }
-  };
 
   const handleExcluirFornecedor = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este fornecedor?")) return;
@@ -846,76 +712,13 @@ export default function Configuracoes() {
   };
 
   const handleNovoFuncionario = () => {
-    setFuncionarioEditando({
-      nome: "",
-      sobrenome: "",
-      cpf: "",
-      rg: "",
-      email: "",
-      telefone: "",
-      endereco: "",
-      cidade: "",
-      estado: "",
-      cep: "",
-      data_nascimento: "",
-      sexo: "masculino",
-      estado_civil: "solteiro",
-      cargo: "",
-      departamento: "",
-      data_admissao: "",
-      data_demissao: null,
-      salario: 0,
-      tipo_salario: "mensal",
-      valor_hora: 0,
-      comissao_percentual: 0,
-      banco: "",
-      agencia: "",
-      conta: "",
-      digito: "",
-      tipo_conta: "corrente",
-      pix: "",
-      observacoes: "",
-      status: "ativo"
-    });
-    setMostrarFormFuncionario(true);
+    navigate('/dashboard/novo-funcionario');
   };
 
   const handleEditarFuncionario = (funcionario: any) => {
-    setFuncionarioEditando(funcionario);
-    setMostrarFormFuncionario(true);
+    navigate(`/dashboard/novo-funcionario/${funcionario.id}`);
   };
 
-  const handleSalvarFuncionario = async () => {
-    if (!funcionarioEditando) return;
-
-    setSalvando(true);
-    try {
-      // Aqui você implementaria a chamada para a API
-      // if (funcionarioEditando.id) {
-      //   await api.put(`/funcionarios/${funcionarioEditando.id}`, funcionarioEditando);
-      // } else {
-      //   await api.post('/funcionarios', funcionarioEditando);
-      // }
-      
-      toast({
-        title: "Sucesso",
-        description: funcionarioEditando.id ? "Funcionário atualizado com sucesso!" : "Funcionário criado com sucesso!",
-        variant: "default"
-      });
-      
-      setMostrarFormFuncionario(false);
-      setFuncionarioEditando(null);
-      carregarFuncionarios();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar funcionário",
-        variant: "destructive"
-      });
-    } finally {
-      setSalvando(false);
-    }
-  };
 
   const handleExcluirFuncionario = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este funcionário?")) return;
@@ -3136,852 +2939,262 @@ export default function Configuracoes() {
           </div>
         )}
 
-        {/* Modal de Fornecedor */}
-      {mostrarFormFornecedor && fornecedorEditando && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-card shadow-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center">
-                  <Building2 className="h-5 w-5 mr-2" />
-                  {fornecedorEditando.id ? "Editar Fornecedor" : "Novo Fornecedor"}
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setMostrarFormFornecedor(false);
-                    setFornecedorEditando(null);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="nome_fornecedor">Nome *</Label>
-                  <Input
-                    id="nome_fornecedor"
-                    value={fornecedorEditando.nome}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, nome: e.target.value } : null)}
-                    placeholder="Nome do fornecedor"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="razao_social_fornecedor">Razão Social</Label>
-                  <Input
-                    id="razao_social_fornecedor"
-                    value={fornecedorEditando.razao_social || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, razao_social: e.target.value } : null)}
-                    placeholder="Razão social"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj_fornecedor">CNPJ</Label>
-                  <Input
-                    id="cnpj_fornecedor"
-                    value={fornecedorEditando.cnpj || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, cnpj: e.target.value } : null)}
-                    placeholder="00.000.000/0000-00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email_fornecedor">Email</Label>
-                  <Input
-                    id="email_fornecedor"
-                    type="email"
-                    value={fornecedorEditando.email || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, email: e.target.value } : null)}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefone_fornecedor">Telefone</Label>
-                  <Input
-                    id="telefone_fornecedor"
-                    value={fornecedorEditando.telefone || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, telefone: e.target.value } : null)}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contato_fornecedor">Contato</Label>
-                  <Input
-                    id="contato_fornecedor"
-                    value={fornecedorEditando.contato || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, contato: e.target.value } : null)}
-                    placeholder="Nome do contato"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cep_fornecedor">CEP</Label>
-                  <Input
-                    id="cep_fornecedor"
-                    value={fornecedorEditando.cep || ""}
-                    onChange={(e) => {
-                      const valor = e.target.value;
-                      setFornecedorEditando(prev => prev ? { ...prev, cep: valor } : null);
-                      // Busca automaticamente quando o CEP tem 8 dígitos
-                      buscarCepFornecedor(valor);
-                    }}
-                    placeholder="00000-000"
-                    maxLength={9}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cidade_fornecedor">Cidade</Label>
-                  <Input
-                    id="cidade_fornecedor"
-                    value={fornecedorEditando.cidade || ""}
-                    onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, cidade: e.target.value } : null)}
-                    placeholder="Cidade"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="estado_fornecedor">Estado</Label>
-                  <Select 
-                    value={fornecedorEditando.estado || ""} 
-                    onValueChange={(value) => setFornecedorEditando(prev => prev ? { ...prev, estado: value } : null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AC">Acre</SelectItem>
-                      <SelectItem value="AL">Alagoas</SelectItem>
-                      <SelectItem value="AP">Amapá</SelectItem>
-                      <SelectItem value="AM">Amazonas</SelectItem>
-                      <SelectItem value="BA">Bahia</SelectItem>
-                      <SelectItem value="CE">Ceará</SelectItem>
-                      <SelectItem value="DF">Distrito Federal</SelectItem>
-                      <SelectItem value="ES">Espírito Santo</SelectItem>
-                      <SelectItem value="GO">Goiás</SelectItem>
-                      <SelectItem value="MA">Maranhão</SelectItem>
-                      <SelectItem value="MT">Mato Grosso</SelectItem>
-                      <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
-                      <SelectItem value="MG">Minas Gerais</SelectItem>
-                      <SelectItem value="PA">Pará</SelectItem>
-                      <SelectItem value="PB">Paraíba</SelectItem>
-                      <SelectItem value="PR">Paraná</SelectItem>
-                      <SelectItem value="PE">Pernambuco</SelectItem>
-                      <SelectItem value="PI">Piauí</SelectItem>
-                      <SelectItem value="RJ">Rio de Janeiro</SelectItem>
-                      <SelectItem value="RN">Rio Grande do Norte</SelectItem>
-                      <SelectItem value="RS">Rio Grande do Sul</SelectItem>
-                      <SelectItem value="RO">Rondônia</SelectItem>
-                      <SelectItem value="RR">Roraima</SelectItem>
-                      <SelectItem value="SC">Santa Catarina</SelectItem>
-                      <SelectItem value="SP">São Paulo</SelectItem>
-                      <SelectItem value="SE">Sergipe</SelectItem>
-                      <SelectItem value="TO">Tocantins</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status_fornecedor">Status</Label>
-                  <Select 
-                    value={fornecedorEditando.status || "ativo"} 
-                    onValueChange={(value) => setFornecedorEditando(prev => prev ? { ...prev, status: value } : null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="inativo">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="endereco_fornecedor">Endereço</Label>
-                <Textarea
-                  id="endereco_fornecedor"
-                  value={fornecedorEditando.endereco || ""}
-                  onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, endereco: e.target.value } : null)}
-                  placeholder="Endereço completo"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="observacoes_fornecedor">Observações</Label>
-                <Textarea
-                  id="observacoes_fornecedor"
-                  value={fornecedorEditando.observacoes || ""}
-                  onChange={(e) => setFornecedorEditando(prev => prev ? { ...prev, observacoes: e.target.value } : null)}
-                  placeholder="Observações sobre o fornecedor"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMostrarFormFornecedor(false);
-                    setFornecedorEditando(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button onClick={handleSalvarFornecedor} disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Fornecedor'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
         {/* Modal de Usuário */}
         {mostrarFormUsuario && usuarioEditando && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-card shadow-card">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center">
-                    <UserCog className="h-5 w-5 mr-2" />
-                    {usuarioEditando.id ? "Editar Usuário" : "Novo Usuário"}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setMostrarFormUsuario(false);
-                      setUsuarioEditando(null);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Informações Básicas */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <User className="h-5 w-5 mr-2" />
-                    Informações Básicas
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="nome_usuario">Nome *</Label>
-                      <Input
-                        id="nome_usuario"
-                        value={usuarioEditando.nome}
-                        onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, nome: e.target.value } : null)}
-                        placeholder="Nome do usuário"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sobrenome_usuario">Sobrenome *</Label>
-                      <Input
-                        id="sobrenome_usuario"
-                        value={usuarioEditando.sobrenome}
-                        onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null)}
-                        placeholder="Sobrenome do usuário"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email_usuario">Email *</Label>
-                      <Input
-                        id="email_usuario"
-                        type="email"
-                        value={usuarioEditando.email}
-                        onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, email: e.target.value } : null)}
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="senha_usuario">Senha {!usuarioEditando.id && "*"}</Label>
-                      <div className="relative">
-                        <Input
-                          id="senha_usuario"
-                          type={mostrarSenha ? "text" : "password"}
-                          value={usuarioEditando.senha || ""}
-                          onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, senha: e.target.value } : null)}
-                          placeholder="Digite a senha"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3"
-                          onClick={() => setMostrarSenha(!mostrarSenha)}
-                        >
-                          {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="w-full max-w-5xl h-[90vh] overflow-hidden">
+              <Card className="bg-background border-0 shadow-2xl h-full flex flex-col">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <UserCog className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-bold">
+                          {usuarioEditando.id ? "Editar Usuário" : "Novo Usuário"}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {usuarioEditando.id ? "Atualize as informações do usuário" : "Preencha os dados para criar um novo usuário"}
+                        </p>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setMostrarFormUsuario(false);
+                        setUsuarioEditando(null);
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-hidden p-0">
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1 p-6 space-y-6 overflow-hidden">
+                      {/* Informações Básicas e Role/Status */}
+                      <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Informações Básicas */}
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-b">
+                            <div className="p-1.5 rounded bg-blue-500/10">
+                              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold">Informações Básicas</h3>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label htmlFor="nome_usuario" className="text-sm font-medium">Nome *</Label>
+                                <Input
+                                  id="nome_usuario"
+                                  value={usuarioEditando.nome}
+                                  onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, nome: e.target.value } : null)}
+                                  placeholder="Nome do usuário"
+                                  className="h-10"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="sobrenome_usuario" className="text-sm font-medium">Sobrenome *</Label>
+                                <Input
+                                  id="sobrenome_usuario"
+                                  value={usuarioEditando.sobrenome}
+                                  onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null)}
+                                  placeholder="Sobrenome do usuário"
+                                  className="h-10"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email_usuario" className="text-sm font-medium">Email *</Label>
+                              <Input
+                                id="email_usuario"
+                                type="email"
+                                value={usuarioEditando.email}
+                                onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, email: e.target.value } : null)}
+                                placeholder="email@exemplo.com"
+                                className="h-10"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="senha_usuario" className="text-sm font-medium">
+                                Senha {!usuarioEditando.id && "*"}
+                              </Label>
+                              <div className="relative">
+                                <Input
+                                  id="senha_usuario"
+                                  type={mostrarSenha ? "text" : "password"}
+                                  value={usuarioEditando.senha || ""}
+                                  onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, senha: e.target.value } : null)}
+                                  placeholder="Digite a senha"
+                                  className="h-10 pr-10"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                                >
+                                  {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
 
-                {/* Role e Status */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <Shield className="h-5 w-5 mr-2" />
-                    Role e Status
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="role_usuario">Role *</Label>
-                      <Select 
-                        value={usuarioEditando.role} 
-                        onValueChange={(value) => {
-                          const permissoesPadrao = obterPermissoesPorRole(value);
-                          setUsuarioEditando(prev => prev ? { 
-                            ...prev, 
-                            role: value,
-                            permissoes: permissoesPadrao
-                          } : null);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="administrador">
-                            <div className="flex items-center space-x-2">
-                              <Crown className="h-4 w-4 text-red-500" />
-                              <span>Administrador</span>
+                        {/* Role e Status */}
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-b">
+                            <div className="p-1.5 rounded bg-purple-500/10">
+                              <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                             </div>
-                          </SelectItem>
-                          <SelectItem value="gerente">
-                            <div className="flex items-center space-x-2">
-                              <Star className="h-4 w-4 text-blue-500" />
-                              <span>Gerente</span>
+                            <h3 className="text-lg font-semibold">Role e Status</h3>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="role_usuario" className="text-sm font-medium">Role *</Label>
+                              <Select 
+                                value={usuarioEditando.role} 
+                                onValueChange={(value) => {
+                                  const permissoesPadrao = obterPermissoesPorRole(value);
+                                  setUsuarioEditando(prev => prev ? { 
+                                    ...prev, 
+                                    role: value,
+                                    permissoes: permissoesPadrao
+                                  } : null);
+                                }}
+                              >
+                                <SelectTrigger className="h-10">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="administrador">
+                                    <div className="flex items-center space-x-2">
+                                      <Crown className="h-4 w-4 text-red-500" />
+                                      <span>Administrador</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="gerente">
+                                    <div className="flex items-center space-x-2">
+                                      <Star className="h-4 w-4 text-blue-500" />
+                                      <span>Gerente</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="vendedor">
+                                    <div className="flex items-center space-x-2">
+                                      <UserCheck className="h-4 w-4 text-green-500" />
+                                      <span>Vendedor</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                          </SelectItem>
-                          <SelectItem value="vendedor">
-                            <div className="flex items-center space-x-2">
-                              <UserCheck className="h-4 w-4 text-green-500" />
-                              <span>Vendedor</span>
+                            <div className="space-y-2">
+                              <Label htmlFor="status_usuario" className="text-sm font-medium">Status</Label>
+                              <Select 
+                                value={usuarioEditando.status} 
+                                onValueChange={(value) => setUsuarioEditando(prev => prev ? { ...prev, status: value } : null)}
+                              >
+                                <SelectTrigger className="h-10">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="ativo">
+                                    <div className="flex items-center space-x-2">
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                      <span>Ativo</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="inativo">
+                                    <div className="flex items-center space-x-2">
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                      <span>Inativo</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status_usuario">Status</Label>
-                      <Select 
-                        value={usuarioEditando.status} 
-                        onValueChange={(value) => setUsuarioEditando(prev => prev ? { ...prev, status: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ativo">Ativo</SelectItem>
-                          <SelectItem value="inativo">Inativo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Permissões */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <Key className="h-5 w-5 mr-2" />
-                    Permissões
-                  </h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {permissoesDisponiveis.map((permissao) => (
-                      <div key={permissao.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                        <input
-                          type="checkbox"
-                          id={`permissao-${permissao.id}`}
-                          checked={usuarioEditando.permissoes.includes(permissao.id)}
-                          onChange={(e) => {
-                            const novasPermissoes = e.target.checked
-                              ? [...usuarioEditando.permissoes, permissao.id]
-                              : usuarioEditando.permissoes.filter(p => p !== permissao.id);
-                            setUsuarioEditando(prev => prev ? { ...prev, permissoes: novasPermissoes } : null);
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                        <div className="flex-1">
-                          <Label htmlFor={`permissao-${permissao.id}`} className="font-medium">
-                            {permissao.nome}
-                          </Label>
-                          <p className="text-sm text-muted-foreground">{permissao.descricao}</p>
+                            <div className="p-3 bg-muted/30 rounded-lg">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Permissões selecionadas:</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {usuarioEditando.permissoes.length}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    ))}
+
+                      {/* Permissões - Layout Compacto */}
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2 pb-2 border-b">
+                          <div className="p-1.5 rounded bg-green-500/10">
+                            <Key className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold">Permissões</h3>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {permissoesDisponiveis.map((permissao) => (
+                            <div key={permissao.id} className="group flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                              <input
+                                type="checkbox"
+                                id={`permissao-${permissao.id}`}
+                                checked={usuarioEditando.permissoes.includes(permissao.id)}
+                                onChange={(e) => {
+                                  const novasPermissoes = e.target.checked
+                                    ? [...usuarioEditando.permissoes, permissao.id]
+                                    : usuarioEditando.permissoes.filter(p => p !== permissao.id);
+                                  setUsuarioEditando(prev => prev ? { ...prev, permissoes: novasPermissoes } : null);
+                                }}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <Label 
+                                htmlFor={`permissao-${permissao.id}`} 
+                                className="font-medium text-sm cursor-pointer group-hover:text-primary transition-colors flex-1"
+                              >
+                                {permissao.nome}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="bg-muted/30 px-6 py-4 border-t flex-shrink-0">
+                  <div className="flex justify-end space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setMostrarFormUsuario(false);
+                        setUsuarioEditando(null);
+                      }}
+                      className="px-6"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleSalvarUsuario} 
+                      disabled={salvando}
+                      className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {salvando ? 'Salvando...' : 'Salvar Usuário'}
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setMostrarFormUsuario(false);
-                      setUsuarioEditando(null);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSalvarUsuario} disabled={salvando}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {salvando ? 'Salvando...' : 'Salvar Usuário'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
         )}
 
-        {/* Modal de Funcionário */}
-        {mostrarFormFuncionario && funcionarioEditando && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-card shadow-card">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    {funcionarioEditando.id ? "Editar Funcionário" : "Novo Funcionário"}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setMostrarFormFuncionario(false);
-                      setFuncionarioEditando(null);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Informações Pessoais */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <User className="h-5 w-5 mr-2" />
-                    Informações Pessoais
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="nome_funcionario">Nome *</Label>
-                      <Input
-                        id="nome_funcionario"
-                        value={funcionarioEditando.nome}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, nome: e.target.value } : null)}
-                        placeholder="Nome do funcionário"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sobrenome_funcionario">Sobrenome *</Label>
-                      <Input
-                        id="sobrenome_funcionario"
-                        value={funcionarioEditando.sobrenome}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null)}
-                        placeholder="Sobrenome do funcionário"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cpf_funcionario">CPF *</Label>
-                      <Input
-                        id="cpf_funcionario"
-                        value={funcionarioEditando.cpf}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, cpf: e.target.value } : null)}
-                        placeholder="000.000.000-00"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="rg_funcionario">RG</Label>
-                      <Input
-                        id="rg_funcionario"
-                        value={funcionarioEditando.rg || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, rg: e.target.value } : null)}
-                        placeholder="00.000.000-0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email_funcionario">Email</Label>
-                      <Input
-                        id="email_funcionario"
-                        type="email"
-                        value={funcionarioEditando.email || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, email: e.target.value } : null)}
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="telefone_funcionario">Telefone</Label>
-                      <Input
-                        id="telefone_funcionario"
-                        value={funcionarioEditando.telefone || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, telefone: e.target.value } : null)}
-                        placeholder="(11) 99999-9999"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="data_nascimento_funcionario">Data de Nascimento</Label>
-                      <Input
-                        id="data_nascimento_funcionario"
-                        type="date"
-                        value={funcionarioEditando.data_nascimento || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, data_nascimento: e.target.value } : null)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sexo_funcionario">Sexo</Label>
-                      <Select 
-                        value={funcionarioEditando.sexo || "masculino"} 
-                        onValueChange={(value) => setFuncionarioEditando(prev => prev ? { ...prev, sexo: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="masculino">Masculino</SelectItem>
-                          <SelectItem value="feminino">Feminino</SelectItem>
-                          <SelectItem value="outro">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="estado_civil_funcionario">Estado Civil</Label>
-                      <Select 
-                        value={funcionarioEditando.estado_civil || "solteiro"} 
-                        onValueChange={(value) => setFuncionarioEditando(prev => prev ? { ...prev, estado_civil: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="solteiro">Solteiro(a)</SelectItem>
-                          <SelectItem value="casado">Casado(a)</SelectItem>
-                          <SelectItem value="divorciado">Divorciado(a)</SelectItem>
-                          <SelectItem value="viuvo">Viúvo(a)</SelectItem>
-                          <SelectItem value="uniao_estavel">União Estável</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Informações Profissionais */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <Briefcase className="h-5 w-5 mr-2" />
-                    Informações Profissionais
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="cargo_funcionario">Cargo *</Label>
-                      <Input
-                        id="cargo_funcionario"
-                        value={funcionarioEditando.cargo}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, cargo: e.target.value } : null)}
-                        placeholder="Cargo do funcionário"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="departamento_funcionario">Departamento</Label>
-                      <Input
-                        id="departamento_funcionario"
-                        value={funcionarioEditando.departamento || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, departamento: e.target.value } : null)}
-                        placeholder="Departamento"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="data_admissao_funcionario">Data de Admissão *</Label>
-                      <Input
-                        id="data_admissao_funcionario"
-                        type="date"
-                        value={funcionarioEditando.data_admissao}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, data_admissao: e.target.value } : null)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="data_demissao_funcionario">Data de Demissão</Label>
-                      <Input
-                        id="data_demissao_funcionario"
-                        type="date"
-                        value={funcionarioEditando.data_demissao || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, data_demissao: e.target.value || null } : null)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status_funcionario">Status</Label>
-                      <Select 
-                        value={funcionarioEditando.status || "ativo"} 
-                        onValueChange={(value) => setFuncionarioEditando(prev => prev ? { ...prev, status: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ativo">Ativo</SelectItem>
-                          <SelectItem value="inativo">Inativo</SelectItem>
-                          <SelectItem value="afastado">Afastado</SelectItem>
-                          <SelectItem value="demitido">Demitido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Informações Salariais */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2" />
-                    Informações Salariais
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo_salario_funcionario">Tipo de Salário</Label>
-                      <Select 
-                        value={funcionarioEditando.tipo_salario || "mensal"} 
-                        onValueChange={(value) => setFuncionarioEditando(prev => prev ? { ...prev, tipo_salario: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mensal">Mensal</SelectItem>
-                          <SelectItem value="horista">Horista</SelectItem>
-                          <SelectItem value="comissionado">Comissionado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="salario_funcionario">Salário *</Label>
-                      <Input
-                        id="salario_funcionario"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={funcionarioEditando.salario}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, salario: parseFloat(e.target.value) || 0 } : null)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    {funcionarioEditando.tipo_salario === "horista" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="valor_hora_funcionario">Valor por Hora</Label>
-                        <Input
-                          id="valor_hora_funcionario"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={funcionarioEditando.valor_hora || 0}
-                          onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, valor_hora: parseFloat(e.target.value) || 0 } : null)}
-                          placeholder="0.00"
-                        />
-                      </div>
-                    )}
-                    {funcionarioEditando.tipo_salario === "comissionado" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="comissao_funcionario">Comissão (%)</Label>
-                        <Input
-                          id="comissao_funcionario"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="100"
-                          value={funcionarioEditando.comissao_percentual || 0}
-                          onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, comissao_percentual: parseFloat(e.target.value) || 0 } : null)}
-                          placeholder="0.00"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Endereço */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <MapPinIcon className="h-5 w-5 mr-2" />
-                    Endereço
-                  </h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="endereco_funcionario">Endereço Completo</Label>
-                    <Textarea
-                      id="endereco_funcionario"
-                      value={funcionarioEditando.endereco || ""}
-                      onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, endereco: e.target.value } : null)}
-                      placeholder="Endereço completo"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="cep_funcionario">CEP</Label>
-                      <Input
-                        id="cep_funcionario"
-                        value={funcionarioEditando.cep || ""}
-                        onChange={(e) => {
-                          const valor = e.target.value;
-                          setFuncionarioEditando(prev => prev ? { ...prev, cep: valor } : null);
-                          // Busca automaticamente quando o CEP tem 8 dígitos
-                          buscarCepFuncionario(valor);
-                        }}
-                        placeholder="00000-000"
-                        maxLength={9}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cidade_funcionario">Cidade</Label>
-                      <Input
-                        id="cidade_funcionario"
-                        value={funcionarioEditando.cidade || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, cidade: e.target.value } : null)}
-                        placeholder="Cidade"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="estado_funcionario">Estado</Label>
-                      <Select 
-                        value={funcionarioEditando.estado || ""} 
-                        onValueChange={(value) => setFuncionarioEditando(prev => prev ? { ...prev, estado: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AC">Acre</SelectItem>
-                          <SelectItem value="AL">Alagoas</SelectItem>
-                          <SelectItem value="AP">Amapá</SelectItem>
-                          <SelectItem value="AM">Amazonas</SelectItem>
-                          <SelectItem value="BA">Bahia</SelectItem>
-                          <SelectItem value="CE">Ceará</SelectItem>
-                          <SelectItem value="DF">Distrito Federal</SelectItem>
-                          <SelectItem value="ES">Espírito Santo</SelectItem>
-                          <SelectItem value="GO">Goiás</SelectItem>
-                          <SelectItem value="MA">Maranhão</SelectItem>
-                          <SelectItem value="MT">Mato Grosso</SelectItem>
-                          <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
-                          <SelectItem value="MG">Minas Gerais</SelectItem>
-                          <SelectItem value="PA">Pará</SelectItem>
-                          <SelectItem value="PB">Paraíba</SelectItem>
-                          <SelectItem value="PR">Paraná</SelectItem>
-                          <SelectItem value="PE">Pernambuco</SelectItem>
-                          <SelectItem value="PI">Piauí</SelectItem>
-                          <SelectItem value="RJ">Rio de Janeiro</SelectItem>
-                          <SelectItem value="RN">Rio Grande do Norte</SelectItem>
-                          <SelectItem value="RS">Rio Grande do Sul</SelectItem>
-                          <SelectItem value="RO">Rondônia</SelectItem>
-                          <SelectItem value="RR">Roraima</SelectItem>
-                          <SelectItem value="SC">Santa Catarina</SelectItem>
-                          <SelectItem value="SP">São Paulo</SelectItem>
-                          <SelectItem value="SE">Sergipe</SelectItem>
-                          <SelectItem value="TO">Tocantins</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dados Bancários */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    Dados Bancários
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="banco_funcionario">Banco</Label>
-                      <Input
-                        id="banco_funcionario"
-                        value={funcionarioEditando.banco || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, banco: e.target.value } : null)}
-                        placeholder="Nome do banco"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="agencia_funcionario">Agência</Label>
-                      <Input
-                        id="agencia_funcionario"
-                        value={funcionarioEditando.agencia || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, agencia: e.target.value } : null)}
-                        placeholder="Número da agência"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="conta_funcionario">Conta</Label>
-                      <Input
-                        id="conta_funcionario"
-                        value={funcionarioEditando.conta || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, conta: e.target.value } : null)}
-                        placeholder="Número da conta"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="digito_funcionario">Dígito</Label>
-                      <Input
-                        id="digito_funcionario"
-                        value={funcionarioEditando.digito || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, digito: e.target.value } : null)}
-                        placeholder="Dígito da conta"
-                        maxLength={2}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo_conta_funcionario">Tipo de Conta</Label>
-                      <Select 
-                        value={funcionarioEditando.tipo_conta || "corrente"} 
-                        onValueChange={(value) => setFuncionarioEditando(prev => prev ? { ...prev, tipo_conta: value } : null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="corrente">Conta Corrente</SelectItem>
-                          <SelectItem value="poupanca">Conta Poupança</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pix_funcionario">PIX</Label>
-                      <Input
-                        id="pix_funcionario"
-                        value={funcionarioEditando.pix || ""}
-                        onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, pix: e.target.value } : null)}
-                        placeholder="Chave PIX"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Observações */}
-                <div className="space-y-2">
-                  <Label htmlFor="observacoes_funcionario">Observações</Label>
-                  <Textarea
-                    id="observacoes_funcionario"
-                    value={funcionarioEditando.observacoes || ""}
-                    onChange={(e) => setFuncionarioEditando(prev => prev ? { ...prev, observacoes: e.target.value } : null)}
-                    placeholder="Observações sobre o funcionário"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setMostrarFormFuncionario(false);
-                      setFuncionarioEditando(null);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSalvarFuncionario} disabled={salvando}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {salvando ? 'Salvando...' : 'Salvar Funcionário'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
         </div>
       </div>
     </div>
