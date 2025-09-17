@@ -21,6 +21,8 @@ import Configuracoes from "./pages/Configuracoes";
 import NovoProduto from "./pages/NovoProduto";
 import NovoCliente from "./pages/NovoCliente";
 import NovaTransacao from "./pages/NovaTransacao";
+import NovoFornecedor from "./pages/NovoFornecedor";
+import NovoFuncionario from "./pages/NovoFuncionario";
 
 import PaginaNaoEncontrada from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -65,6 +67,10 @@ function AppContent() {
             <Route path="nova-transacao" element={<NovaTransacao />} />
             <Route path="nfe" element={<NFe />} />
             <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="novo-fornecedor" element={<NovoFornecedor />} />
+            <Route path="novo-fornecedor/:id" element={<NovoFornecedor />} />
+            <Route path="novo-funcionario" element={<NovoFuncionario />} />
+            <Route path="novo-funcionario/:id" element={<NovoFuncionario />} />
           </Route>
           
           {/* Rota 404 */}
