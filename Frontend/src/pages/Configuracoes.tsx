@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { useFornecedores } from "@/hooks/useFornecedores";
+import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useToast } from "@/hooks/use-toast";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { 
@@ -145,11 +146,17 @@ export default function Configuracoes() {
   const [filtroStatusFornecedor, setFiltroStatusFornecedor] = useState("todos");
 
   // Estados para funcionários
-  const [funcionarios, setFuncionarios] = useState([]);
   const [buscaFuncionario, setBuscaFuncionario] = useState("");
   const [filtroStatusFuncionario, setFiltroStatusFuncionario] = useState("todos");
   const [filtroCargoFuncionario, setFiltroCargoFuncionario] = useState("todos");
-  const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
+  
+  // Hook para funcionários
+  const { 
+    funcionarios, 
+    carregando: carregandoFuncionarios, 
+    buscarFuncionarios, 
+    excluirFuncionario 
+  } = useFuncionarios();
   const [abaAtiva, setAbaAtiva] = useState("conta");
 
   // Estados para administração
@@ -168,12 +175,25 @@ export default function Configuracoes() {
     carregarUsuarios();
   }, []);
 
-  // Carregar fornecedores quando a aba for ativada
+  // Carregar dados quando a aba for ativada
   useEffect(() => {
     if (abaAtiva === "fornecedores" && !carregandoFornecedores) {
       carregarFornecedores();
+    } else if (abaAtiva === "funcionarios" && !carregandoFuncionarios) {
+      carregarFuncionarios();
     }
   }, [abaAtiva]); // Removido carregarFornecedores das dependências
+
+  // Recarregar funcionários quando os filtros mudarem (com debounce para busca)
+  useEffect(() => {
+    if (abaAtiva === "funcionarios") {
+      const timeoutId = setTimeout(() => {
+        carregarFuncionarios();
+      }, buscaFuncionario ? 500 : 0); // Debounce de 500ms apenas para busca
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [buscaFuncionario, filtroStatusFuncionario, filtroCargoFuncionario]);
 
   // Função para buscar dados do CEP
   const buscarCep = async (cep: string) => {
@@ -571,90 +591,31 @@ export default function Configuracoes() {
 
   // Funções para gerenciar funcionários
   const carregarFuncionarios = async () => {
-    setCarregandoFuncionarios(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.get('/funcionarios');
-      // setFuncionarios(response.data);
-      
-      // Dados mock para demonstração
-      const funcionariosMock = [
-        {
-          id: 1,
-          nome: "João",
-          sobrenome: "Silva",
-          cpf: "123.456.789-00",
-          rg: "12.345.678-9",
-          email: "joao.silva@empresa.com",
-          telefone: "(11) 99999-9999",
-          endereco: "Rua das Flores, 123",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01234-567",
-          data_nascimento: "1990-05-15",
-          sexo: "masculino",
-          estado_civil: "casado",
-          cargo: "Vendedor",
-          departamento: "Vendas",
-          data_admissao: "2023-01-15",
-          data_demissao: null,
-          salario: 3500.00,
-          tipo_salario: "mensal",
-          valor_hora: null,
-          comissao_percentual: 2.5,
-          banco: "Banco do Brasil",
-          agencia: "1234",
-          conta: "12345-6",
-          digito: "7",
-          tipo_conta: "corrente",
-          pix: "joao.silva@empresa.com",
-          observacoes: "Funcionário dedicado e pontual",
-          status: "ativo",
-          data_criacao: "2023-01-15T10:30:00Z"
-        },
-        {
-          id: 2,
-          nome: "Maria",
-          sobrenome: "Santos",
-          cpf: "987.654.321-00",
-          rg: "98.765.432-1",
-          email: "maria.santos@empresa.com",
-          telefone: "(11) 88888-8888",
-          endereco: "Av. Paulista, 456",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01310-100",
-          data_nascimento: "1985-08-22",
-          sexo: "feminino",
-          estado_civil: "solteira",
-          cargo: "Gerente",
-          departamento: "Administrativo",
-          data_admissao: "2022-06-01",
-          data_demissao: null,
-          salario: 6500.00,
-          tipo_salario: "mensal",
-          valor_hora: null,
-          comissao_percentual: null,
-          banco: "Itaú",
-          agencia: "5678",
-          conta: "98765-4",
-          digito: "3",
-          tipo_conta: "corrente",
-          pix: "maria.santos@empresa.com",
-          observacoes: "Excelente liderança e organização",
-          status: "ativo",
-          data_criacao: "2022-06-01T14:20:00Z"
-        }
-      ];
-      setFuncionarios(funcionariosMock);
+      const params: any = {
+        page: 1,
+        limit: 100
+      };
+
+      if (buscaFuncionario) {
+        params.q = buscaFuncionario;
+      }
+
+      if (filtroStatusFuncionario !== "todos") {
+        params.filtroStatus = filtroStatusFuncionario;
+      }
+
+      if (filtroCargoFuncionario !== "todos") {
+        params.filtroCargo = filtroCargoFuncionario;
+      }
+
+      await buscarFuncionarios(params);
     } catch (error) {
       toast({
         title: "Erro",
         description: "Erro ao carregar funcionários",
         variant: "destructive"
       });
-    } finally {
-      setCarregandoFuncionarios(false);
     }
   };
 
@@ -670,40 +631,25 @@ export default function Configuracoes() {
   const handleExcluirFuncionario = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este funcionário?")) return;
 
-    setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.delete(`/funcionarios/${id}`);
+      await excluirFuncionario(id);
       
       toast({
         title: "Sucesso",
         description: "Funcionário excluído com sucesso!",
         variant: "default"
       });
-      
-      carregarFuncionarios();
     } catch (error) {
       toast({
         title: "Erro",
         description: "Erro ao excluir funcionário",
         variant: "destructive"
       });
-    } finally {
-      setSalvando(false);
     }
   };
 
-  const funcionariosFiltrados = funcionarios.filter(funcionario => {
-    const matchBusca = funcionario.nome.toLowerCase().includes(buscaFuncionario.toLowerCase()) ||
-                      funcionario.sobrenome.toLowerCase().includes(buscaFuncionario.toLowerCase()) ||
-                      funcionario.cpf?.includes(buscaFuncionario) ||
-                      funcionario.cargo?.toLowerCase().includes(buscaFuncionario.toLowerCase());
-    
-    const matchStatus = filtroStatusFuncionario === "todos" || funcionario.status === filtroStatusFuncionario;
-    const matchCargo = filtroCargoFuncionario === "todos" || funcionario.cargo === filtroCargoFuncionario;
-    
-    return matchBusca && matchStatus && matchCargo;
-  });
+  // Filtros são aplicados na API, então usamos os dados diretamente
+  const funcionariosFiltrados = funcionarios;
 
   // Funções para gerenciar usuários e sistema de roles
   const carregarUsuarios = async () => {

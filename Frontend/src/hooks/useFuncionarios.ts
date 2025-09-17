@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from './use-toast';
+import { useCrudApi } from './useApi';
+import { API_ENDPOINTS } from '@/config/api';
 
 export interface Funcionario {
   id?: number;
@@ -33,252 +35,126 @@ export interface Funcionario {
   observacoes?: string;
   status: string;
   data_criacao?: string;
+  data_atualizacao?: string;
 }
 
-export const useFuncionarios = () => {
+interface FuncionariosResponse {
+  funcionarios: Funcionario[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+interface FuncionarioSingleResponse {
+  funcionario: Funcionario;
+}
+
+export function useFuncionarios() {
+  const api = useCrudApi<FuncionariosResponse>(API_ENDPOINTS.FUNCIONARIOS.LIST);
   const { toast } = useToast();
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [carregando, setCarregando] = useState(false);
-  const [salvando, setSalvando] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
 
-  const carregarFuncionarios = async () => {
-    setCarregando(true);
+  const buscarFuncionarios = useCallback(async (params?: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    filtroStatus?: string;
+    filtroCargo?: string;
+  }) => {
     try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.get('/funcionarios');
-      // setFuncionarios(response.data);
-      
-      // Dados mock para demonstração
-      const funcionariosMock: Funcionario[] = [
-        {
-          id: 1,
-          nome: "João",
-          sobrenome: "Silva",
-          cpf: "123.456.789-00",
-          rg: "12.345.678-9",
-          email: "joao.silva@empresa.com",
-          telefone: "(11) 99999-9999",
-          endereco: "Rua das Flores, 123",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01234-567",
-          data_nascimento: "1990-05-15",
-          sexo: "masculino",
-          estado_civil: "casado",
-          cargo: "Vendedor",
-          departamento: "Vendas",
-          data_admissao: "2023-01-15",
-          data_demissao: null,
-          salario: 3500.00,
-          tipo_salario: "mensal",
-          valor_hora: null,
-          comissao_percentual: 2.5,
-          banco: "Banco do Brasil",
-          agencia: "1234",
-          conta: "12345-6",
-          digito: "7",
-          tipo_conta: "corrente",
-          pix: "joao.silva@empresa.com",
-          observacoes: "Funcionário dedicado e pontual",
-          status: "ativo",
-          data_criacao: "2023-01-15T10:30:00Z"
-        },
-        {
-          id: 2,
-          nome: "Maria",
-          sobrenome: "Santos",
-          cpf: "987.654.321-00",
-          rg: "98.765.432-1",
-          email: "maria.santos@empresa.com",
-          telefone: "(11) 88888-8888",
-          endereco: "Av. Paulista, 456",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01310-100",
-          data_nascimento: "1985-08-22",
-          sexo: "feminino",
-          estado_civil: "solteira",
-          cargo: "Gerente",
-          departamento: "Administrativo",
-          data_admissao: "2022-06-01",
-          data_demissao: null,
-          salario: 6500.00,
-          tipo_salario: "mensal",
-          valor_hora: null,
-          comissao_percentual: null,
-          banco: "Itaú",
-          agencia: "5678",
-          conta: "98765-4",
-          digito: "3",
-          tipo_conta: "corrente",
-          pix: "maria.santos@empresa.com",
-          observacoes: "Excelente liderança e organização",
-          status: "ativo",
-          data_criacao: "2022-06-01T14:20:00Z"
-        }
-      ];
-      setFuncionarios(funcionariosMock);
+      const response = await api.list(params);
+      setFuncionarios(response.funcionarios);
+      setPagination(response.pagination);
+      return response;
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar funcionários",
-        variant: "destructive"
-      });
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const criarFuncionario = async (funcionario: Omit<Funcionario, 'id' | 'data_criacao'>) => {
-    setSalvando(true);
-    try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.post('/funcionarios', funcionario);
-      // const novoFuncionario = response.data;
-      
-      // Mock para demonstração
-      const novoFuncionario: Funcionario = {
-        ...funcionario,
-        id: Date.now(), // ID temporário
-        data_criacao: new Date().toISOString()
-      };
-      
-      setFuncionarios(prev => [...prev, novoFuncionario]);
-      
-      toast({
-        title: "Sucesso",
-        description: "Funcionário criado com sucesso!",
-        variant: "default"
-      });
-      
-      return novoFuncionario;
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao criar funcionário",
-        variant: "destructive"
-      });
+      console.error('Erro ao buscar funcionários:', error);
       throw error;
-    } finally {
-      setSalvando(false);
     }
-  };
+  }, [api]);
 
-  const atualizarFuncionario = async (id: number, funcionario: Partial<Funcionario>) => {
-    setSalvando(true);
+  const buscarFuncionario = useCallback(async (id: number) => {
     try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.put(`/funcionarios/${id}`, funcionario);
-      // const funcionarioAtualizado = response.data;
-      
-      // Mock para demonstração
-      const funcionarioAtualizado: Funcionario = {
-        ...funcionarios.find(f => f.id === id),
-        ...funcionario
-      } as Funcionario;
-      
-      setFuncionarios(prev => 
-        prev.map(f => f.id === id ? funcionarioAtualizado : f)
-      );
-      
-      toast({
-        title: "Sucesso",
-        description: "Funcionário atualizado com sucesso!",
-        variant: "default"
-      });
-      
-      return funcionarioAtualizado;
+      const response = await api.get(id) as unknown as FuncionarioSingleResponse;
+      return response.funcionario;
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar funcionário",
-        variant: "destructive"
-      });
+      console.error('Erro ao buscar funcionário:', error);
       throw error;
-    } finally {
-      setSalvando(false);
     }
-  };
+  }, [api]);
 
-  const excluirFuncionario = async (id: number) => {
-    setSalvando(true);
+  const criarFuncionario = useCallback(async (dados: Partial<Funcionario>) => {
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.delete(`/funcionarios/${id}`);
-      
-      setFuncionarios(prev => prev.filter(f => f.id !== id));
-      
-      toast({
-        title: "Sucesso",
-        description: "Funcionário excluído com sucesso!",
-        variant: "default"
-      });
+      const response = await api.create(dados) as unknown as FuncionarioSingleResponse;
+      // Atualizar lista local
+      await buscarFuncionarios();
+      return response.funcionario;
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir funcionário",
-        variant: "destructive"
-      });
+      console.error('Erro ao criar funcionário:', error);
       throw error;
-    } finally {
-      setSalvando(false);
     }
-  };
+  }, [api, buscarFuncionarios]);
 
-  const buscarFuncionario = async (id: number) => {
-    setCarregando(true);
+  const atualizarFuncionario = useCallback(async (id: number, dados: Partial<Funcionario>) => {
     try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.get(`/funcionarios/${id}`);
-      // return response.data;
+      const response = await api.update(id, dados) as unknown as FuncionarioSingleResponse;
+      // Atualizar lista local
+      await buscarFuncionarios();
+      return response.funcionario;
+    } catch (error) {
+      console.error('Erro ao atualizar funcionário:', error);
+      throw error;
+    }
+  }, [api, buscarFuncionarios]);
+
+  const excluirFuncionario = useCallback(async (id: number) => {
+    try {
+      await api.remove(id);
+      // Atualizar lista local
+      await buscarFuncionarios();
+    } catch (error) {
+      console.error('Erro ao excluir funcionário:', error);
+      throw error;
+    }
+  }, [api, buscarFuncionarios]);
+
+  const buscarCep = useCallback(async (cep: string) => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.FUNCIONARIOS.SEARCH_CEP(cep)}`);
+      const data = await response.json();
       
-      // Mock para demonstração
-      const funcionario = funcionarios.find(f => f.id === id);
-      if (!funcionario) {
-        throw new Error('Funcionário não encontrado');
+      if (data.success) {
+        return data.dados;
       }
-      return funcionario;
+      return null;
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao buscar funcionário",
-        variant: "destructive"
-      });
-      throw error;
-    } finally {
-      setCarregando(false);
+      console.error('Erro ao buscar CEP:', error);
+      return null;
     }
-  };
-
-  const buscarCep = async (cep: string) => {
-    if (cep.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-        const data = await response.json();
-        
-        if (!data.erro) {
-          return {
-            endereco: `${data.logradouro}, ${data.bairro}`,
-            cidade: data.localidade,
-            estado: data.uf
-          };
-        }
-      } catch (error) {
-        console.error('Erro ao buscar CEP:', error);
-      }
-    }
-    return null;
-  };
+  }, []);
 
   return {
     funcionarios,
-    carregando,
-    salvando,
-    carregarFuncionarios,
+    pagination,
+    carregando: api.loading,
+    salvando: api.loading,
+    buscarFuncionarios,
+    buscarFuncionario,
     criarFuncionario,
     atualizarFuncionario,
     excluirFuncionario,
-    buscarFuncionario,
     buscarCep
   };
-};
+}

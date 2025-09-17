@@ -101,6 +101,17 @@ export const API_ENDPOINTS = {
     SEARCH_CEP: (cep: string) => `/fornecedores/buscar/cep/${cep}`,
     STATS: '/fornecedores/stats/overview',
   },
+  
+  // Funcionários
+  FUNCIONARIOS: {
+    LIST: '/funcionarios',
+    CREATE: '/funcionarios',
+    GET: (id: number) => `/funcionarios/${id}`,
+    UPDATE: (id: number) => `/funcionarios/${id}`,
+    DELETE: (id: number) => `/funcionarios/${id}`,
+    SEARCH_CEP: (cep: string) => `/funcionarios/buscar/cep/${cep}`,
+    STATS: '/funcionarios/stats/overview',
+  },
 };
 
 // Status codes
