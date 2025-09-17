@@ -845,3 +845,86 @@ export const validateFuncionario = [
     .withMessage('Status deve ser "ativo", "inativo", "afastado" ou "demitido"'),
   handleValidationErrors
 ];
+
+// Validações para métodos de pagamento
+export const validateMetodoPagamento = [
+  body('tipo')
+    .isIn(['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque'])
+    .withMessage('Tipo de pagamento deve ser válido'),
+  body('nome')
+    .notEmpty()
+    .withMessage('Nome do método de pagamento é obrigatório')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Nome deve ter entre 2 e 100 caracteres'),
+  body('taxa')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Taxa deve ser um número entre 0 e 100'),
+  body('ativo')
+    .optional()
+    .isBoolean()
+    .withMessage('Ativo deve ser um valor booleano'),
+  body('ordem')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Ordem deve ser um número inteiro positivo'),
+  body('configuracoes')
+    .optional()
+    .isObject()
+    .withMessage('Configurações deve ser um objeto JSON'),
+  handleValidationErrors
+];
+
+// Validações para parcelas de métodos de pagamento
+export const validateParcelaMetodoPagamento = [
+  body('quantidade')
+    .isInt({ min: 1, max: 24 })
+    .withMessage('Quantidade de parcelas deve ser entre 1 e 24'),
+  body('taxa')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Taxa deve ser um número entre 0 e 100'),
+  body('ativo')
+    .optional()
+    .isBoolean()
+    .withMessage('Ativo deve ser um valor booleano'),
+  handleValidationErrors
+];
+
+// Validações para atualização de métodos de pagamento em lote
+export const validateMetodosPagamentoLote = [
+  body('metodos')
+    .isArray({ min: 1 })
+    .withMessage('Deve conter pelo menos um método de pagamento'),
+  body('metodos.*.tipo')
+    .isIn(['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque'])
+    .withMessage('Tipo de pagamento deve ser válido'),
+  body('metodos.*.nome')
+    .notEmpty()
+    .withMessage('Nome do método de pagamento é obrigatório')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Nome deve ter entre 2 e 100 caracteres'),
+  body('metodos.*.taxa')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Taxa deve ser um número entre 0 e 100'),
+  body('metodos.*.ativo')
+    .isBoolean()
+    .withMessage('Ativo deve ser um valor booleano'),
+  body('metodos.*.ordem')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Ordem deve ser um número inteiro positivo'),
+  body('metodos.*.parcelas')
+    .optional()
+    .isArray()
+    .withMessage('Parcelas deve ser um array'),
+  body('metodos.*.parcelas.*.quantidade')
+    .optional()
+    .isInt({ min: 1, max: 24 })
+    .withMessage('Quantidade de parcelas deve ser entre 1 e 24'),
+  body('metodos.*.parcelas.*.taxa')
+    .optional()
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Taxa da parcela deve ser um número entre 0 e 100'),
+  handleValidationErrors
+];

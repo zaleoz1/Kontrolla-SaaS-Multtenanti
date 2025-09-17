@@ -81,12 +81,15 @@ export default function Configuracoes() {
     dadosConta, 
     dadosTenant, 
     configuracoes, 
+    metodosPagamento,
     dadosContaEditando,
     dadosTenantEditando,
     configuracoesEditando,
+    metodosPagamentoEditando,
     setDadosContaEditando,
     setDadosTenantEditando,
     setConfiguracoesEditando,
+    setMetodosPagamentoEditando,
     loading, 
     error,
     atualizarDadosConta,
@@ -94,7 +97,11 @@ export default function Configuracoes() {
     atualizarConfiguracoes,
     alterarSenha,
     uploadAvatar,
-    uploadLogo
+    uploadLogo,
+    buscarMetodosPagamento,
+    atualizarMetodosPagamento,
+    adicionarParcela,
+    deletarParcela
   } = useConfiguracoes();
 
   const {
@@ -115,14 +122,18 @@ export default function Configuracoes() {
   const [mostrarSenhas, setMostrarSenhas] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  // Estados para métodos de pagamento
-  const [metodosPagamento, setMetodosPagamento] = useState({
-    cartao_credito: { ativo: true, taxa: 3.5, nome: "Cartão de Crédito" },
-    cartao_debito: { ativo: true, taxa: 2.5, nome: "Cartão de Débito" },
-    pix: { ativo: true, taxa: 0, nome: "PIX" },
-    transferencia: { ativo: false, taxa: 0, nome: "Transferência Bancária" },
-    dinheiro: { ativo: true, taxa: 0, nome: "Dinheiro" }
+  // Estados para métodos de pagamento (agora usando dados do hook)
+  const [metodosPagamentoLocal, setMetodosPagamentoLocal] = useState({
+    cartao_credito: { ativo: true, taxa: 0, nome: "Cartão de Crédito", parcelas: [] as Array<{quantidade: number, taxa: number}> },
+    cartao_debito: { ativo: true, taxa: 0, nome: "Cartão de Débito", parcelas: [] as Array<{quantidade: number, taxa: number}> },
+    pix: { ativo: true, taxa: 0, nome: "PIX", parcelas: [] as Array<{quantidade: number, taxa: number}> },
+    transferencia: { ativo: false, taxa: 0, nome: "Transferência Bancária", parcelas: [] as Array<{quantidade: number, taxa: number}> },
+    dinheiro: { ativo: true, taxa: 0, nome: "Dinheiro", parcelas: [] as Array<{quantidade: number, taxa: number}> }
   });
+
+  // Estados para modal de parcelas
+  const [mostrarModalParcelas, setMostrarModalParcelas] = useState(false);
+  const [parcelasEditando, setParcelasEditando] = useState<Array<{quantidade: number, taxa: number}>>([]);
 
   const [dadosPix, setDadosPix] = useState({
     chave_pix: "",
@@ -174,6 +185,42 @@ export default function Configuracoes() {
     carregarFuncionarios();
     carregarUsuarios();
   }, []);
+
+  // Sincronizar métodos de pagamento do banco com estado local
+  useEffect(() => {
+    if (metodosPagamentoEditando && metodosPagamentoEditando.length > 0) {
+      console.log('Dados carregados da API:', metodosPagamentoEditando);
+      const metodosFormatados = metodosPagamentoEditando.reduce((acc, metodo) => {
+        const tipo = metodo.tipo as keyof typeof metodosPagamentoLocal;
+        const parcelasValidas = (metodo.parcelas || [])
+          .filter(p => p.quantidade && p.quantidade > 0 && p.taxa !== undefined && p.taxa !== null);
+        
+        console.log(`Método ${tipo} - parcelas originais:`, metodo.parcelas, 'parcelas válidas:', parcelasValidas);
+        
+        acc[tipo] = {
+          ativo: metodo.ativo,
+          taxa: metodo.taxa || 0, // Garantir que taxa seja 0 se não definida
+          nome: metodo.nome,
+          parcelas: parcelasValidas.map(p => ({ quantidade: p.quantidade, taxa: p.taxa }))
+        };
+        return acc;
+      }, {} as typeof metodosPagamentoLocal);
+      
+      console.log('Métodos formatados:', metodosFormatados);
+      setMetodosPagamentoLocal(prev => ({ ...prev, ...metodosFormatados }));
+    } else {
+      // Se não há dados do banco, manter taxas zeradas
+      console.log('Nenhum método de pagamento encontrado no banco, mantendo taxas zeradas');
+      setMetodosPagamentoLocal(prev => ({
+        ...prev,
+        cartao_credito: { ...prev.cartao_credito, taxa: 0 },
+        cartao_debito: { ...prev.cartao_debito, taxa: 0 },
+        pix: { ...prev.pix, taxa: 0 },
+        transferencia: { ...prev.transferencia, taxa: 0 },
+        dinheiro: { ...prev.dinheiro, taxa: 0 }
+      }));
+    }
+  }, [metodosPagamentoEditando]);
 
   // Carregar dados quando a aba for ativada
   useEffect(() => {
@@ -450,8 +497,45 @@ export default function Configuracoes() {
   const handleSalvarMetodosPagamento = async () => {
     setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.put('/configuracoes/metodos-pagamento', metodosPagamento);
+      // Converter dados locais para formato da API
+      const metodosParaSalvar = Object.entries(metodosPagamentoLocal).map(([tipo, metodo], index) => {
+        const metodoData: any = {
+          tipo: tipo as any,
+          nome: metodo.nome,
+          taxa: metodo.taxa,
+          ativo: metodo.ativo,
+          ordem: index
+        };
+
+        // Só incluir parcelas se houver parcelas válidas
+        if (metodo.parcelas && metodo.parcelas.length > 0) {
+          const parcelasValidas = metodo.parcelas.filter(p => 
+            p.quantidade && 
+            p.quantidade > 0 && 
+            p.quantidade <= 24 &&
+            p.taxa !== undefined && 
+            p.taxa !== null &&
+            p.taxa >= 0 &&
+            p.taxa <= 100
+          );
+          
+          if (parcelasValidas.length > 0) {
+            metodoData.parcelas = parcelasValidas.map(p => ({
+              quantidade: p.quantidade,
+              taxa: p.taxa,
+              ativo: true
+            }));
+          }
+        }
+
+        return metodoData;
+      });
+
+      console.log('Dados que serão enviados para a API:', metodosParaSalvar);
+      await atualizarMetodosPagamento(metodosParaSalvar);
+      
+      // Recarregar dados para sincronizar
+      await buscarMetodosPagamento();
       
       toast({
         title: "Sucesso",
@@ -459,6 +543,7 @@ export default function Configuracoes() {
         variant: "default"
       });
     } catch (error) {
+      console.error('Erro ao salvar métodos de pagamento:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar métodos de pagamento",
@@ -510,6 +595,78 @@ export default function Configuracoes() {
       });
     } finally {
       setSalvando(false);
+    }
+  };
+
+  // Funções para gerenciar parcelas
+  const handleAbrirModalParcelas = () => {
+    setParcelasEditando([...metodosPagamentoLocal.cartao_credito.parcelas]);
+    setMostrarModalParcelas(true);
+  };
+
+  const handleAdicionarParcela = () => {
+    setParcelasEditando(prev => [...prev, { quantidade: prev.length + 1, taxa: 0 }]);
+  };
+
+  const handleRemoverParcela = (index: number) => {
+    setParcelasEditando(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAtualizarParcela = (index: number, campo: 'quantidade' | 'taxa', valor: number) => {
+    setParcelasEditando(prev => prev.map((parcela, i) => 
+      i === index ? { ...parcela, [campo]: valor } : parcela
+    ));
+  };
+
+  const handleSalvarParcelas = async () => {
+    try {
+      // Encontrar o método de cartão de crédito nos dados originais
+      const metodoCartaoCredito = metodosPagamento?.find(m => m.tipo === 'cartao_credito');
+      
+      if (metodoCartaoCredito && metodoCartaoCredito.id) {
+        // Deletar parcelas existentes
+        for (const parcela of metodoCartaoCredito.parcelas) {
+          if (parcela.id) {
+            await deletarParcela(metodoCartaoCredito.id, parcela.id);
+          }
+        }
+        
+        // Adicionar novas parcelas
+        for (const parcela of parcelasEditando) {
+          await adicionarParcela(metodoCartaoCredito.id, {
+            quantidade: parcela.quantidade,
+            taxa: parcela.taxa,
+            ativo: true
+          });
+        }
+      }
+      
+      // Atualizar estado local
+      setMetodosPagamentoLocal(prev => ({
+        ...prev,
+        cartao_credito: {
+          ...prev.cartao_credito,
+          parcelas: parcelasEditando
+        }
+      }));
+      
+      // Recarregar dados do hook para sincronizar
+      await buscarMetodosPagamento();
+      
+      toast({
+        title: "Sucesso",
+        description: "Configuração de parcelas atualizada com sucesso!",
+        variant: "default"
+      });
+      
+      setMostrarModalParcelas(false);
+    } catch (error) {
+      console.error('Erro ao salvar parcelas:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar parcelas",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1043,7 +1200,7 @@ export default function Configuracoes() {
                         <Label htmlFor="nome" className="text-sm font-medium">Nome</Label>
                         <Input
                           id="nome"
-                          value={dadosContaEditando?.nome || ''}
+                          value={dadosContaEditando?.nome ?? ''}
                           onChange={(e) => {
                             setDadosContaEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
                           }}
@@ -1055,7 +1212,7 @@ export default function Configuracoes() {
                         <Label htmlFor="sobrenome" className="text-sm font-medium">Sobrenome</Label>
                         <Input
                           id="sobrenome"
-                          value={dadosContaEditando?.sobrenome || ''}
+                          value={dadosContaEditando?.sobrenome ?? ''}
                           onChange={(e) => {
                             setDadosContaEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null);
                           }}
@@ -1069,7 +1226,7 @@ export default function Configuracoes() {
                       <Input
                         id="email"
                         type="email"
-                        value={dadosContaEditando?.email || ''}
+                          value={dadosContaEditando?.email ?? ''}
                         onChange={(e) => {
                           setDadosContaEditando(prev => prev ? { ...prev, email: e.target.value } : null);
                         }}
@@ -1081,7 +1238,7 @@ export default function Configuracoes() {
                       <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
                       <Input
                         id="telefone"
-                        value={dadosContaEditando?.telefone || ''}
+                          value={dadosContaEditando?.telefone ?? ''}
                         onChange={(e) => {
                           setDadosContaEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
                         }}
@@ -1110,7 +1267,7 @@ export default function Configuracoes() {
                       <Label htmlFor="endereco_empresa" className="text-sm font-medium">Endereço Completo</Label>
                       <Textarea
                         id="endereco_empresa"
-                        value={dadosTenantEditando?.endereco || ''}
+                        value={dadosTenantEditando?.endereco ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, endereco: e.target.value } : null);
                         }}
@@ -1124,7 +1281,7 @@ export default function Configuracoes() {
                         <Label htmlFor="cep_empresa" className="text-sm font-medium">CEP</Label>
                         <Input
                           id="cep_empresa"
-                          value={dadosTenantEditando?.cep || ''}
+                          value={dadosTenantEditando?.cep ?? ''}
                           onChange={(e) => {
                             const valor = e.target.value;
                             setDadosTenantEditando(prev => prev ? { ...prev, cep: valor } : null);
@@ -1139,7 +1296,7 @@ export default function Configuracoes() {
                         <Label htmlFor="cidade_empresa" className="text-sm font-medium">Cidade</Label>
                         <Input
                           id="cidade_empresa"
-                          value={dadosTenantEditando?.cidade || ''}
+                          value={dadosTenantEditando?.cidade ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, cidade: e.target.value } : null);
                           }}
@@ -1150,7 +1307,7 @@ export default function Configuracoes() {
                       <div className="space-y-2">
                         <Label htmlFor="estado_empresa" className="text-sm font-medium">Estado</Label>
                         <Select 
-                          value={dadosTenantEditando?.estado || ''} 
+                          value={dadosTenantEditando?.estado ?? ''} 
                           onValueChange={(value) => setDadosTenantEditando(prev => prev ? { ...prev, estado: value } : null)}
                         >
                           <SelectTrigger className="h-11">
@@ -1211,7 +1368,7 @@ export default function Configuracoes() {
                       <Label htmlFor="nome_empresa" className="text-sm font-medium">Nome da Empresa</Label>
                       <Input
                         id="nome_empresa"
-                        value={dadosTenantEditando?.nome || ''}
+                        value={dadosTenantEditando?.nome ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
                         }}
@@ -1223,7 +1380,7 @@ export default function Configuracoes() {
                       <Label htmlFor="razao_social" className="text-sm font-medium">Razão Social</Label>
                       <Input
                         id="razao_social"
-                        value={dadosTenantEditando?.razao_social || ''}
+                        value={dadosTenantEditando?.razao_social ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, razao_social: e.target.value } : null);
                         }}
@@ -1235,7 +1392,7 @@ export default function Configuracoes() {
                       <Label htmlFor="cnpj" className="text-sm font-medium">CNPJ/CPF</Label>
                       <Input
                         id="cnpj"
-                        value={dadosTenantEditando?.cnpj || dadosTenantEditando?.cpf || ''}
+                        value={dadosTenantEditando?.cnpj ?? dadosTenantEditando?.cpf ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, cnpj: e.target.value } : null);
                         }}
@@ -1249,7 +1406,7 @@ export default function Configuracoes() {
                         <Input
                           id="email_empresa"
                           type="email"
-                          value={dadosTenantEditando?.email || ''}
+                          value={dadosTenantEditando?.email ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, email: e.target.value } : null);
                           }}
@@ -1261,7 +1418,7 @@ export default function Configuracoes() {
                         <Label htmlFor="telefone_empresa" className="text-sm font-medium">Telefone da Empresa</Label>
                         <Input
                           id="telefone_empresa"
-                          value={dadosTenantEditando?.telefone || ''}
+                          value={dadosTenantEditando?.telefone ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
                           }}
@@ -1275,7 +1432,7 @@ export default function Configuracoes() {
                         <Label htmlFor="inscricao_estadual" className="text-sm font-medium">Inscrição Estadual</Label>
                         <Input
                           id="inscricao_estadual"
-                          value={dadosTenantEditando?.inscricao_estadual || ''}
+                          value={dadosTenantEditando?.inscricao_estadual ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, inscricao_estadual: e.target.value } : null);
                           }}
@@ -1287,7 +1444,7 @@ export default function Configuracoes() {
                         <Label htmlFor="inscricao_municipal" className="text-sm font-medium">Inscrição Municipal</Label>
                         <Input
                           id="inscricao_municipal"
-                          value={dadosTenantEditando?.inscricao_municipal || ''}
+                          value={dadosTenantEditando?.inscricao_municipal ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, inscricao_municipal: e.target.value } : null);
                           }}
@@ -2143,7 +2300,7 @@ export default function Configuracoes() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {Object.entries(metodosPagamento).map(([key, metodo]) => (
+                {Object.entries(metodosPagamentoLocal).map(([key, metodo]) => (
                   <div key={key} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 rounded-lg bg-primary/10">
@@ -2157,34 +2314,52 @@ export default function Configuracoes() {
                         <p className="font-medium">{metodo.nome}</p>
                         <p className="text-sm text-muted-foreground">
                           Taxa: {metodo.taxa}%
+                          {key === 'cartao_credito' && 'parcelas' in metodo && metodo.parcelas && metodo.parcelas.length > 0 && (
+                            <span className="ml-2 text-blue-600">
+                              • {metodo.parcelas.length} parcela(s) configurada(s)
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <Label htmlFor={`taxa-${key}`} className="text-sm">Taxa (%)</Label>
-                        <Input
-                          id={`taxa-${key}`}
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={metodo.taxa}
-                          onChange={(e) => {
-                            setMetodosPagamento(prev => ({
-                              ...prev,
-                              [key]: { ...prev[key as keyof typeof prev], taxa: parseFloat(e.target.value) || 0 }
-                            }));
-                          }}
-                          className="w-20"
-                          disabled={key === 'pix' || key === 'dinheiro'}
-                        />
-                      </div>
+                      {key !== 'cartao_credito' && (
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor={`taxa-${key}`} className="text-sm">Taxa (%)</Label>
+                          <Input
+                            id={`taxa-${key}`}
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            value={metodo.taxa}
+                            onChange={(e) => {
+                              setMetodosPagamentoLocal(prev => ({
+                                ...prev,
+                                [key]: { ...prev[key as keyof typeof prev], taxa: parseFloat(e.target.value) || 0 }
+                              }));
+                            }}
+                            className="w-20"
+                            disabled={key === 'pix' || key === 'dinheiro'}
+                          />
+                        </div>
+                      )}
+                      {key === 'cartao_credito' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAbrirModalParcelas}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Percent className="h-4 w-4 mr-1" />
+                          Parcelas
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setMetodosPagamento(prev => ({
+                          setMetodosPagamentoLocal(prev => ({
                             ...prev,
                             [key]: { ...prev[key as keyof typeof prev], ativo: !prev[key as keyof typeof prev].ativo }
                           }));
@@ -2389,7 +2564,7 @@ export default function Configuracoes() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(metodosPagamento)
+                  {Object.entries(metodosPagamentoLocal)
                     .filter(([_, metodo]) => metodo.ativo)
                     .map(([key, metodo]) => (
                     <div key={key} className="flex items-center space-x-3 p-3 border rounded-lg">
@@ -2430,7 +2605,7 @@ export default function Configuracoes() {
                 <div className="space-y-2">
                   <Label>Tema</Label>
                   <Select 
-                    value={configuracoesEditando?.tema || 'sistema'} 
+                    value={configuracoesEditando?.tema ?? 'sistema'} 
                     onValueChange={(value: 'claro' | 'escuro' | 'sistema') => {
                       setConfiguracoesEditando(prev => prev ? { ...prev, tema: value } : null);
                     }}
@@ -2490,7 +2665,7 @@ export default function Configuracoes() {
                 <div className="space-y-2">
                   <Label>Idioma</Label>
                   <Select 
-                    value={configuracoesEditando?.idioma || 'pt-BR'} 
+                    value={configuracoesEditando?.idioma ?? 'pt-BR'} 
                     onValueChange={(value) => {
                       setConfiguracoesEditando(prev => prev ? { ...prev, idioma: value } : null);
                     }}
@@ -2508,7 +2683,7 @@ export default function Configuracoes() {
                 <div className="space-y-2">
                   <Label>Fuso Horário</Label>
                   <Select 
-                    value={configuracoesEditando?.fuso_horario || 'America/Sao_Paulo'} 
+                    value={configuracoesEditando?.fuso_horario ?? 'America/Sao_Paulo'} 
                     onValueChange={(value) => {
                       setConfiguracoesEditando(prev => prev ? { ...prev, fuso_horario: value } : null);
                     }}
@@ -2526,7 +2701,7 @@ export default function Configuracoes() {
                 <div className="space-y-2">
                   <Label>Moeda</Label>
                   <Select 
-                    value={configuracoesEditando?.moeda || 'BRL'} 
+                    value={configuracoesEditando?.moeda ?? 'BRL'} 
                     onValueChange={(value) => {
                       setConfiguracoesEditando(prev => prev ? { ...prev, moeda: value } : null);
                     }}
@@ -2833,6 +3008,149 @@ export default function Configuracoes() {
         )}
 
 
+        {/* Modal de Parcelas */}
+        {mostrarModalParcelas && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="w-full max-w-5xl h-[90vh] overflow-hidden">
+              <Card className="bg-background border-0 shadow-2xl h-full flex flex-col">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Percent className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-bold">Configuração de Parcelas</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Configure as parcelas disponíveis para cartão de crédito
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMostrarModalParcelas(false)}
+                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-hidden p-0">
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1 p-4 space-y-4 overflow-hidden">
+                      {/* Seção Principal - Layout Responsivo */}
+                      <div className="space-y-4">
+                        {/* Header com Botão de Adicionar */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b">
+                          <div className="flex items-center space-x-2">
+                            <div className="p-1.5 rounded bg-primary/10">
+                              <Percent className="h-4 w-4 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold">Parcelas Configuradas</h3>
+                          </div>
+                          <Button
+                            onClick={handleAdicionarParcela}
+                            size="sm"
+                            className="w-full sm:w-auto h-9"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar Parcela
+                          </Button>
+                        </div>
+                        
+                        {/* Lista de Parcelas - Scrollable */}
+                        <div className="flex-1 overflow-y-auto space-y-3 max-h-96">
+                          {parcelasEditando.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Percent className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                              <p className="font-medium mb-1">Nenhuma parcela configurada</p>
+                              <p className="text-sm">Clique em "Adicionar Parcela" para começar</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {parcelasEditando.map((parcela, index) => (
+                                <div key={index} className="p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                                  <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div className="space-y-1">
+                                        <Label htmlFor={`quantidade-${index}`} className="text-xs font-medium text-muted-foreground">
+                                          Quantidade de Parcelas
+                                        </Label>
+                                        <Input
+                                          id={`quantidade-${index}`}
+                                          type="number"
+                                          min="1"
+                                          max="24"
+                                          value={parcela.quantidade}
+                                          onChange={(e) => handleAtualizarParcela(index, 'quantidade', parseInt(e.target.value) || 1)}
+                                          className="h-9 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                                          placeholder="Ex: 3"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label htmlFor={`taxa-${index}`} className="text-xs font-medium text-muted-foreground">
+                                          Taxa de Juros (%)
+                                        </Label>
+                                        <Input
+                                          id={`taxa-${index}`}
+                                          type="number"
+                                          step="0.1"
+                                          min="0"
+                                          max="100"
+                                          value={parcela.taxa}
+                                          onChange={(e) => handleAtualizarParcela(index, 'taxa', parseFloat(e.target.value) || 0)}
+                                          className="h-9 text-sm"
+                                          placeholder="Ex: 2.5"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-end lg:justify-start">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRemoverParcela(index)}
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto h-9 px-3"
+                                      >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        <span className="text-xs">Remover</span>
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="bg-muted/30 px-6 py-4 border-t flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row justify-end gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setMostrarModalParcelas(false)}
+                      className="w-full sm:w-auto px-6"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleSalvarParcelas}
+                      className="w-full sm:w-auto px-6"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Salvar Parcelas
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {/* Modal de Usuário */}
         {mostrarFormUsuario && usuarioEditando && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -2921,7 +3239,7 @@ export default function Configuracoes() {
                                 <Input
                                   id="senha_usuario"
                                   type={mostrarSenha ? "text" : "password"}
-                                  value={usuarioEditando.senha || ""}
+                                  value={usuarioEditando.senha ?? ""}
                                   onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, senha: e.target.value } : null)}
                                   placeholder="Digite a senha"
                                   className="h-10 pr-10"
