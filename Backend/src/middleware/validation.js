@@ -702,3 +702,146 @@ export const validateFornecedor = [
     .withMessage('Status deve ser "ativo" ou "inativo"'),
   handleValidationErrors
 ];
+
+// Validações para funcionários
+export const validateFuncionario = [
+  body('nome')
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Nome deve ter entre 2 e 255 caracteres'),
+  body('sobrenome')
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Sobrenome deve ter entre 2 e 255 caracteres'),
+  body('cpf')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('CPF é obrigatório');
+      }
+      const cpf = value.replace(/\D/g, '');
+      if (cpf.length !== 11) {
+        throw new Error('CPF deve ter 11 dígitos');
+      }
+      return true;
+    }),
+  body('rg')
+    .optional()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('RG deve ter no máximo 20 caracteres'),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Email deve ser válido')
+    .normalizeEmail(),
+  body('telefone')
+    .optional()
+    .isLength({ min: 10, max: 20 })
+    .withMessage('Telefone deve ter entre 10 e 20 caracteres'),
+  body('endereco')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Endereço deve ter no máximo 500 caracteres'),
+  body('cidade')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Cidade deve ter no máximo 100 caracteres'),
+  body('estado')
+    .optional()
+    .isLength({ min: 2, max: 2 })
+    .withMessage('Estado deve ter 2 caracteres'),
+  body('cep')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      const cep = value.replace(/\D/g, '');
+      if (cep.length !== 8) {
+        throw new Error('CEP deve ter 8 dígitos');
+      }
+      return true;
+    }),
+  body('data_nascimento')
+    .optional()
+    .isISO8601()
+    .withMessage('Data de nascimento deve ser uma data válida'),
+  body('sexo')
+    .optional()
+    .isIn(['masculino', 'feminino', 'outro'])
+    .withMessage('Sexo deve ser "masculino", "feminino" ou "outro"'),
+  body('estado_civil')
+    .optional()
+    .isIn(['solteiro', 'casado', 'divorciado', 'viuvo', 'uniao_estavel'])
+    .withMessage('Estado civil deve ser "solteiro", "casado", "divorciado", "viuvo" ou "uniao_estavel"'),
+  body('cargo')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Cargo deve ter entre 2 e 100 caracteres'),
+  body('departamento')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Departamento deve ter no máximo 100 caracteres'),
+  body('data_admissao')
+    .isISO8601()
+    .withMessage('Data de admissão é obrigatória e deve ser uma data válida'),
+  body('data_demissao')
+    .optional()
+    .isISO8601()
+    .withMessage('Data de demissão deve ser uma data válida'),
+  body('salario')
+    .isFloat({ min: 0.01 })
+    .withMessage('Salário é obrigatório e deve ser maior que zero'),
+  body('tipo_salario')
+    .optional()
+    .isIn(['mensal', 'horista', 'comissionado'])
+    .withMessage('Tipo de salário deve ser "mensal", "horista" ou "comissionado"'),
+  body('valor_hora')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Valor por hora deve ser um número positivo'),
+  body('comissao_percentual')
+    .optional()
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Comissão percentual deve ser entre 0 e 100'),
+  body('banco')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Banco deve ter no máximo 100 caracteres'),
+  body('agencia')
+    .optional()
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('Agência deve ter no máximo 10 caracteres'),
+  body('conta')
+    .optional()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Conta deve ter no máximo 20 caracteres'),
+  body('digito')
+    .optional()
+    .trim()
+    .isLength({ max: 2 })
+    .withMessage('Dígito deve ter no máximo 2 caracteres'),
+  body('tipo_conta')
+    .optional()
+    .isIn(['corrente', 'poupanca'])
+    .withMessage('Tipo de conta deve ser "corrente" ou "poupanca"'),
+  body('pix')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('PIX deve ter no máximo 255 caracteres'),
+  body('observacoes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Observações deve ter no máximo 1000 caracteres'),
+  body('status')
+    .optional()
+    .isIn(['ativo', 'inativo', 'afastado', 'demitido'])
+    .withMessage('Status deve ser "ativo", "inativo", "afastado" ou "demitido"'),
+  handleValidationErrors
+];

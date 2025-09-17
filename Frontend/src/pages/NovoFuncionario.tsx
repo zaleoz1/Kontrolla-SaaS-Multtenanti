@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useFuncionarios } from '@/hooks/useFuncionarios';
+import { useFuncionarios, Funcionario } from '@/hooks/useFuncionarios';
 import { ConfiguracoesSidebar } from '@/components/layout/ConfiguracoesSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -30,38 +30,6 @@ import {
   FileText
 } from 'lucide-react';
 
-interface Funcionario {
-  id?: number;
-  nome: string;
-  sobrenome: string;
-  cpf: string;
-  rg?: string;
-  email?: string;
-  telefone?: string;
-  endereco?: string;
-  cidade?: string;
-  estado?: string;
-  cep?: string;
-  data_nascimento?: string;
-  sexo: string;
-  estado_civil: string;
-  cargo: string;
-  departamento?: string;
-  data_admissao: string;
-  data_demissao?: string | null;
-  salario: number;
-  tipo_salario: string;
-  valor_hora?: number | null;
-  comissao_percentual?: number | null;
-  banco?: string;
-  agencia?: string;
-  conta?: string;
-  digito?: string;
-  tipo_conta: string;
-  pix?: string;
-  observacoes?: string;
-  status: string;
-}
 
 export default function NovoFuncionario() {
   const navigate = useNavigate();
