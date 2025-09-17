@@ -631,3 +631,74 @@ export const validateSearch = [
     .withMessage('Termo de busca deve ter entre 1 e 255 caracteres'),
   handleValidationErrors
 ];
+
+// Validações para fornecedores
+export const validateFornecedor = [
+  body('nome')
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Nome deve ter entre 2 e 255 caracteres'),
+  body('razao_social')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Razão social deve ter no máximo 255 caracteres'),
+  body('cnpj')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      const cnpj = value.replace(/\D/g, '');
+      if (cnpj.length !== 14) {
+        throw new Error('CNPJ deve ter 14 dígitos');
+      }
+      return true;
+    }),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Email deve ser válido')
+    .normalizeEmail(),
+  body('telefone')
+    .optional()
+    .isLength({ min: 10, max: 20 })
+    .withMessage('Telefone deve ter entre 10 e 20 caracteres'),
+  body('endereco')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Endereço deve ter no máximo 500 caracteres'),
+  body('cidade')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Cidade deve ter no máximo 100 caracteres'),
+  body('estado')
+    .optional()
+    .isLength({ min: 2, max: 2 })
+    .withMessage('Estado deve ter 2 caracteres'),
+  body('cep')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      const cep = value.replace(/\D/g, '');
+      if (cep.length !== 8) {
+        throw new Error('CEP deve ter 8 dígitos');
+      }
+      return true;
+    }),
+  body('contato')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Contato deve ter no máximo 255 caracteres'),
+  body('observacoes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Observações deve ter no máximo 1000 caracteres'),
+  body('status')
+    .optional()
+    .isIn(['ativo', 'inativo'])
+    .withMessage('Status deve ser "ativo" ou "inativo"'),
+  handleValidationErrors
+];

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { useFornecedores } from "@/hooks/useFornecedores";
 import { useToast } from "@/hooks/use-toast";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { 
@@ -95,6 +96,17 @@ export default function Configuracoes() {
     uploadLogo
   } = useConfiguracoes();
 
+  const {
+    fornecedores,
+    carregando: carregandoFornecedores,
+    salvando: salvandoFornecedor,
+    carregarFornecedores,
+    criarFornecedor,
+    atualizarFornecedor,
+    excluirFornecedor,
+    buscarCep: buscarCepFornecedor
+  } = useFornecedores();
+
   const { toast } = useToast();
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
@@ -129,10 +141,8 @@ export default function Configuracoes() {
   });
 
   // Estados para fornecedores
-  const [fornecedores, setFornecedores] = useState([]);
   const [buscaFornecedor, setBuscaFornecedor] = useState("");
   const [filtroStatusFornecedor, setFiltroStatusFornecedor] = useState("todos");
-  const [carregandoFornecedores, setCarregandoFornecedores] = useState(false);
 
   // Estados para funcionários
   const [funcionarios, setFuncionarios] = useState([]);
@@ -154,10 +164,16 @@ export default function Configuracoes() {
 
   // Carregar fornecedores e funcionários quando o componente montar
   useEffect(() => {
-    carregarFornecedores();
     carregarFuncionarios();
     carregarUsuarios();
   }, []);
+
+  // Carregar fornecedores quando a aba for ativada
+  useEffect(() => {
+    if (abaAtiva === "fornecedores" && !carregandoFornecedores) {
+      carregarFornecedores();
+    }
+  }, [abaAtiva]); // Removido carregarFornecedores das dependências
 
   // Função para buscar dados do CEP
   const buscarCep = async (cep: string) => {
@@ -167,17 +183,16 @@ export default function Configuracoes() {
     // Verifica se o CEP tem 8 dígitos
     if (cepLimpo.length === 8) {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const data = await response.json();
+        const data = await buscarCepFornecedor(cepLimpo);
         
-        if (!data.erro) {
+        if (data) {
           // Atualiza os dados do tenant com as informações do CEP
           setDadosTenantEditando(prev => prev ? {
             ...prev,
-            endereco: data.logradouro || '',
-            cidade: data.localidade || '',
-            estado: data.uf || '',
-            cep: data.cep || cep
+            endereco: data.endereco || '',
+            cidade: data.cidade || '',
+            estado: data.estado || '',
+            cep: cep
           } : null);
           
           toast({
@@ -522,60 +537,7 @@ export default function Configuracoes() {
     }
   };
 
-  // Funções para gerenciar fornecedores
-  const carregarFornecedores = async () => {
-    setCarregandoFornecedores(true);
-    try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.get('/fornecedores');
-      // setFornecedores(response.data);
-      
-      // Dados mock para demonstração
-      const fornecedoresMock = [
-        {
-          id: 1,
-          nome: "Fornecedor ABC Ltda",
-          razao_social: "ABC Fornecedores Ltda",
-          cnpj: "12.345.678/0001-90",
-          email: "contato@abc.com.br",
-          telefone: "(11) 99999-9999",
-          endereco: "Rua das Flores, 123",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01234-567",
-          contato: "João Silva",
-          observacoes: "Fornecedor principal de produtos eletrônicos",
-          status: "ativo",
-          data_criacao: "2024-01-15T10:30:00Z"
-        },
-        {
-          id: 2,
-          nome: "Distribuidora XYZ",
-          razao_social: "XYZ Distribuidora S.A.",
-          cnpj: "98.765.432/0001-10",
-          email: "vendas@xyz.com.br",
-          telefone: "(11) 88888-8888",
-          endereco: "Av. Paulista, 456",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01310-100",
-          contato: "Maria Santos",
-          observacoes: "Especializada em produtos de limpeza",
-          status: "ativo",
-          data_criacao: "2024-01-10T14:20:00Z"
-        }
-      ];
-      setFornecedores(fornecedoresMock);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar fornecedores",
-        variant: "destructive"
-      });
-    } finally {
-      setCarregandoFornecedores(false);
-    }
-  };
+  // Funções para gerenciar fornecedores (usando hook useFornecedores)
 
   const handleNovoFornecedor = () => {
     navigate('/dashboard/novo-fornecedor');
@@ -589,26 +551,11 @@ export default function Configuracoes() {
   const handleExcluirFornecedor = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este fornecedor?")) return;
 
-    setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.delete(`/fornecedores/${id}`);
-      
-      toast({
-        title: "Sucesso",
-        description: "Fornecedor excluído com sucesso!",
-        variant: "default"
-      });
-      
-      carregarFornecedores();
+      await excluirFornecedor(id);
+      // O hook já atualiza a lista automaticamente
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir fornecedor",
-        variant: "destructive"
-      });
-    } finally {
-      setSalvando(false);
+      // O hook já exibe o toast de erro
     }
   };
 

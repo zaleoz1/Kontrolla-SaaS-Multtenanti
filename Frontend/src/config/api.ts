@@ -90,6 +90,17 @@ export const API_ENDPOINTS = {
     STATS: '/catalogo/stats',
     CONFIG: '/catalogo/configuracoes',
   },
+  
+  // Fornecedores
+  FORNECEDORES: {
+    LIST: '/fornecedores',
+    CREATE: '/fornecedores',
+    GET: (id: number) => `/fornecedores/${id}`,
+    UPDATE: (id: number) => `/fornecedores/${id}`,
+    DELETE: (id: number) => `/fornecedores/${id}`,
+    SEARCH_CEP: (cep: string) => `/fornecedores/buscar/cep/${cep}`,
+    STATS: '/fornecedores/stats/overview',
+  },
 };
 
 // Status codes

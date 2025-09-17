@@ -68,6 +68,16 @@ export function useApi<T = any>() {
       if (!response.ok) {
         let errorMessage = ERROR_MESSAGES.UNKNOWN_ERROR;
         
+        // Tentar obter mensagem de erro do servidor
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // Se não conseguir parsear o JSON, usar mensagem padrão
+        }
+        
         switch (response.status) {
           case HTTP_STATUS.UNAUTHORIZED:
             errorMessage = ERROR_MESSAGES.UNAUTHORIZED;
@@ -82,7 +92,10 @@ export function useApi<T = any>() {
             errorMessage = ERROR_MESSAGES.NOT_FOUND;
             break;
           case HTTP_STATUS.BAD_REQUEST:
-            errorMessage = ERROR_MESSAGES.VALIDATION_ERROR;
+            errorMessage = errorMessage || ERROR_MESSAGES.VALIDATION_ERROR;
+            break;
+          case HTTP_STATUS.CONFLICT:
+            errorMessage = errorMessage || 'Recurso já existe ou está em conflito';
             break;
           case HTTP_STATUS.INTERNAL_SERVER_ERROR:
             errorMessage = ERROR_MESSAGES.SERVER_ERROR;

@@ -105,7 +105,8 @@ export default function NovoFornecedor() {
   };
 
   const handleBuscarCep = async (cep: string) => {
-    if (cep.length === 8) {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length === 8) {
       try {
         const dadosCep = await buscarCep(cep);
         if (dadosCep) {
