@@ -387,6 +387,35 @@ CREATE TABLE IF NOT EXISTS tenant_configuracoes (
     UNIQUE KEY unique_tenant_key (tenant_id, chave)
 );
 
+-- Tabela de métodos de pagamento
+CREATE TABLE IF NOT EXISTS metodos_pagamento (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    tipo ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque') NOT NULL,
+    nome VARCHAR(100) NOT NULL,
+    taxa DECIMAL(5,2) DEFAULT 0.00,
+    ativo BOOLEAN DEFAULT TRUE,
+    ordem INT DEFAULT 0,
+    configuracoes JSON,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_tenant_tipo (tenant_id, tipo)
+);
+
+-- Tabela de parcelas dos métodos de pagamento
+CREATE TABLE IF NOT EXISTS metodos_pagamento_parcelas (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    metodo_pagamento_id INT NOT NULL,
+    quantidade INT NOT NULL,
+    taxa DECIMAL(5,2) NOT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (metodo_pagamento_id) REFERENCES metodos_pagamento(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_metodo_quantidade (metodo_pagamento_id, quantidade)
+);
+
 -- Índices para melhor performance
 CREATE INDEX idx_usuarios_tenant ON usuarios(tenant_id);
 CREATE INDEX idx_usuarios_email ON usuarios(email);
@@ -405,6 +434,9 @@ CREATE INDEX idx_transacoes_fornecedor ON transacoes(fornecedor_id);
 CREATE INDEX idx_contas_pagar_tenant ON contas_pagar(tenant_id);
 CREATE INDEX idx_contas_pagar_fornecedor ON contas_pagar(fornecedor_id);
 CREATE INDEX idx_nfe_tenant ON nfe(tenant_id);
+CREATE INDEX idx_metodos_pagamento_tenant ON metodos_pagamento(tenant_id);
+CREATE INDEX idx_metodos_pagamento_tipo ON metodos_pagamento(tipo);
+CREATE INDEX idx_metodos_pagamento_parcelas_metodo ON metodos_pagamento_parcelas(metodo_pagamento_id);
 
 -- Índices para busca
 CREATE INDEX idx_clientes_nome ON clientes(nome);

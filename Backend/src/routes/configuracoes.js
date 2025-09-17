@@ -2,9 +2,14 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { query, queryWithResult } from '../database/connection.js';
+import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { handleValidationErrors } from '../middleware/validation.js';
+import { 
+  handleValidationErrors, 
+  validateMetodoPagamento, 
+  validateParcelaMetodoPagamento, 
+  validateMetodosPagamentoLote 
+} from '../middleware/validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -438,6 +443,337 @@ router.post('/logo', requireAdmin, upload.single('logo'), async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao fazer upload da logo:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// ===== ROTAS PARA MÉTODOS DE PAGAMENTO =====
+
+// Buscar todos os métodos de pagamento do tenant
+router.get('/metodos-pagamento', async (req, res) => {
+  try {
+    const metodos = await query(`
+      SELECT 
+        mp.*,
+        GROUP_CONCAT(
+          JSON_OBJECT(
+            'id', mpp.id,
+            'quantidade', mpp.quantidade,
+            'taxa', mpp.taxa,
+            'ativo', mpp.ativo
+          )
+        ) as parcelas_json
+      FROM metodos_pagamento mp
+      LEFT JOIN metodos_pagamento_parcelas mpp ON mp.id = mpp.metodo_pagamento_id AND mpp.ativo = 1
+      WHERE mp.tenant_id = ?
+      GROUP BY mp.id
+      ORDER BY mp.ordem ASC, mp.nome ASC
+    `, [req.user.tenant_id]);
+
+    // Processar parcelas
+    const metodosProcessados = metodos.map(metodo => ({
+      ...metodo,
+      parcelas: metodo.parcelas_json ? 
+        JSON.parse(`[${metodo.parcelas_json}]`) : []
+    }));
+
+    res.json(metodosProcessados);
+  } catch (error) {
+    console.error('Erro ao buscar métodos de pagamento:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Criar ou atualizar método de pagamento
+router.post('/metodos-pagamento', requireAdmin, validateMetodoPagamento, async (req, res) => {
+  try {
+    const { tipo, nome, taxa, ativo, ordem, configuracoes, parcelas } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    // Verificar se já existe um método com este tipo
+    const [metodoExistente] = await query(
+      'SELECT id FROM metodos_pagamento WHERE tenant_id = ? AND tipo = ?',
+      [tenantId, tipo]
+    );
+
+    let metodoId;
+
+    if (metodoExistente) {
+      // Atualizar método existente
+      await query(`
+        UPDATE metodos_pagamento 
+        SET nome = ?, taxa = ?, ativo = ?, ordem = ?, configuracoes = ?
+        WHERE id = ?
+      `, [nome, taxa, ativo, ordem, JSON.stringify(configuracoes || {}), metodoExistente.id]);
+      
+      metodoId = metodoExistente.id;
+
+      // Remover parcelas existentes
+      await query(
+        'DELETE FROM metodos_pagamento_parcelas WHERE metodo_pagamento_id = ?',
+        [metodoId]
+      );
+    } else {
+      // Criar novo método
+      const [result] = await query(`
+        INSERT INTO metodos_pagamento (tenant_id, tipo, nome, taxa, ativo, ordem, configuracoes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [tenantId, tipo, nome, taxa, ativo, ordem, JSON.stringify(configuracoes || {})]);
+      
+      metodoId = result.insertId;
+    }
+
+    // Inserir parcelas se fornecidas
+    if (parcelas && parcelas.length > 0) {
+      for (const parcela of parcelas) {
+        await query(`
+          INSERT INTO metodos_pagamento_parcelas (metodo_pagamento_id, quantidade, taxa, ativo)
+          VALUES (?, ?, ?, ?)
+        `, [metodoId, parcela.quantidade, parcela.taxa, parcela.ativo !== false]);
+      }
+    }
+
+    // Buscar método atualizado
+    const [metodoAtualizado] = await query(`
+      SELECT 
+        mp.*,
+        GROUP_CONCAT(
+          JSON_OBJECT(
+            'id', mpp.id,
+            'quantidade', mpp.quantidade,
+            'taxa', mpp.taxa,
+            'ativo', mpp.ativo
+          )
+        ) as parcelas_json
+      FROM metodos_pagamento mp
+      LEFT JOIN metodos_pagamento_parcelas mpp ON mp.id = mpp.metodo_pagamento_id AND mpp.ativo = 1
+      WHERE mp.id = ?
+      GROUP BY mp.id
+    `, [metodoId]);
+
+    const metodoProcessado = {
+      ...metodoAtualizado,
+      parcelas: metodoAtualizado.parcelas_json ? 
+        JSON.parse(`[${metodoAtualizado.parcelas_json}]`) : []
+    };
+
+    res.json({
+      message: metodoExistente ? 'Método de pagamento atualizado com sucesso' : 'Método de pagamento criado com sucesso',
+      metodo: metodoProcessado
+    });
+  } catch (error) {
+    console.error('Erro ao salvar método de pagamento:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Atualizar métodos de pagamento em lote
+router.put('/metodos-pagamento/lote', requireAdmin, validateMetodosPagamentoLote, async (req, res) => {
+  try {
+    const { metodos } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    // Usar função de transação existente
+    await transaction(async (connection) => {
+      // Limpar métodos existentes
+      await connection.execute('DELETE FROM metodos_pagamento WHERE tenant_id = ?', [tenantId]);
+
+      // Inserir novos métodos
+      for (const metodo of metodos) {
+        const [result] = await connection.execute(`
+          INSERT INTO metodos_pagamento (tenant_id, tipo, nome, taxa, ativo, ordem, configuracoes)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+          tenantId, 
+          metodo.tipo, 
+          metodo.nome, 
+          metodo.taxa, 
+          metodo.ativo, 
+          metodo.ordem || 0, 
+          JSON.stringify(metodo.configuracoes || {})
+        ]);
+
+        const metodoId = result.insertId;
+
+        // Inserir parcelas se fornecidas
+        if (metodo.parcelas && metodo.parcelas.length > 0) {
+          for (const parcela of metodo.parcelas) {
+            await connection.execute(`
+              INSERT INTO metodos_pagamento_parcelas (metodo_pagamento_id, quantidade, taxa, ativo)
+              VALUES (?, ?, ?, ?)
+            `, [metodoId, parcela.quantidade, parcela.taxa, parcela.ativo !== false]);
+          }
+        }
+      }
+    });
+
+    // Buscar métodos atualizados
+    const metodosAtualizados = await query(`
+      SELECT 
+        mp.*,
+        GROUP_CONCAT(
+          JSON_OBJECT(
+            'id', mpp.id,
+            'quantidade', mpp.quantidade,
+            'taxa', mpp.taxa,
+            'ativo', mpp.ativo
+          )
+        ) as parcelas_json
+      FROM metodos_pagamento mp
+      LEFT JOIN metodos_pagamento_parcelas mpp ON mp.id = mpp.metodo_pagamento_id AND mpp.ativo = 1
+      WHERE mp.tenant_id = ?
+      GROUP BY mp.id
+      ORDER BY mp.ordem ASC, mp.nome ASC
+    `, [tenantId]);
+
+    const metodosProcessados = metodosAtualizados.map(metodo => ({
+      ...metodo,
+      parcelas: metodo.parcelas_json ? 
+        JSON.parse(`[${metodo.parcelas_json}]`) : []
+    }));
+
+    res.json({
+      message: 'Métodos de pagamento atualizados com sucesso',
+      metodos: metodosProcessados
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar métodos de pagamento em lote:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Deletar método de pagamento
+router.delete('/metodos-pagamento/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenant_id;
+
+    // Verificar se o método pertence ao tenant
+    const [metodo] = await query(
+      'SELECT id FROM metodos_pagamento WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+
+    if (!metodo) {
+      return res.status(404).json({
+        error: 'Método de pagamento não encontrado'
+      });
+    }
+
+    // Deletar método (as parcelas serão deletadas automaticamente por CASCADE)
+    await query('DELETE FROM metodos_pagamento WHERE id = ?', [id]);
+
+    res.json({
+      message: 'Método de pagamento deletado com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao deletar método de pagamento:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Adicionar parcela a um método de pagamento
+router.post('/metodos-pagamento/:id/parcelas', requireAdmin, validateParcelaMetodoPagamento, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantidade, taxa, ativo } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    // Verificar se o método pertence ao tenant
+    const [metodo] = await query(
+      'SELECT id FROM metodos_pagamento WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+
+    if (!metodo) {
+      return res.status(404).json({
+        error: 'Método de pagamento não encontrado'
+      });
+    }
+
+    // Verificar se já existe parcela com esta quantidade
+    const [parcelaExistente] = await query(
+      'SELECT id FROM metodos_pagamento_parcelas WHERE metodo_pagamento_id = ? AND quantidade = ?',
+      [id, quantidade]
+    );
+
+    if (parcelaExistente) {
+      return res.status(400).json({
+        error: 'Já existe uma parcela com esta quantidade'
+      });
+    }
+
+    // Inserir nova parcela
+    const result = await queryWithResult(`
+      INSERT INTO metodos_pagamento_parcelas (metodo_pagamento_id, quantidade, taxa, ativo)
+      VALUES (?, ?, ?, ?)
+    `, [id, quantidade, taxa, ativo !== false]);
+
+    res.json({
+      message: 'Parcela adicionada com sucesso',
+      parcela: {
+        id: result.insertId,
+        quantidade,
+        taxa,
+        ativo: ativo !== false
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao adicionar parcela:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Deletar parcela de um método de pagamento
+router.delete('/metodos-pagamento/:id/parcelas/:parcelaId', requireAdmin, async (req, res) => {
+  try {
+    const { id, parcelaId } = req.params;
+    const tenantId = req.user.tenant_id;
+
+    // Verificar se o método pertence ao tenant
+    const [metodo] = await query(
+      'SELECT id FROM metodos_pagamento WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+
+    if (!metodo) {
+      return res.status(404).json({
+        error: 'Método de pagamento não encontrado'
+      });
+    }
+
+    // Verificar se a parcela pertence ao método
+    const [parcela] = await query(
+      'SELECT id FROM metodos_pagamento_parcelas WHERE id = ? AND metodo_pagamento_id = ?',
+      [parcelaId, id]
+    );
+
+    if (!parcela) {
+      return res.status(404).json({
+        error: 'Parcela não encontrada'
+      });
+    }
+
+    // Deletar parcela
+    await query('DELETE FROM metodos_pagamento_parcelas WHERE id = ?', [parcelaId]);
+
+    res.json({
+      message: 'Parcela deletada com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao deletar parcela:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
