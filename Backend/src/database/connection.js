@@ -13,7 +13,11 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  charset: 'utf8mb4'
+  charset: 'utf8mb4',
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true,
+  multipleStatements: false
 };
 
 // Pool de conexões
