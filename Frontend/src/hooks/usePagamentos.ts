@@ -134,7 +134,10 @@ export const usePagamentos = () => {
         }];
       } else {
         const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
-        metodosFinais = [{ metodo: metodoPagamentoUnico, valor: valorAlvo.toString() }];
+        metodosFinais = [{ 
+          metodo: metodoPagamentoUnico, 
+          valor: valorAlvo.toString()
+        }];
       }
     } else if (metodosPagamento.length > 0) {
       // Processar métodos múltiplos para calcular troco se houver dinheiro
