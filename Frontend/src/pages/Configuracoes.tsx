@@ -82,6 +82,8 @@ export default function Configuracoes() {
     dadosTenant, 
     configuracoes, 
     metodosPagamento,
+    pixConfiguracao,
+    dadosBancarios,
     dadosContaEditando,
     dadosTenantEditando,
     configuracoesEditando,
@@ -101,7 +103,9 @@ export default function Configuracoes() {
     buscarMetodosPagamento,
     atualizarMetodosPagamento,
     adicionarParcela,
-    deletarParcela
+    deletarParcela,
+    salvarPixConfiguracao,
+    salvarDadosBancarios
   } = useConfiguracoes();
 
   const {
@@ -135,19 +139,20 @@ export default function Configuracoes() {
   const [mostrarModalParcelas, setMostrarModalParcelas] = useState(false);
   const [parcelasEditando, setParcelasEditando] = useState<Array<{quantidade: number, taxa: number}>>([]);
 
-  const [dadosPix, setDadosPix] = useState({
+  // Estados locais para edição de PIX e dados bancários
+  const [dadosPixEditando, setDadosPixEditando] = useState({
     chave_pix: "",
     qr_code: "",
     nome_titular: "",
     cpf_cnpj: ""
   });
 
-  const [dadosBancarios, setDadosBancarios] = useState({
+  const [dadosBancariosEditando, setDadosBancariosEditando] = useState({
     banco: "",
     agencia: "",
     conta: "",
     digito: "",
-    tipo_conta: "corrente",
+    tipo_conta: "corrente" as "corrente" | "poupanca",
     nome_titular: "",
     cpf_cnpj: ""
   });
@@ -221,6 +226,33 @@ export default function Configuracoes() {
       }));
     }
   }, [metodosPagamentoEditando]);
+
+  // Sincronizar dados PIX do hook com estado local
+  useEffect(() => {
+    if (pixConfiguracao) {
+      setDadosPixEditando({
+        chave_pix: pixConfiguracao.chave_pix || "",
+        qr_code: pixConfiguracao.qr_code || "",
+        nome_titular: pixConfiguracao.nome_titular || "",
+        cpf_cnpj: pixConfiguracao.cpf_cnpj || ""
+      });
+    }
+  }, [pixConfiguracao]);
+
+  // Sincronizar dados bancários do hook com estado local
+  useEffect(() => {
+    if (dadosBancarios) {
+      setDadosBancariosEditando({
+        banco: dadosBancarios.banco || "",
+        agencia: dadosBancarios.agencia || "",
+        conta: dadosBancarios.conta || "",
+        digito: dadosBancarios.digito || "",
+        tipo_conta: dadosBancarios.tipo_conta || "corrente",
+        nome_titular: dadosBancarios.nome_titular || "",
+        cpf_cnpj: dadosBancarios.cpf_cnpj || ""
+      });
+    }
+  }, [dadosBancarios]);
 
   // Carregar dados quando a aba for ativada
   useEffect(() => {
@@ -557,8 +589,7 @@ export default function Configuracoes() {
   const handleSalvarDadosPix = async () => {
     setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.put('/configuracoes/pix', dadosPix);
+      await salvarPixConfiguracao(dadosPixEditando);
       
       toast({
         title: "Sucesso",
@@ -579,8 +610,7 @@ export default function Configuracoes() {
   const handleSalvarDadosBancarios = async () => {
     setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.put('/configuracoes/dados-bancarios', dadosBancarios);
+      await salvarDadosBancarios(dadosBancariosEditando);
       
       toast({
         title: "Sucesso",
@@ -696,7 +726,7 @@ export default function Configuracoes() {
       // Aqui você implementaria o upload do QR code
       const reader = new FileReader();
       reader.onload = (e) => {
-        setDadosPix(prev => ({ ...prev, qr_code: e.target?.result as string }));
+        setDadosPixEditando(prev => ({ ...prev, qr_code: e.target?.result as string }));
       };
       reader.readAsDataURL(file);
       
@@ -2313,11 +2343,16 @@ export default function Configuracoes() {
                       <div>
                         <p className="font-medium">{metodo.nome}</p>
                         <p className="text-sm text-muted-foreground">
-                          Taxa: {metodo.taxa}%
-                          {key === 'cartao_credito' && 'parcelas' in metodo && metodo.parcelas && metodo.parcelas.length > 0 && (
-                            <span className="ml-2 text-blue-600">
-                              • {metodo.parcelas.length} parcela(s) configurada(s)
-                            </span>
+                          {key === 'cartao_credito' ? (
+                            'parcelas' in metodo && metodo.parcelas && metodo.parcelas.length > 0 ? (
+                              <span className="text-blue-600">
+                                {metodo.parcelas.length} parcela(s) configurada(s)
+                              </span>
+                            ) : (
+                              'Configure as parcelas disponíveis'
+                            )
+                          ) : (
+                            `Taxa: ${metodo.taxa}%`
                           )}
                         </p>
                       </div>
@@ -2399,8 +2434,8 @@ export default function Configuracoes() {
                     <Input
                       id="chave_pix"
                       placeholder="Digite sua chave PIX"
-                      value={dadosPix.chave_pix}
-                      onChange={(e) => setDadosPix(prev => ({ ...prev, chave_pix: e.target.value }))}
+                      value={dadosPixEditando.chave_pix}
+                      onChange={(e) => setDadosPixEditando(prev => ({ ...prev, chave_pix: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2408,8 +2443,8 @@ export default function Configuracoes() {
                     <Input
                       id="nome_titular_pix"
                       placeholder="Nome do titular da conta"
-                      value={dadosPix.nome_titular}
-                      onChange={(e) => setDadosPix(prev => ({ ...prev, nome_titular: e.target.value }))}
+                      value={dadosPixEditando.nome_titular}
+                      onChange={(e) => setDadosPixEditando(prev => ({ ...prev, nome_titular: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2417,17 +2452,17 @@ export default function Configuracoes() {
                     <Input
                       id="cpf_cnpj_pix"
                       placeholder="CPF ou CNPJ do titular"
-                      value={dadosPix.cpf_cnpj}
-                      onChange={(e) => setDadosPix(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                      value={dadosPixEditando.cpf_cnpj}
+                      onChange={(e) => setDadosPixEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>QR Code PIX</Label>
                     <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                      {dadosPix.qr_code ? (
+                      {dadosPixEditando.qr_code ? (
                         <div className="space-y-2">
                           <img 
-                            src={dadosPix.qr_code} 
+                            src={dadosPixEditando.qr_code} 
                             alt="QR Code PIX" 
                             className="h-24 w-24 mx-auto object-contain"
                           />
@@ -2450,7 +2485,7 @@ export default function Configuracoes() {
                       />
                       <Button variant="outline" size="sm" asChild>
                         <label htmlFor="qr-code-upload">
-                          {dadosPix.qr_code ? 'Alterar QR Code' : 'Selecionar Arquivo'}
+                          {dadosPixEditando.qr_code ? 'Alterar QR Code' : 'Selecionar Arquivo'}
                         </label>
                       </Button>
                     </div>
@@ -2481,8 +2516,8 @@ export default function Configuracoes() {
                     <Input
                       id="banco"
                       placeholder="Nome do banco"
-                      value={dadosBancarios.banco}
-                      onChange={(e) => setDadosBancarios(prev => ({ ...prev, banco: e.target.value }))}
+                      value={dadosBancariosEditando.banco}
+                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, banco: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2490,8 +2525,8 @@ export default function Configuracoes() {
                     <Input
                       id="agencia"
                       placeholder="Número da agência"
-                      value={dadosBancarios.agencia}
-                      onChange={(e) => setDadosBancarios(prev => ({ ...prev, agencia: e.target.value }))}
+                      value={dadosBancariosEditando.agencia}
+                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, agencia: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2499,8 +2534,8 @@ export default function Configuracoes() {
                     <Input
                       id="conta"
                       placeholder="Número da conta"
-                      value={dadosBancarios.conta}
-                      onChange={(e) => setDadosBancarios(prev => ({ ...prev, conta: e.target.value }))}
+                      value={dadosBancariosEditando.conta}
+                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, conta: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2508,16 +2543,16 @@ export default function Configuracoes() {
                     <Input
                       id="digito"
                       placeholder="Dígito da conta"
-                      value={dadosBancarios.digito}
-                      onChange={(e) => setDadosBancarios(prev => ({ ...prev, digito: e.target.value }))}
+                      value={dadosBancariosEditando.digito}
+                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, digito: e.target.value }))}
                       maxLength={1}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tipo_conta">Tipo de Conta</Label>
                     <Select 
-                      value={dadosBancarios.tipo_conta} 
-                      onValueChange={(value) => setDadosBancarios(prev => ({ ...prev, tipo_conta: value }))}
+                      value={dadosBancariosEditando.tipo_conta} 
+                      onValueChange={(value: "corrente" | "poupanca") => setDadosBancariosEditando(prev => ({ ...prev, tipo_conta: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -2533,8 +2568,8 @@ export default function Configuracoes() {
                     <Input
                       id="nome_titular_banco"
                       placeholder="Nome do titular da conta"
-                      value={dadosBancarios.nome_titular}
-                      onChange={(e) => setDadosBancarios(prev => ({ ...prev, nome_titular: e.target.value }))}
+                      value={dadosBancariosEditando.nome_titular}
+                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, nome_titular: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2542,8 +2577,8 @@ export default function Configuracoes() {
                     <Input
                       id="cpf_cnpj_banco"
                       placeholder="CPF ou CNPJ do titular"
-                      value={dadosBancarios.cpf_cnpj}
-                      onChange={(e) => setDadosBancarios(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                      value={dadosBancariosEditando.cpf_cnpj}
+                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
                     />
                   </div>
                 </div>

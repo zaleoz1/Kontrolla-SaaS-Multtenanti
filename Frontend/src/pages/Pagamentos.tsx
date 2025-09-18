@@ -31,16 +31,23 @@ import {
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { Cliente } from "@/hooks/useClientes";
-import { MetodoPagamento, PagamentoPrazo } from "@/hooks/useVendas";
+import { PagamentoPrazo } from "@/hooks/useVendas";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
+import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
+import { useApi } from "@/hooks/useApi";
 
 interface ItemCarrinho {
   produto: any;
   quantidade: number;
   precoUnitario: number;
   precoTotal: number;
+}
+
+interface MetodoPagamentoSelecionado {
+  metodo: string;
+  valor: string;
 }
 
 export default function Pagamentos() {
@@ -74,12 +81,14 @@ export default function Pagamentos() {
     criarVenda 
   } = usePagamentos();
   const { tenant, loading: carregandoTenant } = useTenant();
+  const { metodosPagamento: metodosDisponiveis } = useMetodosPagamento();
+  const { loading: carregandoMetodos } = useApi();
   
   // Estados do formulário
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData.clienteSelecionado);
   const [carrinho] = useState<ItemCarrinho[]>(vendaData.carrinho);
   const [desconto, setDesconto] = useState(vendaData.desconto);
-  const [metodosPagamento, setMetodosPagamento] = useState<MetodoPagamento[]>([]);
+  const [metodosPagamento, setMetodosPagamento] = useState<MetodoPagamentoSelecionado[]>([]);
   const [metodoPagamentoUnico, setMetodoPagamentoUnico] = useState("");
   const [valorDinheiro, setValorDinheiro] = useState("");
   const [mostrarSelecaoCliente, setMostrarSelecaoCliente] = useState(false);
@@ -104,13 +113,15 @@ export default function Pagamentos() {
 
   // Função para calcular valor com juros e data de vencimento
   const handleCalcularPagamentoPrazo = (dias: string, juros: string) => {
-    const valorBase = metodosPagamento.length > 0 ? calcularValorRestantePrazo(metodosPagamento, total) : total;
+    const metodosFormatados = metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor }));
+    const valorBase = metodosPagamento.length > 0 ? calcularValorRestantePrazo(metodosFormatados, total) : total;
     calcularPagamentoPrazo(dias, juros, valorBase, setPagamentoPrazo);
   };
 
   // Função para calcular o valor restante para pagamento a prazo
   const handleCalcularValorRestantePrazo = () => {
-    return calcularValorRestantePrazo(metodosPagamento, total);
+    const metodosFormatados = metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor }));
+    return calcularValorRestantePrazo(metodosFormatados, total);
   };
 
   // Atualizar pagamento a prazo quando o total ou métodos de pagamento mudarem
@@ -132,7 +143,7 @@ export default function Pagamentos() {
       // Processar dados da venda usando o hook
       const dadosVenda = processarDadosVenda(
         { carrinho, clienteSelecionado, subtotal, desconto, total },
-        metodosPagamento,
+        metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor })),
         metodoPagamentoUnico,
         valorDinheiro,
         usarPagamentoPrazo,
@@ -179,7 +190,7 @@ export default function Pagamentos() {
 
   const validacaoFormulario = validarFormulario(
     carrinho,
-    metodosPagamento,
+    metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor })),
     metodoPagamentoUnico,
     valorDinheiro,
     usarPagamentoPrazo,
@@ -397,14 +408,17 @@ export default function Pagamentos() {
               })}</div>
             ` : ''}
 
-            ${vendaFinalizada?.metodos_pagamento?.map((metodo: any) => `
-              <div>
-                ${metodo.metodo?.replace('_', ' ').toUpperCase()}: ${parseFloat(metodo.valor || 0).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                })}
-              </div>
-            `).join('') || ''}
+            ${vendaFinalizada?.metodos_pagamento?.map((metodo: any) => {
+              const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
+              return `
+                <div>
+                  ${metodoDisponivel?.nome || metodo.metodo?.replace('_', ' ').toUpperCase()}: ${parseFloat(metodo.valor || 0).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}
+                </div>
+              `;
+            }).join('') || ''}
 
             ${vendaFinalizada?.pagamento_prazo ? `
               <div>
@@ -640,14 +654,16 @@ export default function Pagamentos() {
                       }
                     }}
                     className="w-full p-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg"
+                    disabled={carregandoMetodos}
                   >
-                    <option value="">Escolha uma forma de pagamento</option>
-                    <option value="pix">PIX</option>
-                    <option value="cartao_credito">Cartão de Crédito</option>
-                    <option value="cartao_debito">Cartão de Débito</option>
-                    <option value="dinheiro">Dinheiro</option>
-                    <option value="transferencia">Transferência</option>
-                    <option value="boleto">Boleto</option>
+                    <option value="">
+                      {carregandoMetodos ? "Carregando métodos..." : "Escolha uma forma de pagamento"}
+                    </option>
+                    {metodosDisponiveis.map((metodo) => (
+                      <option key={metodo.id} value={metodo.tipo}>
+                        {metodo.nome}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -694,6 +710,7 @@ export default function Pagamentos() {
                     setMetodosPagamento([{ metodo: "", valor: "" }]);
                   }}
                   className="w-full border-green-300 text-green-600 hover:bg-green-50"
+                  disabled={carregandoMetodos}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Múltiplos Métodos
@@ -719,6 +736,7 @@ export default function Pagamentos() {
                         setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "" }]);
                       }}
                       className="border-green-300 text-green-600 hover:bg-green-50"
+                      disabled={carregandoMetodos}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Adicionar
@@ -753,14 +771,16 @@ export default function Pagamentos() {
                           setMetodosPagamento(novosMetodos);
                         }}
                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        disabled={carregandoMetodos}
                       >
-                        <option value="">Selecione</option>
-                        <option value="pix">PIX</option>
-                        <option value="cartao_credito">Crédito</option>
-                        <option value="cartao_debito">Débito</option>
-                        <option value="dinheiro">Dinheiro</option>
-                        <option value="transferencia">Transferência</option>
-                        <option value="boleto">Boleto</option>
+                        <option value="">
+                          {carregandoMetodos ? "Carregando..." : "Selecione"}
+                        </option>
+                        {metodosDisponiveis.map((metodoDisponivel) => (
+                          <option key={metodoDisponivel.id} value={metodoDisponivel.tipo}>
+                            {metodoDisponivel.nome}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     
@@ -800,19 +820,22 @@ export default function Pagamentos() {
                 <div className="bg-slate-100 rounded-lg p-4">
                   <h4 className="font-bold mb-3 text-slate-800">Resumo dos Pagamentos</h4>
                   <div className="space-y-2">
-                    {metodosPagamento.map((metodo, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span className="capitalize text-slate-600">
-                          {metodo.metodo.replace('_', ' ')}:
-                        </span>
-                        <span className="font-medium">
-                          {(parseFloat(metodo.valor) || 0).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          })}
-                        </span>
-                      </div>
-                    ))}
+                    {metodosPagamento.map((metodo, index) => {
+                      const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
+                      return (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span className="text-slate-600">
+                            {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}:
+                          </span>
+                          <span className="font-medium">
+                            {(parseFloat(metodo.valor) || 0).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}
+                          </span>
+                        </div>
+                      );
+                    })}
                     <div className="border-t pt-2">
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total Pago:</span>

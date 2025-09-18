@@ -79,11 +79,38 @@ interface MetodoPagamento {
   parcelas: ParcelaMetodoPagamento[];
 }
 
+interface PixConfiguracao {
+  id?: number;
+  chave_pix: string;
+  qr_code?: string;
+  nome_titular: string;
+  cpf_cnpj: string;
+  ativo: boolean;
+  data_criacao?: string;
+  data_atualizacao?: string;
+}
+
+interface DadosBancarios {
+  id?: number;
+  banco: string;
+  agencia: string;
+  conta: string;
+  digito: string;
+  tipo_conta: 'corrente' | 'poupanca';
+  nome_titular: string;
+  cpf_cnpj: string;
+  ativo: boolean;
+  data_criacao?: string;
+  data_atualizacao?: string;
+}
+
 export const useConfiguracoes = () => {
   const [dadosConta, setDadosConta] = useState<DadosConta | null>(null);
   const [dadosTenant, setDadosTenant] = useState<DadosTenant | null>(null);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesSistema | null>(null);
   const [metodosPagamento, setMetodosPagamento] = useState<MetodoPagamento[]>([]);
+  const [pixConfiguracao, setPixConfiguracao] = useState<PixConfiguracao | null>(null);
+  const [dadosBancarios, setDadosBancarios] = useState<DadosBancarios | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { makeRequest } = useApi();
@@ -156,6 +183,38 @@ export const useConfiguracoes = () => {
     }
   };
 
+  // Buscar configurações PIX
+  const buscarPixConfiguracao = async () => {
+    try {
+      const response = await makeRequest('/configuracoes/pix', { method: 'GET' });
+      if (response.pix) {
+        setPixConfiguracao(response.pix);
+        return response.pix;
+      }
+      return null;
+    } catch (err) {
+      console.error('Erro ao buscar configurações PIX:', err);
+      setError('Erro ao carregar configurações PIX');
+      throw err;
+    }
+  };
+
+  // Buscar dados bancários
+  const buscarDadosBancarios = async () => {
+    try {
+      const response = await makeRequest('/configuracoes/dados-bancarios', { method: 'GET' });
+      if (response.dadosBancarios) {
+        setDadosBancarios(response.dadosBancarios);
+        return response.dadosBancarios;
+      }
+      return null;
+    } catch (err) {
+      console.error('Erro ao buscar dados bancários:', err);
+      setError('Erro ao carregar dados bancários');
+      throw err;
+    }
+  };
+
   // Carregar todos os dados
   const carregarDados = async () => {
     setLoading(true);
@@ -165,11 +224,13 @@ export const useConfiguracoes = () => {
       const user = await buscarDadosUsuario();
       
       if (user && user.tenant_id) {
-        // Buscar dados do tenant, configurações e métodos de pagamento após obter dados do usuário
-        const [tenant, config, metodos] = await Promise.all([
+        // Buscar dados do tenant, configurações, métodos de pagamento, PIX e dados bancários após obter dados do usuário
+        const [tenant, config, metodos, pix, bancarios] = await Promise.all([
           buscarDadosTenant(user.tenant_id),
           buscarConfiguracoes(user.tenant_id),
-          buscarMetodosPagamento()
+          buscarMetodosPagamento(),
+          buscarPixConfiguracao(),
+          buscarDadosBancarios()
         ]);
         
         // Sincronizar estados de edição
@@ -405,6 +466,68 @@ export const useConfiguracoes = () => {
     }
   };
 
+  // Salvar configurações PIX
+  const salvarPixConfiguracao = async (dados: Partial<PixConfiguracao>) => {
+    try {
+      const response = await makeRequest('/configuracoes/pix', { 
+        method: 'POST', 
+        body: dados
+      });
+      if (response.pix) {
+        setPixConfiguracao(response.pix);
+      }
+      return response;
+    } catch (err) {
+      console.error('Erro ao salvar configurações PIX:', err);
+      throw err;
+    }
+  };
+
+  // Salvar dados bancários
+  const salvarDadosBancarios = async (dados: Partial<DadosBancarios>) => {
+    try {
+      const response = await makeRequest('/configuracoes/dados-bancarios', { 
+        method: 'POST', 
+        body: dados
+      });
+      if (response.dadosBancarios) {
+        setDadosBancarios(response.dadosBancarios);
+      }
+      return response;
+    } catch (err) {
+      console.error('Erro ao salvar dados bancários:', err);
+      throw err;
+    }
+  };
+
+  // Deletar configurações PIX
+  const deletarPixConfiguracao = async () => {
+    try {
+      const response = await makeRequest('/configuracoes/pix', { 
+        method: 'DELETE'
+      });
+      setPixConfiguracao(null);
+      return response;
+    } catch (err) {
+      console.error('Erro ao deletar configurações PIX:', err);
+      throw err;
+    }
+  };
+
+  // Deletar dados bancários
+  const deletarDadosBancarios = async () => {
+    try {
+      const response = await makeRequest('/configuracoes/dados-bancarios', { 
+        method: 'DELETE'
+      });
+      setDadosBancarios(null);
+      return response;
+    } catch (err) {
+      console.error('Erro ao deletar dados bancários:', err);
+      throw err;
+    }
+  };
+
   // Sincronizar estados de edição com dados originais
   useEffect(() => {
     if (dadosConta) {
@@ -428,6 +551,8 @@ export const useConfiguracoes = () => {
     dadosTenant,
     configuracoes,
     metodosPagamento,
+    pixConfiguracao,
+    dadosBancarios,
     dadosContaEditando,
     dadosTenantEditando,
     configuracoesEditando,
@@ -450,6 +575,12 @@ export const useConfiguracoes = () => {
     salvarMetodoPagamento,
     deletarMetodoPagamento,
     adicionarParcela,
-    deletarParcela
+    deletarParcela,
+    buscarPixConfiguracao,
+    buscarDadosBancarios,
+    salvarPixConfiguracao,
+    salvarDadosBancarios,
+    deletarPixConfiguracao,
+    deletarDadosBancarios
   };
 };
