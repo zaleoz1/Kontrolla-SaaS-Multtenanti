@@ -803,6 +803,7 @@ router.get('/pix', async (req, res) => {
   }
 });
 
+
 // Criar ou atualizar configurações PIX
 router.post('/pix', async (req, res) => {
   try {
