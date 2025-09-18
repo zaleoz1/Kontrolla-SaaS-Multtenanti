@@ -14,6 +14,8 @@ export interface MetodoPagamento {
   metodo: string;
   valor: string;
   troco?: number;
+  parcelas?: number;
+  taxaParcela?: number;
 }
 
 export interface PagamentoPrazo {

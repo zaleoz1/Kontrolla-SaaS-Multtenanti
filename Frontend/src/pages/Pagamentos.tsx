@@ -162,6 +162,8 @@ export default function Pagamentos() {
   const [parcelasDisponiveis, setParcelasDisponiveis] = useState<ParcelaDisponivel[]>([]);
   const [metodoSelecionadoParaParcelas, setMetodoSelecionadoParaParcelas] = useState<string>("");
   const [parcelaSelecionada, setParcelaSelecionada] = useState<ParcelaDisponivel | null>(null);
+  const [parcelaConfirmada, setParcelaConfirmada] = useState<ParcelaDisponivel | null>(null);
+  const [valorParcelaModal, setValorParcelaModal] = useState<number>(0);
 
   // Cálculos
   const subtotal = vendaData.subtotal;
@@ -192,6 +194,7 @@ export default function Pagamentos() {
         const parcelasOrdenadas = [...metodoCredito.parcelas].sort((a, b) => a.quantidade - b.quantidade);
         setParcelasDisponiveis(parcelasOrdenadas);
         setMetodoSelecionadoParaParcelas("cartao_credito");
+        setValorParcelaModal(total); // Para método único, usar o total
         setMostrarModalParcelas(true);
         return;
       }
@@ -216,18 +219,19 @@ export default function Pagamentos() {
         metodosDisponiveis
       });
       
-      // Verificar se é para múltiplos métodos (contém _)
-      if (metodoSelecionadoParaParcelas.includes('_')) {
-        const [metodo, indexStr] = metodoSelecionadoParaParcelas.split('_');
+      // Verificar se é para múltiplos métodos (formato: metodo_index)
+      const parts = metodoSelecionadoParaParcelas.split('_');
+      if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
+        const [metodo, tipo, indexStr] = parts;
         const index = parseInt(indexStr);
         
-        console.log('Debug - múltiplos métodos:', { metodo, indexStr, index });
+        console.log('Debug - múltiplos métodos:', { metodo, tipo, indexStr, index });
         
         // Validar se o índice é válido e o array de métodos selecionados não está vazio
-        if (!isNaN(index) && index >= 0 && metodosPagamento.length > 0 && index < metodosPagamento.length) {
+        if (index >= 0 && metodosPagamento.length > 0 && index < metodosPagamento.length) {
           // Atualizar o método específico nos múltiplos métodos
           const novosMetodos = [...metodosPagamento];
-          novosMetodos[index].metodo = metodo;
+          novosMetodos[index].metodo = `${metodo}_${tipo}`;
           novosMetodos[index].parcelas = parcelaSelecionada.quantidade;
           novosMetodos[index].taxaParcela = parcelaSelecionada.taxa;
           setMetodosPagamento(novosMetodos);
@@ -255,20 +259,21 @@ export default function Pagamentos() {
           return;
         }
       } else {
-        // Método único - apenas definir o método e a parcela selecionada
-        setMetodoPagamentoUnico(metodoSelecionadoParaParcelas);
-        setParcelaSelecionada(parcelaSelecionada);
+        // Método único - definir cartao_credito como método primário e a parcela selecionada
+        setMetodoPagamentoUnico("cartao_credito");
+        setParcelaConfirmada(parcelaSelecionada);
         console.log('Debug - método único configurado:', {
-          metodo: metodoSelecionadoParaParcelas,
+          metodo: "cartao_credito",
           parcela: parcelaSelecionada
         });
       }
       
-      setMostrarModalParcelas(false);
       // Limpar estados após sucesso
+      setMostrarModalParcelas(false);
       setParcelaSelecionada(null);
       setMetodoSelecionadoParaParcelas("");
       setParcelasDisponiveis([]);
+      setValorParcelaModal(0);
     }
   };
 
@@ -276,8 +281,10 @@ export default function Pagamentos() {
   const handleCancelarParcela = () => {
     setMostrarModalParcelas(false);
     setParcelaSelecionada(null);
+    setParcelaConfirmada(null);
     setMetodoSelecionadoParaParcelas("");
     setParcelasDisponiveis([]);
+    setValorParcelaModal(0);
   };
 
   // Atualizar pagamento a prazo quando o total ou métodos de pagamento mudarem
@@ -286,6 +293,20 @@ export default function Pagamentos() {
       handleCalcularPagamentoPrazo(pagamentoPrazo.dias, pagamentoPrazo.juros);
     }
   }, [total, usarPagamentoPrazo, metodosPagamento]);
+
+  // Atualizar valor das parcelas quando o valor do método de pagamento mudar
+  useEffect(() => {
+    if (mostrarModalParcelas && metodoSelecionadoParaParcelas.includes('_')) {
+      const parts = metodoSelecionadoParaParcelas.split('_');
+      if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
+        const index = parseInt(parts[2]);
+        if (index >= 0 && index < metodosPagamento.length) {
+          const valorMetodo = parseFloat(metodosPagamento[index].valor) || 0;
+          setValorParcelaModal(valorMetodo);
+        }
+      }
+    }
+  }, [mostrarModalParcelas, metodoSelecionadoParaParcelas, metodosPagamento]);
 
   // Desativar pagamento a prazo quando cliente for removido
   useEffect(() => {
@@ -297,9 +318,27 @@ export default function Pagamentos() {
   const salvarVenda = async () => {
     try {
       // Processar dados da venda usando o hook
+      // Se há método único e é cartão de crédito com parcelas, incluir as parcelas
+      let metodosComParcelas = metodosPagamento.map(m => ({ 
+        metodo: m.metodo, 
+        valor: m.valor, 
+        parcelas: m.parcelas, 
+        taxaParcela: m.taxaParcela 
+      }));
+      
+      // Se há método único de cartão de crédito com parcelas confirmadas, incluir
+      if (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && metodosComParcelas.length === 0) {
+        metodosComParcelas = [{
+          metodo: "cartao_credito",
+          valor: (usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total).toString(),
+          parcelas: parcelaConfirmada.quantidade,
+          taxaParcela: parcelaConfirmada.taxa
+        }];
+      }
+      
       const dadosVenda = processarDadosVenda(
         { carrinho, clienteSelecionado, subtotal, desconto, total },
-        metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor })),
+        metodosComParcelas,
         metodoPagamentoUnico,
         valorDinheiro,
         usarPagamentoPrazo,
@@ -833,7 +872,7 @@ export default function Pagamentos() {
                 </div>
 
                 {/* Indicação de Parcelas para Cartão de Crédito */}
-                {metodoPagamentoUnico === "cartao_credito" && parcelaSelecionada && (
+                {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
@@ -847,25 +886,25 @@ export default function Pagamentos() {
                           <div className="flex items-center space-x-4 text-sm">
                             <div className="flex items-center space-x-1">
                               <span className="text-blue-600 font-medium">
-                                {parcelaSelecionada.quantidade}x
+                                {parcelaConfirmada.quantidade}x
                               </span>
                               <span className="text-blue-600">de</span>
                               <span className="font-bold text-green-600">
-                                {(total / parcelaSelecionada.quantidade).toLocaleString("pt-BR", {
+                                {(total / parcelaConfirmada.quantidade).toLocaleString("pt-BR", {
                                   style: "currency",
                                   currency: "BRL"
                                 })}
                               </span>
                             </div>
-                            {parcelaSelecionada.taxa > 0 && (
+                            {parcelaConfirmada.taxa > 0 && (
                               <div className="flex items-center space-x-1">
                                 <span className="text-orange-600">•</span>
                                 <span className="text-orange-600 font-medium">
-                                  Taxa: {parcelaSelecionada.taxa}%
+                                  Taxa: {parcelaConfirmada.taxa}%
                                 </span>
                               </div>
                             )}
-                            {parcelaSelecionada.taxa === 0 && (
+                            {parcelaConfirmada.taxa === 0 && (
                               <div className="flex items-center space-x-1">
                                 <span className="text-green-600">•</span>
                                 <span className="text-green-600 font-medium">
@@ -878,8 +917,8 @@ export default function Pagamentos() {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-lg text-slate-800">
-                          {parcelaSelecionada.taxa > 0
-                            ? (total * (1 + parcelaSelecionada.taxa / 100)).toLocaleString("pt-BR", {
+                          {parcelaConfirmada.taxa > 0
+                            ? (total * (1 + parcelaConfirmada.taxa / 100)).toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })
@@ -888,9 +927,9 @@ export default function Pagamentos() {
                                 currency: "BRL"
                               })}
                         </div>
-                        {parcelaSelecionada.taxa > 0 && (
+                        {parcelaConfirmada.taxa > 0 && (
                           <div className="text-xs text-orange-600">
-                            +{((total * parcelaSelecionada.taxa) / 100).toLocaleString("pt-BR", {
+                            +{((total * parcelaConfirmada.taxa) / 100).toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
                             })} juros
@@ -899,7 +938,7 @@ export default function Pagamentos() {
                         <Button
                           type="button"
                           onClick={() => {
-                            setParcelaSelecionada(null);
+                            setParcelaConfirmada(null);
                             setMetodoPagamentoUnico("");
                           }}
                           variant="ghost"
@@ -1098,6 +1137,8 @@ export default function Pagamentos() {
                               setMostrarModalParcelas(true);
                               // Armazenar o índice para atualizar depois
                               setMetodoSelecionadoParaParcelas(`cartao_credito_${index}`);
+                              // Definir valor para cálculo das parcelas (será atualizado quando o usuário inserir o valor)
+                              setValorParcelaModal(0);
                               return;
                             }
                           }
@@ -1196,6 +1237,11 @@ export default function Pagamentos() {
                       const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
                       const valorMetodo = parseFloat(metodo.valor) || 0;
                       
+                      // Calcular valor com juros se houver parcelas com taxa
+                      const valorComJuros = metodo.taxaParcela && metodo.taxaParcela > 0 
+                        ? valorMetodo * (1 + metodo.taxaParcela / 100)
+                        : valorMetodo;
+                      
                       return (
                         <div key={index} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200">
                           <div className="flex items-center space-x-2">
@@ -1214,7 +1260,7 @@ export default function Pagamentos() {
                             )}
                           </div>
                           <span className="font-bold text-slate-800">
-                            {valorMetodo.toLocaleString("pt-BR", {
+                            {valorComJuros.toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
                             })}
@@ -1227,7 +1273,13 @@ export default function Pagamentos() {
                       <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
                         <span className="font-bold text-lg text-slate-800">Total Pago:</span>
                         <span className="font-bold text-xl text-green-600">
-                          {metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0).toLocaleString("pt-BR", {
+                          {metodosPagamento.reduce((sum, m) => {
+                            const valorMetodo = parseFloat(m.valor) || 0;
+                            const valorComJuros = m.taxaParcela && m.taxaParcela > 0 
+                              ? valorMetodo * (1 + m.taxaParcela / 100)
+                              : valorMetodo;
+                            return sum + valorComJuros;
+                          }, 0).toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
                           })}
@@ -1435,9 +1487,9 @@ export default function Pagamentos() {
                 </h4>
                 <div className="flex items-center justify-center space-x-4 text-sm">
                   <div className="flex items-center space-x-2">
-                    <span className="text-slate-600">Valor total:</span>
+                    <span className="text-slate-600">Valor para parcelas:</span>
                     <span className="font-bold text-lg text-green-600">
-                      {total.toLocaleString("pt-BR", {
+                      {valorParcelaModal.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
                       })}
@@ -1468,9 +1520,9 @@ export default function Pagamentos() {
                   </div>
                 ) : (
                   parcelasDisponiveis.map((parcela) => {
-                    const valorParcela = total / parcela.quantidade;
-                    const valorTotal = parcela.taxa > 0 ? total * (1 + parcela.taxa / 100) : total;
-                    const valorJuros = parcela.taxa > 0 ? (total * parcela.taxa) / 100 : 0;
+                    const valorParcela = valorParcelaModal / parcela.quantidade;
+                    const valorTotal = parcela.taxa > 0 ? valorParcelaModal * (1 + parcela.taxa / 100) : valorParcelaModal;
+                    const valorJuros = parcela.taxa > 0 ? (valorParcelaModal * parcela.taxa) / 100 : 0;
                     
                     return (
                       <div
