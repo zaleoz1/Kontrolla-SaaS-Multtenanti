@@ -416,6 +416,39 @@ CREATE TABLE IF NOT EXISTS metodos_pagamento_parcelas (
     UNIQUE KEY unique_metodo_quantidade (metodo_pagamento_id, quantidade)
 );
 
+-- Tabela de configurações PIX
+CREATE TABLE IF NOT EXISTS pix_configuracoes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    chave_pix VARCHAR(255) NOT NULL,
+    qr_code LONGTEXT,
+    nome_titular VARCHAR(255) NOT NULL,
+    cpf_cnpj VARCHAR(20) NOT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_tenant_pix (tenant_id)
+);
+
+-- Tabela de dados bancários para transferência
+CREATE TABLE IF NOT EXISTS dados_bancarios (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    banco VARCHAR(255) NOT NULL,
+    agencia VARCHAR(20) NOT NULL,
+    conta VARCHAR(20) NOT NULL,
+    digito VARCHAR(2) NOT NULL,
+    tipo_conta ENUM('corrente', 'poupanca') DEFAULT 'corrente',
+    nome_titular VARCHAR(255) NOT NULL,
+    cpf_cnpj VARCHAR(20) NOT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_tenant_bancario (tenant_id)
+);
+
 -- Índices para melhor performance
 CREATE INDEX idx_usuarios_tenant ON usuarios(tenant_id);
 CREATE INDEX idx_usuarios_email ON usuarios(email);
@@ -437,6 +470,10 @@ CREATE INDEX idx_nfe_tenant ON nfe(tenant_id);
 CREATE INDEX idx_metodos_pagamento_tenant ON metodos_pagamento(tenant_id);
 CREATE INDEX idx_metodos_pagamento_tipo ON metodos_pagamento(tipo);
 CREATE INDEX idx_metodos_pagamento_parcelas_metodo ON metodos_pagamento_parcelas(metodo_pagamento_id);
+CREATE INDEX idx_pix_configuracoes_tenant ON pix_configuracoes(tenant_id);
+CREATE INDEX idx_pix_configuracoes_chave ON pix_configuracoes(chave_pix);
+CREATE INDEX idx_dados_bancarios_tenant ON dados_bancarios(tenant_id);
+CREATE INDEX idx_dados_bancarios_banco ON dados_bancarios(banco);
 
 -- Índices para busca
 CREATE INDEX idx_clientes_nome ON clientes(nome);

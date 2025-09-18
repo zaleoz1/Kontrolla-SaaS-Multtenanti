@@ -780,4 +780,190 @@ router.delete('/metodos-pagamento/:id/parcelas/:parcelaId', requireAdmin, async 
   }
 });
 
+// ===== ROTAS PARA CONFIGURAÇÕES PIX =====
+
+// Buscar configurações PIX
+router.get('/pix', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    
+    const pixConfig = await query(
+      'SELECT * FROM pix_configuracoes WHERE tenant_id = ? AND ativo = TRUE',
+      [tenantId]
+    );
+    
+    if (pixConfig.length === 0) {
+      return res.json({ pix: null });
+    }
+    
+    res.json({ pix: pixConfig[0] });
+  } catch (error) {
+    console.error('Erro ao buscar configurações PIX:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Criar ou atualizar configurações PIX
+router.post('/pix', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const { chave_pix, qr_code, nome_titular, cpf_cnpj } = req.body;
+    
+    // Validações básicas
+    if (!chave_pix || !nome_titular || !cpf_cnpj) {
+      return res.status(400).json({ error: 'Chave PIX, nome do titular e CPF/CNPJ são obrigatórios' });
+    }
+    
+    // Verificar se já existe configuração PIX para este tenant
+    const existingPix = await query(
+      'SELECT id FROM pix_configuracoes WHERE tenant_id = ?',
+      [tenantId]
+    );
+    
+    let result;
+    if (existingPix.length > 0) {
+      // Atualizar configuração existente
+      result = await queryWithResult(
+        `UPDATE pix_configuracoes 
+         SET chave_pix = ?, qr_code = ?, nome_titular = ?, cpf_cnpj = ?, 
+             data_atualizacao = CURRENT_TIMESTAMP
+         WHERE tenant_id = ?`,
+        [chave_pix, qr_code, nome_titular, cpf_cnpj, tenantId]
+      );
+    } else {
+      // Criar nova configuração
+      result = await queryWithResult(
+        `INSERT INTO pix_configuracoes (tenant_id, chave_pix, qr_code, nome_titular, cpf_cnpj)
+         VALUES (?, ?, ?, ?, ?)`,
+        [tenantId, chave_pix, qr_code, nome_titular, cpf_cnpj]
+      );
+    }
+    
+    // Buscar a configuração atualizada
+    const updatedPix = await query(
+      'SELECT * FROM pix_configuracoes WHERE tenant_id = ?',
+      [tenantId]
+    );
+    
+    res.json({ 
+      success: true, 
+      pix: updatedPix[0],
+      message: existingPix.length > 0 ? 'Configurações PIX atualizadas com sucesso' : 'Configurações PIX criadas com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao salvar configurações PIX:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Deletar configurações PIX
+router.delete('/pix', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    
+    await query(
+      'UPDATE pix_configuracoes SET ativo = FALSE WHERE tenant_id = ?',
+      [tenantId]
+    );
+    
+    res.json({ success: true, message: 'Configurações PIX removidas com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar configurações PIX:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ===== ROTAS PARA DADOS BANCÁRIOS =====
+
+// Buscar dados bancários
+router.get('/dados-bancarios', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    
+    const dadosBancarios = await query(
+      'SELECT * FROM dados_bancarios WHERE tenant_id = ? AND ativo = TRUE',
+      [tenantId]
+    );
+    
+    if (dadosBancarios.length === 0) {
+      return res.json({ dadosBancarios: null });
+    }
+    
+    res.json({ dadosBancarios: dadosBancarios[0] });
+  } catch (error) {
+    console.error('Erro ao buscar dados bancários:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Criar ou atualizar dados bancários
+router.post('/dados-bancarios', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const { banco, agencia, conta, digito, tipo_conta, nome_titular, cpf_cnpj } = req.body;
+    
+    // Validações básicas
+    if (!banco || !agencia || !conta || !digito || !nome_titular || !cpf_cnpj) {
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    }
+    
+    // Verificar se já existem dados bancários para este tenant
+    const existingDados = await query(
+      'SELECT id FROM dados_bancarios WHERE tenant_id = ?',
+      [tenantId]
+    );
+    
+    let result;
+    if (existingDados.length > 0) {
+      // Atualizar dados existentes
+      result = await queryWithResult(
+        `UPDATE dados_bancarios 
+         SET banco = ?, agencia = ?, conta = ?, digito = ?, tipo_conta = ?, 
+             nome_titular = ?, cpf_cnpj = ?, data_atualizacao = CURRENT_TIMESTAMP
+         WHERE tenant_id = ?`,
+        [banco, agencia, conta, digito, tipo_conta, nome_titular, cpf_cnpj, tenantId]
+      );
+    } else {
+      // Criar novos dados
+      result = await queryWithResult(
+        `INSERT INTO dados_bancarios (tenant_id, banco, agencia, conta, digito, tipo_conta, nome_titular, cpf_cnpj)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [tenantId, banco, agencia, conta, digito, tipo_conta, nome_titular, cpf_cnpj]
+      );
+    }
+    
+    // Buscar os dados atualizados
+    const updatedDados = await query(
+      'SELECT * FROM dados_bancarios WHERE tenant_id = ?',
+      [tenantId]
+    );
+    
+    res.json({ 
+      success: true, 
+      dadosBancarios: updatedDados[0],
+      message: existingDados.length > 0 ? 'Dados bancários atualizados com sucesso' : 'Dados bancários criados com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao salvar dados bancários:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Deletar dados bancários
+router.delete('/dados-bancarios', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    
+    await query(
+      'UPDATE dados_bancarios SET ativo = FALSE WHERE tenant_id = ?',
+      [tenantId]
+    );
+    
+    res.json({ success: true, message: 'Dados bancários removidos com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar dados bancários:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 export default router;
