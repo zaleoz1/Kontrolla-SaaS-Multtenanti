@@ -331,6 +331,77 @@ async function seedDatabase() {
       );
     }
 
+    // Criar métodos de pagamento
+    console.log('💳 Criando métodos de pagamento...');
+    const metodosPagamento = [
+      {
+        tipo: 'dinheiro',
+        nome: 'Dinheiro',
+        taxa: 0,
+        ativo: true,
+        ordem: 1
+      },
+      {
+        tipo: 'pix',
+        nome: 'PIX',
+        taxa: 0,
+        ativo: true,
+        ordem: 2
+      },
+      {
+        tipo: 'cartao_credito',
+        nome: 'Cartão de Crédito',
+        taxa: 0,
+        ativo: true,
+        ordem: 3
+      },
+      {
+        tipo: 'cartao_debito',
+        nome: 'Cartão de Débito',
+        taxa: 0,
+        ativo: true,
+        ordem: 4
+      },
+      {
+        tipo: 'transferencia',
+        nome: 'Transferência Bancária',
+        taxa: 0,
+        ativo: true,
+        ordem: 5
+      }
+    ];
+
+    const metodoIds = {};
+    for (const metodo of metodosPagamento) {
+      const [result] = await query(
+        `INSERT INTO metodos_pagamento (tenant_id, tipo, nome, taxa, ativo, ordem)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [tenantId, metodo.tipo, metodo.nome, metodo.taxa, metodo.ativo, metodo.ordem]
+      );
+      metodoIds[metodo.tipo] = result.insertId;
+    }
+
+    // Criar parcelas para cartão de crédito
+    console.log('📊 Criando parcelas para cartão de crédito...');
+    const parcelasCredito = [
+      { quantidade: 1, taxa: 0 },
+      { quantidade: 2, taxa: 0 },
+      { quantidade: 3, taxa: 2.5 },
+      { quantidade: 4, taxa: 3.0 },
+      { quantidade: 5, taxa: 3.5 },
+      { quantidade: 6, taxa: 4.0 },
+      { quantidade: 10, taxa: 5.0 },
+      { quantidade: 12, taxa: 6.0 }
+    ];
+
+    for (const parcela of parcelasCredito) {
+      await query(
+        `INSERT INTO metodos_pagamento_parcelas (metodo_pagamento_id, quantidade, taxa, ativo)
+         VALUES (?, ?, ?, ?)`,
+        [metodoIds.cartao_credito, parcela.quantidade, parcela.taxa, true]
+      );
+    }
+
     // Criar configurações do tenant
     console.log('⚙️  Criando configurações...');
     const configuracoes = [
@@ -358,6 +429,8 @@ async function seedDatabase() {
     console.log(`   - ${clientes.length} clientes`);
     console.log(`   - ${vendas.length} vendas`);
     console.log(`   - ${transacoes.length} transações`);
+    console.log(`   - ${metodosPagamento.length} métodos de pagamento`);
+    console.log(`   - ${parcelasCredito.length} parcelas para cartão de crédito`);
     console.log(`   - ${configuracoes.length} configurações`);
 
   } catch (error) {

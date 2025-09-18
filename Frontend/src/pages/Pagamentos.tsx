@@ -27,7 +27,8 @@ import {
   Banknote,
   Building2,
   FileText,
-  Calendar
+  Calendar,
+  QrCode
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { Cliente } from "@/hooks/useClientes";
@@ -37,6 +38,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
 import { useApi } from "@/hooks/useApi";
+import { usePixConfiguracoes } from "@/hooks/usePixConfiguracoes";
 
 interface ItemCarrinho {
   produto: any;
@@ -48,6 +50,15 @@ interface ItemCarrinho {
 interface MetodoPagamentoSelecionado {
   metodo: string;
   valor: string;
+  parcelas?: number;
+  taxaParcela?: number;
+}
+
+interface ParcelaDisponivel {
+  id: number;
+  quantidade: number;
+  taxa: number;
+  ativo: boolean;
 }
 
 export default function Pagamentos() {
@@ -81,8 +92,9 @@ export default function Pagamentos() {
     criarVenda 
   } = usePagamentos();
   const { tenant, loading: carregandoTenant } = useTenant();
-  const { metodosPagamento: metodosDisponiveis } = useMetodosPagamento();
+  const { metodosPagamento: metodosDisponiveis, buscarMetodosPagamento } = useMetodosPagamento();
   const { loading: carregandoMetodos } = useApi();
+  const { configuracao: pixConfiguracao, loading: carregandoPix } = usePixConfiguracoes();
   
   // Estados do formulário
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData.clienteSelecionado);
@@ -101,9 +113,55 @@ export default function Pagamentos() {
     dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   });
   const [usarPagamentoPrazo, setUsarPagamentoPrazo] = useState(false);
+  
+  // Estados para controle de carregamento
+  const [erroCarregamentoMetodos, setErroCarregamentoMetodos] = useState<string | null>(null);
+  const [carregandoMetodosPagamento, setCarregandoMetodosPagamento] = useState(false);
+
+  // Função para recarregar métodos de pagamento
+  const recarregarMetodosPagamento = async () => {
+    try {
+      setCarregandoMetodosPagamento(true);
+      setErroCarregamentoMetodos(null);
+      await buscarMetodosPagamento();
+    } catch (error: any) {
+      console.error('Erro ao recarregar métodos de pagamento:', error);
+      setErroCarregamentoMetodos(error.message || 'Erro ao carregar métodos de pagamento');
+    } finally {
+      setCarregandoMetodosPagamento(false);
+    }
+  };
+
+  // Effect para monitorar o carregamento dos métodos de pagamento
+  useEffect(() => {
+    if (metodosDisponiveis.length === 0 && !carregandoMetodos) {
+      // Se não há métodos carregados e não está carregando, pode ser um erro
+      setErroCarregamentoMetodos('Nenhum método de pagamento encontrado');
+    } else if (metodosDisponiveis.length > 0) {
+      setErroCarregamentoMetodos(null);
+    }
+  }, [metodosDisponiveis.length, carregandoMetodos]);
+
+  // Effect para verificar autenticação
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('🔓 Usuário não autenticado, redirecionando para login');
+      navigate('/login');
+    }
+  }, [navigate]);
 
   // Estado para venda finalizada
   const [vendaFinalizada, setVendaFinalizada] = useState<any>(null);
+  
+  // Estado para modal PIX
+  const [mostrarModalPix, setMostrarModalPix] = useState(false);
+  
+  // Estados para modal de parcelas
+  const [mostrarModalParcelas, setMostrarModalParcelas] = useState(false);
+  const [parcelasDisponiveis, setParcelasDisponiveis] = useState<ParcelaDisponivel[]>([]);
+  const [metodoSelecionadoParaParcelas, setMetodoSelecionadoParaParcelas] = useState<string>("");
+  const [parcelaSelecionada, setParcelaSelecionada] = useState<ParcelaDisponivel | null>(null);
 
   // Cálculos
   const subtotal = vendaData.subtotal;
@@ -122,6 +180,104 @@ export default function Pagamentos() {
   const handleCalcularValorRestantePrazo = () => {
     const metodosFormatados = metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor }));
     return calcularValorRestantePrazo(metodosFormatados, total);
+  };
+
+  // Função para abrir modal de parcelas quando cartão de crédito for selecionado
+  const handleSelecionarMetodoPagamento = (metodo: string) => {
+    if (metodo === "cartao_credito") {
+      // Buscar parcelas disponíveis para cartão de crédito
+      const metodoCredito = metodosDisponiveis.find(m => m.tipo === "cartao_credito");
+      if (metodoCredito && metodoCredito.parcelas && metodoCredito.parcelas.length > 0) {
+        // Ordenar parcelas por quantidade
+        const parcelasOrdenadas = [...metodoCredito.parcelas].sort((a, b) => a.quantidade - b.quantidade);
+        setParcelasDisponiveis(parcelasOrdenadas);
+        setMetodoSelecionadoParaParcelas("cartao_credito");
+        setMostrarModalParcelas(true);
+        return;
+      }
+    }
+    
+    // Para outros métodos, definir diretamente
+    setMetodoPagamentoUnico(metodo);
+    if (metodo !== "dinheiro") {
+      setValorDinheiro("");
+    }
+  };
+
+  // Função para confirmar seleção de parcela
+  const handleConfirmarParcela = () => {
+    if (parcelaSelecionada) {
+      console.log('Debug - handleConfirmarParcela:', {
+        parcelaSelecionada,
+        metodoSelecionadoParaParcelas,
+        metodosPagamentoLength: metodosPagamento.length,
+        metodosPagamento,
+        metodosDisponiveisLength: metodosDisponiveis.length,
+        metodosDisponiveis
+      });
+      
+      // Verificar se é para múltiplos métodos (contém _)
+      if (metodoSelecionadoParaParcelas.includes('_')) {
+        const [metodo, indexStr] = metodoSelecionadoParaParcelas.split('_');
+        const index = parseInt(indexStr);
+        
+        console.log('Debug - múltiplos métodos:', { metodo, indexStr, index });
+        
+        // Validar se o índice é válido e o array de métodos selecionados não está vazio
+        if (!isNaN(index) && index >= 0 && metodosPagamento.length > 0 && index < metodosPagamento.length) {
+          // Atualizar o método específico nos múltiplos métodos
+          const novosMetodos = [...metodosPagamento];
+          novosMetodos[index].metodo = metodo;
+          novosMetodos[index].parcelas = parcelaSelecionada.quantidade;
+          novosMetodos[index].taxaParcela = parcelaSelecionada.taxa;
+          setMetodosPagamento(novosMetodos);
+        } else {
+          console.error('Índice inválido para múltiplos métodos:', {
+            index,
+            metodosPagamentoLength: metodosPagamento.length,
+            metodoSelecionadoParaParcelas
+          });
+          
+          // Se não há métodos de pagamento selecionados, mostrar erro específico
+          if (metodosPagamento.length === 0) {
+            toast({
+              title: "Erro",
+              description: "Nenhum método de pagamento foi adicionado. Adicione pelo menos um método de pagamento primeiro.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Erro",
+              description: "Erro ao configurar parcela. Tente novamente.",
+              variant: "destructive",
+            });
+          }
+          return;
+        }
+      } else {
+        // Método único - apenas definir o método e a parcela selecionada
+        setMetodoPagamentoUnico(metodoSelecionadoParaParcelas);
+        setParcelaSelecionada(parcelaSelecionada);
+        console.log('Debug - método único configurado:', {
+          metodo: metodoSelecionadoParaParcelas,
+          parcela: parcelaSelecionada
+        });
+      }
+      
+      setMostrarModalParcelas(false);
+      // Limpar estados após sucesso
+      setParcelaSelecionada(null);
+      setMetodoSelecionadoParaParcelas("");
+      setParcelasDisponiveis([]);
+    }
+  };
+
+  // Função para cancelar seleção de parcela
+  const handleCancelarParcela = () => {
+    setMostrarModalParcelas(false);
+    setParcelaSelecionada(null);
+    setMetodoSelecionadoParaParcelas("");
+    setParcelasDisponiveis([]);
   };
 
   // Atualizar pagamento a prazo quando o total ou métodos de pagamento mudarem
@@ -648,10 +804,19 @@ export default function Pagamentos() {
                   <select
                     value={metodoPagamentoUnico}
                     onChange={(e) => {
-                      setMetodoPagamentoUnico(e.target.value);
-                      if (e.target.value !== "dinheiro") {
-                        setValorDinheiro("");
+                      const metodoSelecionado = e.target.value;
+                      
+                      // Verificar se há métodos de pagamento disponíveis
+                      if (metodoSelecionado === "cartao_credito" && metodosDisponiveis.length === 0) {
+                        toast({
+                          title: "Erro",
+                          description: "Métodos de pagamento não foram carregados. Tente recarregar a página.",
+                          variant: "destructive",
+                        });
+                        return;
                       }
+                      
+                      handleSelecionarMetodoPagamento(metodoSelecionado);
                     }}
                     className="w-full p-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg"
                     disabled={carregandoMetodos}
@@ -666,6 +831,88 @@ export default function Pagamentos() {
                     ))}
                   </select>
                 </div>
+
+                {/* Indicação de Parcelas para Cartão de Crédito */}
+                {metodoPagamentoUnico === "cartao_credito" && parcelaSelecionada && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <CreditCard className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-blue-800 mb-1">
+                            Pagamento Parcelado
+                          </h4>
+                          <div className="flex items-center space-x-4 text-sm">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-blue-600 font-medium">
+                                {parcelaSelecionada.quantidade}x
+                              </span>
+                              <span className="text-blue-600">de</span>
+                              <span className="font-bold text-green-600">
+                                {(total / parcelaSelecionada.quantidade).toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </span>
+                            </div>
+                            {parcelaSelecionada.taxa > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-orange-600">•</span>
+                                <span className="text-orange-600 font-medium">
+                                  Taxa: {parcelaSelecionada.taxa}%
+                                </span>
+                              </div>
+                            )}
+                            {parcelaSelecionada.taxa === 0 && (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-green-600">•</span>
+                                <span className="text-green-600 font-medium">
+                                  Sem juros
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg text-slate-800">
+                          {parcelaSelecionada.taxa > 0
+                            ? (total * (1 + parcelaSelecionada.taxa / 100)).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })
+                            : total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                        </div>
+                        {parcelaSelecionada.taxa > 0 && (
+                          <div className="text-xs text-orange-600">
+                            +{((total * parcelaSelecionada.taxa) / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })} juros
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setParcelaSelecionada(null);
+                            setMetodoPagamentoUnico("");
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 mt-2"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Alterar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Campo de Valor em Dinheiro */}
                 {metodoPagamentoUnico === "dinheiro" && (
@@ -704,10 +951,40 @@ export default function Pagamentos() {
                   </div>
                 )}
 
+                {/* Botão Visualizar Chave PIX */}
+                {metodoPagamentoUnico === "pix" && (
+                  <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-green-800 mb-1">
+                          <Zap className="h-4 w-4 inline mr-1" />
+                          Pagamento via PIX
+                        </h4>
+                        <p className="text-sm text-green-600">
+                          {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setMostrarModalPix(true)}
+                        disabled={!pixConfiguracao || carregandoPix}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {carregandoPix ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Zap className="h-4 w-4 mr-2" />
+                        )}
+                        Visualizar Chave
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setMetodosPagamento([{ metodo: "", valor: "" }]);
+                    setMetodosPagamento([{ metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                   }}
                   className="w-full border-green-300 text-green-600 hover:bg-green-50"
                   disabled={carregandoMetodos}
@@ -733,7 +1010,7 @@ export default function Pagamentos() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "" }]);
+                        setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                       }}
                       className="border-green-300 text-green-600 hover:bg-green-50"
                       disabled={carregandoMetodos}
@@ -756,6 +1033,41 @@ export default function Pagamentos() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Mostrar loading se estiver carregando */}
+                {carregandoMetodos && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                      <p className="text-sm text-blue-700">Carregando métodos de pagamento...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mostrar erro de carregamento se houver */}
+                {erroCarregamentoMetodos && !carregandoMetodos && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <AlertCircle className="h-5 w-5 text-red-500" />
+                        <p className="text-sm text-red-700">{erroCarregamentoMetodos}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={recarregarMetodosPagamento}
+                        disabled={carregandoMetodosPagamento}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        {carregandoMetodosPagamento ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Tentar novamente"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 {metodosPagamento.map((metodo, index) => (
                   <div key={index} className="grid grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border">
                     <div>
@@ -765,9 +1077,36 @@ export default function Pagamentos() {
                       <select
                         value={metodo.metodo}
                         onChange={(e) => {
+                          const metodoSelecionado = e.target.value;
+                          if (metodoSelecionado === "cartao_credito") {
+                            // Verificar se há métodos de pagamento disponíveis
+                            if (metodosDisponiveis.length === 0) {
+                              toast({
+                                title: "Erro",
+                                description: "Métodos de pagamento não foram carregados. Tente recarregar a página.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            
+                            // Para múltiplos métodos, também abrir modal de parcelas
+                            const metodoCredito = metodosDisponiveis.find(m => m.tipo === "cartao_credito");
+                            if (metodoCredito && metodoCredito.parcelas && metodoCredito.parcelas.length > 0) {
+                              // Ordenar parcelas por quantidade
+                              const parcelasOrdenadas = [...metodoCredito.parcelas].sort((a, b) => a.quantidade - b.quantidade);
+                              setParcelasDisponiveis(parcelasOrdenadas);
+                              setMostrarModalParcelas(true);
+                              // Armazenar o índice para atualizar depois
+                              setMetodoSelecionadoParaParcelas(`cartao_credito_${index}`);
+                              return;
+                            }
+                          }
+                          
                           const novosMetodos = [...metodosPagamento];
-                          novosMetodos[index].metodo = e.target.value;
+                          novosMetodos[index].metodo = metodoSelecionado;
                           novosMetodos[index].valor = "";
+                          novosMetodos[index].parcelas = undefined;
+                          novosMetodos[index].taxaParcela = undefined;
                           setMetodosPagamento(novosMetodos);
                         }}
                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
@@ -816,19 +1155,66 @@ export default function Pagamentos() {
                   </div>
                 ))}
 
+                {/* Botão PIX para múltiplos métodos */}
+                {metodosPagamento.some(m => m.metodo === "pix") && (
+                  <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-green-800 mb-1">
+                          <Zap className="h-4 w-4 inline mr-1" />
+                          Dados PIX Disponíveis
+                        </h4>
+                        <p className="text-sm text-green-600">
+                          {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setMostrarModalPix(true)}
+                        disabled={!pixConfiguracao || carregandoPix}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {carregandoPix ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Zap className="h-4 w-4 mr-2" />
+                        )}
+                        Visualizar PIX
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Resumo dos Pagamentos */}
-                <div className="bg-slate-100 rounded-lg p-4">
-                  <h4 className="font-bold mb-3 text-slate-800">Resumo dos Pagamentos</h4>
-                  <div className="space-y-2">
+                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                  <h4 className="font-bold mb-4 text-slate-800 flex items-center">
+                    <Calculator className="h-5 w-5 mr-2 text-slate-600" />
+                    Resumo dos Pagamentos
+                  </h4>
+                  <div className="space-y-3">
                     {metodosPagamento.map((metodo, index) => {
                       const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
+                      const valorMetodo = parseFloat(metodo.valor) || 0;
+                      
                       return (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span className="text-slate-600">
-                            {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}:
-                          </span>
-                          <span className="font-medium">
-                            {(parseFloat(metodo.valor) || 0).toLocaleString("pt-BR", {
+                        <div key={index} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-slate-700 font-medium">
+                              {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}
+                            </span>
+                            {metodo.parcelas && metodo.parcelas > 1 && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                {metodo.parcelas}x
+                              </span>
+                            )}
+                            {metodo.taxaParcela && metodo.taxaParcela > 0 && (
+                              <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                                +{metodo.taxaParcela}%
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-bold text-slate-800">
+                            {valorMetodo.toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
                             })}
@@ -836,10 +1222,11 @@ export default function Pagamentos() {
                         </div>
                       );
                     })}
-                    <div className="border-t pt-2">
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>Total Pago:</span>
-                        <span className="text-green-600">
+                    
+                    <div className="border-t border-slate-300 pt-3">
+                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                        <span className="font-bold text-lg text-slate-800">Total Pago:</span>
+                        <span className="font-bold text-xl text-green-600">
                           {metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0).toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
@@ -1014,6 +1401,284 @@ export default function Pagamentos() {
                   Fechar
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Parcelas */}
+      {mostrarModalParcelas && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <CardHeader className="pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl flex items-center">
+                  <CreditCard className="h-6 w-6 mr-3 text-blue-600" />
+                  Selecionar Parcelas
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelarParcela}
+                  className="h-8 w-8 p-0 hover:bg-slate-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="flex-1 overflow-hidden flex flex-col">
+              {/* Header com informações */}
+              <div className="text-center mb-6 p-4 bg-slate-50 rounded-lg">
+                <h4 className="font-semibold text-slate-800 mb-2">
+                  Escolha o número de parcelas
+                </h4>
+                <div className="flex items-center justify-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-slate-600">Valor total:</span>
+                    <span className="font-bold text-lg text-green-600">
+                      {total.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}
+                    </span>
+                  </div>
+                  {parcelaSelecionada && (
+                    <div className="flex items-center space-x-2 text-blue-600">
+                      <span>•</span>
+                      <span className="font-medium">
+                        {parcelaSelecionada.quantidade} parcela{parcelaSelecionada.quantidade > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista de parcelas com scroll */}
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                {parcelasDisponiveis.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-600 mb-2">
+                      Nenhuma parcela disponível
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      Configure as parcelas nas configurações do sistema
+                    </p>
+                  </div>
+                ) : (
+                  parcelasDisponiveis.map((parcela) => {
+                    const valorParcela = total / parcela.quantidade;
+                    const valorTotal = parcela.taxa > 0 ? total * (1 + parcela.taxa / 100) : total;
+                    const valorJuros = parcela.taxa > 0 ? (total * parcela.taxa) / 100 : 0;
+                    
+                    return (
+                      <div
+                        key={parcela.id}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                          parcelaSelecionada?.id === parcela.id
+                            ? "border-blue-500 bg-blue-50 shadow-md"
+                            : "border-slate-200 hover:border-blue-300 hover:shadow-sm"
+                        }`}
+                        onClick={() => setParcelaSelecionada(parcela)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              parcelaSelecionada?.id === parcela.id
+                                ? "border-blue-500 bg-blue-500"
+                                : "border-slate-300"
+                            }`}>
+                              {parcelaSelecionada?.id === parcela.id && (
+                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                              )}
+                            </div>
+                            
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="font-semibold text-lg">
+                                  {parcela.quantidade}x
+                                </span>
+                                <span className="text-slate-600">de</span>
+                                <span className="font-bold text-green-600">
+                                  {valorParcela.toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2 text-sm text-slate-500">
+                                <span>
+                                  {parcela.quantidade} parcela{parcela.quantidade > 1 ? "s" : ""}
+                                </span>
+                                {parcela.taxa > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-orange-600 font-medium">
+                                      Taxa: {parcela.taxa}%
+                                    </span>
+                                  </>
+                                )}
+                                {parcela.taxa === 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-green-600 font-medium">
+                                      Sem juros
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            <div className="font-bold text-xl text-slate-800">
+                              {valorTotal.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </div>
+                            {valorJuros > 0 && (
+                              <div className="text-sm text-orange-600 font-medium">
+                                +{valorJuros.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })} juros
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Botões de ação */}
+              <div className="flex space-x-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelarParcela}
+                  className="flex-1 h-12"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmarParcela}
+                  disabled={!parcelaSelecionada}
+                  className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirmar Parcela
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal PIX */}
+      {mostrarModalPix && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="max-w-lg w-full mx-4">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center">
+                  <Zap className="h-5 w-5 mr-2 text-green-600" />
+                  Dados PIX
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMostrarModalPix(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {pixConfiguracao ? (
+                <>
+                  {/* QR Code */}
+                  <div className="text-center">
+                    <h4 className="font-medium mb-3 text-slate-700">QR Code PIX</h4>
+                    <div className="bg-white p-4 rounded-lg border-2 border-slate-200 inline-block">
+                      {pixConfiguracao.qr_code ? (
+                        <img 
+                          src={pixConfiguracao.qr_code.startsWith('data:') 
+                            ? pixConfiguracao.qr_code 
+                            : pixConfiguracao.qr_code.startsWith('http') 
+                              ? pixConfiguracao.qr_code 
+                              : `data:image/png;base64,${pixConfiguracao.qr_code}`} 
+                          alt="QR Code PIX" 
+                          className="w-48 h-48 mx-auto object-contain"
+                          onError={(e) => {
+                            console.error('Erro ao carregar QR Code:', e);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-48 h-48 mx-auto flex items-center justify-center bg-slate-100 rounded-lg">
+                          <div className="text-center">
+                            <QrCode className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                            <p className="text-xs text-slate-500">
+                              QR Code não configurado
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              Use a chave PIX abaixo
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      {pixConfiguracao.qr_code 
+                        ? "Escaneie o QR Code com seu aplicativo de pagamento"
+                        : "Copie a chave PIX abaixo para fazer o pagamento"
+                      }
+                    </p>
+                  </div>
+
+                  {/* Chave PIX */}
+                  <div>
+                    <h4 className="font-medium mb-2 text-slate-700">Chave PIX</h4>
+                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                      <p className="font-mono text-sm break-all text-center bg-white p-3 rounded border">
+                        {pixConfiguracao.chave_pix}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Nome do Titular */}
+                  <div className="text-center">
+                    <h4 className="font-medium mb-3 text-slate-700">Nome do Titular</h4>
+                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-lg font-semibold text-slate-800">{pixConfiguracao.nome_titular}</p>
+                    </div>
+                  </div>
+
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-slate-600">
+                    Configuração PIX não encontrada
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Configure as informações PIX nas configurações do sistema para usar esta funcionalidade.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setMostrarModalPix(false)}
+                    className="w-full"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
