@@ -193,20 +193,77 @@ router.get('/vendas-recentes', async (req, res) => {
     const { limit = 5 } = req.query;
     const limitValue = parseInt(limit);
 
+    // Buscar vendas com informações do cliente
     const vendas = await query(
-      `SELECT v.id, v.numero_venda, v.data_venda, v.total, v.status, v.forma_pagamento,
-              c.nome as cliente_nome, u.nome as vendedor_nome
+      `SELECT v.id, v.numero_venda, v.data_venda, v.status, 
+              CAST(v.subtotal AS DECIMAL(10,2)) as subtotal, 
+              CAST(v.desconto AS DECIMAL(10,2)) as desconto, 
+              CAST(v.total AS DECIMAL(10,2)) as total, 
+              v.forma_pagamento, v.parcelas, v.observacoes, v.cliente_id, v.usuario_id,
+              c.nome as cliente_nome, c.email as cliente_email, u.nome as vendedor_nome
        FROM vendas v 
-       LEFT JOIN clientes c ON v.cliente_id = c.id 
-       LEFT JOIN usuarios u ON v.usuario_id = u.id
+       LEFT JOIN clientes c ON v.cliente_id = c.id AND c.tenant_id = v.tenant_id
+       LEFT JOIN usuarios u ON v.usuario_id = u.id AND u.tenant_id = v.tenant_id
        WHERE v.tenant_id = ? 
        ORDER BY v.data_venda DESC 
        LIMIT ${limitValue}`,
       [req.user.tenant_id]
     );
 
+    // Buscar itens e métodos de pagamento para cada venda
+    const vendasComItens = await Promise.all(
+      vendas.map(async (venda) => {
+        // Buscar itens da venda
+        const itens = await query(
+          `SELECT vi.id, vi.produto_id, vi.quantidade, 
+                  CAST(vi.preco_unitario AS DECIMAL(10,2)) as preco_unitario, 
+                  CAST(vi.preco_total AS DECIMAL(10,2)) as preco_total, 
+                  CAST(vi.desconto AS DECIMAL(10,2)) as desconto,
+                  p.nome as produto_nome
+           FROM venda_itens vi
+           JOIN produtos p ON vi.produto_id = p.id
+           WHERE vi.venda_id = ?
+           ORDER BY vi.id`,
+          [venda.id]
+        );
+
+        // Buscar métodos de pagamento
+        const metodosPagamento = await query(
+          `SELECT metodo, 
+                  CAST(valor AS DECIMAL(10,2)) as valor, 
+                  CAST(troco AS DECIMAL(10,2)) as troco,
+                  parcelas, 
+                  CAST(taxa_parcela AS DECIMAL(5,2)) as taxa_parcela
+           FROM venda_pagamentos
+           WHERE venda_id = ?
+           ORDER BY id`,
+          [venda.id]
+        );
+
+        // Buscar pagamento a prazo
+        const pagamentoPrazo = await query(
+          `SELECT dias, 
+                  CAST(juros AS DECIMAL(5,2)) as juros, 
+                  CAST(valor_original AS DECIMAL(10,2)) as valor_original, 
+                  CAST(valor_com_juros AS DECIMAL(10,2)) as valor_com_juros, 
+                  data_vencimento, status
+           FROM venda_pagamentos_prazo
+           WHERE venda_id = ?
+           ORDER BY id`,
+          [venda.id]
+        );
+        
+        return {
+          ...venda,
+          itens,
+          metodos_pagamento: metodosPagamento,
+          pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null
+        };
+      })
+    );
+
     res.json({
-      vendas
+      vendas: vendasComItens
     });
   } catch (error) {
     console.error('Erro ao buscar vendas recentes:', error);

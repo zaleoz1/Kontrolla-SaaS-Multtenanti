@@ -258,16 +258,48 @@ export default function Dashboard() {
                           {venda.numero_venda} • {formatDateTime(venda.data_venda)}
                         </p>
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          {venda.forma_pagamento === 'pix' ? (
-                            <img 
-                              src={getPaymentIcon(venda.forma_pagamento)} 
-                              alt="PIX" 
-                              className="w-4 h-4"
-                            />
+                          {venda.forma_pagamento === 'multiplo_avista' && venda.metodos_pagamento ? (
+                            // Para vendas múltiplas à vista, mostrar os métodos de pagamento usados
+                            <div className="flex flex-wrap items-center gap-1">
+                              {venda.metodos_pagamento.map((metodo: any, index: number) => (
+                                <div key={index} className="flex items-center space-x-1">
+                                  {metodo.metodo === 'pix' ? (
+                                    <img 
+                                      src={getPaymentIcon(metodo.metodo)} 
+                                      alt="PIX" 
+                                      className="w-3 h-3"
+                                    />
+                                  ) : (
+                                    <span className="text-xs">{getPaymentIcon(metodo.metodo)}</span>
+                                  )}
+                                  <span className="text-xs">{getPaymentText(metodo.metodo)}</span>
+                                  {index < venda.metodos_pagamento.length - 1 && (
+                                    <span className="text-xs">+</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : venda.forma_pagamento === 'prazo' ? (
+                            // Para vendas a prazo, mostrar ícone e texto de prazo
+                            <>
+                              <span>{getPaymentIcon(venda.forma_pagamento)}</span>
+                              <span>{getPaymentText(venda.forma_pagamento)}</span>
+                            </>
                           ) : (
-                            <span>{getPaymentIcon(venda.forma_pagamento)}</span>
+                            // Para vendas normais, mostrar forma de pagamento padrão
+                            <>
+                              {venda.forma_pagamento === 'pix' ? (
+                                <img 
+                                  src={getPaymentIcon(venda.forma_pagamento)} 
+                                  alt="PIX" 
+                                  className="w-4 h-4"
+                                />
+                              ) : (
+                                <span>{getPaymentIcon(venda.forma_pagamento)}</span>
+                              )}
+                              <span>{getPaymentText(venda.forma_pagamento)}</span>
+                            </>
                           )}
-                          <span>{getPaymentText(venda.forma_pagamento)}</span>
                         </div>
                       </div>
                       <div className="text-right space-y-1">
@@ -276,7 +308,9 @@ export default function Dashboard() {
                           variant={statusInfo.variant as any}
                           className={statusInfo.className}
                         >
-                          {venda.status.charAt(0).toUpperCase() + venda.status.slice(1)}
+                          {venda.status === 'pago' ? 'Pago' : 
+                           venda.status === 'pendente' ? 'Pendente' : 
+                           venda.status.charAt(0).toUpperCase() + venda.status.slice(1)}
                         </Badge>
                       </div>
                     </div>
