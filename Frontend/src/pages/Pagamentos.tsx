@@ -399,6 +399,16 @@ export default function Pagamentos() {
     }
   }, [clienteSelecionado, usarPagamentoPrazo]);
 
+  // Limpar métodos de pagamento quando pagamento a prazo for ativado e não houver métodos múltiplos
+  useEffect(() => {
+    if (usarPagamentoPrazo && metodosPagamento.length === 0) {
+      // Limpar método único de pagamento
+      setMetodoPagamentoUnico("");
+      setValorDinheiro("");
+      setParcelaConfirmada(null);
+    }
+  }, [usarPagamentoPrazo, metodosPagamento.length]);
+
   const salvarVenda = async () => {
     try {
       // Calcular o total final que será salvo no banco
@@ -1126,7 +1136,6 @@ export default function Pagamentos() {
                 )}
 
                 <Button
-                  variant="outline"
                   onClick={() => {
                     // Limpar dados de pagamento anterior
                     setMetodoPagamentoUnico("");
@@ -1142,7 +1151,7 @@ export default function Pagamentos() {
                     // Adicionar novo método de pagamento
                     setMetodosPagamento([{ metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                   }}
-                  className="w-full border-green-300 text-green-600 hover:bg-green-50"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
                   disabled={carregandoMetodos}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -1163,19 +1172,17 @@ export default function Pagamentos() {
                   </CardTitle>
                   <div className="flex space-x-2">
                     <Button
-                      variant="outline"
                       size="sm"
                       onClick={() => {
                         setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                       }}
-                      className="border-green-300 text-green-600 hover:bg-green-50"
+                      className="bg-green-600 hover:bg-green-700 text-white"
                       disabled={carregandoMetodos}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Adicionar
                     </Button>
                     <Button
-                      variant="outline"
                       size="sm"
                       onClick={() => {
                         // Limpar dados de múltiplos métodos
@@ -1189,7 +1196,7 @@ export default function Pagamentos() {
                           dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
                         });
                       }}
-                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <X className="h-4 w-4 mr-1" />
                       Único

@@ -76,6 +76,65 @@ export default function Vendas() {
 
   const { metodosPagamento } = useMetodosPagamento();
 
+  // Função para separar vendas com pagamento múltiplo
+  const separarVendasMultiplas = (vendas: any[], filtroStatus?: string) => {
+    const vendasSeparadas: any[] = [];
+    
+    vendas.forEach(venda => {
+      // Verificar se a venda tem pagamento múltiplo (métodos de pagamento + pagamento a prazo)
+      const temMetodosPagamento = venda.metodos_pagamento && venda.metodos_pagamento.length > 0;
+      const temPagamentoPrazo = venda.pagamento_prazo && venda.pagamento_prazo.status;
+      
+      if (temMetodosPagamento && temPagamentoPrazo) {
+        // Calcular total dos métodos de pagamento (à vista)
+        const totalAVista = venda.metodos_pagamento.reduce((sum: number, metodo: any) => 
+          sum + (parseFloat(metodo.valor) - (metodo.troco || 0)), 0
+        );
+        
+        // Criar venda à vista
+        const vendaAVista = {
+          ...venda,
+          id: `${venda.id}-avista`,
+          numero_venda: `${venda.numero_venda}-AV`,
+          status: 'pago',
+          total: totalAVista,
+          metodos_pagamento: venda.metodos_pagamento,
+          pagamento_prazo: null,
+          forma_pagamento: 'multiplo_avista',
+          observacoes: `${venda.observacoes || ''} - Pagamento à vista (parcial)`.trim()
+        };
+        
+        // Criar venda a prazo
+        const vendaPrazo = {
+          ...venda,
+          id: `${venda.id}-prazo`,
+          numero_venda: `${venda.numero_venda}-PZ`,
+          status: 'pendente',
+          total: venda.pagamento_prazo.valor_com_juros,
+          metodos_pagamento: [],
+          forma_pagamento: 'prazo',
+          observacoes: `${venda.observacoes || ''} - Pagamento a prazo (parcial)`.trim()
+        };
+        
+        // Aplicar filtro de status se especificado
+        if (!filtroStatus || filtroStatus === '') {
+          // Sem filtro, adicionar ambas as vendas
+          vendasSeparadas.push(vendaAVista, vendaPrazo);
+        } else if (filtroStatus === 'pago') {
+          // Filtro "pagas" - adicionar apenas a venda à vista
+          vendasSeparadas.push(vendaAVista);
+        } else if (filtroStatus === 'pendente') {
+          // Filtro "pendentes" - adicionar apenas a venda a prazo
+          vendasSeparadas.push(vendaPrazo);
+        }
+      } else {
+        // Venda normal, adicionar como está (já vem filtrada do backend)
+        vendasSeparadas.push(venda);
+      }
+    });
+    return vendasSeparadas;
+  };
+
   // Carregar dados iniciais
   useEffect(() => {
     fetchVendas(filtros);
@@ -227,8 +286,11 @@ export default function Vendas() {
     fetchVendas(novosFiltros);
   };
 
+  // Separar vendas com pagamento múltiplo
+  const vendasSeparadas = separarVendasMultiplas(vendas, filtros.status);
+
   // Calcular totais
-  const totalVendas = vendas.reduce((acc, venda) => {
+  const totalVendas = vendasSeparadas.reduce((acc, venda) => {
     // Se a venda tem pagamentos à vista, somar apenas esses valores (excluindo troco)
     if (venda.metodos_pagamento && venda.metodos_pagamento.length > 0) {
       return acc + venda.metodos_pagamento.reduce((sum: number, metodo: any) => 
@@ -240,7 +302,7 @@ export default function Vendas() {
   }, 0);
   
   // Calcular estatísticas de vendas pendentes
-  const estatisticasPendentes = calcularEstatisticasPendentes(vendas);
+  const estatisticasPendentes = calcularEstatisticasPendentes(vendasSeparadas);
   const saldoPendente = estatisticasPendentes.valorTotal;
   
 
@@ -500,7 +562,7 @@ export default function Vendas() {
       {/* Lista de Vendas */}
       {!loading && !error && (
         <div className="space-y-4">
-          {vendas.map((venda) => {
+          {vendasSeparadas.map((venda) => {
             const statusBadge = getStatusBadge(venda.status);
             const paymentMethod = getDisplayPaymentMethod(venda);
             
@@ -577,7 +639,7 @@ export default function Vendas() {
       )}
 
       {/* Estado vazio */}
-      {!loading && !error && vendas.length === 0 && (
+      {!loading && !error && vendasSeparadas.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
             <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -594,7 +656,7 @@ export default function Vendas() {
       )}
 
       {/* Paginação */}
-      {!loading && !error && vendas.length > 0 && pagination.totalPages > 1 && (
+      {!loading && !error && vendasSeparadas.length > 0 && pagination.totalPages > 1 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
