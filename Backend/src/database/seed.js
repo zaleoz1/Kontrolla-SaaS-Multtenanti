@@ -420,6 +420,14 @@ async function seedDatabase() {
       );
     }
 
+    // Criar dados bancários de exemplo
+    console.log('🏦 Criando dados bancários...');
+    await query(
+      `INSERT INTO dados_bancarios (tenant_id, banco, agencia, conta, digito, tipo_conta, nome_titular, cpf_cnpj, ativo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenantId, 'Banco do Brasil', '1234', '56789', '0', 'corrente', 'Loja Exemplo Ltda', '12.345.678/0001-90', true]
+    );
+
     console.log('✅ Seed concluído com sucesso!');
     console.log('📊 Dados de exemplo criados:');
     console.log(`   - 1 tenant: Loja Exemplo Ltda`);
@@ -432,6 +440,7 @@ async function seedDatabase() {
     console.log(`   - ${metodosPagamento.length} métodos de pagamento`);
     console.log(`   - ${parcelasCredito.length} parcelas para cartão de crédito`);
     console.log(`   - ${configuracoes.length} configurações`);
+    console.log(`   - 1 configuração de dados bancários`);
 
   } catch (error) {
     console.error('❌ Erro durante o seed:', error);
