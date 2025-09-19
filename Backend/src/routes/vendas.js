@@ -26,8 +26,18 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
     // Adicionar filtro de status
     if (status) {
-      whereClause += ' AND v.status = ?';
-      params.push(status);
+      // Para vendas com pagamento múltiplo, buscar tanto pagas quanto pendentes
+      // para que possam ser separadas no frontend
+      if (status === 'pago' || status === 'pendente') {
+        whereClause += ` AND (
+          v.status = ? OR 
+          (EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) AND EXISTS(SELECT 1 FROM venda_pagamentos_prazo vpr WHERE vpr.venda_id = v.id))
+        )`;
+        params.push(status);
+      } else {
+        whereClause += ' AND v.status = ?';
+        params.push(status);
+      }
     }
 
     // Adicionar filtro de data

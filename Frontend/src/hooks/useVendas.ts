@@ -33,7 +33,7 @@ export interface Venda {
   subtotal: number;
   desconto: number;
   total: number;
-  forma_pagamento: 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'pix' | 'transferencia' | 'boleto' | 'cheque' | 'prazo';
+  forma_pagamento: 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'pix' | 'transferencia' | 'boleto' | 'cheque' | 'prazo' | 'multiplo_avista';
   parcelas: number;
   observacoes?: string;
   cliente_id?: number;
@@ -294,6 +294,8 @@ export const useVendas = () => {
         return 'Cheque';
       case 'prazo':
         return 'Prazo';
+      case 'multiplo_avista':
+        return 'Múltiplo';
       default:
         return 'Outro';
     }
@@ -304,6 +306,8 @@ export const useVendas = () => {
     switch (forma_pagamento) {
       case 'prazo':
         return 'text-yellow-600';
+      case 'multiplo_avista':
+        return 'text-green-600';
       default:
         return 'text-muted-foreground';
     }
@@ -323,6 +327,16 @@ export const useVendas = () => {
         color: 'text-yellow-600'
       };
     }
+    
+    // Se for pagamento múltiplo à vista, mostrar "Múltiplo"
+    if (venda.forma_pagamento === 'multiplo_avista') {
+      return {
+        icon: '',
+        text: 'Múltiplo',
+        color: 'text-green-600'
+      };
+    }
+    
     return {
       icon: getPaymentIcon(venda.forma_pagamento),
       text: getPaymentText(venda.forma_pagamento),
