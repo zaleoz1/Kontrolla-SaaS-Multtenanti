@@ -195,19 +195,9 @@ export default function Pagamentos() {
     if (metodosPagamento.length > 0) {
       return metodosPagamento.reduce((sum, m) => {
         const valorMetodo = parseFloat(m.valor) || 0;
-        // Para cartão de crédito, usar valor original (sem juros)
-        if (m.metodo === "cartao_credito") {
-          return sum + valorMetodo;
-        }
-        // Para cartão de débito, usar valor original (sem taxa) - taxa é apenas para o cliente
-        if (m.metodo === "cartao_debito") {
-          return sum + valorMetodo;
-        }
-        // Para outros métodos, usar valor com juros se aplicável
-        const valorComJuros = m.taxaParcela && m.taxaParcela > 0 
-          ? valorMetodo * (1 + m.taxaParcela / 100)
-          : valorMetodo;
-        return sum + valorComJuros;
+        // Para todos os métodos, usar valor original (sem taxas da máquina)
+        // As taxas são apenas para controle da máquina, não afetam o valor da venda
+        return sum + valorMetodo;
       }, 0);
     }
     
@@ -216,7 +206,7 @@ export default function Pagamentos() {
     }
     
     if (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada) {
-      return total; // Para cartão de crédito, usar valor original (sem juros)
+      return total; // Para cartão de crédito, usar valor original (sem taxas)
     }
     
     // Para cartão de débito, usar valor original (sem taxa) - taxa é apenas para o cliente
@@ -1796,7 +1786,10 @@ export default function Pagamentos() {
                         {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
                           <div className="flex justify-between text-xs">
                             <span>Cartão de Crédito ({parcelaConfirmada.quantidade}x):</span>
-                            <span>{total.toLocaleString("pt-BR", {
+                            <span>{(parcelaConfirmada.taxa > 0
+                              ? (total * (1 + parcelaConfirmada.taxa / 100))
+                              : total
+                            ).toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
                             })}</span>

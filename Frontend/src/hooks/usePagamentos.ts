@@ -96,17 +96,11 @@ export const usePagamentos = () => {
     
     if (usarPagamentoPrazo) {
       if (metodosPagamento.length > 0) {
-        // Calcular total pago considerando as taxas de parcelamento usando fórmula Price
+        // Calcular total pago usando valor original (sem taxas da máquina)
+        // As taxas são apenas para controle da máquina, não afetam o valor da venda
         const totalPago = metodosPagamento.reduce((sum, m) => {
           const valorBase = parseFloat(m.valor) || 0;
-          let valorComTaxa = valorBase;
-          
-          if (m.taxaParcela && m.taxaParcela > 0 && m.parcelas && m.parcelas > 1) {
-            const { totalFinal } = calcularParcelas(valorBase, m.taxaParcela, m.parcelas);
-            valorComTaxa = totalFinal;
-          }
-          
-          return sum + valorComTaxa;
+          return sum + valorBase;
         }, 0);
         
         const valorRestante = total - totalPago;
@@ -124,17 +118,11 @@ export const usePagamentos = () => {
     }
     
     if (metodosPagamento.length > 0) {
-      // Calcular total pago considerando as taxas de parcelamento usando fórmula Price
+      // Calcular total pago usando valor original (sem taxas da máquina)
+      // As taxas são apenas para controle da máquina, não afetam o valor da venda
       const totalPago = metodosPagamento.reduce((sum, m) => {
         const valorBase = parseFloat(m.valor) || 0;
-        let valorComTaxa = valorBase;
-        
-        if (m.taxaParcela && m.taxaParcela > 0 && m.parcelas && m.parcelas > 1) {
-          const { totalFinal } = calcularParcelas(valorBase, m.taxaParcela, m.parcelas);
-          valorComTaxa = totalFinal;
-        }
-        
-        return sum + valorComTaxa;
+        return sum + valorBase;
       }, 0);
       
       if (totalPago < total) {
@@ -189,28 +177,24 @@ export const usePagamentos = () => {
       // Processar métodos múltiplos para calcular troco se houver dinheiro
       const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
       metodosFinais = metodosPagamento.map(metodo => {
-        // Aplicar taxa de parcelamento usando fórmula Price se houver
-        let valorComTaxa = parseFloat(metodo.valor);
-        if (metodo.taxaParcela && metodo.taxaParcela > 0 && metodo.parcelas && metodo.parcelas > 1) {
-          const { totalFinal } = calcularParcelas(
-            parseFloat(metodo.valor),
-            metodo.taxaParcela,
-            metodo.parcelas
-          );
-          valorComTaxa = totalFinal;
-        }
+        // Para cartão de crédito, salvar valor original sem taxas no banco
+        // As taxas são apenas para controle da máquina, não para o valor da venda
+        let valorParaSalvar = parseFloat(metodo.valor);
         
+        // Apenas para dinheiro aplicar cálculos de troco
         if (metodo.metodo === "dinheiro") {
           return {
             ...metodo,
-            valor: valorComTaxa.toString(),
-            troco: Math.max(0, valorComTaxa - (valorAlvo - metodosPagamento.reduce((sum, m) => 
+            valor: valorParaSalvar.toString(),
+            troco: Math.max(0, valorParaSalvar - (valorAlvo - metodosPagamento.reduce((sum, m) => 
               m.metodo !== "dinheiro" ? sum + parseFloat(m.valor) : sum, 0)))
           };
         }
+        
+        // Para cartão de crédito e outros métodos, salvar valor original
         return {
           ...metodo,
-          valor: valorComTaxa.toString()
+          valor: valorParaSalvar.toString()
         };
       });
     }

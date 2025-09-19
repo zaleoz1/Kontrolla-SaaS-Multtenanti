@@ -707,18 +707,57 @@ export default function Vendas() {
                   {vendaSelecionada.metodos_pagamento && vendaSelecionada.metodos_pagamento.length > 0 && (
                     <div className="pt-2 border-t">
                       <h4 className="text-sm font-medium mb-2">Métodos de Pagamento:</h4>
-                      <div className="space-y-1">
-                        {vendaSelecionada.metodos_pagamento.map((metodo: any, index: number) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span className="flex items-center space-x-1">
-                              <span className={getPaymentColor(metodo.metodo)}>{getPaymentText(metodo.metodo)}</span>
-                              {metodo.troco > 0 && (
-                                <span className="text-green-600">(Troco: {formatCurrency(metodo.troco)})</span>
+                      <div className="space-y-2">
+                        {vendaSelecionada.metodos_pagamento.map((metodo: any, index: number) => {
+                          // O valor que vem do banco já é o valor original (sem taxas)
+                          const valorOriginal = parseFloat(metodo.valor) || 0;
+                          const parcelas = metodo.parcelas || 1;
+                          const taxaParcela = metodo.taxa_parcela || 0;
+                          
+                          // Calcular valor com taxa aplicando a taxa sobre o valor original
+                          let valorComTaxa = valorOriginal;
+                          if (taxaParcela > 0 && parcelas > 1) {
+                            // Aplicar taxa simples sobre o valor original
+                            valorComTaxa = valorOriginal * (1 + taxaParcela / 100);
+                          }
+                          
+                          const valorParcela = valorComTaxa / parcelas;
+                          
+                          return (
+                            <div key={index} className="p-3 rounded-lg bg-muted/30 border">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <span className={getPaymentColor(metodo.metodo)}>{getPaymentText(metodo.metodo)}</span>
+                                  {parcelas > 1 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {parcelas}x
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-semibold text-primary">
+                                    {formatCurrency(valorComTaxa)}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {parcelas > 1 && (
+                                <div className="text-xs text-muted-foreground">
+                                  <div className="flex justify-between">
+                                    <span>Valor da parcela:</span>
+                                    <span className="font-medium">{formatCurrency(valorParcela)}</span>
+                                  </div>
+                                </div>
                               )}
-                            </span>
-                            <span className="font-medium">{formatCurrency(metodo.valor)}</span>
-                          </div>
-                        ))}
+                              
+                              {metodo.troco > 0 && (
+                                <div className="text-xs text-green-600 mt-1">
+                                  Troco: {formatCurrency(metodo.troco)}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
