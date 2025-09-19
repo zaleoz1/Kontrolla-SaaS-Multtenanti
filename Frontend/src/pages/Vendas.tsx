@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVendas, VendasFilters } from "@/hooks/useVendas";
+import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
 
 export default function Vendas() {
   const [termoBusca, setTermoBusca] = useState("");
@@ -72,6 +73,8 @@ export default function Vendas() {
     calcularSaldoPendente,
     calcularEstatisticasPendentes
   } = useVendas();
+
+  const { metodosPagamento } = useMetodosPagamento();
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -714,11 +717,25 @@ export default function Vendas() {
                           const parcelas = metodo.parcelas || 1;
                           const taxaParcela = metodo.taxa_parcela || 0;
                           
+                          // Para cartão de débito, sempre buscar a taxa do método de pagamento configurado
+                          let taxaAplicar = taxaParcela;
+                          if (metodo.metodo === 'cartao_debito') {
+                            // Buscar a taxa do método de pagamento configurado
+                            const metodoDebito = metodosPagamento.find(m => m.tipo === 'cartao_debito');
+                            console.log('Método débito encontrado:', metodoDebito);
+                            if (metodoDebito) {
+                              taxaAplicar = metodoDebito.taxa || 0;
+                              console.log('Taxa aplicada para débito:', taxaAplicar);
+                            }
+                          }
+                          
                           // Calcular valor com taxa aplicando a taxa sobre o valor original
                           let valorComTaxa = valorOriginal;
-                          if (taxaParcela > 0 && parcelas > 1) {
+                          console.log('Valor original:', valorOriginal, 'Taxa a aplicar:', taxaAplicar);
+                          if (taxaAplicar > 0) {
                             // Aplicar taxa simples sobre o valor original
-                            valorComTaxa = valorOriginal * (1 + taxaParcela / 100);
+                            valorComTaxa = valorOriginal * (1 + taxaAplicar / 100);
+                            console.log('Valor com taxa calculado:', valorComTaxa);
                           }
                           
                           const valorParcela = valorComTaxa / parcelas;
