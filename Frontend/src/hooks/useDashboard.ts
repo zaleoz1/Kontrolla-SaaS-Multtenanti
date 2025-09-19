@@ -33,6 +33,23 @@ export interface DashboardMetricas {
   };
 }
 
+export interface MetodoPagamento {
+  metodo: string;
+  valor: number;
+  troco?: number;
+  parcelas?: number;
+  taxaParcela?: number;
+}
+
+export interface PagamentoPrazo {
+  dias: number;
+  juros: number;
+  valor_original: number;
+  valor_com_juros: number;
+  data_vencimento: string;
+  status: 'pendente' | 'pago';
+}
+
 export interface VendaRecente {
   id: number;
   numero_venda: string;
@@ -42,6 +59,8 @@ export interface VendaRecente {
   forma_pagamento: string;
   cliente_nome?: string;
   vendedor_nome?: string;
+  metodos_pagamento?: MetodoPagamento[];
+  pagamento_prazo?: PagamentoPrazo;
 }
 
 export interface ProdutoEstoqueBaixo {
@@ -228,7 +247,8 @@ export function useDashboard() {
       'transferencia': 'Transferência',
       'boleto': 'Boleto',
       'cheque': 'Cheque',
-      'prazo': 'A Prazo'
+      'prazo': 'A Prazo',
+      'multiplo_avista': 'Múltiplo'
     };
     return textMap[forma_pagamento as keyof typeof textMap] || forma_pagamento;
   };
@@ -257,8 +277,64 @@ export function useDashboard() {
     return `${absVariacao.toFixed(1)}%`;
   };
 
+  // Função para separar vendas com pagamento múltiplo
+  const separarVendasMultiplas = (vendas: VendaRecente[]) => {
+    const vendasSeparadas: VendaRecente[] = [];
+    
+    vendas.forEach(venda => {
+      // Verificar se a venda tem pagamento múltiplo (métodos de pagamento + pagamento a prazo)
+      const temMetodosPagamento = venda.metodos_pagamento && venda.metodos_pagamento.length > 0;
+      const temPagamentoPrazo = venda.pagamento_prazo && venda.pagamento_prazo.status;
+      
+      if (temMetodosPagamento && temPagamentoPrazo) {
+        // Calcular total dos métodos de pagamento (à vista)
+        const totalAVista = venda.metodos_pagamento!.reduce((sum: number, metodo: MetodoPagamento) => 
+          sum + (metodo.valor - (metodo.troco || 0)), 0
+        );
+        
+        // Criar venda à vista
+        const vendaAVista: VendaRecente = {
+          ...venda,
+          id: parseInt(`${venda.id}-avista`),
+          numero_venda: `${venda.numero_venda}-AV`,
+          status: 'pago',
+          total: totalAVista,
+          metodos_pagamento: venda.metodos_pagamento,
+          pagamento_prazo: undefined,
+          forma_pagamento: 'multiplo_avista'
+        };
+        
+        // Criar venda a prazo
+        const vendaPrazo: VendaRecente = {
+          ...venda,
+          id: parseInt(`${venda.id}-prazo`),
+          numero_venda: `${venda.numero_venda}-PZ`,
+          status: 'pendente',
+          total: venda.pagamento_prazo!.valor_com_juros,
+          metodos_pagamento: [],
+          forma_pagamento: 'prazo'
+        };
+        
+        vendasSeparadas.push(vendaAVista, vendaPrazo);
+      } else {
+        // Venda normal, adicionar como está
+        vendasSeparadas.push(venda);
+      }
+    });
+    
+    return vendasSeparadas;
+  };
+
+  // Processar vendas recentes para separar vendas múltiplas
+  const processarVendasRecentes = (vendas: VendaRecente[]) => {
+    return separarVendasMultiplas(vendas);
+  };
+
   return {
-    data,
+    data: data ? {
+      ...data,
+      vendas_recentes: processarVendasRecentes(data.vendas_recentes)
+    } : null,
     loading,
     error,
     refreshData,
