@@ -74,7 +74,10 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
         const metodosPagamento = await query(
           `SELECT metodo, 
                   CAST(valor AS DECIMAL(10,2)) as valor, 
-                  CAST(troco AS DECIMAL(10,2)) as troco
+                  CAST(troco AS DECIMAL(10,2)) as troco,
+                  parcelas,
+                  CAST(taxa_parcela AS DECIMAL(5,2)) as taxa_parcela,
+                  CAST(valor_original AS DECIMAL(10,2)) as valor_original
            FROM venda_pagamentos
            WHERE venda_id = ?
            ORDER BY id`,
@@ -200,7 +203,12 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
 
     // Buscar métodos de pagamento
     const metodosPagamento = await query(
-      `SELECT metodo, valor, troco
+      `SELECT metodo, 
+              CAST(valor AS DECIMAL(10,2)) as valor, 
+              CAST(troco AS DECIMAL(10,2)) as troco,
+              parcelas,
+              CAST(taxa_parcela AS DECIMAL(5,2)) as taxa_parcela,
+              CAST(valor_original AS DECIMAL(10,2)) as valor_original
        FROM venda_pagamentos
        WHERE venda_id = ?
        ORDER BY id`,
@@ -360,10 +368,27 @@ router.post('/', validateVenda, async (req, res) => {
     // Salvar métodos de pagamento (se houver)
     if (metodos_pagamento && metodos_pagamento.length > 0) {
       for (const metodo of metodos_pagamento) {
+        // Calcular valor original usando fórmula Price reversa
+        let valorOriginal = parseFloat(metodo.valor);
+        if (metodo.taxaParcela && metodo.taxaParcela > 0 && metodo.parcelas && metodo.parcelas > 1) {
+          // Fórmula Price reversa: valorOriginal = valorParcela * ((1 - (1 + i)^-n) / i)
+          const i = metodo.taxaParcela / 100;
+          const valorParcela = parseFloat(metodo.valor) / metodo.parcelas;
+          valorOriginal = valorParcela * ((1 - Math.pow(1 + i, -metodo.parcelas)) / i);
+        }
+        
         await query(
-          `INSERT INTO venda_pagamentos (venda_id, metodo, valor, troco)
-           VALUES (?, ?, ?, ?)`,
-          [vendaId, metodo.metodo, metodo.valor, metodo.troco || 0]
+          `INSERT INTO venda_pagamentos (venda_id, metodo, valor, troco, parcelas, taxa_parcela, valor_original)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            vendaId, 
+            metodo.metodo, 
+            metodo.valor, 
+            metodo.troco || 0,
+            metodo.parcelas || 1,
+            metodo.taxaParcela || 0,
+            valorOriginal
+          ]
         );
       }
     } else if (forma_pagamento && !pagamento_prazo) {
@@ -413,7 +438,12 @@ router.post('/', validateVenda, async (req, res) => {
 
     // Buscar métodos de pagamento da venda criada
     const metodosPagamento = await query(
-      `SELECT metodo, valor, troco
+      `SELECT metodo, 
+              CAST(valor AS DECIMAL(10,2)) as valor, 
+              CAST(troco AS DECIMAL(10,2)) as troco,
+              parcelas,
+              CAST(taxa_parcela AS DECIMAL(5,2)) as taxa_parcela,
+              CAST(valor_original AS DECIMAL(10,2)) as valor_original
        FROM venda_pagamentos
        WHERE venda_id = ?
        ORDER BY id`,

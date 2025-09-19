@@ -171,6 +171,34 @@ export default function Pagamentos() {
   const valorDesconto = (subtotal * descontoNum) / 100;
   const total = subtotal - valorDesconto;
 
+  // Função para calcular o TOTAL FINAL exatamente como mostrado no layout
+  const calcularTotalFinal = () => {
+    if (usarPagamentoPrazo && clienteSelecionado) {
+      return pagamentoPrazo.valorComJuros;
+    }
+    
+    if (metodosPagamento.length > 0) {
+      return metodosPagamento.reduce((sum, m) => {
+        const valorMetodo = parseFloat(m.valor) || 0;
+        // Para cartão de crédito, usar valor original (sem juros)
+        if (m.metodo === "cartao_credito") {
+          return sum + valorMetodo;
+        }
+        // Para outros métodos, usar valor com juros se aplicável
+        const valorComJuros = m.taxaParcela && m.taxaParcela > 0 
+          ? valorMetodo * (1 + m.taxaParcela / 100)
+          : valorMetodo;
+        return sum + valorComJuros;
+      }, 0);
+    }
+    
+    if (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada) {
+      return total; // Para cartão de crédito, usar valor original (sem juros)
+    }
+    
+    return total;
+  };
+
   // Função para calcular valor com juros e data de vencimento
   const handleCalcularPagamentoPrazo = (dias: string, juros: string) => {
     const metodosFormatados = metodosPagamento.map(m => ({ metodo: m.metodo, valor: m.valor }));
@@ -308,6 +336,12 @@ export default function Pagamentos() {
     }
   }, [mostrarModalParcelas, metodoSelecionadoParaParcelas, metodosPagamento]);
 
+  // Forçar re-render do select quando valores mudarem para atualizar opções desabilitadas
+  const [forceUpdate, setForceUpdate] = useState(0);
+  useEffect(() => {
+    setForceUpdate(prev => prev + 1);
+  }, [metodosPagamento.map(m => m.valor).join(',')]);
+
   // Desativar pagamento a prazo quando cliente for removido
   useEffect(() => {
     if (!clienteSelecionado && usarPagamentoPrazo) {
@@ -317,6 +351,9 @@ export default function Pagamentos() {
 
   const salvarVenda = async () => {
     try {
+      // Calcular o total final que será salvo no banco
+      const totalFinal = calcularTotalFinal();
+      
       // Processar dados da venda usando o hook
       // Se há método único e é cartão de crédito com parcelas, incluir as parcelas
       let metodosComParcelas = metodosPagamento.map(m => ({ 
@@ -337,7 +374,7 @@ export default function Pagamentos() {
       }
       
       const dadosVenda = processarDadosVenda(
-        { carrinho, clienteSelecionado, subtotal, desconto, total },
+        { carrinho, clienteSelecionado, subtotal, desconto, total: totalFinal },
         metodosComParcelas,
         metodoPagamentoUnico,
         valorDinheiro,
@@ -605,14 +642,36 @@ export default function Pagamentos() {
 
             ${vendaFinalizada?.metodos_pagamento?.map((metodo: any) => {
               const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
-              return `
+              const valorMetodo = parseFloat(metodo.valor || 0);
+              const parcelas = metodo.parcelas || 1;
+              const taxaParcela = metodo.taxaParcela || 0;
+              
+              // Calcular valor com juros se houver taxa
+              const valorComJuros = taxaParcela > 0 ? valorMetodo * (1 + taxaParcela / 100) : valorMetodo;
+              const valorParcela = valorComJuros / parcelas;
+              
+              let metodoInfo = `
                 <div>
-                  ${metodoDisponivel?.nome || metodo.metodo?.replace('_', ' ').toUpperCase()}: ${parseFloat(metodo.valor || 0).toLocaleString('pt-BR', {
+                  ${metodoDisponivel?.nome || metodo.metodo?.replace('_', ' ').toUpperCase()}: ${valorComJuros.toLocaleString('pt-BR', {
                     style: 'currency',
                     currency: 'BRL'
                   })}
-                </div>
               `;
+              
+              // Se for cartão de crédito com parcelas, mostrar detalhes
+              if (metodo.metodo === 'cartao_credito' && parcelas > 1) {
+                metodoInfo += `
+                  <div style="margin-left: 10px; font-size: 10px;">
+                    ${parcelas}x de ${valorParcela.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}
+                  </div>
+                `;
+              }
+              
+              metodoInfo += `</div>`;
+              return metodoInfo;
             }).join('') || ''}
 
             ${vendaFinalizada?.pagamento_prazo ? `
@@ -721,13 +780,16 @@ export default function Pagamentos() {
                 Resumo da Venda
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
+              {/* Itens do carrinho */}
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">Itens no carrinho:</span>
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
                   {carrinho.length} produtos
                 </Badge>
               </div>
+
+              {/* Subtotal */}
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">Subtotal:</span>
                 <span className="font-medium">
@@ -737,6 +799,8 @@ export default function Pagamentos() {
                   })}
                 </span>
               </div>
+
+              {/* Desconto */}
               {parseFloat(desconto) > 0 && (
                 <div className="flex justify-between items-center text-green-600">
                   <span>Desconto ({desconto}%):</span>
@@ -748,11 +812,229 @@ export default function Pagamentos() {
                   </span>
                 </div>
               )}
+
+              {/* Total base */}
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center text-lg font-bold">
-                  <span>TOTAL:</span>
-                  <span className="text-green-600">
+                  <span>Total Base:</span>
+                  <span className="text-slate-700">
                     {total.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL"
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Resumo dos métodos de pagamento */}
+              {(metodosPagamento.length > 0 || (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada)) && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-slate-700 mb-3 flex items-center">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Formas de Pagamento
+                  </h4>
+                  <div className="space-y-2">
+                    {/* Método único com parcelas */}
+                    {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">
+                              Cartão de Crédito
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-blue-800">
+                              {total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Múltiplos métodos */}
+                    {metodosPagamento.map((metodo, index) => {
+                      const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
+                      const valorMetodo = parseFloat(metodo.valor) || 0;
+                      const valorComJuros = metodo.taxaParcela && metodo.taxaParcela > 0 
+                        ? valorMetodo * (1 + metodo.taxaParcela / 100)
+                        : valorMetodo;
+
+                      // Para cartão de crédito, mostrar apenas nome e valor original (sem juros)
+                      if (metodo.metodo === "cartao_credito") {
+                        return (
+                          <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center space-x-2">
+                                <CreditCard className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-800">
+                                  Cartão de Crédito
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-blue-800">
+                                  {valorMetodo.toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Para outros métodos, mostrar com detalhes
+                      return (
+                        <div key={index} className="bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center space-x-2">
+                              <CreditCard className="h-4 w-4 text-slate-600" />
+                              <span className="text-sm font-medium text-slate-700">
+                                {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}
+                              </span>
+                              {metodo.parcelas && metodo.parcelas > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {metodo.parcelas}x
+                                </Badge>
+                              )}
+                              {metodo.taxaParcela && metodo.taxaParcela > 0 && (
+                                <Badge variant="outline" className="text-xs text-orange-600">
+                                  +{metodo.taxaParcela}%
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-slate-800">
+                                {valorComJuros.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </div>
+                              {metodo.parcelas && metodo.parcelas > 1 && (
+                                <div className="text-xs text-slate-500">
+                                  {metodo.parcelas}x de {(valorComJuros / metodo.parcelas).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Dinheiro */}
+                    {metodoPagamentoUnico === "dinheiro" && (
+                      <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            <Banknote className="h-4 w-4 text-yellow-600" />
+                            <span className="text-sm font-medium text-yellow-800">
+                              Dinheiro
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-yellow-800">
+                              {total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </div>
+                            {parseFloat(valorDinheiro) > 0 && (
+                              <div className="text-xs text-yellow-600">
+                                Recebido: {parseFloat(valorDinheiro).toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PIX */}
+                    {metodoPagamentoUnico === "pix" && (
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            <Zap className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">
+                              PIX
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-green-800">
+                              {total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Pagamento a prazo */}
+              {usarPagamentoPrazo && clienteSelecionado && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-slate-700 mb-3 flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Pagamento a Prazo
+                  </h4>
+                  <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Valor Original:</span>
+                        <span className="font-medium">
+                          {(metodosPagamento.length > 0 ? handleCalcularValorRestantePrazo() : total).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                          })}
+                        </span>
+                      </div>
+                      {parseFloat(pagamentoPrazo.juros) > 0 && (
+                        <div className="flex justify-between text-orange-600">
+                          <span>Juros ({pagamentoPrazo.juros}%):</span>
+                          <span className="font-medium">
+                            +{((metodosPagamento.length > 0 ? handleCalcularValorRestantePrazo() : total) * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-purple-600 border-t border-purple-200 pt-2">
+                        <span>Total a Prazo:</span>
+                        <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL"
+                        })}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Vencimento:</span>
+                        <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Total final */}
+              <div className="border-t-2 border-slate-300 pt-4">
+                <div className="flex justify-between items-center text-xl font-bold">
+                  <span className="text-slate-800">TOTAL FINAL:</span>
+                  <span className="text-green-600">
+                    {calcularTotalFinal().toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL"
                     })}
@@ -890,10 +1172,16 @@ export default function Pagamentos() {
                               </span>
                               <span className="text-blue-600">de</span>
                               <span className="font-bold text-green-600">
-                                {(total / parcelaConfirmada.quantidade).toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
+                                {parcelaConfirmada.taxa > 0 
+                                  ? ((total * (1 + parcelaConfirmada.taxa / 100)) / parcelaConfirmada.quantidade).toLocaleString("pt-BR", {
+                                      style: "currency",
+                                      currency: "BRL"
+                                    })
+                                  : (total / parcelaConfirmada.quantidade).toLocaleString("pt-BR", {
+                                      style: "currency",
+                                      currency: "BRL"
+                                    })
+                                }
                               </span>
                             </div>
                             {parcelaConfirmada.taxa > 0 && (
@@ -1113,6 +1401,11 @@ export default function Pagamentos() {
                       <label className="block text-sm font-medium mb-2 text-slate-700">
                         Método
                       </label>
+                      {parseFloat(metodo.valor) <= 0 && (
+                        <p className="text-xs text-amber-600 mb-2">
+                          💡 Adicione um valor primeiro para selecionar cartão de crédito
+                        </p>
+                      )}
                       <select
                         value={metodo.metodo}
                         onChange={(e) => {
@@ -1128,6 +1421,18 @@ export default function Pagamentos() {
                               return;
                             }
                             
+                            // Verificar se o valor já foi preenchido
+                            const valorAtual = parseFloat(metodo.valor) || 0;
+                            if (valorAtual <= 0) {
+                              toast({
+                                title: "Valor necessário",
+                                description: "Por favor, adicione um valor antes de selecionar cartão de crédito.",
+                                variant: "destructive",
+                              });
+                              // Não alterar o método se não há valor
+                              return;
+                            }
+                            
                             // Para múltiplos métodos, também abrir modal de parcelas
                             const metodoCredito = metodosDisponiveis.find(m => m.tipo === "cartao_credito");
                             if (metodoCredito && metodoCredito.parcelas && metodoCredito.parcelas.length > 0) {
@@ -1137,8 +1442,8 @@ export default function Pagamentos() {
                               setMostrarModalParcelas(true);
                               // Armazenar o índice para atualizar depois
                               setMetodoSelecionadoParaParcelas(`cartao_credito_${index}`);
-                              // Definir valor para cálculo das parcelas (será atualizado quando o usuário inserir o valor)
-                              setValorParcelaModal(0);
+                              // Usar o valor já preenchido
+                              setValorParcelaModal(valorAtual);
                               return;
                             }
                           }
@@ -1156,11 +1461,22 @@ export default function Pagamentos() {
                         <option value="">
                           {carregandoMetodos ? "Carregando..." : "Selecione"}
                         </option>
-                        {metodosDisponiveis.map((metodoDisponivel) => (
-                          <option key={metodoDisponivel.id} value={metodoDisponivel.tipo}>
-                            {metodoDisponivel.nome}
-                          </option>
-                        ))}
+                        {metodosDisponiveis.map((metodoDisponivel) => {
+                          const valorAtual = parseFloat(metodo.valor) || 0;
+                          const isCartaoCredito = metodoDisponivel.tipo === "cartao_credito";
+                          const isDisabled = isCartaoCredito && valorAtual <= 0;
+                          
+                          return (
+                            <option 
+                              key={metodoDisponivel.id} 
+                              value={metodoDisponivel.tipo}
+                              disabled={isDisabled}
+                            >
+                              {metodoDisponivel.nome}
+                              {isDisabled ? " (adicione um valor primeiro)" : ""}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     
@@ -1238,6 +1554,7 @@ export default function Pagamentos() {
                       const valorMetodo = parseFloat(metodo.valor) || 0;
                       
                       // Calcular valor com juros se houver parcelas com taxa
+                      // A taxa é aplicada sobre o valor total da transação, não sobre cada parcela
                       const valorComJuros = metodo.taxaParcela && metodo.taxaParcela > 0 
                         ? valorMetodo * (1 + metodo.taxaParcela / 100)
                         : valorMetodo;
@@ -1520,8 +1837,9 @@ export default function Pagamentos() {
                   </div>
                 ) : (
                   parcelasDisponiveis.map((parcela) => {
-                    const valorParcela = valorParcelaModal / parcela.quantidade;
-                    const valorTotal = parcela.taxa > 0 ? valorParcelaModal * (1 + parcela.taxa / 100) : valorParcelaModal;
+                    // Calcular valor total com taxa aplicada sobre o valor total da transação
+                    const valorTotalComTaxa = parcela.taxa > 0 ? valorParcelaModal * (1 + parcela.taxa / 100) : valorParcelaModal;
+                    const valorParcela = valorTotalComTaxa / parcela.quantidade;
                     const valorJuros = parcela.taxa > 0 ? (valorParcelaModal * parcela.taxa) / 100 : 0;
                     
                     return (
@@ -1586,7 +1904,7 @@ export default function Pagamentos() {
                           
                           <div className="text-right">
                             <div className="font-bold text-xl text-slate-800">
-                              {valorTotal.toLocaleString("pt-BR", {
+                              {valorTotalComTaxa.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}

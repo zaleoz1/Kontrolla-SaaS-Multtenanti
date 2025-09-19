@@ -2,6 +2,25 @@ import { useState } from 'react';
 import { useApi } from './useApi';
 import { MetodoPagamento, PagamentoPrazo, ItemVenda } from './useVendas';
 
+// Função auxiliar para calcular parcelas usando fórmula Price (juros compostos)
+function calcularParcelas(valor: number, taxa: number, qtdParcelas: number) {
+  if (taxa === 0) {
+    return {
+      valorParcela: valor / qtdParcelas,
+      totalFinal: valor
+    };
+  }
+
+  const i = taxa / 100;
+  const parcela = valor * (i / (1 - Math.pow(1 + i, -qtdParcelas)));
+  const totalFinal = parcela * qtdParcelas;
+
+  return {
+    valorParcela: parcela,
+    totalFinal
+  };
+}
+
 export interface DadosPagamento {
   carrinho: any[];
   clienteSelecionado: any;
@@ -77,7 +96,19 @@ export const usePagamentos = () => {
     
     if (usarPagamentoPrazo) {
       if (metodosPagamento.length > 0) {
-        const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
+        // Calcular total pago considerando as taxas de parcelamento usando fórmula Price
+        const totalPago = metodosPagamento.reduce((sum, m) => {
+          const valorBase = parseFloat(m.valor) || 0;
+          let valorComTaxa = valorBase;
+          
+          if (m.taxaParcela && m.taxaParcela > 0 && m.parcelas && m.parcelas > 1) {
+            const { totalFinal } = calcularParcelas(valorBase, m.taxaParcela, m.parcelas);
+            valorComTaxa = totalFinal;
+          }
+          
+          return sum + valorComTaxa;
+        }, 0);
+        
         const valorRestante = total - totalPago;
         if (valorRestante > 0) {
           if (pagamentoPrazo.valorComJuros < valorRestante) {
@@ -93,7 +124,19 @@ export const usePagamentos = () => {
     }
     
     if (metodosPagamento.length > 0) {
-      const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
+      // Calcular total pago considerando as taxas de parcelamento usando fórmula Price
+      const totalPago = metodosPagamento.reduce((sum, m) => {
+        const valorBase = parseFloat(m.valor) || 0;
+        let valorComTaxa = valorBase;
+        
+        if (m.taxaParcela && m.taxaParcela > 0 && m.parcelas && m.parcelas > 1) {
+          const { totalFinal } = calcularParcelas(valorBase, m.taxaParcela, m.parcelas);
+          valorComTaxa = totalFinal;
+        }
+        
+        return sum + valorComTaxa;
+      }, 0);
+      
       if (totalPago < total) {
         return `Falta R$ ${(total - totalPago).toFixed(2)} para completar o pagamento`;
       }
@@ -120,6 +163,9 @@ export const usePagamentos = () => {
   ): DadosVendaCompleta => {
     const { carrinho, clienteSelecionado, subtotal, desconto, total } = dadosPagamento;
     
+    // O total já vem calculado corretamente do frontend (TOTAL FINAL)
+    // Não precisamos recalcular aqui
+    
     // Determinar os métodos de pagamento finais
     let metodosFinais = metodosPagamento;
     
@@ -143,25 +189,35 @@ export const usePagamentos = () => {
       // Processar métodos múltiplos para calcular troco se houver dinheiro
       const valorAlvo = usarPagamentoPrazo ? pagamentoPrazo.valorComJuros : total;
       metodosFinais = metodosPagamento.map(metodo => {
+        // Aplicar taxa de parcelamento usando fórmula Price se houver
+        let valorComTaxa = parseFloat(metodo.valor);
+        if (metodo.taxaParcela && metodo.taxaParcela > 0 && metodo.parcelas && metodo.parcelas > 1) {
+          const { totalFinal } = calcularParcelas(
+            parseFloat(metodo.valor),
+            metodo.taxaParcela,
+            metodo.parcelas
+          );
+          valorComTaxa = totalFinal;
+        }
+        
         if (metodo.metodo === "dinheiro") {
           return {
             ...metodo,
-            troco: Math.max(0, parseFloat(metodo.valor) - (valorAlvo - metodosPagamento.reduce((sum, m) => 
+            valor: valorComTaxa.toString(),
+            troco: Math.max(0, valorComTaxa - (valorAlvo - metodosPagamento.reduce((sum, m) => 
               m.metodo !== "dinheiro" ? sum + parseFloat(m.valor) : sum, 0)))
           };
         }
-        return metodo;
+        return {
+          ...metodo,
+          valor: valorComTaxa.toString()
+        };
       });
     }
     
-    // Calcular o total final da venda
-    // O valor total da venda deve ser sempre o valor real dos produtos (sem troco)
-    let totalFinal = total;
-    if (usarPagamentoPrazo && metodosPagamento.length === 0) {
-      totalFinal = pagamentoPrazo.valorComJuros;
-    }
-    // Para pagamentos com troco, o total da venda permanece o valor dos produtos
-    // O troco é calculado e armazenado separadamente nos métodos de pagamento
+    // O total já vem calculado corretamente do frontend (TOTAL FINAL)
+    // Usar o total recebido diretamente
+    const totalFinal = total;
     
     // Preparar itens da venda
     const itensVenda: ItemVenda[] = carrinho.map(item => ({
