@@ -182,6 +182,16 @@ export default function Pagamentos() {
       return pagamentoPrazo.valorComJuros;
     }
     
+    // O TOTAL sempre deve mostrar o valor da venda, independente dos métodos de pagamento
+    return total;
+  };
+
+  // Função para calcular o total pago pelos métodos de pagamento
+  const calcularTotalPago = () => {
+    if (usarPagamentoPrazo && clienteSelecionado) {
+      return 0; // Pagamento a prazo não conta como pago
+    }
+    
     if (metodosPagamento.length > 0) {
       return metodosPagamento.reduce((sum, m) => {
         const valorMetodo = parseFloat(m.valor) || 0;
@@ -201,6 +211,10 @@ export default function Pagamentos() {
       }, 0);
     }
     
+    if (metodoPagamentoUnico === "dinheiro") {
+      return parseFloat(valorDinheiro) || 0;
+    }
+    
     if (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada) {
       return total; // Para cartão de crédito, usar valor original (sem juros)
     }
@@ -210,7 +224,27 @@ export default function Pagamentos() {
       return total;
     }
     
-    return total;
+    if (metodoPagamentoUnico === "pix" || metodoPagamentoUnico === "transferencia") {
+      return total;
+    }
+    
+    return 0;
+  };
+
+  // Função para calcular valor restante ou troco
+  const calcularStatusPagamento = () => {
+    const totalVenda = usarPagamentoPrazo && clienteSelecionado ? pagamentoPrazo.valorComJuros : total;
+    const totalPago = calcularTotalPago();
+    const diferenca = totalPago - totalVenda;
+    
+    return {
+      totalVenda,
+      totalPago,
+      diferenca,
+      faltaPagar: diferenca < 0 ? Math.abs(diferenca) : 0,
+      troco: diferenca > 0 ? diferenca : 0,
+      pagoCompleto: diferenca >= 0
+    };
   };
 
   // Função para calcular valor com juros e data de vencimento
@@ -250,12 +284,6 @@ export default function Pagamentos() {
         const valorComTaxa = total * (1 + metodoDebito.taxa / 100);
         setMetodoPagamentoUnico(metodo);
         setValorDinheiro("");
-        
-        // Mostrar toast informativo sobre a taxa
-        toast({
-          title: "Taxa aplicada",
-          description: `Taxa de ${metodoDebito.taxa}% aplicada ao cartão de débito`,
-        });
         return;
       }
     }
@@ -801,466 +829,9 @@ export default function Pagamentos() {
       </div>
 
       {/* Layout Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Coluna Esquerda - Resumo e Desconto */}
-        <div className="space-y-6">
-          {/* Resumo da Venda */}
-          <Card className="bg-slate-50 border-slate-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Receipt className="h-5 w-5 mr-2 text-slate-600" />
-                Resumo da Venda
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Itens do carrinho */}
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600">Itens no carrinho:</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  {carrinho.length} produtos
-                </Badge>
-              </div>
-
-              {/* Subtotal */}
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600">Subtotal:</span>
-                <span className="font-medium">
-                  {subtotal.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                  })}
-                </span>
-              </div>
-
-              {/* Desconto */}
-              {parseFloat(desconto) > 0 && (
-                <div className="flex justify-between items-center text-green-600">
-                  <span>Desconto ({desconto}%):</span>
-                  <span className="font-medium">
-                    -{valorDesconto.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    })}
-                  </span>
-                </div>
-              )}
-
-
-              {/* Resumo dos métodos de pagamento */}
-              {(metodosPagamento.length > 0 || metodoPagamentoUnico || (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada)) && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold text-slate-700 mb-3 flex items-center">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Formas de Pagamento
-                  </h4>
-                  <div className="space-y-2">
-                    {/* Método único com parcelas */}
-                    {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <CreditCard className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800">
-                              Cartão de Crédito
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-blue-800">
-                              {total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Múltiplos métodos */}
-                    {metodosPagamento.map((metodo, index) => {
-                      const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
-                      const valorMetodo = parseFloat(metodo.valor) || 0;
-                      const valorComJuros = metodo.taxaParcela && metodo.taxaParcela > 0 
-                        ? valorMetodo * (1 + metodo.taxaParcela / 100)
-                        : valorMetodo;
-
-                      // Para cartão de crédito, mostrar apenas nome e valor original (sem juros)
-                      if (metodo.metodo === "cartao_credito") {
-                        return (
-                          <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center space-x-2">
-                                <CreditCard className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">
-                                  Cartão de Crédito
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-bold text-blue-800">
-                                  {valorMetodo.toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL"
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      // Para cartão de débito, mostrar com taxa se aplicável
-                      if (metodo.metodo === "cartao_debito") {
-                        const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
-                        const valorComTaxa = metodoDebito && metodoDebito.taxa > 0 
-                          ? valorMetodo * (1 + metodoDebito.taxa / 100)
-                          : valorMetodo;
-                        
-                        return (
-                          <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center space-x-2">
-                                <CreditCard className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">
-                                  Cartão de Débito
-                                </span>
-                                {metodoDebito && metodoDebito.taxa > 0 && (
-                                  <Badge variant="outline" className="text-xs text-orange-600">
-                                    +{metodoDebito.taxa}%
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className="font-bold text-blue-800">
-                                  {valorComTaxa.toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL"
-                                  })}
-                                </div>
-                                {metodoDebito && metodoDebito.taxa > 0 && (
-                                  <div className="text-xs text-orange-600">
-                                    +{((valorComTaxa - valorMetodo)).toLocaleString("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL"
-                                    })} taxa
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      // Para outros métodos, mostrar com detalhes
-                      return (
-                        <div key={index} className="bg-white p-3 rounded-lg border border-slate-200">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center space-x-2">
-                              <CreditCard className="h-4 w-4 text-slate-600" />
-                              <span className="text-sm font-medium text-slate-700">
-                                {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}
-                              </span>
-                              {metodo.parcelas && metodo.parcelas > 1 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {metodo.parcelas}x
-                                </Badge>
-                              )}
-                              {metodo.taxaParcela && metodo.taxaParcela > 0 && (
-                                <Badge variant="outline" className="text-xs text-orange-600">
-                                  +{metodo.taxaParcela}%
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold text-slate-800">
-                                {valorComJuros.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
-                              </div>
-                              {metodo.parcelas && metodo.parcelas > 1 && (
-                                <div className="text-xs text-slate-500">
-                                  {metodo.parcelas}x de {(valorComJuros / metodo.parcelas).toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL"
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Dinheiro */}
-                    {metodoPagamentoUnico === "dinheiro" && (
-                      <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <Banknote className="h-4 w-4 text-yellow-600" />
-                            <span className="text-sm font-medium text-yellow-800">
-                              Dinheiro
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-yellow-800">
-                              {total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}
-                            </div>
-                            {parseFloat(valorDinheiro) > 0 && (
-                              <div className="text-xs text-yellow-600">
-                                Recebido: {parseFloat(valorDinheiro).toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* PIX */}
-                    {metodoPagamentoUnico === "pix" && (
-                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <Zap className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-medium text-green-800">
-                              PIX
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-green-800">
-                              {total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Transferência Bancária */}
-                    {metodoPagamentoUnico === "transferencia" && (
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <Building2 className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800">
-                              Transferência Bancária
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-blue-800">
-                              {total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cartão de Crédito (método único sem parcelas) */}
-                    {metodoPagamentoUnico === "cartao_credito" && !parcelaConfirmada && (
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <CreditCard className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800">
-                              Cartão de Crédito
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-blue-800">
-                              {total.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL"
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cartão de Débito (método único) */}
-                    {metodoPagamentoUnico === "cartao_debito" && (
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <CreditCard className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800">
-                              Cartão de Débito
-                            </span>
-                            {(() => {
-                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
-                              return metodoDebito && metodoDebito.taxa > 0 ? (
-                                <Badge variant="outline" className="text-xs text-orange-600">
-                                  +{metodoDebito.taxa}%
-                                </Badge>
-                              ) : null;
-                            })()}
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-blue-800">
-                              {(() => {
-                                const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
-                                const valorComTaxa = metodoDebito && metodoDebito.taxa > 0 
-                                  ? total * (1 + metodoDebito.taxa / 100)
-                                  : total;
-                                return valorComTaxa.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                });
-                              })()}
-                            </div>
-                            {(() => {
-                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
-                              return metodoDebito && metodoDebito.taxa > 0 ? (
-                                <div className="text-xs text-orange-600">
-                                  +{((total * metodoDebito.taxa) / 100).toLocaleString("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL"
-                                  })} taxa
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Pagamento a prazo */}
-              {usarPagamentoPrazo && clienteSelecionado && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold text-slate-700 mb-3 flex items-center">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Pagamento a Prazo
-                  </h4>
-                  <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Valor Original:</span>
-                        <span className="font-medium">
-                          {(metodosPagamento.length > 0 ? handleCalcularValorRestantePrazo() : total).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          })}
-                        </span>
-                      </div>
-                      {parseFloat(pagamentoPrazo.juros) > 0 && (
-                        <div className="flex justify-between text-orange-600">
-                          <span>Juros ({pagamentoPrazo.juros}%):</span>
-                          <span className="font-medium">
-                            +{((metodosPagamento.length > 0 ? handleCalcularValorRestantePrazo() : total) * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL"
-                            })}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-bold text-purple-600 border-t border-purple-200 pt-2">
-                        <span>Total a Prazo:</span>
-                        <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL"
-                        })}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>Vencimento:</span>
-                        <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Total final */}
-              <div className="border-t-2 border-slate-300 pt-4">
-                <div className="flex justify-between items-center text-xl font-bold">
-                  <span className="text-slate-800">TOTAL FINAL:</span>
-                  <span className="text-green-600">
-                    {calcularTotalFinal().toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    })}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Desconto */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Percent className="h-5 w-5 mr-2 text-orange-600" />
-                Desconto
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-3">
-                <Input
-                  type="text"
-                  placeholder="0"
-                  value={desconto}
-                  onChange={(e) => setDesconto(e.target.value)}
-                  className="text-lg text-center"
-                />
-                <span className="text-slate-600 font-medium">%</span>
-                {parseFloat(desconto) > 0 && (
-                  <span className="text-green-600 font-bold">
-                    = {valorDesconto.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    })}
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cliente */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <User className="h-5 w-5 mr-2 text-blue-600" />
-                Cliente
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {clienteSelecionado ? (
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
-                  <p className="text-muted-foreground text-xs">{clienteSelecionado.cpf_cnpj}</p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setClienteSelecionado(null)}
-                    className="mt-2 text-red-500 hover:text-red-600 p-0 h-auto"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Remover
-                  </Button>
-                </div>
-              ) : (
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-muted-foreground text-sm">Cliente não selecionado</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Coluna Direita - Formas de Pagamento */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Coluna Esquerda - Formas de Pagamento */}
+        <div className="xl:col-span-2 space-y-6">
           {/* Método de Pagamento Único */}
           {metodosPagamento.length === 0 && (
             <Card className="border-green-200">
@@ -1491,6 +1062,79 @@ export default function Pagamentos() {
                   </div>
                 )}
 
+                {/* Informações do Cartão de Débito */}
+                {metodoPagamentoUnico === "cartao_debito" && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <CreditCard className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-blue-800 mb-1">
+                            Cartão de Débito
+                          </h4>
+                          <div className="flex items-center space-x-4 text-sm">
+                            {(() => {
+                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                              if (metodoDebito && metodoDebito.taxa > 0) {
+                                return (
+                                  <div className="flex items-center space-x-1">
+                                    <span className="text-orange-600">•</span>
+                                    <span className="text-orange-600 font-medium">
+                                      Taxa: {metodoDebito.taxa}%
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-green-600">•</span>
+                                  <span className="text-green-600 font-medium">
+                                    Sem taxa adicional
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg text-slate-800">
+                          {(() => {
+                            const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                            if (metodoDebito && metodoDebito.taxa > 0) {
+                              return (total * (1 + metodoDebito.taxa / 100)).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              });
+                            }
+                            return total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            });
+                          })()}
+                        </div>
+                        {(() => {
+                          const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                          if (metodoDebito && metodoDebito.taxa > 0) {
+                            const valorTaxa = (total * metodoDebito.taxa) / 100;
+                            return (
+                              <div className="text-xs text-orange-600">
+                                +{valorTaxa.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })} taxa
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1663,12 +1307,6 @@ export default function Pagamentos() {
                                 novosMetodos[index].metodo = metodoSelecionado;
                                 novosMetodos[index].taxaParcela = metodoDebito.taxa;
                                 setMetodosPagamento(novosMetodos);
-                                
-                                // Mostrar toast informativo sobre a taxa
-                                toast({
-                                  title: "Taxa aplicada",
-                                  description: `Taxa de ${metodoDebito.taxa}% aplicada ao cartão de débito`,
-                                });
                                 return;
                               }
                             }
@@ -2004,20 +1642,329 @@ export default function Pagamentos() {
               )}
             </CardContent>
           </Card>
+
+          {/* Campo de Desconto */}
+          <Card className="border-orange-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center">
+                <Percent className="h-4 w-4 mr-2 text-orange-600" />
+                Desconto
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium mb-1 text-slate-600">
+                    Porcentagem
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="text"
+                      value={desconto}
+                      onChange={(e) => setDesconto(e.target.value)}
+                      placeholder="0"
+                      className="text-center w-16 text-sm font-semibold h-8"
+                    />
+                    <span className="text-sm font-medium text-slate-600">%</span>
+                  </div>
+                </div>
+                
+                <div className="flex-1">
+                  <label className="block text-xs font-medium mb-1 text-slate-600">
+                    Valor
+                  </label>
+                  <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                    <span className="text-sm font-bold text-green-600">
+                      {valorDesconto.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Coluna Direita - Resumo da Venda */}
+        <div className="xl:col-span-1">
+          {/* Resumo da Venda */}
+          <Card className="w-full flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[calc(100vh-150px)] min-h-0 sticky top-6">
+            <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2 text-slate-800">
+                  <Receipt className="h-5 w-5" />
+                  <span>Resumo da Venda</span>
+                </CardTitle>
+                <Badge variant="secondary" className="bg-green-600 text-white">
+                  {carrinho.length} itens
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col p-0 bg-slate-50 min-h-0">
+              {/* Área de Cliente */}
+              <div className="p-4 border-b flex-shrink-0">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Cliente</h3>
+                </div>
+                
+                {clienteSelecionado ? (
+                  <div className="bg-muted rounded-lg p-3">
+                    <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
+                    <p className="text-muted-foreground text-xs">{clienteSelecionado.cpf_cnpj}</p>
+                  </div>
+                ) : (
+                  <div className="bg-muted rounded-lg p-3 text-center">
+                    <p className="text-muted-foreground text-sm">Cliente não selecionado</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Lista de Itens do Carrinho */}
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {carrinho.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Carrinho vazio</p>
+                    <p className="text-muted-foreground/60 text-sm">Adicione produtos para começar</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {carrinho.map((item) => (
+                      <div key={item.produto.id} className="bg-muted rounded-lg p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm line-clamp-2">
+                              {item.produto.nome}
+                            </h4>
+                            <p className="text-muted-foreground text-xs">
+                              {item.precoUnitario.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })} x {item.quantidade}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-muted-foreground text-xs">Qtd: {item.quantidade}</span>
+                          </div>
+                          <span className="text-green-600 font-bold text-sm">
+                            {item.precoTotal.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Resumo Financeiro */}
+              <div className="p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal:</span>
+                    <span>{subtotal.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL"
+                    })}</span>
+                  </div>
+                  
+                  {parseFloat(desconto) > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Desconto ({desconto}%):</span>
+                      <span>-{valorDesconto.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}</span>
+                    </div>
+                  )}
+
+                  {/* Resumo dos métodos de pagamento */}
+                  {(metodosPagamento.length > 0 || metodoPagamentoUnico || (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada)) && (
+                    <div className="pt-2 border-t border-slate-300">
+                      <div className="text-xs text-muted-foreground mb-2">Formas de Pagamento:</div>
+                      <div className="space-y-1">
+                        {/* Método único com parcelas */}
+                        {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
+                          <div className="flex justify-between text-xs">
+                            <span>Cartão de Crédito ({parcelaConfirmada.quantidade}x):</span>
+                            <span>{total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}</span>
+                          </div>
+                        )}
+
+                        {/* Múltiplos métodos */}
+                        {metodosPagamento.map((metodo, index) => {
+                          const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
+                          const valorMetodo = parseFloat(metodo.valor) || 0;
+                          const valorComJuros = metodo.taxaParcela && metodo.taxaParcela > 0 
+                            ? valorMetodo * (1 + metodo.taxaParcela / 100)
+                            : valorMetodo;
+
+                          return (
+                            <div key={index} className="flex justify-between text-xs">
+                              <span>
+                                {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}
+                                {metodo.parcelas && metodo.parcelas > 1 && ` (${metodo.parcelas}x)`}
+                              </span>
+                              <span>{valorComJuros.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Dinheiro */}
+                        {metodoPagamentoUnico === "dinheiro" && (
+                          <div className="flex justify-between text-xs">
+                            <span>Dinheiro:</span>
+                            <span>{total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}</span>
+                          </div>
+                        )}
+
+                        {/* PIX */}
+                        {metodoPagamentoUnico === "pix" && (
+                          <div className="flex justify-between text-xs">
+                            <span>PIX:</span>
+                            <span>{total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}</span>
+                          </div>
+                        )}
+
+                        {/* Transferência Bancária */}
+                        {metodoPagamentoUnico === "transferencia" && (
+                          <div className="flex justify-between text-xs">
+                            <span>Transferência:</span>
+                            <span>{total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}</span>
+                          </div>
+                        )}
+
+                        {/* Cartão de Crédito (método único sem parcelas) */}
+                        {metodoPagamentoUnico === "cartao_credito" && !parcelaConfirmada && (
+                          <div className="flex justify-between text-xs">
+                            <span>Cartão de Crédito:</span>
+                            <span>{total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}</span>
+                          </div>
+                        )}
+
+                        {/* Cartão de Débito (método único) */}
+                        {metodoPagamentoUnico === "cartao_debito" && (
+                          <div className="flex justify-between text-xs">
+                            <span>Cartão de Débito:</span>
+                            <span>{(() => {
+                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                              const valorComTaxa = metodoDebito && metodoDebito.taxa > 0 
+                                ? total * (1 + metodoDebito.taxa / 100)
+                                : total;
+                              return valorComTaxa.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              });
+                            })()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status do Pagamento - Falta Pagar ou Troco */}
+                  {(() => {
+                    const statusPagamento = calcularStatusPagamento();
+                    
+                    // Só mostrar se há métodos de pagamento configurados e não é pagamento a prazo
+                    if ((metodosPagamento.length > 0 || metodoPagamentoUnico) && !usarPagamentoPrazo) {
+                      return (
+                        <div className="pt-2 border-t border-slate-300">
+                          <div className="text-xs text-muted-foreground mb-2">Status do Pagamento:</div>
+                          
+                          {/* Falta Pagar */}
+                          {statusPagamento.faltaPagar > 0 && (
+                            <div className="flex justify-between text-xs text-red-600 font-medium bg-red-50 p-2 rounded border border-red-200">
+                              <span>Falta Pagar:</span>
+                              <span>
+                                {statusPagamento.faltaPagar.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Troco */}
+                          {statusPagamento.troco > 0 && (
+                            <div className="flex justify-between text-xs text-green-600 font-medium bg-green-50 p-2 rounded border border-green-200">
+                              <span>Troco:</span>
+                              <span>
+                                {statusPagamento.troco.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* Pagamento a prazo */}
+                  {usarPagamentoPrazo && clienteSelecionado && (
+                    <div className="pt-2 border-t border-slate-300">
+                      <div className="flex justify-between text-xs text-purple-600">
+                        <span>Total a Prazo:</span>
+                        <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL"
+                        })}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Vencimento:</span>
+                        <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>TOTAL:</span>
+                      <span className="text-green-600">
+                        {calcularTotalFinal().toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL"
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Validação do Formulário */}
-      {!formularioValido && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2 text-red-800">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {validacaoFormulario}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Venda Finalizada */}
       {vendaFinalizada && (
