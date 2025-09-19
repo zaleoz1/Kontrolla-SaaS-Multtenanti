@@ -32,9 +32,10 @@ export function Header({ onMenuClick }: PropsCabecalho) {
   const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
   const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
   const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/novo-fornecedor/');
+  const isPagamentosPage = location.pathname === '/dashboard/pagamentos';
   
   // Se estiver em páginas que usam layout próprio, não renderizar o header
-  if (isNovaVendaPage || isNovoFuncionarioPage || isConfiguracoesPage || isNovoFornecedorPage) {
+  if (isNovaVendaPage || isNovoFuncionarioPage || isConfiguracoesPage || isNovoFornecedorPage || isPagamentosPage) {
     return null;
   }
 

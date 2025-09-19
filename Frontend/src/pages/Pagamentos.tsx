@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
 import { useApi } from "@/hooks/useApi";
 import { usePixConfiguracoes } from "@/hooks/usePixConfiguracoes";
+import { useDadosBancarios } from "@/hooks/useDadosBancarios";
 
 interface ItemCarrinho {
   produto: any;
@@ -95,6 +96,7 @@ export default function Pagamentos() {
   const { metodosPagamento: metodosDisponiveis, buscarMetodosPagamento } = useMetodosPagamento();
   const { loading: carregandoMetodos } = useApi();
   const { configuracao: pixConfiguracao, loading: carregandoPix } = usePixConfiguracoes();
+  const { dadosBancarios, loading: carregandoDadosBancarios } = useDadosBancarios();
   
   // Estados do formulário
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData.clienteSelecionado);
@@ -157,6 +159,9 @@ export default function Pagamentos() {
   // Estado para modal PIX
   const [mostrarModalPix, setMostrarModalPix] = useState(false);
   
+  // Estado para modal de dados bancários
+  const [mostrarModalDadosBancarios, setMostrarModalDadosBancarios] = useState(false);
+  
   // Estados para modal de parcelas
   const [mostrarModalParcelas, setMostrarModalParcelas] = useState(false);
   const [parcelasDisponiveis, setParcelasDisponiveis] = useState<ParcelaDisponivel[]>([]);
@@ -184,6 +189,10 @@ export default function Pagamentos() {
         if (m.metodo === "cartao_credito") {
           return sum + valorMetodo;
         }
+        // Para cartão de débito, usar valor original (sem taxa) - taxa é apenas para o cliente
+        if (m.metodo === "cartao_debito") {
+          return sum + valorMetodo;
+        }
         // Para outros métodos, usar valor com juros se aplicável
         const valorComJuros = m.taxaParcela && m.taxaParcela > 0 
           ? valorMetodo * (1 + m.taxaParcela / 100)
@@ -194,6 +203,11 @@ export default function Pagamentos() {
     
     if (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada) {
       return total; // Para cartão de crédito, usar valor original (sem juros)
+    }
+    
+    // Para cartão de débito, usar valor original (sem taxa) - taxa é apenas para o cliente
+    if (metodoPagamentoUnico === "cartao_debito") {
+      return total;
     }
     
     return total;
@@ -224,6 +238,24 @@ export default function Pagamentos() {
         setMetodoSelecionadoParaParcelas("cartao_credito");
         setValorParcelaModal(total); // Para método único, usar o total
         setMostrarModalParcelas(true);
+        return;
+      }
+    }
+    
+    // Para cartão de débito, aplicar taxa automaticamente
+    if (metodo === "cartao_debito") {
+      const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+      if (metodoDebito && metodoDebito.taxa > 0) {
+        // Aplicar taxa do cartão de débito
+        const valorComTaxa = total * (1 + metodoDebito.taxa / 100);
+        setMetodoPagamentoUnico(metodo);
+        setValorDinheiro("");
+        
+        // Mostrar toast informativo sobre a taxa
+        toast({
+          title: "Taxa aplicada",
+          description: `Taxa de ${metodoDebito.taxa}% aplicada ao cartão de débito`,
+        });
         return;
       }
     }
@@ -813,21 +845,9 @@ export default function Pagamentos() {
                 </div>
               )}
 
-              {/* Total base */}
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total Base:</span>
-                  <span className="text-slate-700">
-                    {total.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    })}
-                  </span>
-                </div>
-              </div>
 
               {/* Resumo dos métodos de pagamento */}
-              {(metodosPagamento.length > 0 || (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada)) && (
+              {(metodosPagamento.length > 0 || metodoPagamentoUnico || (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada)) && (
                 <div className="border-t pt-4">
                   <h4 className="font-semibold text-slate-700 mb-3 flex items-center">
                     <CreditCard className="h-4 w-4 mr-2" />
@@ -882,6 +902,48 @@ export default function Pagamentos() {
                                     currency: "BRL"
                                   })}
                                 </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Para cartão de débito, mostrar com taxa se aplicável
+                      if (metodo.metodo === "cartao_debito") {
+                        const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                        const valorComTaxa = metodoDebito && metodoDebito.taxa > 0 
+                          ? valorMetodo * (1 + metodoDebito.taxa / 100)
+                          : valorMetodo;
+                        
+                        return (
+                          <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center space-x-2">
+                                <CreditCard className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-800">
+                                  Cartão de Débito
+                                </span>
+                                {metodoDebito && metodoDebito.taxa > 0 && (
+                                  <Badge variant="outline" className="text-xs text-orange-600">
+                                    +{metodoDebito.taxa}%
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-blue-800">
+                                  {valorComTaxa.toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })}
+                                </div>
+                                {metodoDebito && metodoDebito.taxa > 0 && (
+                                  <div className="text-xs text-orange-600">
+                                    +{((valorComTaxa - valorMetodo)).toLocaleString("pt-BR", {
+                                      style: "currency",
+                                      currency: "BRL"
+                                    })} taxa
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -976,6 +1038,97 @@ export default function Pagamentos() {
                                 currency: "BRL"
                               })}
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Transferência Bancária */}
+                    {metodoPagamentoUnico === "transferencia" && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">
+                              Transferência Bancária
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-blue-800">
+                              {total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cartão de Crédito (método único sem parcelas) */}
+                    {metodoPagamentoUnico === "cartao_credito" && !parcelaConfirmada && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">
+                              Cartão de Crédito
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-blue-800">
+                              {total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cartão de Débito (método único) */}
+                    {metodoPagamentoUnico === "cartao_debito" && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">
+                              Cartão de Débito
+                            </span>
+                            {(() => {
+                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                              return metodoDebito && metodoDebito.taxa > 0 ? (
+                                <Badge variant="outline" className="text-xs text-orange-600">
+                                  +{metodoDebito.taxa}%
+                                </Badge>
+                              ) : null;
+                            })()}
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-blue-800">
+                              {(() => {
+                                const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                                const valorComTaxa = metodoDebito && metodoDebito.taxa > 0 
+                                  ? total * (1 + metodoDebito.taxa / 100)
+                                  : total;
+                                return valorComTaxa.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                });
+                              })()}
+                            </div>
+                            {(() => {
+                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                              return metodoDebito && metodoDebito.taxa > 0 ? (
+                                <div className="text-xs text-orange-600">
+                                  +{((total * metodoDebito.taxa) / 100).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })} taxa
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -1308,9 +1461,51 @@ export default function Pagamentos() {
                   </div>
                 )}
 
+                {/* Botão Visualizar Dados Bancários */}
+                {metodoPagamentoUnico === "transferencia" && (
+                  <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-blue-800 mb-1">
+                          <Building2 className="h-4 w-4 inline mr-1" />
+                          Transferência Bancária
+                        </h4>
+                        <p className="text-sm text-blue-600">
+                          {dadosBancarios ? 'Clique para visualizar os dados da conta' : 'Configure os dados bancários nas configurações'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setMostrarModalDadosBancarios(true)}
+                        disabled={!dadosBancarios || carregandoDadosBancarios}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {carregandoDadosBancarios ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Building2 className="h-4 w-4 mr-2" />
+                        )}
+                        Visualizar Conta
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={() => {
+                    // Limpar dados de pagamento anterior
+                    setMetodoPagamentoUnico("");
+                    setValorDinheiro("");
+                    setParcelaConfirmada(null);
+                    setUsarPagamentoPrazo(false);
+                    setPagamentoPrazo({
+                      dias: "",
+                      juros: "",
+                      valorComJuros: 0,
+                      dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    });
+                    // Adicionar novo método de pagamento
                     setMetodosPagamento([{ metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                   }}
                   className="w-full border-green-300 text-green-600 hover:bg-green-50"
@@ -1349,7 +1544,16 @@ export default function Pagamentos() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
+                        // Limpar dados de múltiplos métodos
                         setMetodosPagamento([]);
+                        // Limpar dados de pagamento a prazo
+                        setUsarPagamentoPrazo(false);
+                        setPagamentoPrazo({
+                          dias: "",
+                          juros: "",
+                          valorComJuros: 0,
+                          dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                        });
                       }}
                       className="border-red-300 text-red-600 hover:bg-red-50"
                     >
@@ -1448,6 +1652,28 @@ export default function Pagamentos() {
                             }
                           }
                           
+                          // Para cartão de débito, aplicar taxa automaticamente
+                          if (metodoSelecionado === "cartao_debito") {
+                            const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                            if (metodoDebito && metodoDebito.taxa > 0) {
+                              const valorAtual = parseFloat(metodo.valor) || 0;
+                              if (valorAtual > 0) {
+                                const valorComTaxa = valorAtual * (1 + metodoDebito.taxa / 100);
+                                const novosMetodos = [...metodosPagamento];
+                                novosMetodos[index].metodo = metodoSelecionado;
+                                novosMetodos[index].taxaParcela = metodoDebito.taxa;
+                                setMetodosPagamento(novosMetodos);
+                                
+                                // Mostrar toast informativo sobre a taxa
+                                toast({
+                                  title: "Taxa aplicada",
+                                  description: `Taxa de ${metodoDebito.taxa}% aplicada ao cartão de débito`,
+                                });
+                                return;
+                              }
+                            }
+                          }
+                          
                           const novosMetodos = [...metodosPagamento];
                           novosMetodos[index].metodo = metodoSelecionado;
                           novosMetodos[index].valor = "";
@@ -1542,6 +1768,36 @@ export default function Pagamentos() {
                   </div>
                 )}
 
+                {/* Botão Dados Bancários para múltiplos métodos */}
+                {metodosPagamento.some(m => m.metodo === "transferencia") && (
+                  <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-blue-800 mb-1">
+                          <Building2 className="h-4 w-4 inline mr-1" />
+                          Dados Bancários Disponíveis
+                        </h4>
+                        <p className="text-sm text-blue-600">
+                          {dadosBancarios ? 'Clique para visualizar os dados da conta' : 'Configure os dados bancários nas configurações'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setMostrarModalDadosBancarios(true)}
+                        disabled={!dadosBancarios || carregandoDadosBancarios}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {carregandoDadosBancarios ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Building2 className="h-4 w-4 mr-2" />
+                        )}
+                        Visualizar Conta
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Resumo dos Pagamentos */}
                 <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
                   <h4 className="font-bold mb-4 text-slate-800 flex items-center">
@@ -1555,9 +1811,18 @@ export default function Pagamentos() {
                       
                       // Calcular valor com juros se houver parcelas com taxa
                       // A taxa é aplicada sobre o valor total da transação, não sobre cada parcela
-                      const valorComJuros = metodo.taxaParcela && metodo.taxaParcela > 0 
-                        ? valorMetodo * (1 + metodo.taxaParcela / 100)
-                        : valorMetodo;
+                      let valorComJuros = valorMetodo;
+                      
+                      if (metodo.metodo === "cartao_debito") {
+                        // Para cartão de débito, aplicar taxa do método
+                        const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                        if (metodoDebito && metodoDebito.taxa > 0) {
+                          valorComJuros = valorMetodo * (1 + metodoDebito.taxa / 100);
+                        }
+                      } else if (metodo.taxaParcela && metodo.taxaParcela > 0) {
+                        // Para outros métodos com taxa de parcela
+                        valorComJuros = valorMetodo * (1 + metodo.taxaParcela / 100);
+                      }
                       
                       return (
                         <div key={index} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200">
@@ -1570,9 +1835,17 @@ export default function Pagamentos() {
                                 {metodo.parcelas}x
                               </span>
                             )}
-                            {metodo.taxaParcela && metodo.taxaParcela > 0 && (
+                            {(metodo.taxaParcela && metodo.taxaParcela > 0) || (metodo.metodo === "cartao_debito" && (() => {
+                              const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                              return metodoDebito && metodoDebito.taxa > 0;
+                            })()) && (
                               <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                +{metodo.taxaParcela}%
+                                +{metodo.metodo === "cartao_debito" ? 
+                                  (() => {
+                                    const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
+                                    return metodoDebito ? metodoDebito.taxa : 0;
+                                  })() : 
+                                  metodo.taxaParcela}%
                               </span>
                             )}
                           </div>
@@ -1592,9 +1865,19 @@ export default function Pagamentos() {
                         <span className="font-bold text-xl text-green-600">
                           {metodosPagamento.reduce((sum, m) => {
                             const valorMetodo = parseFloat(m.valor) || 0;
-                            const valorComJuros = m.taxaParcela && m.taxaParcela > 0 
-                              ? valorMetodo * (1 + m.taxaParcela / 100)
-                              : valorMetodo;
+                            let valorComJuros = valorMetodo;
+                            
+                            if (m.metodo === "cartao_debito") {
+                              // Para cartão de débito, aplicar taxa do método
+                              const metodoDebito = metodosDisponiveis.find(metodo => metodo.tipo === "cartao_debito");
+                              if (metodoDebito && metodoDebito.taxa > 0) {
+                                valorComJuros = valorMetodo * (1 + metodoDebito.taxa / 100);
+                              }
+                            } else if (m.taxaParcela && m.taxaParcela > 0) {
+                              // Para outros métodos com taxa de parcela
+                              valorComJuros = valorMetodo * (1 + m.taxaParcela / 100);
+                            }
+                            
                             return sum + valorComJuros;
                           }, 0).toLocaleString("pt-BR", {
                             style: "currency",
@@ -2043,6 +2326,110 @@ export default function Pagamentos() {
                   <Button
                     variant="outline"
                     onClick={() => setMostrarModalPix(false)}
+                    className="w-full"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal Dados Bancários */}
+      {mostrarModalDadosBancarios && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="max-w-lg w-full mx-4">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center">
+                  <Building2 className="h-5 w-5 mr-2 text-blue-600" />
+                  Dados Bancários
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMostrarModalDadosBancarios(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {carregandoDadosBancarios ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Carregando dados bancários...</p>
+                </div>
+              ) : dadosBancarios ? (
+                <>
+                  {/* Banco */}
+                  <div>
+                    <h4 className="font-medium mb-2 text-slate-700">Banco</h4>
+                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-lg font-semibold text-slate-800">{dadosBancarios.banco}</p>
+                    </div>
+                  </div>
+
+                  {/* Agência e Conta */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium mb-2 text-slate-700">Agência</h4>
+                      <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                        <p className="text-lg font-semibold text-slate-800">{dadosBancarios.agencia}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2 text-slate-700">Conta</h4>
+                      <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                        <p className="text-lg font-semibold text-slate-800">
+                          {dadosBancarios.conta}-{dadosBancarios.digito}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tipo de Conta */}
+                  <div>
+                    <h4 className="font-medium mb-2 text-slate-700">Tipo de Conta</h4>
+                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-lg font-semibold text-slate-800 capitalize">
+                        {dadosBancarios.tipo_conta === 'corrente' ? 'Conta Corrente' : 'Conta Poupança'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Nome do Titular */}
+                  <div>
+                    <h4 className="font-medium mb-2 text-slate-700">Nome do Titular</h4>
+                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-lg font-semibold text-slate-800">{dadosBancarios.nome_titular}</p>
+                    </div>
+                  </div>
+
+                  {/* CPF/CNPJ */}
+                  <div>
+                    <h4 className="font-medium mb-2 text-slate-700">CPF/CNPJ</h4>
+                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-lg font-semibold text-slate-800">{dadosBancarios.cpf_cnpj}</p>
+                    </div>
+                  </div>
+
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-slate-600">
+                    Dados bancários não encontrados
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Configure os dados bancários nas configurações do sistema para usar esta funcionalidade.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setMostrarModalDadosBancarios(false)}
                     className="w-full"
                   >
                     Fechar
