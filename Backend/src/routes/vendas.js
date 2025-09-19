@@ -368,14 +368,9 @@ router.post('/', validateVenda, async (req, res) => {
     // Salvar métodos de pagamento (se houver)
     if (metodos_pagamento && metodos_pagamento.length > 0) {
       for (const metodo of metodos_pagamento) {
-        // Calcular valor original usando fórmula Price reversa
+        // O valor já vem do frontend como valor original (sem taxas da máquina)
+        // As taxas são apenas para controle da máquina, não afetam o valor da venda
         let valorOriginal = parseFloat(metodo.valor);
-        if (metodo.taxaParcela && metodo.taxaParcela > 0 && metodo.parcelas && metodo.parcelas > 1) {
-          // Fórmula Price reversa: valorOriginal = valorParcela * ((1 - (1 + i)^-n) / i)
-          const i = metodo.taxaParcela / 100;
-          const valorParcela = parseFloat(metodo.valor) / metodo.parcelas;
-          valorOriginal = valorParcela * ((1 - Math.pow(1 + i, -metodo.parcelas)) / i);
-        }
         
         await query(
           `INSERT INTO venda_pagamentos (venda_id, metodo, valor, troco, parcelas, taxa_parcela, valor_original)
