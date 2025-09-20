@@ -257,6 +257,9 @@ CREATE TABLE IF NOT EXISTS venda_pagamentos (
     metodo ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque') NOT NULL,
     valor DECIMAL(10,2) NOT NULL,
     troco DECIMAL(10,2) DEFAULT 0.00,
+    parcelas INT DEFAULT 1,
+    taxa_parcela DECIMAL(5,2) DEFAULT 0.00,
+    valor_original DECIMAL(10,2) NOT NULL,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
 );

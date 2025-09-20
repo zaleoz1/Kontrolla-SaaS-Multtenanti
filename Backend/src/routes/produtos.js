@@ -126,7 +126,7 @@ router.post('/', validateProduto, async (req, res) => {
       largura,
       altura,
       comprimento,
-      fornecedor,
+      fornecedor_id,
       marca,
       modelo,
       garantia,
@@ -181,12 +181,12 @@ router.post('/', validateProduto, async (req, res) => {
       `INSERT INTO produtos (
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
         preco_promocional, estoque, estoque_minimo, peso, largura, altura,
-        comprimento, fornecedor, marca, modelo, garantia, status, destaque, imagens
+        comprimento, fornecedor_id, marca, modelo, garantia, status, destaque, imagens
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
         preco, preco_promocional, estoque, estoque_minimo, peso, largura,
-        altura, comprimento, fornecedor, marca, modelo, garantia, status,
+        altura, comprimento, fornecedor_id, marca, modelo, garantia, status,
         destaque, JSON.stringify(imagens)
       ]
     );
@@ -230,7 +230,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       largura,
       altura,
       comprimento,
-      fornecedor,
+      fornecedor_id,
       marca,
       modelo,
       garantia,
@@ -297,12 +297,12 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       `UPDATE produtos SET 
         categoria_id = ?, nome = ?, descricao = ?, codigo_barras = ?, sku = ?,
         preco = ?, preco_promocional = ?, estoque = ?, estoque_minimo = ?,
-        peso = ?, largura = ?, altura = ?, comprimento = ?, fornecedor = ?,
+        peso = ?, largura = ?, altura = ?, comprimento = ?, fornecedor_id = ?,
         marca = ?, modelo = ?, garantia = ?, status = ?, destaque = ?, imagens = ?
       WHERE id = ? AND tenant_id = ?`,
       [
         categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
-        estoque, estoque_minimo, peso, largura, altura, comprimento, fornecedor,
+        estoque, estoque_minimo, peso, largura, altura, comprimento, fornecedor_id,
         marca, modelo, garantia, status, destaque, JSON.stringify(imagens),
         id, req.user.tenant_id
       ]

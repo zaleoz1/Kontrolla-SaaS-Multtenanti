@@ -13,7 +13,7 @@ import {
   Users,
   UserCog
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface ConfiguracoesSidebarProps {
   activeTab: string;
@@ -89,6 +89,7 @@ export function ConfiguracoesSidebar({
   onLogout 
 }: ConfiguracoesSidebarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <div className="flex h-screen w-80 flex-col bg-sidebar border-r border-sidebar-border">
@@ -116,7 +117,13 @@ export function ConfiguracoesSidebar({
             if (tab.isExternal && tab.path) {
               navigate(tab.path);
             } else {
-              onTabChange(tab.id);
+              // Se estamos em uma página externa (como funcionários), navegar para configurações com a aba específica
+              if (location.pathname !== '/dashboard/configuracoes') {
+                navigate(`/dashboard/configuracoes?aba=${tab.id}`);
+              } else {
+                // Se já estamos na página de configurações, apenas mudar a aba
+                onTabChange(tab.id);
+              }
             }
           };
           

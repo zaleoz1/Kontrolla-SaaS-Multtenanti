@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +72,7 @@ import {
 
 export default function Configuracoes() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     dadosConta, 
     dadosTenant, 
@@ -144,6 +145,16 @@ export default function Configuracoes() {
 
 
   const [abaAtiva, setAbaAtiva] = useState("conta");
+
+  // Ler parâmetro da URL para definir a aba ativa
+  useEffect(() => {
+    const abaParam = searchParams.get('aba');
+    if (abaParam) {
+      setAbaAtiva(abaParam);
+      // Limpar o parâmetro da URL após definir a aba
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Estados para administração
   const [usuarios, setUsuarios] = useState([]);
