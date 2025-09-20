@@ -9,8 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
-import { useFornecedores } from "@/hooks/useFornecedores";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useToast } from "@/hooks/use-toast";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { 
@@ -55,7 +53,6 @@ import {
   Search,
   Filter,
   MoreHorizontal,
-  Building2,
   MapPin as MapPinIcon,
   Phone as PhoneIcon,
   Mail as MailIcon,
@@ -65,8 +62,6 @@ import {
   ArrowLeft,
   LogOut,
   Users,
-  DollarSign,
-  Briefcase,
   XCircle,
   AlertCircle,
   Clock,
@@ -108,16 +103,6 @@ export default function Configuracoes() {
     salvarDadosBancarios
   } = useConfiguracoes();
 
-  const {
-    fornecedores,
-    carregando: carregandoFornecedores,
-    salvando: salvandoFornecedor,
-    carregarFornecedores,
-    criarFornecedor,
-    atualizarFornecedor,
-    excluirFornecedor,
-    buscarCep: buscarCepFornecedor
-  } = useFornecedores();
 
   const { toast } = useToast();
   const [senhaAtual, setSenhaAtual] = useState("");
@@ -157,22 +142,7 @@ export default function Configuracoes() {
     cpf_cnpj: ""
   });
 
-  // Estados para fornecedores
-  const [buscaFornecedor, setBuscaFornecedor] = useState("");
-  const [filtroStatusFornecedor, setFiltroStatusFornecedor] = useState("todos");
 
-  // Estados para funcionários
-  const [buscaFuncionario, setBuscaFuncionario] = useState("");
-  const [filtroStatusFuncionario, setFiltroStatusFuncionario] = useState("todos");
-  const [filtroCargoFuncionario, setFiltroCargoFuncionario] = useState("todos");
-  
-  // Hook para funcionários
-  const { 
-    funcionarios, 
-    carregando: carregandoFuncionarios, 
-    buscarFuncionarios, 
-    excluirFuncionario 
-  } = useFuncionarios();
   const [abaAtiva, setAbaAtiva] = useState("conta");
 
   // Estados para administração
@@ -185,9 +155,8 @@ export default function Configuracoes() {
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
-  // Carregar fornecedores e funcionários quando o componente montar
+  // Carregar dados quando o componente montar
   useEffect(() => {
-    carregarFuncionarios();
     carregarUsuarios();
   }, []);
 
@@ -254,25 +223,6 @@ export default function Configuracoes() {
     }
   }, [dadosBancarios]);
 
-  // Carregar dados quando a aba for ativada
-  useEffect(() => {
-    if (abaAtiva === "fornecedores" && !carregandoFornecedores) {
-      carregarFornecedores();
-    } else if (abaAtiva === "funcionarios" && !carregandoFuncionarios) {
-      carregarFuncionarios();
-    }
-  }, [abaAtiva]); // Removido carregarFornecedores das dependências
-
-  // Recarregar funcionários quando os filtros mudarem (com debounce para busca)
-  useEffect(() => {
-    if (abaAtiva === "funcionarios") {
-      const timeoutId = setTimeout(() => {
-        carregarFuncionarios();
-      }, buscaFuncionario ? 500 : 0); // Debounce de 500ms apenas para busca
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [buscaFuncionario, filtroStatusFuncionario, filtroCargoFuncionario]);
 
   // Função para buscar dados do CEP
   const buscarCep = async (cep: string) => {
@@ -282,30 +232,18 @@ export default function Configuracoes() {
     // Verifica se o CEP tem 8 dígitos
     if (cepLimpo.length === 8) {
       try {
-        const data = await buscarCepFornecedor(cepLimpo);
+        // Implementar busca de CEP aqui se necessário
+        // Por enquanto, apenas atualiza o CEP
+        setDadosTenantEditando(prev => prev ? {
+          ...prev,
+          cep: cep
+        } : null);
         
-        if (data) {
-          // Atualiza os dados do tenant com as informações do CEP
-          setDadosTenantEditando(prev => prev ? {
-            ...prev,
-            endereco: data.endereco || '',
-            cidade: data.cidade || '',
-            estado: data.estado || '',
-            cep: cep
-          } : null);
-          
-          toast({
-            title: "Sucesso",
-            description: "Endereço preenchido automaticamente!",
-            variant: "default"
-          });
-        } else {
-          toast({
-            title: "Aviso",
-            description: "CEP não encontrado",
-            variant: "destructive"
-          });
-        }
+        toast({
+          title: "Aviso",
+          description: "Funcionalidade de busca de CEP será implementada",
+          variant: "default"
+        });
       } catch (error) {
         toast({
           title: "Erro",
@@ -744,99 +682,7 @@ export default function Configuracoes() {
     }
   };
 
-  // Funções para gerenciar fornecedores (usando hook useFornecedores)
 
-  const handleNovoFornecedor = () => {
-    navigate('/dashboard/novo-fornecedor');
-  };
-
-  const handleEditarFornecedor = (fornecedor: any) => {
-    navigate(`/dashboard/novo-fornecedor/${fornecedor.id}`);
-  };
-
-
-  const handleExcluirFornecedor = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este fornecedor?")) return;
-
-    try {
-      await excluirFornecedor(id);
-      // O hook já atualiza a lista automaticamente
-    } catch (error) {
-      // O hook já exibe o toast de erro
-    }
-  };
-
-  const fornecedoresFiltrados = fornecedores.filter(fornecedor => {
-    const matchBusca = fornecedor.nome.toLowerCase().includes(buscaFornecedor.toLowerCase()) ||
-                      fornecedor.razao_social?.toLowerCase().includes(buscaFornecedor.toLowerCase()) ||
-                      fornecedor.cnpj?.includes(buscaFornecedor);
-    
-    const matchStatus = filtroStatusFornecedor === "todos" || fornecedor.status === filtroStatusFornecedor;
-    
-    return matchBusca && matchStatus;
-  });
-
-  // Funções para gerenciar funcionários
-  const carregarFuncionarios = async () => {
-    try {
-      const params: any = {
-        page: 1,
-        limit: 100
-      };
-
-      if (buscaFuncionario) {
-        params.q = buscaFuncionario;
-      }
-
-      if (filtroStatusFuncionario !== "todos") {
-        params.filtroStatus = filtroStatusFuncionario;
-      }
-
-      if (filtroCargoFuncionario !== "todos") {
-        params.filtroCargo = filtroCargoFuncionario;
-      }
-
-      await buscarFuncionarios(params);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar funcionários",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleNovoFuncionario = () => {
-    navigate('/dashboard/novo-funcionario');
-  };
-
-  const handleEditarFuncionario = (funcionario: any) => {
-    navigate(`/dashboard/novo-funcionario/${funcionario.id}`);
-  };
-
-
-  const handleExcluirFuncionario = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este funcionário?")) return;
-
-    try {
-      await excluirFuncionario(id);
-      
-      toast({
-        title: "Sucesso",
-        description: "Funcionário excluído com sucesso!",
-        variant: "default"
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir funcionário",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Filtros são aplicados na API, então usamos os dados diretamente
-  const funcionariosFiltrados = funcionarios;
 
   // Funções para gerenciar usuários e sistema de roles
   const carregarUsuarios = async () => {
@@ -1627,173 +1473,6 @@ export default function Configuracoes() {
           </div>
         )}
 
-        {/* Fornecedores */}
-        {abaAtiva === "fornecedores" && (
-          <div className="space-y-4">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div>
-              <h2 className="text-2xl font-bold">Fornecedores</h2>
-              <p className="text-muted-foreground">
-                Gerencie seus fornecedores e parceiros comerciais
-              </p>
-            </div>
-            <Button onClick={handleNovoFornecedor} className="bg-gradient-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Fornecedor
-            </Button>
-          </div>
-
-          {/* Filtros e Busca */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-4">
-              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Buscar fornecedores..."
-                      value={buscaFornecedor}
-                      onChange={(e) => setBuscaFornecedor(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select value={filtroStatusFornecedor} onValueChange={setFiltroStatusFornecedor}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      <SelectItem value="ativo">Ativos</SelectItem>
-                      <SelectItem value="inativo">Inativos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Lista de Fornecedores */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-0">
-              {carregandoFornecedores ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-sm text-muted-foreground">Carregando fornecedores...</p>
-                  </div>
-                </div>
-              ) : fornecedoresFiltrados.length === 0 ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nenhum fornecedor encontrado</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-2"
-                      onClick={handleNovoFornecedor}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Primeiro Fornecedor
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {fornecedoresFiltrados.map((fornecedor) => (
-                    <div key={fornecedor.id} className="p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                              <Building2 className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-lg">{fornecedor.nome}</h3>
-                              {fornecedor.razao_social && (
-                                <p className="text-sm text-muted-foreground">{fornecedor.razao_social}</p>
-                              )}
-                            </div>
-                            <Badge variant={fornecedor.status === "ativo" ? "default" : "secondary"}>
-                              {fornecedor.status === "ativo" ? "Ativo" : "Inativo"}
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
-                            {fornecedor.cnpj && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">CNPJ:</span>
-                                <span>{fornecedor.cnpj}</span>
-                              </div>
-                            )}
-                            {fornecedor.email && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <MailIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Email:</span>
-                                <span>{fornecedor.email}</span>
-                              </div>
-                            )}
-                            {fornecedor.telefone && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Telefone:</span>
-                                <span>{fornecedor.telefone}</span>
-                              </div>
-                            )}
-                            {fornecedor.cidade && fornecedor.estado && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Local:</span>
-                                <span>{fornecedor.cidade}, {fornecedor.estado}</span>
-                              </div>
-                            )}
-                            {fornecedor.contato && (
-                              <div className="flex items-center space-x-2 text-sm">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Contato:</span>
-                                <span>{fornecedor.contato}</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {fornecedor.observacoes && (
-                            <div className="mt-3">
-                              <p className="text-sm text-muted-foreground">
-                                <strong>Observações:</strong> {fornecedor.observacoes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditarFornecedor(fornecedor)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleExcluirFornecedor(fornecedor.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          </div>
-        )}
 
         {/* Administração */}
         {abaAtiva === "administracao" && (
@@ -2028,182 +1707,6 @@ export default function Configuracoes() {
           </div>
         )}
 
-        {/* Funcionários */}
-        {abaAtiva === "funcionarios" && (
-          <div className="space-y-4">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div>
-              <h2 className="text-2xl font-bold">Funcionários</h2>
-              <p className="text-muted-foreground">
-                Gerencie os dados dos funcionários, salários e informações de pagamento
-              </p>
-            </div>
-            <Button onClick={handleNovoFuncionario} className="bg-gradient-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Funcionário
-            </Button>
-          </div>
-
-          {/* Filtros e Busca */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-4">
-              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Buscar funcionários..."
-                      value={buscaFuncionario}
-                      onChange={(e) => setBuscaFuncionario(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select value={filtroStatusFuncionario} onValueChange={setFiltroStatusFuncionario}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      <SelectItem value="ativo">Ativos</SelectItem>
-                      <SelectItem value="inativo">Inativos</SelectItem>
-                      <SelectItem value="afastado">Afastados</SelectItem>
-                      <SelectItem value="demitido">Demitidos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={filtroCargoFuncionario} onValueChange={setFiltroCargoFuncionario}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos os Cargos</SelectItem>
-                      <SelectItem value="Vendedor">Vendedor</SelectItem>
-                      <SelectItem value="Gerente">Gerente</SelectItem>
-                      <SelectItem value="Assistente">Assistente</SelectItem>
-                      <SelectItem value="Diretor">Diretor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Lista de Funcionários */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-0">
-              {carregandoFuncionarios ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-sm text-muted-foreground">Carregando funcionários...</p>
-                  </div>
-                </div>
-              ) : funcionariosFiltrados.length === 0 ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nenhum funcionário encontrado</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-2"
-                      onClick={handleNovoFuncionario}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Primeiro Funcionário
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {funcionariosFiltrados.map((funcionario) => (
-                    <div key={funcionario.id} className="p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                              <Users className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-lg">{funcionario.nome} {funcionario.sobrenome}</h3>
-                              <p className="text-sm text-muted-foreground">{funcionario.cargo} - {funcionario.departamento}</p>
-                            </div>
-                            <Badge variant={funcionario.status === "ativo" ? "default" : "secondary"}>
-                              {funcionario.status === "ativo" ? "Ativo" : 
-                               funcionario.status === "inativo" ? "Inativo" :
-                               funcionario.status === "afastado" ? "Afastado" : "Demitido"}
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
-                            <div className="flex items-center space-x-2 text-sm">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">CPF:</span>
-                              <span>{funcionario.cpf}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm">
-                              <MailIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Email:</span>
-                              <span>{funcionario.email}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm">
-                              <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Telefone:</span>
-                              <span>{funcionario.telefone}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm">
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Salário:</span>
-                              <span>R$ {funcionario.salario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Admissão:</span>
-                              <span>{new Date(funcionario.data_admissao).toLocaleDateString("pt-BR")}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Briefcase className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Tipo:</span>
-                              <span className="capitalize">{funcionario.tipo_salario}</span>
-                            </div>
-                          </div>
-                          
-                          {funcionario.observacoes && (
-                            <div className="mt-3">
-                              <p className="text-sm text-muted-foreground">
-                                <strong>Observações:</strong> {funcionario.observacoes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditarFuncionario(funcionario)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleExcluirFuncionario(funcionario.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          </div>
-        )}
 
         {/* Pagamentos e Assinatura */}
         {abaAtiva === "pagamentos" && (

@@ -12,9 +12,11 @@ export function AppLayout() {
   
   // Verificar se estamos em páginas que usam ConfiguracoesSidebar
   const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
+  const isFornecedoresPage = location.pathname === '/dashboard/fornecedores';
+  const isFuncionariosPage = location.pathname === '/dashboard/funcionarios';
   const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/editar-fornecedor/');
   const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
-  const isConfiguracoesLayout = isConfiguracoesPage || isNovoFornecedorPage || isNovoFuncionarioPage;
+  const isConfiguracoesLayout = isConfiguracoesPage || isFornecedoresPage || isFuncionariosPage || isNovoFornecedorPage || isNovoFuncionarioPage;
 
   // Fecha o sidebar quando a tela é redimensionada para desktop
   useEffect(() => {

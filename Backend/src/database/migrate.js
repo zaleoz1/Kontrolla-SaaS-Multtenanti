@@ -25,6 +25,24 @@ async function runMigrations() {
     console.log('📝 Executando schema do banco de dados...');
     await query(schema);
 
+    // Verificar se precisa executar migração adicional para funcionários
+    try {
+      console.log('🔍 Verificando se precisa executar migração de funcionários...');
+      const [columns] = await query("SHOW COLUMNS FROM contas_pagar LIKE 'funcionario_id'");
+      
+      if (columns.length === 0) {
+        console.log('📝 Executando migração adicional para funcionários...');
+        const migrationPath = path.join(__dirname, 'migration_funcionarios_contas_pagar.sql');
+        const migration = fs.readFileSync(migrationPath, 'utf8');
+        await query(migration);
+        console.log('✅ Migração de funcionários concluída!');
+      } else {
+        console.log('✅ Migração de funcionários já aplicada!');
+      }
+    } catch (migrationError) {
+      console.log('⚠️ Erro na migração de funcionários (pode ser normal se já aplicada):', migrationError.message);
+    }
+
     console.log('✅ Migração concluída com sucesso!');
     console.log('📊 Banco de dados criado e configurado');
     

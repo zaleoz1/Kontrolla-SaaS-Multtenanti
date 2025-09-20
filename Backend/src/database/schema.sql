@@ -262,6 +262,7 @@ CREATE TABLE IF NOT EXISTS venda_pagamentos (
 );
 
 -- Tabela de pagamentos a prazo
+
 CREATE TABLE IF NOT EXISTS venda_pagamentos_prazo (
     id INT PRIMARY KEY AUTO_INCREMENT,
     venda_id INT NOT NULL,
@@ -299,6 +300,7 @@ CREATE TABLE IF NOT EXISTS transacoes (
     FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
 );
+
 
 -- Tabela de contas a receber
 CREATE TABLE IF NOT EXISTS contas_receber (

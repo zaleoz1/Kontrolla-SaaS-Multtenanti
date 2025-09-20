@@ -21,6 +21,8 @@ import Configuracoes from "./pages/Configuracoes";
 import NovoProduto from "./pages/NovoProduto";
 import NovoCliente from "./pages/NovoCliente";
 import NovaTransacao from "./pages/NovaTransacao";
+import Fornecedores from "./pages/Fornecedores";
+import Funcionarios from "./pages/Funcionarios";
 import NovoFornecedor from "./pages/NovoFornecedor";
 import NovoFuncionario from "./pages/NovoFuncionario";
 
@@ -66,9 +68,11 @@ function AppContent() {
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="nova-transacao" element={<NovaTransacao />} />
             <Route path="nfe" element={<NFe />} />
-            <Route path="configuracoes" element={<Configuracoes />} />
-            <Route path="novo-fornecedor" element={<NovoFornecedor />} />
-            <Route path="novo-fornecedor/:id" element={<NovoFornecedor />} />
+          <Route path="configuracoes" element={<Configuracoes />} />
+          <Route path="fornecedores" element={<Fornecedores />} />
+          <Route path="funcionarios" element={<Funcionarios />} />
+          <Route path="novo-fornecedor" element={<NovoFornecedor />} />
+          <Route path="novo-fornecedor/:id" element={<NovoFornecedor />} />
             <Route path="novo-funcionario" element={<NovoFuncionario />} />
             <Route path="novo-funcionario/:id" element={<NovoFuncionario />} />
           </Route>
