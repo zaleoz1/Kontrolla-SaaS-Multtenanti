@@ -38,7 +38,7 @@ interface Produto {
   largura: number | null;
   altura: number | null;
   comprimento: number | null;
-  fornecedor: string;
+  fornecedor_id?: number;
   marca: string;
   modelo: string;
   garantia: string;
@@ -53,11 +53,22 @@ interface Categoria {
   descricao: string;
 }
 
+interface Fornecedor {
+  id: number;
+  nome: string;
+  razao_social?: string;
+  cnpj?: string;
+  email?: string;
+  telefone?: string;
+  status: string;
+}
+
 export default function NovoProduto() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const [abaAtiva, setAbaAtiva] = useState("basico");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [novaCategoria, setNovaCategoria] = useState("");
   const [mostrarInputNovaCategoria, setMostrarInputNovaCategoria] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -83,7 +94,7 @@ export default function NovoProduto() {
     largura: null,
     altura: null,
     comprimento: null,
-    fornecedor: "",
+    fornecedor_id: undefined,
     marca: "",
     modelo: "",
     garantia: "",
@@ -94,9 +105,10 @@ export default function NovoProduto() {
 
 
 
-  // Carregar categorias e produto (se editando) ao montar o componente
+  // Carregar categorias, fornecedores e produto (se editando) ao montar o componente
   useEffect(() => {
     carregarCategorias();
+    carregarFornecedores();
     if (isEditMode && id) {
       carregarProduto(parseInt(id));
     }
@@ -109,6 +121,16 @@ export default function NovoProduto() {
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
       toast.error('Erro ao carregar categorias');
+    }
+  };
+
+  const carregarFornecedores = async () => {
+    try {
+      const response = await makeRequest(API_ENDPOINTS.FORNECEDORES.LIST);
+      setFornecedores(response.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar fornecedores:', error);
+      toast.error('Erro ao carregar fornecedores');
     }
   };
 
@@ -147,7 +169,7 @@ export default function NovoProduto() {
         largura: produtoData.largura || null,
         altura: produtoData.altura || null,
         comprimento: produtoData.comprimento || null,
-        fornecedor: produtoData.fornecedor || "",
+        fornecedor_id: produtoData.fornecedor_id || undefined,
         marca: produtoData.marca || "",
         modelo: produtoData.modelo || "",
         garantia: produtoData.garantia || "",
@@ -395,7 +417,7 @@ export default function NovoProduto() {
         largura: produto.largura ? parseFloat(String(produto.largura)) : null,
         altura: produto.altura ? parseFloat(String(produto.altura)) : null,
         comprimento: produto.comprimento ? parseFloat(String(produto.comprimento)) : null,
-        fornecedor: produto.fornecedor?.trim() || null,
+        fornecedor_id: produto.fornecedor_id || null,
         marca: produto.marca?.trim() || null,
         modelo: produto.modelo?.trim() || null,
         garantia: produto.garantia?.trim() || null,
@@ -629,12 +651,23 @@ export default function NovoProduto() {
 
                     <div>
                       <label className="text-sm font-medium">Fornecedor</label>
-                      <Input
-                        placeholder="Nome do fornecedor"
-                        value={produto.fornecedor}
-                        onChange={(e) => atualizarProduto("fornecedor", e.target.value)}
-                        className="mt-1"
-                      />
+                      <select
+                        value={produto.fornecedor_id === null ? "0" : (produto.fornecedor_id || "")}
+                        onChange={(e) => {
+                          const fornecedorId = e.target.value ? parseInt(e.target.value) : undefined;
+                          // Se for "0" (Sem fornecedor), enviar null para o backend
+                          atualizarProduto("fornecedor_id", fornecedorId === 0 ? null : fornecedorId);
+                        }}
+                        className="w-full mt-1 p-2 border rounded-md bg-background"
+                      >
+                        <option value="">Selecione um fornecedor</option>
+                        <option value="0">Nenhum fornecedor</option>
+                        {fornecedores.map((fornecedor) => (
+                          <option key={fornecedor.id} value={fornecedor.id}>
+                            {fornecedor.nome} {fornecedor.razao_social && `(${fornecedor.razao_social})`}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

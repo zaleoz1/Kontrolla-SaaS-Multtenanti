@@ -380,11 +380,18 @@ export const validateProduto = [
       }
       return true;
     }),
-  body('fornecedor')
+  body('fornecedor_id')
     .optional()
-    .trim()
-    .isLength({ max: 255 })
-    .withMessage('Fornecedor deve ter no máximo 255 caracteres'),
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true; // Campo opcional
+      }
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 1) {
+        throw new Error('ID do fornecedor deve ser um número inteiro positivo');
+      }
+      return true;
+    }),
   body('marca')
     .optional()
     .trim()
