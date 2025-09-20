@@ -15,6 +15,83 @@ router.use((req, res, next) => {
   return authenticateToken(req, res, next);
 });
 
+// Rota para gerar contas de salário para funcionários existentes
+router.post('/gerar-contas-salario', async (req, res) => {
+  try {
+    if (!req.user || !req.user.tenant_id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Usuário não autenticado'
+      });
+    }
+
+    const tenantId = req.user.tenant_id;
+    const { mes, ano } = req.body;
+
+    // Se não especificado, usar o mês atual
+    const dataReferencia = mes && ano ? new Date(ano, mes - 1, 1) : new Date();
+    const proximoMes = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth() + 1, 5);
+
+    // Buscar funcionários ativos
+    const funcionarios = await query(
+      'SELECT id, nome, sobrenome, cargo, salario FROM funcionarios WHERE tenant_id = ? AND status = "ativo"',
+      [tenantId]
+    );
+
+    let contasCriadas = 0;
+    let contasExistentes = 0;
+
+    for (const funcionario of funcionarios) {
+      // Verificar se já existe conta para este funcionário no mês
+      const contaExistente = await query(
+        `SELECT id FROM contas_pagar 
+         WHERE tenant_id = ? AND funcionario_id = ? 
+         AND MONTH(data_vencimento) = ? AND YEAR(data_vencimento) = ?`,
+        [tenantId, funcionario.id, proximoMes.getMonth() + 1, proximoMes.getFullYear()]
+      );
+
+      if (contaExistente.length === 0) {
+        // Criar conta a pagar para o salário
+        await queryWithResult(
+          `INSERT INTO contas_pagar (
+            tenant_id, fornecedor_id, funcionario_id, descricao, valor, data_vencimento, 
+            status, categoria, observacoes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            tenantId,
+            null,
+            funcionario.id,
+            `Salário - ${funcionario.nome} ${funcionario.sobrenome} (${funcionario.cargo})`,
+            funcionario.salario,
+            proximoMes.toISOString().split('T')[0],
+            'pendente',
+            'Folha de Pagamento',
+            `Salário mensal do funcionário ${funcionario.nome} ${funcionario.sobrenome} - Cargo: ${funcionario.cargo}`
+          ]
+        );
+        contasCriadas++;
+      } else {
+        contasExistentes++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Contas de salário processadas: ${contasCriadas} criadas, ${contasExistentes} já existiam`,
+      contasCriadas,
+      contasExistentes,
+      totalFuncionarios: funcionarios.length
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar contas de salário:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Validação para funcionário
 const validateFuncionario = [
   (req, res, next) => {
@@ -367,13 +444,51 @@ router.post('/', validateFuncionario, async (req, res) => {
       ]
     );
 
+    const funcionarioId = result.insertId;
+
+    // Criar conta a pagar para o salário do funcionário
+    try {
+      // Calcular data de vencimento (próximo dia 5 do mês)
+      const dataAdmissao = new Date(data_admissao);
+      const proximoMes = new Date(dataAdmissao.getFullYear(), dataAdmissao.getMonth() + 1, 5);
+      
+      // Se o funcionário foi admitido no dia 5 ou depois, o primeiro pagamento é no mês seguinte
+      if (dataAdmissao.getDate() >= 5) {
+        proximoMes.setMonth(proximoMes.getMonth() + 1);
+      }
+
+      // Criar conta a pagar para o salário
+      await queryWithResult(
+        `INSERT INTO contas_pagar (
+          tenant_id, fornecedor_id, funcionario_id, descricao, valor, data_vencimento, 
+          status, categoria, observacoes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          tenantId,
+          null, // fornecedor_id será null para funcionários
+          funcionarioId, // funcionario_id para identificar o funcionário
+          `Salário - ${nome.trim()} ${sobrenome.trim()} (${cargo.trim()})`,
+          salario,
+          proximoMes.toISOString().split('T')[0], // Formato YYYY-MM-DD
+          'pendente',
+          'Folha de Pagamento',
+          `Salário mensal do funcionário ${nome.trim()} ${sobrenome.trim()} - Cargo: ${cargo.trim()}`
+        ]
+      );
+
+      console.log('✅ Conta a pagar criada para o salário do funcionário:', funcionarioId);
+    } catch (contaError) {
+      console.error('⚠️ Erro ao criar conta a pagar para o funcionário:', contaError);
+      // Não falhar a criação do funcionário se houver erro na conta a pagar
+    }
+
     // Buscar funcionário criado
     const funcionarios = await query(
       'SELECT * FROM funcionarios WHERE id = ?',
-      [result.insertId]
+      [funcionarioId]
     );
 
-    console.log('✅ Funcionário criado com sucesso:', result.insertId);
+    console.log('✅ Funcionário criado com sucesso:', funcionarioId);
 
     res.status(201).json({
       success: true,

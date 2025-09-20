@@ -500,11 +500,11 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
       paramsTransacoes.push(data_fim);
     }
 
-    // Buscar contas a pagar tradicionais
+    // Buscar contas a pagar tradicionais (fornecedores e funcionários)
     const contasPagar = await query(
       `SELECT 
         cp.id,
-        cp.fornecedor,
+        COALESCE(f.nome, 'Fornecedor não informado') as fornecedor,
         cp.descricao,
         cp.valor,
         cp.data_vencimento,
@@ -514,8 +514,15 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
         cp.observacoes,
         cp.data_criacao,
         cp.data_atualizacao,
-        'conta_pagar' as tipo_origem
+        'conta_pagar' as tipo_origem,
+        CASE 
+          WHEN cp.funcionario_id IS NOT NULL THEN 'funcionario'
+          WHEN cp.fornecedor_id IS NOT NULL THEN 'fornecedor'
+          ELSE 'outro'
+        END as tipo_conta
        FROM contas_pagar cp 
+       LEFT JOIN funcionarios f ON cp.funcionario_id = f.id
+       LEFT JOIN fornecedores forn ON cp.fornecedor_id = forn.id
        ${whereClauseContas} 
        ORDER BY cp.data_vencimento ASC`,
       paramsContas

@@ -434,6 +434,16 @@ export default function Financeiro() {
                                 Transação
                               </Badge>
                             )}
+                            {item.tipo_conta === 'funcionario' && (
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                Funcionário
+                              </Badge>
+                            )}
+                            {item.tipo_conta === 'fornecedor' && (
+                              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700">
+                                Fornecedor
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">{item.descricao}</p>
                           <div className="flex items-center space-x-4 text-xs text-muted-foreground">

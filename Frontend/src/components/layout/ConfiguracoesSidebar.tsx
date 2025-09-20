@@ -33,13 +33,17 @@ const configuracoesTabs = [
     id: "fornecedores", 
     nome: "Fornecedores", 
     icone: Building2, 
-    descricao: "Gerenciar fornecedores" 
+    descricao: "Gerenciar fornecedores",
+    isExternal: true,
+    path: "/dashboard/fornecedores"
   },
   { 
     id: "funcionarios", 
     nome: "Funcionários", 
     icone: Users, 
-    descricao: "Gerenciar funcionários" 
+    descricao: "Gerenciar funcionários",
+    isExternal: true,
+    path: "/dashboard/funcionarios"
   },
   { 
     id: "administracao", 
@@ -108,10 +112,18 @@ export function ConfiguracoesSidebar({
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
         {configuracoesTabs.map((tab) => {
           const Icon = tab.icone;
+          const handleClick = () => {
+            if (tab.isExternal && tab.path) {
+              navigate(tab.path);
+            } else {
+              onTabChange(tab.id);
+            }
+          };
+          
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              onClick={handleClick}
               className={cn(
                 "w-full flex items-start space-x-3 p-4 text-left rounded-lg transition-all duration-200",
                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
