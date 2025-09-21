@@ -383,9 +383,16 @@ export default function Financeiro() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Contas a Pagar</CardTitle>
-                <Badge variant="secondary">
-                  {loadingContasPagar ? '...' : contasPagar.length} pendentes
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">
+                    {loadingContasPagar ? '...' : contasPagar.length} pendentes
+                  </Badge>
+                  {contasPagar.some(conta => conta.tipo_conta === 'funcionario') && (
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                      {contasPagar.filter(conta => conta.tipo_conta === 'funcionario').length} funcionários
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>

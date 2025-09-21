@@ -14,7 +14,7 @@ export function AppLayout() {
   const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
   const isFornecedoresPage = location.pathname === '/dashboard/fornecedores';
   const isFuncionariosPage = location.pathname === '/dashboard/funcionarios';
-  const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/editar-fornecedor/');
+  const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/novo-fornecedor/');
   const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
   const isConfiguracoesLayout = isConfiguracoesPage || isFornecedoresPage || isFuncionariosPage || isNovoFornecedorPage || isNovoFuncionarioPage;
 

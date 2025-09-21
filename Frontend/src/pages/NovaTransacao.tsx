@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useTransacoes, Transacao } from "@/hooks/useTransacoes";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
+import { useBuscaFornecedores } from "@/hooks/useBuscaFornecedores";
 import { 
   Save, 
   X, 
@@ -33,6 +34,7 @@ export default function NovaTransacao() {
   const { toast } = useToast();
   const { criarTransacao, loading } = useTransacoes();
   const { clientesFiltrados: clientes, carregando: loadingClientes } = useBuscaClientes();
+  const { fornecedoresFiltrados: fornecedores, carregando: loadingFornecedores } = useBuscaFornecedores();
   const [abaAtiva, setAbaAtiva] = useState("basico");
   const [transacao, setTransacao] = useState<Partial<Transacao>>({
     tipo: "entrada",
@@ -86,15 +88,7 @@ export default function NovaTransacao() {
     { label: "Investimentos", value: "investimentos" }
   ];
 
-  const fornecedores = [
-    "Fornecedor Tech Ltda",
-    "Loja de Acessórios",
-    "Energia Elétrica SP",
-    "Água e Esgoto",
-    "Internet e Telefone",
-    "Limpeza e Higiene",
-    "Outros"
-  ];
+  // Os fornecedores são carregados automaticamente pelo hook useBuscaFornecedores
 
   // Os clientes são carregados automaticamente pelo hook useBuscaClientes
 
@@ -132,14 +126,14 @@ export default function NovaTransacao() {
         status: transacao.status,
         // Campos opcionais - usar null em vez de undefined
         cliente_id: null,
-        fornecedor: null
+        fornecedor_id: null
       };
 
       // Adicionar cliente ou fornecedor baseado no tipo
       if (transacao.tipo === "entrada" && clienteSelecionado) {
         dadosTransacao.cliente_id = parseInt(clienteSelecionado);
       } else if (transacao.tipo === "saida" && fornecedorSelecionado) {
-        dadosTransacao.fornecedor = fornecedorSelecionado;
+        dadosTransacao.fornecedor_id = parseInt(fornecedorSelecionado);
       }
 
       // Converter campos vazios para null
@@ -154,9 +148,14 @@ export default function NovaTransacao() {
 
       await criarTransacao(dadosTransacao);
       
+      // Mensagem específica para transações de saída pendentes
+      const mensagem = transacao.tipo === "saida" && transacao.status === "pendente" 
+        ? "Conta a pagar criada com sucesso. A transação foi salva diretamente em contas a pagar."
+        : "Transação criada com sucesso.";
+      
       toast({
         title: "Sucesso!",
-        description: "Transação criada com sucesso.",
+        description: mensagem,
       });
       
       navigate("/dashboard/financeiro");
@@ -363,14 +362,21 @@ export default function NovaTransacao() {
                         value={fornecedorSelecionado}
                         onChange={(e) => setFornecedorSelecionado(e.target.value)}
                         className="w-full mt-1 p-2 border rounded-md bg-background"
+                        disabled={loadingFornecedores}
                       >
                         <option value="">Selecione um fornecedor</option>
                         {fornecedores.map(fornecedor => (
-                          <option key={fornecedor} value={fornecedor}>
-                            {fornecedor}
+                          <option key={fornecedor.id} value={fornecedor.id}>
+                            {fornecedor.nome}
                           </option>
                         ))}
                       </select>
+                      {loadingFornecedores && (
+                        <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Carregando fornecedores...
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -420,6 +426,12 @@ export default function NovaTransacao() {
                       <option value="concluida">Concluída</option>
                       <option value="cancelada">Cancelada</option>
                     </select>
+                    {transacao.tipo === "saida" && transacao.status === "pendente" && (
+                      <p className="text-xs text-blue-600 mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Será salva diretamente em contas a pagar
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -523,7 +535,7 @@ export default function NovaTransacao() {
                     {fornecedorSelecionado && (
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>Fornecedor:</span>
-                        <span>{fornecedorSelecionado}</span>
+                        <span>{fornecedores.find(f => f.id === parseInt(fornecedorSelecionado))?.nome || ""}</span>
                       </div>
                     )}
 
@@ -615,6 +627,7 @@ export default function NovaTransacao() {
               <p>• Use categorias específicas para melhor organização</p>
               <p>• Anexe comprovantes quando necessário</p>
               <p>• Mantenha as observações claras e objetivas</p>
+              <p>• Transações de saída pendentes são salvas diretamente em contas a pagar</p>
             </CardContent>
           </Card>
         </div>

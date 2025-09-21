@@ -163,9 +163,10 @@ export function useCrudApi<T = any>(endpoint: string) {
     });
   }, [api.makeRequest, endpoint]);
 
-  const remove = useCallback(async (id: number) => {
+  const remove = useCallback(async (id: number, data?: any) => {
     return api.makeRequest(`${endpoint}/${id}`, {
       method: 'DELETE',
+      body: data,
     });
   }, [api.makeRequest, endpoint]);
 

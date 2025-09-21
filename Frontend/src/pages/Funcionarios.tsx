@@ -118,7 +118,7 @@ export default function Funcionarios() {
     if (!confirm("Deseja gerar contas de salário para todos os funcionários ativos?")) return;
 
     try {
-      const response = await fetch('/api/funcionarios/gerar-contas-salario', {
+      const response = await fetch('http://localhost:3000/api/funcionarios/gerar-contas-salario', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

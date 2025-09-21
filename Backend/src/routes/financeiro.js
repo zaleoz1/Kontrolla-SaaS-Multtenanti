@@ -127,7 +127,7 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
       data_transacao,
       metodo_pagamento,
       conta,
-      fornecedor,
+      fornecedor_id,
       cliente_id,
       observacoes,
       anexos = [],
@@ -148,26 +148,115 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
       }
     }
 
-    const result = await queryWithResult(
-      `INSERT INTO transacoes (
-        tenant_id, tipo, categoria, descricao, valor, data_transacao,
-        metodo_pagamento, conta, fornecedor, cliente_id, observacoes, anexos, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        req.user.tenant_id, tipo, categoria, descricao, valor, data_transacao,
-        metodo_pagamento, conta, fornecedor, cliente_id, observacoes,
-        JSON.stringify(anexos), status
-      ]
-    );
+    // Verificar se fornecedor existe (se fornecido)
+    if (fornecedor_id) {
+      const fornecedores = await query(
+        'SELECT id FROM fornecedores WHERE id = ? AND tenant_id = ?',
+        [fornecedor_id, req.user.tenant_id]
+      );
 
-    // Buscar transação criada
-    const [transacao] = await query(
-      `SELECT t.*, c.nome as cliente_nome
-       FROM transacoes t 
-       LEFT JOIN clientes c ON t.cliente_id = c.id 
-       WHERE t.id = ?`,
-      [result.insertId]
-    );
+      if (fornecedores.length === 0) {
+        return res.status(400).json({
+          error: 'Fornecedor não encontrado'
+        });
+      }
+    }
+
+    let result;
+    let transacao;
+
+    // Se for uma transação de saída pendente, salvar apenas na tabela contas_pagar
+    if (tipo === 'saida' && status === 'pendente') {
+      console.log('🔄 Salvando transação de saída pendente apenas em contas_pagar...');
+      
+      // Buscar nome do fornecedor se fornecedor_id foi fornecido
+      let nomeFornecedor = 'Fornecedor não informado';
+      if (fornecedor_id) {
+        const fornecedores = await query(
+          'SELECT nome FROM fornecedores WHERE id = ? AND tenant_id = ?',
+          [fornecedor_id, req.user.tenant_id]
+        );
+        if (fornecedores.length > 0) {
+          nomeFornecedor = fornecedores[0].nome;
+        }
+      }
+
+      // Criar conta a pagar diretamente
+      result = await queryWithResult(
+        `INSERT INTO contas_pagar (
+          tenant_id, fornecedor_id, descricao, valor, data_vencimento, 
+          status, categoria, observacoes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id,
+          fornecedor_id || null,
+          descricao,
+          valor,
+          data_transacao, // Usar a data da transação como data de vencimento
+          'pendente',
+          categoria,
+          observacoes || `Conta a pagar criada a partir de transação de saída pendente`
+        ]
+      );
+
+      // Buscar conta a pagar criada para retornar
+      const [contaPagar] = await query(
+        `SELECT cp.*, f.nome as fornecedor_nome
+         FROM contas_pagar cp 
+         LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+         WHERE cp.id = ?`,
+        [result.insertId]
+      );
+
+      transacao = {
+        id: result.insertId,
+        tipo: 'saida',
+        categoria,
+        descricao,
+        valor,
+        data_transacao,
+        metodo_pagamento,
+        conta,
+        fornecedor_id,
+        cliente_id: null,
+        observacoes,
+        anexos: [],
+        status: 'pendente',
+        data_criacao: contaPagar.data_criacao,
+        data_atualizacao: contaPagar.data_atualizacao,
+        cliente_nome: null,
+        fornecedor_nome: contaPagar.fornecedor_nome,
+        // Flag para indicar que foi salva em contas_pagar
+        salva_em_contas_pagar: true
+      };
+
+      console.log('✅ Conta a pagar criada diretamente:', result.insertId);
+    } else {
+      // Para outros tipos de transação, salvar na tabela transacoes normalmente
+      result = await queryWithResult(
+        `INSERT INTO transacoes (
+          tenant_id, tipo, categoria, descricao, valor, data_transacao,
+          metodo_pagamento, conta, fornecedor_id, cliente_id, observacoes, anexos, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id, tipo, categoria, descricao, valor, data_transacao,
+          metodo_pagamento, conta, fornecedor_id, cliente_id, observacoes,
+          JSON.stringify(anexos), status
+        ]
+      );
+
+      // Buscar transação criada
+      const [transacaoCriada] = await query(
+        `SELECT t.*, c.nome as cliente_nome, f.nome as fornecedor_nome
+         FROM transacoes t 
+         LEFT JOIN clientes c ON t.cliente_id = c.id 
+         LEFT JOIN fornecedores f ON t.fornecedor_id = f.id
+         WHERE t.id = ?`,
+        [result.insertId]
+      );
+
+      transacao = transacaoCriada;
+    }
 
     res.status(201).json({
       message: 'Transação criada com sucesso',
@@ -193,20 +282,28 @@ router.put('/transacoes/:id', validateId, validateTransacao, handleValidationErr
       data_transacao,
       metodo_pagamento,
       conta,
-      fornecedor,
+      fornecedor_id,
       cliente_id,
       observacoes,
       anexos,
       status
     } = req.body;
 
-    // Verificar se transação existe
+    // Verificar se transação existe (pode estar em transacoes ou contas_pagar)
     const existingTransacoes = await query(
       'SELECT id FROM transacoes WHERE id = ? AND tenant_id = ?',
       [id, req.user.tenant_id]
     );
 
-    if (existingTransacoes.length === 0) {
+    const existingContasPagar = await query(
+      'SELECT id FROM contas_pagar WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+
+    const isInContasPagar = existingContasPagar.length > 0;
+    const isInTransacoes = existingTransacoes.length > 0;
+
+    if (!isInTransacoes && !isInContasPagar) {
       return res.status(404).json({
         error: 'Transação não encontrada'
       });
@@ -226,27 +323,94 @@ router.put('/transacoes/:id', validateId, validateTransacao, handleValidationErr
       }
     }
 
-    await query(
-      `UPDATE transacoes SET 
-        tipo = ?, categoria = ?, descricao = ?, valor = ?, data_transacao = ?,
-        metodo_pagamento = ?, conta = ?, fornecedor = ?, cliente_id = ?,
-        observacoes = ?, anexos = ?, status = ?
-      WHERE id = ? AND tenant_id = ?`,
-      [
-        tipo, categoria, descricao, valor, data_transacao, metodo_pagamento,
-        conta, fornecedor, cliente_id, observacoes, JSON.stringify(anexos),
-        status, id, req.user.tenant_id
-      ]
-    );
+    // Verificar se fornecedor existe (se fornecido)
+    if (fornecedor_id) {
+      const fornecedores = await query(
+        'SELECT id FROM fornecedores WHERE id = ? AND tenant_id = ?',
+        [fornecedor_id, req.user.tenant_id]
+      );
 
-    // Buscar transação atualizada
-    const [transacao] = await query(
-      `SELECT t.*, c.nome as cliente_nome
-       FROM transacoes t 
-       LEFT JOIN clientes c ON t.cliente_id = c.id 
-       WHERE t.id = ?`,
-      [id]
-    );
+      if (fornecedores.length === 0) {
+        return res.status(400).json({
+          error: 'Fornecedor não encontrado'
+        });
+      }
+    }
+
+    let transacao;
+
+    if (isInContasPagar) {
+      // Se a transação está em contas_pagar, atualizar lá
+      console.log('🔄 Atualizando transação em contas_pagar...');
+      
+      await query(
+        `UPDATE contas_pagar SET 
+          fornecedor_id = ?, descricao = ?, valor = ?, data_vencimento = ?,
+          status = ?, categoria = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          fornecedor_id, descricao, valor, data_transacao,
+          status === 'pendente' ? 'pendente' : status === 'concluida' ? 'pago' : 'cancelado',
+          categoria, observacoes, id, req.user.tenant_id
+        ]
+      );
+
+      // Buscar conta a pagar atualizada
+      const [contaPagar] = await query(
+        `SELECT cp.*, f.nome as fornecedor_nome
+         FROM contas_pagar cp 
+         LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+         WHERE cp.id = ?`,
+        [id]
+      );
+
+      transacao = {
+        id: contaPagar.id,
+        tipo: 'saida',
+        categoria: contaPagar.categoria,
+        descricao: contaPagar.descricao,
+        valor: contaPagar.valor,
+        data_transacao: contaPagar.data_vencimento,
+        metodo_pagamento: 'pix', // Default para contas a pagar
+        conta: 'caixa', // Default para contas a pagar
+        fornecedor_id: contaPagar.fornecedor_id,
+        cliente_id: null,
+        observacoes: contaPagar.observacoes,
+        anexos: [],
+        status: contaPagar.status === 'pago' ? 'concluida' : contaPagar.status === 'cancelado' ? 'cancelada' : 'pendente',
+        data_criacao: contaPagar.data_criacao,
+        data_atualizacao: contaPagar.data_atualizacao,
+        cliente_nome: null,
+        fornecedor_nome: contaPagar.fornecedor_nome,
+        salva_em_contas_pagar: true
+      };
+    } else {
+      // Se a transação está em transacoes, atualizar lá
+      await query(
+        `UPDATE transacoes SET 
+          tipo = ?, categoria = ?, descricao = ?, valor = ?, data_transacao = ?,
+          metodo_pagamento = ?, conta = ?, fornecedor_id = ?, cliente_id = ?,
+          observacoes = ?, anexos = ?, status = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          tipo, categoria, descricao, valor, data_transacao, metodo_pagamento,
+          conta, fornecedor_id, cliente_id, observacoes, JSON.stringify(anexos),
+          status, id, req.user.tenant_id
+        ]
+      );
+
+      // Buscar transação atualizada
+      const [transacaoAtualizada] = await query(
+        `SELECT t.*, c.nome as cliente_nome, f.nome as fornecedor_nome
+         FROM transacoes t 
+         LEFT JOIN clientes c ON t.cliente_id = c.id 
+         LEFT JOIN fornecedores f ON t.fornecedor_id = f.id
+         WHERE t.id = ?`,
+        [id]
+      );
+
+      transacao = transacaoAtualizada;
+    }
 
     res.json({
       message: 'Transação atualizada com sucesso',
@@ -504,7 +668,11 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
     const contasPagar = await query(
       `SELECT 
         cp.id,
-        COALESCE(f.nome, 'Fornecedor não informado') as fornecedor,
+        COALESCE(
+          CONCAT(f.nome, ' ', f.sobrenome), 
+          forn.nome, 
+          'Fornecedor não informado'
+        ) as fornecedor,
         cp.descricao,
         cp.valor,
         cp.data_vencimento,
@@ -519,7 +687,9 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
           WHEN cp.funcionario_id IS NOT NULL THEN 'funcionario'
           WHEN cp.fornecedor_id IS NOT NULL THEN 'fornecedor'
           ELSE 'outro'
-        END as tipo_conta
+        END as tipo_conta,
+        cp.funcionario_id,
+        cp.fornecedor_id
        FROM contas_pagar cp 
        LEFT JOIN funcionarios f ON cp.funcionario_id = f.id
        LEFT JOIN fornecedores forn ON cp.fornecedor_id = forn.id
@@ -528,11 +698,14 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
       paramsContas
     );
 
+    console.log('📊 Contas a pagar encontradas:', contasPagar.length);
+    console.log('📊 Contas de funcionários:', contasPagar.filter(cp => cp.tipo_conta === 'funcionario').length);
+
     // Buscar transações pendentes do tipo saída
     const transacoesPendentes = await query(
       `SELECT 
         t.id,
-        COALESCE(t.fornecedor, 'Fornecedor não informado') as fornecedor,
+        COALESCE(f.nome, 'Fornecedor não informado') as fornecedor,
         t.descricao,
         t.valor,
         t.data_transacao as data_vencimento,
@@ -544,6 +717,7 @@ router.get('/contas-pagar', validatePagination, handleValidationErrors, async (r
         t.data_atualizacao,
         'transacao' as tipo_origem
        FROM transacoes t 
+       LEFT JOIN fornecedores f ON t.fornecedor_id = f.id
        ${whereClauseTransacoes} 
        ORDER BY t.data_transacao ASC`,
       paramsTransacoes
