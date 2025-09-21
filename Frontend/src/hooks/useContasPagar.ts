@@ -16,6 +16,9 @@ export interface ContaPagar {
   data_criacao?: string;
   data_atualizacao?: string;
   tipo_origem?: 'conta_pagar' | 'transacao';
+  tipo_conta?: 'funcionario' | 'fornecedor' | 'outro';
+  funcionario_id?: number;
+  fornecedor_id?: number;
 }
 
 export interface ContasPagarResponse {
@@ -55,6 +58,7 @@ export function useContasPagar() {
   }) => {
     try {
       const response = await api.list(params);
+      console.log('Contas a pagar carregadas:', response.contas);
       setContas(response.contas);
       setPagination(response.pagination);
       return response;
@@ -100,7 +104,7 @@ export function useContasPagar() {
 
   const deletarConta = useCallback(async (id: number, tipo_origem?: 'conta_pagar' | 'transacao') => {
     try {
-      await api.remove(id, { tipo_origem });
+      await (api.remove as any)(id, { tipo_origem });
       // Atualizar lista local
       await buscarContas();
     } catch (error) {

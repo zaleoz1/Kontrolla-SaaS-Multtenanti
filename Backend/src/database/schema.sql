@@ -329,7 +329,8 @@ CREATE TABLE IF NOT EXISTS contas_receber (
 CREATE TABLE IF NOT EXISTS contas_pagar (
     id INT PRIMARY KEY AUTO_INCREMENT,
     tenant_id INT NOT NULL,
-    fornecedor_id INT NOT NULL,
+    fornecedor_id INT,
+    funcionario_id INT,
     descricao VARCHAR(255) NOT NULL,
     valor DECIMAL(10,2) NOT NULL,
     data_vencimento DATE NOT NULL,
@@ -340,7 +341,8 @@ CREATE TABLE IF NOT EXISTS contas_pagar (
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE CASCADE
+    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL,
+    FOREIGN KEY (funcionario_id) REFERENCES funcionarios(id) ON DELETE SET NULL
 );
 
 -- Tabela de NF-e

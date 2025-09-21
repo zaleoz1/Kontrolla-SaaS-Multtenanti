@@ -12,7 +12,7 @@ export interface Transacao {
   data_transacao: string;
   metodo_pagamento: 'pix' | 'cartao_credito' | 'cartao_debito' | 'dinheiro' | 'transferencia' | 'boleto' | 'cheque';
   conta: string;
-  fornecedor?: string;
+  fornecedor_id?: number;
   cliente_id?: number;
   observacoes?: string;
   anexos?: string[];
@@ -20,6 +20,7 @@ export interface Transacao {
   data_criacao?: string;
   data_atualizacao?: string;
   cliente_nome?: string;
+  fornecedor_nome?: string;
 }
 
 export interface TransacoesResponse {
