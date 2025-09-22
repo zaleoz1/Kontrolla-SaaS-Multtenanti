@@ -118,10 +118,12 @@ export default function Financeiro() {
   };
 
   // Calcular totais dos dados reais
-  const totalReceber = stats?.stats?.contas_receber?.valor_pendente || 0;
-  const totalPagar = stats?.stats?.contas_pagar?.valor_pendente || 0;
-  const fluxoCaixa = stats?.stats?.fluxo_caixa || 0;
-  const saldoAtual = (stats?.stats?.total_entradas || 0) - (stats?.stats?.total_saidas || 0);
+  const totalReceber = Number(stats?.stats?.contas_receber?.valor_pendente) || 0;
+  const totalPagar = Number(stats?.stats?.contas_pagar?.valor_pendente) || 0;
+  const fluxoCaixa = Number(stats?.stats?.fluxo_caixa) || 0;
+  const totalEntradas = Number(stats?.stats?.total_entradas) || 0;
+  const totalSaidas = Number(stats?.stats?.total_saidas) || 0;
+  const saldoAtual = totalEntradas - totalSaidas;
 
   // Função para calcular dias de vencimento
   const calcularDiasVencimento = (dataVencimento: string) => {
@@ -131,11 +133,27 @@ export default function Financeiro() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Função para obter texto de dias
+  const obterTextoDias = (dias: number) => {
+    if (dias > 0) {
+      return `${dias} dia${dias > 1 ? 's' : ''} para vencer`;
+    } else if (dias === 0) {
+      return 'Vence hoje';
+    } else {
+      return `${Math.abs(dias)} dia${Math.abs(dias) > 1 ? 's' : ''} em atraso`;
+    }
+  };
+
   // Função para formatar valor
   const formatarValor = (valor: number) => {
-    return valor.toLocaleString("pt-BR", {
+    // Garantir que o valor seja um número válido
+    const valorNumerico = typeof valor === 'number' ? valor : parseFloat(valor) || 0;
+    
+    return valorNumerico.toLocaleString("pt-BR", {
       style: "currency",
-      currency: "BRL"
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   };
 
@@ -349,15 +367,20 @@ export default function Financeiro() {
                           <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span>Vencimento: {formatarData(item.data_vencimento)}</span>
                             {item.parcela && <span>Parcela: {item.parcela}</span>}
-                            {item.status === "vencido" && (
-                              <span className="text-destructive font-medium">
-                                {Math.abs(dias)} dias em atraso
-                              </span>
-                            )}
+                            <span className={`font-medium ${
+                              dias > 0 ? 'text-blue-600' : 
+                              dias === 0 ? 'text-orange-600' : 
+                              'text-destructive'
+                            }`}>
+                              {obterTextoDias(dias)}
+                            </span>
                           </div>
                         </div>
                         <div className="text-right space-y-1">
-                          <p className="text-lg font-bold text-success">{formatarValor(item.valor)}</p>
+                          {/* Valor principal */}
+                          <p className="text-lg font-bold text-success">{formatarValor(Number(item.valor) || 0)}</p>
+                          
+                          
                           {item.status === 'pendente' && (
                             <Button 
                               size="sm" 
@@ -466,7 +489,7 @@ export default function Financeiro() {
                           </div>
                         </div>
                         <div className="text-right space-y-1">
-                          <p className="text-lg font-bold text-destructive">{formatarValor(item.valor)}</p>
+                          <p className="text-lg font-bold text-destructive">{formatarValor(Number(item.valor) || 0)}</p>
                           {item.status === 'pendente' && (
                             <Button 
                               size="sm" 
@@ -495,7 +518,7 @@ export default function Financeiro() {
             <CardContent>
               {errorTransacoes && (
                 <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="h-4 w-4" /> 
                   <AlertDescription>
                     Erro ao carregar transações: {errorTransacoes}
                   </AlertDescription>
@@ -553,7 +576,7 @@ export default function Financeiro() {
                         </div>
                         <div className="text-right space-y-1">
                           <p className={`text-lg font-bold ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
-                            {transacao.tipo === 'entrada' ? '+' : '-'}{formatarValor(transacao.valor)}
+                            {transacao.tipo === 'entrada' ? '+' : '-'}{formatarValor(Number(transacao.valor) || 0)}
                           </p>
                           {obterBadgeStatus(transacao.status)}
                         </div>

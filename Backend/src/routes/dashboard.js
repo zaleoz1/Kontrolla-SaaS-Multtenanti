@@ -242,13 +242,15 @@ router.get('/vendas-recentes', async (req, res) => {
 
         // Buscar pagamento a prazo
         const pagamentoPrazo = await query(
-          `SELECT dias, 
-                  CAST(juros AS DECIMAL(5,2)) as juros, 
-                  CAST(valor_original AS DECIMAL(10,2)) as valor_original, 
-                  CAST(valor_com_juros AS DECIMAL(10,2)) as valor_com_juros, 
-                  data_vencimento, status
-           FROM venda_pagamentos_prazo
-           WHERE venda_id = ?
+          `SELECT 
+            dias,
+            juros,
+            valor_original,
+            valor_com_juros,
+            data_vencimento, 
+            status
+           FROM contas_receber
+           WHERE venda_id = ? AND descricao LIKE 'Pagamento a prazo%'
            ORDER BY id`,
           [venda.id]
         );

@@ -474,7 +474,7 @@ export const validateVenda = [
       if (value === null || value === undefined || value === '') {
         return true; // Permitir null/undefined/vazio
       }
-      const validMethods = ['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque'];
+      const validMethods = ['dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque', 'prazo'];
       if (!validMethods.includes(value)) {
         throw new Error('Forma de pagamento inválida');
       }

@@ -14,6 +14,11 @@ export interface ContaReceber {
   status: 'pendente' | 'pago' | 'vencido' | 'cancelado';
   parcela?: string;
   observacoes?: string;
+  // Campos específicos para pagamentos a prazo
+  dias?: number;
+  juros?: number;
+  valor_original?: number;
+  valor_com_juros?: number;
   data_criacao?: string;
   data_atualizacao?: string;
   cliente_nome?: string;

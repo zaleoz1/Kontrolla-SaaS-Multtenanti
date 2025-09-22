@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS vendas (
     subtotal DECIMAL(10,2) NOT NULL,
     desconto DECIMAL(10,2) DEFAULT 0.00,
     total DECIMAL(10,2) NOT NULL,
-    forma_pagamento ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque') NOT NULL,
+    forma_pagamento ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'transferencia', 'boleto', 'cheque', 'prazo') NOT NULL,
     parcelas INT DEFAULT 1,
     observacoes TEXT,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -264,22 +264,8 @@ CREATE TABLE IF NOT EXISTS venda_pagamentos (
     FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
 );
 
--- Tabela de pagamentos a prazo
-
-CREATE TABLE IF NOT EXISTS venda_pagamentos_prazo (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    venda_id INT NOT NULL,
-    dias INT NULL,
-    juros DECIMAL(5,2) NULL,
-    valor_original DECIMAL(10,2) NOT NULL,
-    valor_com_juros DECIMAL(10,2) NOT NULL,
-    data_vencimento DATE NOT NULL,
-    status ENUM('pendente', 'pago', 'vencido', 'cancelado') DEFAULT 'pendente',
-    data_pagamento DATE NULL,
-    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE
-);
+-- Tabela de pagamentos a prazo foi migrada para contas_receber
+-- Os pagamentos a prazo agora são gerenciados como contas a receber
 
 -- Tabela de transações financeiras
 CREATE TABLE IF NOT EXISTS transacoes (
@@ -318,6 +304,11 @@ CREATE TABLE IF NOT EXISTS contas_receber (
     status ENUM('pendente', 'pago', 'vencido', 'cancelado') DEFAULT 'pendente',
     parcela VARCHAR(10),
     observacoes TEXT,
+    -- Campos específicos para pagamentos a prazo
+    dias INT NULL COMMENT 'Prazo em dias para pagamento',
+    juros DECIMAL(5,2) NULL COMMENT 'Percentual de juros aplicado',
+    valor_original DECIMAL(10,2) NULL COMMENT 'Valor original sem juros',
+    valor_com_juros DECIMAL(10,2) NULL COMMENT 'Valor final com juros aplicado',
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
@@ -494,6 +485,3 @@ CREATE INDEX idx_produtos_codigo_barras ON produtos(codigo_barras);
 CREATE INDEX idx_vendas_numero ON vendas(numero_venda);
 CREATE INDEX idx_vendas_data ON vendas(data_venda);
 CREATE INDEX idx_venda_pagamentos_venda ON venda_pagamentos(venda_id);
-CREATE INDEX idx_venda_pagamentos_prazo_venda ON venda_pagamentos_prazo(venda_id);
-CREATE INDEX idx_venda_pagamentos_prazo_status ON venda_pagamentos_prazo(status);
-CREATE INDEX idx_venda_pagamentos_prazo_vencimento ON venda_pagamentos_prazo(data_vencimento);
