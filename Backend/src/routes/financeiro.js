@@ -463,58 +463,28 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
     const { page = 1, limit = 10, status = '', data_inicio = '', data_fim = '' } = req.query;
     const offset = (page - 1) * limit;
 
-    // Construir query para buscar contas a receber tradicionais
-    let whereClauseContas = 'WHERE cr.tenant_id = ?';
-    let paramsContas = [req.user.tenant_id];
+    // Construir query para buscar APENAS contas a receber da tabela contas_receber
+    let whereClause = 'WHERE cr.tenant_id = ?';
+    let params = [req.user.tenant_id];
 
     // Adicionar filtro de status
     if (status) {
-      whereClauseContas += ' AND cr.status = ?';
-      paramsContas.push(status);
+      whereClause += ' AND cr.status = ?';
+      params.push(status);
     }
 
     // Adicionar filtro de data
     if (data_inicio) {
-      whereClauseContas += ' AND cr.data_vencimento >= ?';
-      paramsContas.push(data_inicio);
+      whereClause += ' AND cr.data_vencimento >= ?';
+      params.push(data_inicio);
     }
 
     if (data_fim) {
-      whereClauseContas += ' AND cr.data_vencimento <= ?';
-      paramsContas.push(data_fim);
+      whereClause += ' AND cr.data_vencimento <= ?';
+      params.push(data_fim);
     }
 
-    // Construir query para buscar vendas pendentes
-    let whereClauseVendas = 'WHERE v.tenant_id = ? AND v.status = ?';
-    let paramsVendas = [req.user.tenant_id, 'pendente'];
-
-    // Adicionar filtro de data para vendas
-    if (data_inicio) {
-      whereClauseVendas += ' AND DATE(v.data_venda) >= ?';
-      paramsVendas.push(data_inicio);
-    }
-
-    if (data_fim) {
-      whereClauseVendas += ' AND DATE(v.data_venda) <= ?';
-      paramsVendas.push(data_fim);
-    }
-
-    // Construir query para buscar transações de entrada pendentes/vencidas
-    let whereClauseTransacoes = 'WHERE t.tenant_id = ? AND t.tipo = ? AND t.status IN (?, ?)';
-    let paramsTransacoes = [req.user.tenant_id, 'entrada', 'pendente', 'vencido'];
-
-    // Adicionar filtro de data para transações
-    if (data_inicio) {
-      whereClauseTransacoes += ' AND t.data_transacao >= ?';
-      paramsTransacoes.push(data_inicio);
-    }
-
-    if (data_fim) {
-      whereClauseTransacoes += ' AND t.data_transacao <= ?';
-      paramsTransacoes.push(data_fim);
-    }
-
-    // Buscar contas a receber tradicionais
+    // Buscar APENAS contas a receber da tabela contas_receber
     const contasReceber = await query(
       `SELECT 
         cr.id,
@@ -527,6 +497,10 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
         cr.status,
         cr.parcela,
         cr.observacoes,
+        cr.dias,
+        cr.juros,
+        cr.valor_original,
+        cr.valor_com_juros,
         cr.data_criacao,
         cr.data_atualizacao,
         c.nome as cliente_nome,
@@ -534,74 +508,20 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
         'conta_receber' as tipo_origem
        FROM contas_receber cr 
        LEFT JOIN clientes c ON cr.cliente_id = c.id 
-       ${whereClauseContas} 
+       ${whereClause} 
        ORDER BY cr.data_vencimento ASC`,
-      paramsContas
+      params
     );
 
-    // Buscar vendas pendentes
-    const vendasPendentes = await query(
-      `SELECT 
-        v.id,
-        v.cliente_id,
-        v.id as venda_id,
-        CONCAT('Venda #', v.numero_venda) as descricao,
-        v.total as valor,
-        DATE(v.data_venda) as data_vencimento,
-        NULL as data_pagamento,
-        CASE 
-          WHEN v.status = 'pendente' AND DATE(v.data_venda) < CURDATE() THEN 'vencido'
-          ELSE v.status
-        END as status,
-        CONCAT('1/', v.parcelas) as parcela,
-        v.observacoes,
-        v.data_criacao,
-        v.data_atualizacao,
-        c.nome as cliente_nome,
-        c.email as cliente_email,
-        'venda' as tipo_origem
-       FROM vendas v 
-       LEFT JOIN clientes c ON v.cliente_id = c.id 
-       ${whereClauseVendas} 
-       ORDER BY v.data_venda ASC`,
-      paramsVendas
+    // Contar total de registros
+    const [totalResult] = await query(
+      `SELECT COUNT(*) as total FROM contas_receber cr ${whereClause}`,
+      params
     );
 
-    // Buscar transações de entrada pendentes/vencidas
-    const transacoesEntrada = await query(
-      `SELECT 
-        t.id,
-        t.cliente_id,
-        NULL as venda_id,
-        t.descricao,
-        t.valor,
-        t.data_transacao as data_vencimento,
-        NULL as data_pagamento,
-        CASE 
-          WHEN t.status = 'pendente' AND t.data_transacao < CURDATE() THEN 'vencido'
-          ELSE t.status
-        END as status,
-        '1/1' as parcela,
-        t.observacoes,
-        t.data_criacao,
-        t.data_atualizacao,
-        c.nome as cliente_nome,
-        c.email as cliente_email,
-        'transacao_entrada' as tipo_origem
-       FROM transacoes t 
-       LEFT JOIN clientes c ON t.cliente_id = c.id 
-       ${whereClauseTransacoes} 
-       ORDER BY t.data_transacao ASC`,
-      paramsTransacoes
-    );
-
-    // Combinar os resultados
-    const contas = [...contasReceber, ...vendasPendentes, ...transacoesEntrada];
-
-    // Aplicar paginação no resultado combinado
-    const total = contas.length;
+    const total = totalResult.total;
     const totalPages = Math.ceil(total / limit);
-    const contasPaginadas = contas.slice(offset, offset + Number(limit));
+    const contasPaginadas = contasReceber.slice(offset, offset + Number(limit));
 
     res.json({
       contas: contasPaginadas,
@@ -1279,32 +1199,15 @@ router.get('/stats/overview', async (req, res) => {
       params
     );
 
-    // Contas a receber (incluindo vendas pendentes e transações de entrada pendentes/vencidas)
+    // Contas a receber (APENAS da tabela contas_receber)
     const contasReceber = await query(
       `SELECT 
         COUNT(*) as total_contas,
         COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor ELSE 0 END), 0) as valor_pendente,
         COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido
-      FROM (
-        SELECT status, valor FROM contas_receber WHERE tenant_id = ?
-        UNION ALL
-        SELECT 
-          CASE 
-            WHEN status = 'pendente' AND DATE(data_venda) < CURDATE() THEN 'vencido'
-            ELSE status
-          END as status, 
-          total as valor 
-        FROM vendas WHERE tenant_id = ? AND status = 'pendente'
-        UNION ALL
-        SELECT 
-          CASE 
-            WHEN status = 'pendente' AND data_transacao < CURDATE() THEN 'vencido'
-            ELSE status
-          END as status, 
-          valor 
-        FROM transacoes WHERE tenant_id = ? AND tipo = 'entrada' AND status IN ('pendente', 'vencido')
-      ) as contas_combineadas`,
-      [req.user.tenant_id, req.user.tenant_id, req.user.tenant_id]
+      FROM contas_receber 
+      WHERE tenant_id = ?`,
+      [req.user.tenant_id]
     );
 
     // Contas a pagar (incluindo transações pendentes do tipo saída)

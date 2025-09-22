@@ -43,6 +43,24 @@ async function runMigrations() {
       console.log('⚠️ Erro na migração de funcionários (pode ser normal se já aplicada):', migrationError.message);
     }
 
+    // Verificar se precisa executar migração de pagamentos a prazo para contas a receber
+    try {
+      console.log('🔍 Verificando se precisa executar migração de pagamentos a prazo...');
+      const [tables] = await query("SHOW TABLES LIKE 'venda_pagamentos_prazo'");
+      
+      if (tables.length > 0) {
+        console.log('📝 Executando migração de pagamentos a prazo para contas a receber...');
+        const migrationPath = path.join(__dirname, 'migration_prazo_to_contas_receber.sql');
+        const migration = fs.readFileSync(migrationPath, 'utf8');
+        await query(migration);
+        console.log('✅ Migração de pagamentos a prazo concluída!');
+      } else {
+        console.log('✅ Migração de pagamentos a prazo já aplicada!');
+      }
+    } catch (migrationError) {
+      console.log('⚠️ Erro na migração de pagamentos a prazo (pode ser normal se já aplicada):', migrationError.message);
+    }
+
     console.log('✅ Migração concluída com sucesso!');
     console.log('📊 Banco de dados criado e configurado');
     

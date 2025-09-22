@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import {
 
 export default function Funcionarios() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   
   const { 
@@ -41,11 +42,31 @@ export default function Funcionarios() {
   const [filtroStatusFuncionario, setFiltroStatusFuncionario] = useState("todos");
   const [filtroCargoFuncionario, setFiltroCargoFuncionario] = useState("todos");
   const [abaAtiva, setAbaAtiva] = useState("funcionarios");
+  
 
   // Carregar funcionários quando o componente montar
   useEffect(() => {
     carregarFuncionarios();
   }, []);
+
+  // Verificar parâmetros da URL para exibir avisos de sucesso
+  useEffect(() => {
+    const successParam = searchParams.get('success');
+    
+    if (successParam === 'created' || successParam === 'updated') {
+      // Exibir toast de sucesso
+      toast({
+        title: "Sucesso",
+        description: successParam === 'created' 
+          ? 'Funcionário cadastrado com sucesso!' 
+          : 'Funcionário atualizado com sucesso!',
+        variant: "default"
+      });
+      
+      // Limpar o parâmetro da URL após exibir o aviso
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, toast]);
 
   // Recarregar funcionários quando os filtros mudarem (com debounce para busca)
   useEffect(() => {
@@ -199,6 +220,7 @@ export default function Funcionarios() {
               </Button>
             </div>
           </div>
+
 
           {/* Cards de Resumo - Design Moderno */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

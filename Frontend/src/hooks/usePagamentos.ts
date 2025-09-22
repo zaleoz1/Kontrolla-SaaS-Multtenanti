@@ -225,12 +225,12 @@ export const usePagamentos = () => {
         ...pagamentoPrazo,
         juros: pagamentoPrazo.juros === "" ? null : pagamentoPrazo.juros,
         dias: pagamentoPrazo.dias === "" ? null : pagamentoPrazo.dias,
-        valorOriginal: metodosPagamento.length > 0 ? calcularValorRestantePrazo(metodosPagamento, total) : total
+        valorOriginal: metodosFinais.length > 0 ? calcularValorRestantePrazo(metodosFinais, total) : total // O valor original é o valor restante para pagamento a prazo
       } : undefined,
       subtotal: parseFloat(subtotal.toString()),
       desconto: parseFloat(valorDesconto.toString()),
       total: parseFloat(totalFinal.toString()),
-      forma_pagamento: metodosFinais.length > 0 ? metodosFinais[0]?.metodo : (metodoPagamentoUnico || null),
+      forma_pagamento: usarPagamentoPrazo ? 'prazo' : (metodosFinais.length > 0 ? metodosFinais[0]?.metodo : (metodoPagamentoUnico || null)),
       parcelas: 1,
       observacoes: "",
       status: statusVenda

@@ -430,6 +430,23 @@ router.post('/', validateFuncionario, async (req, res) => {
       }
     }
 
+    // Converter datas para formato MySQL (YYYY-MM-DD)
+    const formatDateForMySQL = (dateString) => {
+      if (!dateString) return null;
+      // Se já está no formato YYYY-MM-DD, retorna como está
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+      }
+      // Se é uma data ISO, converte para YYYY-MM-DD
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString().split('T')[0];
+    };
+
+    const dataNascimentoFormatted = formatDateForMySQL(data_nascimento);
+    const dataAdmissaoFormatted = formatDateForMySQL(data_admissao);
+    const dataDemissaoFormatted = formatDateForMySQL(data_demissao);
+
     // Inserir funcionário
     const result = await queryWithResult(
       `INSERT INTO funcionarios (
@@ -442,8 +459,8 @@ router.post('/', validateFuncionario, async (req, res) => {
         tenantId, nome.trim(), sobrenome.trim(), cpf.replace(/\D/g, ''), rg?.trim() || null,
         email?.trim() || null, telefone?.trim() || null, endereco?.trim() || null,
         cidade?.trim() || null, estado?.trim() || null, cep?.replace(/\D/g, '') || null,
-        data_nascimento || null, sexo || 'masculino', estado_civil || 'solteiro',
-        cargo.trim(), departamento?.trim() || null, data_admissao, data_demissao || null,
+        dataNascimentoFormatted, sexo || 'masculino', estado_civil || 'solteiro',
+        cargo.trim(), departamento?.trim() || null, dataAdmissaoFormatted, dataDemissaoFormatted,
         salario, tipo_salario || 'mensal', valor_hora || null, comissao_percentual || null,
         banco?.trim() || null, agencia?.trim() || null, conta?.trim() || null,
         digito?.trim() || null, tipo_conta || 'corrente', pix?.trim() || null,
@@ -605,6 +622,23 @@ router.put('/:id', validateId, validateFuncionario, async (req, res) => {
       }
     }
 
+    // Converter datas para formato MySQL (YYYY-MM-DD)
+    const formatDateForMySQL = (dateString) => {
+      if (!dateString) return null;
+      // Se já está no formato YYYY-MM-DD, retorna como está
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+      }
+      // Se é uma data ISO, converte para YYYY-MM-DD
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString().split('T')[0];
+    };
+
+    const dataNascimentoFormatted = formatDateForMySQL(data_nascimento);
+    const dataAdmissaoFormatted = formatDateForMySQL(data_admissao);
+    const dataDemissaoFormatted = formatDateForMySQL(data_demissao);
+
     // Atualizar funcionário
     await query(
       `UPDATE funcionarios SET 
@@ -619,8 +653,8 @@ router.put('/:id', validateId, validateFuncionario, async (req, res) => {
         nome.trim(), sobrenome.trim(), cpf.replace(/\D/g, ''), rg?.trim() || null,
         email?.trim() || null, telefone?.trim() || null, endereco?.trim() || null,
         cidade?.trim() || null, estado?.trim() || null, cep?.replace(/\D/g, '') || null,
-        data_nascimento || null, sexo || 'masculino', estado_civil || 'solteiro',
-        cargo.trim(), departamento?.trim() || null, data_admissao, data_demissao || null,
+        dataNascimentoFormatted, sexo || 'masculino', estado_civil || 'solteiro',
+        cargo.trim(), departamento?.trim() || null, dataAdmissaoFormatted, dataDemissaoFormatted,
         salario, tipo_salario || 'mensal', valor_hora || null, comissao_percentual || null,
         banco?.trim() || null, agencia?.trim() || null, conta?.trim() || null,
         digito?.trim() || null, tipo_conta || 'corrente', pix?.trim() || null,

@@ -31,7 +31,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
       if (status === 'pago' || status === 'pendente') {
         whereClause += ` AND (
           v.status = ? OR 
-          (EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) AND EXISTS(SELECT 1 FROM venda_pagamentos_prazo vpr WHERE vpr.venda_id = v.id))
+          (EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) AND EXISTS(SELECT 1 FROM contas_receber cr WHERE cr.venda_id = v.id))
         )`;
         params.push(status);
       } else {
@@ -94,15 +94,17 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
           [venda.id]
         );
 
-        // Buscar pagamento a prazo (se houver)
+        // Buscar pagamento a prazo (se houver) - agora em contas_receber
         const pagamentoPrazo = await query(
-          `SELECT dias, 
-                  CAST(juros AS DECIMAL(5,2)) as juros, 
-                  CAST(valor_original AS DECIMAL(10,2)) as valor_original, 
-                  CAST(valor_com_juros AS DECIMAL(10,2)) as valor_com_juros, 
-                  data_vencimento, status
-           FROM venda_pagamentos_prazo
-           WHERE venda_id = ?
+          `SELECT 
+            dias,
+            juros,
+            valor_original,
+            valor_com_juros,
+            data_vencimento, 
+            status
+           FROM contas_receber
+           WHERE venda_id = ? AND descricao LIKE 'Pagamento a prazo%'
            ORDER BY id`,
           [venda.id]
         );
@@ -225,11 +227,17 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
       [id]
     );
 
-    // Buscar pagamento a prazo (se houver)
+    // Buscar pagamento a prazo (se houver) - agora em contas_receber
     const pagamentoPrazo = await query(
-      `SELECT dias, juros, valor_original, valor_com_juros, data_vencimento, status
-       FROM venda_pagamentos_prazo
-       WHERE venda_id = ?
+      `SELECT 
+        dias,
+        juros,
+        valor_original,
+        valor_com_juros,
+        data_vencimento, 
+        status
+       FROM contas_receber
+       WHERE venda_id = ? AND descricao LIKE 'Pagamento a prazo%'
        ORDER BY id`,
       [id]
     );
@@ -338,8 +346,8 @@ router.post('/', validateVenda, async (req, res) => {
     if (metodos_pagamento && metodos_pagamento.length > 0) {
       formaPagamentoPrincipal = metodos_pagamento[0].metodo;
     } else if (pagamento_prazo) {
-      // Se há pagamento a prazo mas não há métodos de pagamento, usar um valor padrão
-      formaPagamentoPrincipal = 'pix'; // Valor padrão para pagamento a prazo
+      // Se há pagamento a prazo mas não há métodos de pagamento, usar 'prazo'
+      formaPagamentoPrincipal = 'prazo';
     }
 
     // Iniciar transação
@@ -405,20 +413,33 @@ router.post('/', validateVenda, async (req, res) => {
       );
     }
 
-    // Salvar pagamento a prazo (se houver)
+    // Salvar pagamento a prazo (se houver) - agora como conta a receber
     if (pagamento_prazo) {
+      // O valor original é sempre o total da venda (sem juros)
+      const valorOriginal = total;
+      const valorComJuros = pagamento_prazo.valorComJuros || total;
+      const dias = pagamento_prazo.dias ? parseInt(pagamento_prazo.dias) : null;
+      const juros = pagamento_prazo.juros ? parseFloat(pagamento_prazo.juros) : 0;
+      const dataVencimento = new Date(pagamento_prazo.dataVencimento).toISOString().split('T')[0];
+
       await query(
-        `INSERT INTO venda_pagamentos_prazo (
-          venda_id, dias, juros, valor_original, valor_com_juros, data_vencimento, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO contas_receber (
+          tenant_id, cliente_id, venda_id, descricao, valor, data_vencimento, status, observacoes,
+          dias, juros, valor_original, valor_com_juros
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          req.user.tenant_id,
+          cliente_id,
           vendaId,
-          pagamento_prazo.dias,
-          pagamento_prazo.juros,
-          pagamento_prazo.valorOriginal || pagamento_prazo.valor_original || total,
-          pagamento_prazo.valorComJuros,
-          new Date(pagamento_prazo.dataVencimento).toISOString().split('T')[0], // Converter para formato YYYY-MM-DD
-          'pendente'
+          `Pagamento a prazo - Venda ${numeroVenda}`,
+          valorComJuros,
+          dataVencimento,
+          'pendente',
+          'Pagamento a prazo',
+          dias,
+          juros,
+          valorOriginal,
+          valorComJuros
         ]
       );
     }
@@ -455,11 +476,17 @@ router.post('/', validateVenda, async (req, res) => {
       [vendaId]
     );
 
-    // Buscar pagamento a prazo (se houver)
+    // Buscar pagamento a prazo (se houver) - agora em contas_receber
     const pagamentoPrazo = await query(
-      `SELECT dias, juros, valor_original, valor_com_juros, data_vencimento, status
-       FROM venda_pagamentos_prazo
-       WHERE venda_id = ?
+      `SELECT 
+        dias,
+        juros,
+        valor_original,
+        valor_com_juros,
+        data_vencimento, 
+        status
+       FROM contas_receber
+       WHERE venda_id = ? AND descricao LIKE 'Pagamento a prazo%'
        ORDER BY id`,
       [vendaId]
     );

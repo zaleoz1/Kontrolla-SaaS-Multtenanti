@@ -176,11 +176,11 @@ export default function NovoFuncionario() {
 
       if (isEditando && id) {
         await atualizarFuncionarioHook(parseInt(id), dadosFuncionario);
+        navigate('/dashboard/funcionarios?success=updated');
       } else {
         await criarFuncionario(dadosFuncionario);
+        navigate('/dashboard/funcionarios?success=created');
       }
-      
-      navigate('/dashboard/configuracoes');
     } catch (error) {
       // Erro já tratado no hook
     }

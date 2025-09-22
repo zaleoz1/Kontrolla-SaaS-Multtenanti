@@ -148,6 +148,21 @@ router.post('/', validateCliente, async (req, res) => {
       }
     }
 
+    // Converter data para formato MySQL (YYYY-MM-DD)
+    const formatDateForMySQL = (dateString) => {
+      if (!dateString) return null;
+      // Se já está no formato YYYY-MM-DD, retorna como está
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+      }
+      // Se é uma data ISO, converte para YYYY-MM-DD
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString().split('T')[0];
+    };
+
+    const dataNascimentoFormatted = formatDateForMySQL(data_nascimento);
+
     const result = await queryWithResult(
       `INSERT INTO clientes (
         tenant_id, nome, email, telefone, cpf_cnpj, tipo_pessoa, endereco,
@@ -157,7 +172,7 @@ router.post('/', validateCliente, async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, nome, email, telefone, cpf_cnpj, tipo_pessoa,
-        endereco, cidade, estado, cep, data_nascimento, sexo, razao_social,
+        endereco, cidade, estado, cep, dataNascimentoFormatted, sexo, razao_social,
         inscricao_estadual, inscricao_municipal, nome_fantasia, observacoes,
         status, vip, limite_credito
       ]
@@ -247,6 +262,21 @@ router.put('/:id', validateId, validateCliente, handleValidationErrors, async (r
       }
     }
 
+    // Converter data para formato MySQL (YYYY-MM-DD)
+    const formatDateForMySQL = (dateString) => {
+      if (!dateString) return null;
+      // Se já está no formato YYYY-MM-DD, retorna como está
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+      }
+      // Se é uma data ISO, converte para YYYY-MM-DD
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString().split('T')[0];
+    };
+
+    const dataNascimentoFormatted = formatDateForMySQL(data_nascimento);
+
     await query(
       `UPDATE clientes SET 
         nome = ?, email = ?, telefone = ?, cpf_cnpj = ?, tipo_pessoa = ?,
@@ -256,7 +286,7 @@ router.put('/:id', validateId, validateCliente, handleValidationErrors, async (r
       WHERE id = ? AND tenant_id = ?`,
       [
         nome, email, telefone, cpf_cnpj, tipo_pessoa, endereco, cidade, estado,
-        cep, data_nascimento, sexo, razao_social, inscricao_estadual,
+        cep, dataNascimentoFormatted, sexo, razao_social, inscricao_estadual,
         inscricao_municipal, nome_fantasia, observacoes, status, vip,
         limite_credito, id, req.user.tenant_id
       ]
