@@ -199,9 +199,16 @@ export const usePagamentos = () => {
       });
     }
     
-    // O total já vem calculado corretamente do frontend (TOTAL FINAL)
-    // Usar o total recebido diretamente
-    const totalFinal = total;
+    // Calcular o total final baseado no tipo de pagamento
+    let totalFinal = total;
+    
+    // Se há pagamento a prazo e métodos de pagamento à vista, o total da venda deve ser apenas o valor pago à vista
+    if (usarPagamentoPrazo && metodosPagamento.length > 0) {
+      totalFinal = metodosPagamento.reduce((sum, m) => {
+        const valorMetodo = parseFloat(m.valor) || 0;
+        return sum + valorMetodo;
+      }, 0);
+    }
     
     // Preparar itens da venda
     const itensVenda: ItemVenda[] = carrinho.map(item => ({

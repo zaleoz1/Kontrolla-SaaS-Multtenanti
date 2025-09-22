@@ -350,6 +350,25 @@ router.post('/', validateVenda, async (req, res) => {
       formaPagamentoPrincipal = 'prazo';
     }
 
+    // Calcular o total correto para a tabela vendas
+    let totalVenda = total;
+    
+    // Se há pagamento a prazo e métodos de pagamento à vista, o total da venda deve ser apenas o valor pago à vista
+    if (pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0) {
+      totalVenda = metodos_pagamento.reduce((sum, metodo) => {
+        return sum + (parseFloat(metodo.valor) || 0);
+      }, 0);
+    }
+    
+    // Debug: verificar cálculo do total
+    console.log('Debug - Cálculo do total da venda:', {
+      totalOriginal: total,
+      totalVenda,
+      temPagamentoPrazo: !!pagamento_prazo,
+      metodosPagamento: metodos_pagamento?.length || 0,
+      metodosPagamentoValores: metodos_pagamento?.map(m => parseFloat(m.valor) || 0) || []
+    });
+
     // Iniciar transação
     const result = await queryWithResult(
       `INSERT INTO vendas (
@@ -358,7 +377,7 @@ router.post('/', validateVenda, async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, cliente_id, req.user.id, numeroVenda, subtotal,
-        desconto, total, formaPagamentoPrincipal, parcelas, observacoes, status
+        desconto, totalVenda, formaPagamentoPrincipal, parcelas, observacoes, status
       ]
     );
 
