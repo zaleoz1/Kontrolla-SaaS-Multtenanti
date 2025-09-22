@@ -1,5 +1,5 @@
 import express from 'express';
-import { query, queryWithResult } from '../database/connection.js';
+import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateTransacao, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 
@@ -846,16 +846,54 @@ router.put('/contas-receber/:id', validateId, handleValidationErrors, async (req
         });
       }
 
-      await query(
-        `UPDATE contas_receber SET 
-          cliente_id = ?, venda_id = ?, descricao = ?, valor = ?, data_vencimento = ?,
-          data_pagamento = ?, status = ?, parcela = ?, observacoes = ?
-        WHERE id = ? AND tenant_id = ?`,
-        [
-          cliente_id, venda_id, descricao, valor, data_vencimento, data_pagamento,
-          status, parcela, observacoes, id, req.user.tenant_id
-        ]
-      );
+      // Construir query dinamicamente apenas com campos fornecidos
+      const updateFields = [];
+      const updateValues = [];
+      
+      if (cliente_id !== undefined) {
+        updateFields.push('cliente_id = ?');
+        updateValues.push(cliente_id);
+      }
+      if (venda_id !== undefined) {
+        updateFields.push('venda_id = ?');
+        updateValues.push(venda_id);
+      }
+      if (descricao !== undefined) {
+        updateFields.push('descricao = ?');
+        updateValues.push(descricao);
+      }
+      if (valor !== undefined) {
+        updateFields.push('valor = ?');
+        updateValues.push(valor);
+      }
+      if (data_vencimento !== undefined) {
+        updateFields.push('data_vencimento = ?');
+        updateValues.push(data_vencimento);
+      }
+      if (data_pagamento !== undefined) {
+        updateFields.push('data_pagamento = ?');
+        updateValues.push(data_pagamento);
+      }
+      if (status !== undefined) {
+        updateFields.push('status = ?');
+        updateValues.push(status);
+      }
+      if (parcela !== undefined) {
+        updateFields.push('parcela = ?');
+        updateValues.push(parcela);
+      }
+      if (observacoes !== undefined) {
+        updateFields.push('observacoes = ?');
+        updateValues.push(observacoes);
+      }
+      
+      if (updateFields.length > 0) {
+        updateValues.push(id, req.user.tenant_id);
+        await query(
+          `UPDATE contas_receber SET ${updateFields.join(', ')} WHERE id = ? AND tenant_id = ?`,
+          updateValues
+        );
+      }
 
       // Buscar conta atualizada
       const [conta] = await query(
@@ -1237,6 +1275,138 @@ router.get('/stats/overview', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao buscar estatísticas financeiras:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Processar pagamento parcial de conta a receber
+router.post('/contas-receber/:id/pagar', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      valorRecebido,
+      dataPagamento,
+      metodoPagamento,
+      observacoes,
+      comprovante
+    } = req.body;
+
+    // Buscar conta a receber
+    const contas = await query(
+      `SELECT cr.*, v.id as venda_id, v.total as venda_total, v.numero_venda
+       FROM contas_receber cr
+       LEFT JOIN vendas v ON cr.venda_id = v.id
+       WHERE cr.id = ? AND cr.tenant_id = ?`,
+      [id, req.user.tenant_id]
+    );
+
+    if (contas.length === 0) {
+      return res.status(404).json({
+        error: 'Conta a receber não encontrada'
+      });
+    }
+
+    const conta = contas[0];
+    const valorOriginal = parseFloat(conta.valor_com_juros || conta.valor);
+    const valorRecebidoNum = parseFloat(valorRecebido);
+
+    if (valorRecebidoNum <= 0) {
+      return res.status(400).json({
+        error: 'Valor recebido deve ser maior que zero'
+      });
+    }
+
+    if (valorRecebidoNum > valorOriginal) {
+      return res.status(400).json({
+        error: 'Valor recebido não pode ser maior que o valor da conta'
+      });
+    }
+
+    // Calcular valor restante
+    const valorRestante = valorOriginal - valorRecebidoNum;
+
+    // Executar todas as operações em uma transação
+    const result = await transaction(async (connection) => {
+      // Atualizar conta a receber
+      if (valorRestante <= 0) {
+        // Pagamento completo - deletar conta a receber e atualizar status da venda
+        await connection.execute(
+          `DELETE FROM contas_receber WHERE id = ? AND tenant_id = ?`,
+          [id, req.user.tenant_id]
+        );
+        
+        // Se a conta está vinculada a uma venda, atualizar status para pago
+        if (conta.venda_id) {
+          await connection.execute(
+            `UPDATE vendas SET status = 'pago' WHERE id = ? AND tenant_id = ?`,
+            [conta.venda_id, req.user.tenant_id]
+          );
+        }
+      } else {
+        // Pagamento parcial - atualizar valor e valor_com_juros da contag
+        await connection.execute(
+          `UPDATE contas_receber SET 
+           valor = ?,
+           valor_com_juros = ?,
+           observacoes = CONCAT(COALESCE(observacoes, ''), ' | Pagamento parcial de ', ?, ' em ', ?)
+           WHERE id = ?`,
+          [valorRestante, valorRestante, valorRecebidoNum, new Date().toISOString().split('T')[0], id]
+        );
+      }
+
+      // Se a conta está vinculada a uma venda, atualizar o total da venda
+      if (conta.venda_id) {
+        // Somar o valor recebido ao total da venda
+        await connection.execute(
+          `UPDATE vendas SET total = total + ? WHERE id = ?`,
+          [valorRecebidoNum, conta.venda_id]
+        );
+
+        // Criar método de pagamento na venda
+        await connection.execute(
+          `INSERT INTO venda_pagamentos (venda_id, metodo, valor, valor_original)
+           VALUES (?, ?, ?, ?)`,
+          [conta.venda_id, metodoPagamento, valorRecebidoNum, valorRecebidoNum]
+        );
+      }
+
+      // Criar transação de entrada para o valor recebido
+      await connection.execute(
+        `INSERT INTO transacoes (
+          tenant_id, tipo, categoria, descricao, valor, data_transacao,
+          metodo_pagamento, conta, cliente_id, observacoes, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id,
+          'entrada',
+          'recebimento',
+          `Recebimento - ${conta.descricao}`,
+          valorRecebidoNum,
+          dataPagamento,
+          metodoPagamento,
+          'caixa',
+          conta.cliente_id,
+          observacoes || `Pagamento parcial de conta a receber #${id}`,
+          'concluida'
+        ]
+      );
+
+      return {
+        valorRecebido: valorRecebidoNum,
+        valorRestante: valorRestante,
+        contaAtualizada: valorRestante > 0
+      };
+    });
+
+    res.json({
+      message: valorRestante <= 0 ? 'Pagamento processado com sucesso' : 'Pagamento parcial processado com sucesso',
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Erro ao processar pagamento parcial:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

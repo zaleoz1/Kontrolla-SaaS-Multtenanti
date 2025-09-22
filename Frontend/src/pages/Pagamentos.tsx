@@ -179,7 +179,16 @@ export default function Pagamentos() {
   // Função para calcular o TOTAL FINAL exatamente como mostrado no layout
   const calcularTotalFinal = () => {
     if (usarPagamentoPrazo && clienteSelecionado) {
-      return pagamentoPrazo.valorComJuros;
+      // Se há pagamento a prazo, o total da venda deve ser apenas o valor pago à vista
+      if (metodosPagamento.length > 0) {
+        // Calcular total pago pelos métodos de pagamento (à vista)
+        return metodosPagamento.reduce((sum, m) => {
+          const valorMetodo = parseFloat(m.valor) || 0;
+          return sum + valorMetodo;
+        }, 0);
+      }
+      // Se não há métodos de pagamento à vista, o total é 0 (tudo a prazo)
+      return 0;
     }
     
     // O TOTAL sempre deve mostrar o valor da venda, independente dos métodos de pagamento

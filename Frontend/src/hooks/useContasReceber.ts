@@ -131,6 +131,28 @@ export function useContasReceber() {
     }
   }, [atualizarConta]);
 
+  const processarPagamentoParcial = useCallback(async (id: number, dados: {
+    valorRecebido: number;
+    dataPagamento: string;
+    metodoPagamento: string;
+    observacoes?: string;
+  }) => {
+    try {
+      const response = await api.makeRequest(`/financeiro/contas-receber/${id}/pagar`, {
+        method: 'POST',
+        body: dados
+      });
+      
+      // Atualizar lista local
+      await buscarContas();
+      
+      return response;
+    } catch (error) {
+      console.error('Erro ao processar pagamento parcial:', error);
+      throw error;
+    }
+  }, [api.makeRequest, buscarContas]);
+
   return {
     ...api,
     contas,
@@ -141,5 +163,6 @@ export function useContasReceber() {
     atualizarConta,
     deletarConta,
     marcarComoPago,
+    processarPagamentoParcial,
   };
 }

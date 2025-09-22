@@ -130,7 +130,8 @@ export default function Financeiro() {
     loading: loadingContasReceber, 
     error: errorContasReceber,
     buscarContas: buscarContasReceber,
-    marcarComoPago: marcarContaReceberComoPago
+    marcarComoPago: marcarContaReceberComoPago,
+    processarPagamentoParcial
   } = useContasReceber();
   
   const { 
@@ -413,13 +414,14 @@ export default function Financeiro() {
   // Função para processar recebimento
   const processarRecebimento = async () => {
     try {
-      // Aqui você pode adicionar lógica para salvar o comprovante se necessário
-      // Por enquanto, vamos usar a função existente
-      await marcarContaReceberComoPago(
-        dadosRecebimento.contaId, 
-        dadosRecebimento.dataRecebimento, 
-        dadosRecebimento.tipo_origem as 'conta_receber' | 'venda' | 'transacao_entrada'
-      );
+      // Sempre usar a funcionalidade de pagamento parcial que já tem a lógica correta
+      // para pagamento completo e parcial
+      await processarPagamentoParcial(dadosRecebimento.contaId, {
+        valorRecebido: valorEditadoRecebimento,
+        dataPagamento: dadosRecebimento.dataRecebimento,
+        metodoPagamento: dadosRecebimento.metodoPagamento,
+        observacoes: dadosRecebimento.observacoes
+      });
       
       setModalRecebimento(false);
       await recarregarDados();
