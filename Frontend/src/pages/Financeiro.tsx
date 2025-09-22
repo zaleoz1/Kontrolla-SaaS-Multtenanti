@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, 
   Search, 
@@ -27,18 +30,92 @@ import {
   Building,
   FileText,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  X,
+  Check,
+  Smartphone,
+  Banknote,
+  CreditCard as CreditCardIcon,
+  Smartphone as SmartphoneIcon,
+  Building2,
+  FileText as FileTextIcon
 } from "lucide-react";
 import { useTransacoes } from "@/hooks/useTransacoes";
 import { useContasReceber } from "@/hooks/useContasReceber";
 import { useContasPagar } from "@/hooks/useContasPagar";
 import { useFinanceiroStats } from "@/hooks/useFinanceiroStats";
+import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
+
+// Interfaces para pagamentos e recebimentos
+interface PagamentoData {
+  contaId: number;
+  valor: number;
+  metodoPagamento: 'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'transferencia' | 'boleto' | 'cheque';
+  dataPagamento: string;
+  comprovante?: File;
+  observacoes?: string;
+  numeroDocumento?: string;
+  bancoOrigem?: string;
+  agenciaOrigem?: string;
+  contaOrigem?: string;
+  tipo_origem?: 'conta_pagar' | 'transacao' | 'conta_receber' | 'venda' | 'transacao_entrada';
+  parcelas?: number;
+  taxaParcela?: number;
+}
+
+interface RecebimentoData {
+  contaId: number;
+  valor: number;
+  metodoPagamento: 'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'transferencia' | 'boleto' | 'cheque';
+  dataRecebimento: string;
+  comprovante?: File;
+  observacoes?: string;
+  desconto?: number;
+  juros?: number;
+  tipo_origem?: 'conta_pagar' | 'transacao' | 'conta_receber' | 'venda' | 'transacao_entrada';
+  parcelas?: number;
+  taxaParcela?: number;
+}
 
 export default function Financeiro() {
   const [termoBusca, setTermoBusca] = useState("");
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('mes');
   const [filtroStatus, setFiltroStatus] = useState<string>('');
   const navigate = useNavigate();
+
+  // Estados para modais de pagamento e recebimento
+  const [modalPagamento, setModalPagamento] = useState(false);
+  const [modalRecebimento, setModalRecebimento] = useState(false);
+  const [contaSelecionada, setContaSelecionada] = useState<any>(null);
+  const [tipoOperacao, setTipoOperacao] = useState<'pagar' | 'receber'>('pagar');
+  const [editandoValorRecebimento, setEditandoValorRecebimento] = useState(false);
+  const [valorEditadoRecebimento, setValorEditadoRecebimento] = useState(0);
+  const [valorOriginalRecebimento, setValorOriginalRecebimento] = useState(0);
+  const [dadosPagamento, setDadosPagamento] = useState<PagamentoData>({
+    contaId: 0,
+    valor: 0,
+    metodoPagamento: 'pix',
+    dataPagamento: new Date().toISOString().split('T')[0],
+    observacoes: '',
+    numeroDocumento: '',
+    bancoOrigem: '',
+    agenciaOrigem: '',
+    contaOrigem: '',
+    parcelas: 1,
+    taxaParcela: 0
+  });
+  const [dadosRecebimento, setDadosRecebimento] = useState<RecebimentoData>({
+    contaId: 0,
+    valor: 0,
+    metodoPagamento: 'pix',
+    dataRecebimento: new Date().toISOString().split('T')[0],
+    observacoes: '',
+    desconto: 0,
+    juros: 0,
+    parcelas: 1,
+    taxaParcela: 0
+  });
 
   // Hooks para dados financeiros
   const { 
@@ -70,6 +147,81 @@ export default function Financeiro() {
     error: errorStats,
     buscarStats 
   } = useFinanceiroStats();
+
+  // Hook para métodos de pagamento
+  const { metodosPagamento } = useMetodosPagamento();
+
+  // Atualizar método padrão quando os métodos de pagamento forem carregados (apenas na inicialização)
+  useEffect(() => {
+    if (metodosPagamento.length > 0 && dadosPagamento.metodoPagamento === 'pix' && dadosRecebimento.metodoPagamento === 'pix') {
+      const primeiroMetodo = metodosPagamento[0];
+      setDadosPagamento(prev => ({ ...prev, metodoPagamento: primeiroMetodo.tipo }));
+      setDadosRecebimento(prev => ({ ...prev, metodoPagamento: primeiroMetodo.tipo }));
+    }
+  }, [metodosPagamento]);
+
+  // Atualizar parcelas quando método de pagamento for cartão de crédito ou débito
+  useEffect(() => {
+    if (dadosPagamento.metodoPagamento === 'cartao_credito') {
+      const parcelasDisponiveis = obterParcelasDisponiveis(dadosPagamento.metodoPagamento);
+      if (parcelasDisponiveis.length > 0) {
+        const primeiraParcela = parcelasDisponiveis[0];
+        setDadosPagamento(prev => ({ 
+          ...prev, 
+          parcelas: primeiraParcela.quantidade,
+          taxaParcela: primeiraParcela.taxa
+        }));
+      }
+    } else if (dadosPagamento.metodoPagamento === 'cartao_debito') {
+      // Para cartão de débito, aplicar apenas a taxa sem parcelas
+      const metodo = obterMetodoSelecionado(dadosPagamento.metodoPagamento);
+      if (metodo) {
+        setDadosPagamento(prev => ({ 
+          ...prev, 
+          parcelas: 1,
+          taxaParcela: metodo.taxa
+        }));
+      }
+    } else {
+      // Reset parcelas e taxa quando não for cartão
+      setDadosPagamento(prev => ({ 
+        ...prev, 
+        parcelas: 1,
+        taxaParcela: 0
+      }));
+    }
+  }, [dadosPagamento.metodoPagamento]);
+
+  useEffect(() => {
+    if (dadosRecebimento.metodoPagamento === 'cartao_credito') {
+      const parcelasDisponiveis = obterParcelasDisponiveis(dadosRecebimento.metodoPagamento);
+      if (parcelasDisponiveis.length > 0) {
+        const primeiraParcela = parcelasDisponiveis[0];
+        setDadosRecebimento(prev => ({ 
+          ...prev, 
+          parcelas: primeiraParcela.quantidade,
+          taxaParcela: primeiraParcela.taxa
+        }));
+      }
+    } else if (dadosRecebimento.metodoPagamento === 'cartao_debito') {
+      // Para cartão de débito, aplicar apenas a taxa sem parcelas
+      const metodo = obterMetodoSelecionado(dadosRecebimento.metodoPagamento);
+      if (metodo) {
+        setDadosRecebimento(prev => ({ 
+          ...prev, 
+          parcelas: 1,
+          taxaParcela: metodo.taxa
+        }));
+      }
+    } else {
+      // Reset parcelas e taxa quando não for cartão
+      setDadosRecebimento(prev => ({ 
+        ...prev, 
+        parcelas: 1,
+        taxaParcela: 0
+      }));
+    }
+  }, [dadosRecebimento.metodoPagamento]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -162,7 +314,124 @@ export default function Financeiro() {
     return new Date(data).toLocaleDateString("pt-BR");
   };
 
-  // Função para marcar conta como paga
+  // Função para abrir modal de pagamento
+  const abrirModalPagamento = (conta: any, tipo: 'receber' | 'pagar') => {
+    setContaSelecionada(conta);
+    setTipoOperacao(tipo);
+    
+    // Para recebimentos, sempre usar PIX como padrão. Para pagamentos, usar o primeiro método disponível
+    const metodoPadrao = tipo === 'receber' ? 'pix' : (metodosPagamento.length > 0 ? metodosPagamento[0].tipo : 'pix');
+    
+    // Configurar parcelas e taxas baseado no método
+    let parcelasIniciais = 1;
+    let taxaInicial = 0;
+    
+    if (metodoPadrao === 'cartao_credito') {
+      const parcelasDisponiveis = obterParcelasDisponiveis(metodoPadrao);
+      if (parcelasDisponiveis.length > 0) {
+        parcelasIniciais = parcelasDisponiveis[0].quantidade;
+        taxaInicial = parcelasDisponiveis[0].taxa;
+      }
+    } else if (metodoPadrao === 'cartao_debito') {
+      // Para cartão de débito, usar apenas a taxa do método
+      const metodo = metodosPagamento.find(m => m.tipo === metodoPadrao);
+      if (metodo) {
+        parcelasIniciais = 1;
+        taxaInicial = metodo.taxa;
+      }
+    } else if (metodoPadrao === 'pix') {
+      // Para PIX, usar a taxa do método PIX se disponível
+      const metodo = metodosPagamento.find(m => m.tipo === 'pix');
+      if (metodo) {
+        parcelasIniciais = 1;
+        taxaInicial = metodo.taxa;
+      }
+    }
+    
+    if (tipo === 'receber') {
+      const valorOriginal = Number(conta.valor) || 0;
+      setDadosRecebimento({
+        contaId: conta.id,
+        valor: valorOriginal,
+        metodoPagamento: metodoPadrao,
+        dataRecebimento: new Date().toISOString().split('T')[0],
+        observacoes: '',
+        desconto: 0,
+        juros: 0,
+        tipo_origem: conta.tipo_origem,
+        parcelas: parcelasIniciais,
+        taxaParcela: taxaInicial
+      });
+      setValorOriginalRecebimento(valorOriginal);
+      // Inicializar com o valor calculado (original + taxas)
+      const valorCalculadoInicial = metodoPadrao === 'cartao_debito' 
+        ? calcularValorComTaxa(valorOriginal, taxaInicial)
+        : calcularValorParcela(valorOriginal, parcelasIniciais, taxaInicial) * parcelasIniciais;
+      setValorEditadoRecebimento(valorCalculadoInicial);
+      setEditandoValorRecebimento(false);
+      setModalRecebimento(true);
+    } else {
+      setDadosPagamento({
+        contaId: conta.id,
+        valor: Number(conta.valor) || 0,
+        metodoPagamento: metodoPadrao,
+        dataPagamento: new Date().toISOString().split('T')[0],
+        observacoes: '',
+        numeroDocumento: '',
+        bancoOrigem: '',
+        agenciaOrigem: '',
+        contaOrigem: '',
+        tipo_origem: conta.tipo_origem,
+        parcelas: parcelasIniciais,
+        taxaParcela: taxaInicial
+      });
+      setModalPagamento(true);
+    }
+  };
+
+  // Função para processar pagamento
+  const processarPagamento = async () => {
+    try {
+      // Aqui você pode adicionar lógica para salvar o comprovante se necessário
+      // Por enquanto, vamos usar a função existente
+      await marcarContaPagarComoPago(
+        dadosPagamento.contaId, 
+        dadosPagamento.dataPagamento, 
+        dadosPagamento.tipo_origem as 'conta_pagar' | 'transacao'
+      );
+      
+      setModalPagamento(false);
+      await recarregarDados();
+      
+      // Aqui você pode adicionar notificação de sucesso
+      console.log('Pagamento processado com sucesso:', dadosPagamento);
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+    }
+  };
+
+  // Função para processar recebimento
+  const processarRecebimento = async () => {
+    try {
+      // Aqui você pode adicionar lógica para salvar o comprovante se necessário
+      // Por enquanto, vamos usar a função existente
+      await marcarContaReceberComoPago(
+        dadosRecebimento.contaId, 
+        dadosRecebimento.dataRecebimento, 
+        dadosRecebimento.tipo_origem as 'conta_receber' | 'venda' | 'transacao_entrada'
+      );
+      
+      setModalRecebimento(false);
+      await recarregarDados();
+      
+      // Aqui você pode adicionar notificação de sucesso
+      console.log('Recebimento processado com sucesso:', dadosRecebimento);
+    } catch (error) {
+      console.error('Erro ao processar recebimento:', error);
+    }
+  };
+
+  // Função para marcar conta como paga (versão simplificada para compatibilidade)
   const handleMarcarComoPago = async (id: number, tipo: 'receber' | 'pagar', tipo_origem?: 'conta_pagar' | 'transacao' | 'conta_receber' | 'venda' | 'transacao_entrada') => {
     try {
       if (tipo === 'receber') {
@@ -174,6 +443,52 @@ export default function Financeiro() {
     } catch (error) {
       console.error('Erro ao marcar como pago:', error);
     }
+  };
+
+  // Função para obter ícone do método de pagamento
+  const obterIconeMetodoPagamento = (tipo: string) => {
+    switch (tipo) {
+      case 'pix':
+        return <SmartphoneIcon className="h-4 w-4" />;
+      case 'dinheiro':
+        return <Banknote className="h-4 w-4" />;
+      case 'cartao_credito':
+      case 'cartao_debito':
+        return <CreditCardIcon className="h-4 w-4" />;
+      case 'transferencia':
+        return <Building2 className="h-4 w-4" />;
+      case 'boleto':
+      case 'cheque':
+        return <FileTextIcon className="h-4 w-4" />;
+      default:
+        return <DollarSign className="h-4 w-4" />;
+    }
+  };
+
+  // Função para obter método de pagamento selecionado
+  const obterMetodoSelecionado = (tipo: string) => {
+    return metodosPagamento.find(metodo => metodo.tipo === tipo);
+  };
+
+  // Função para obter parcelas disponíveis para um método
+  const obterParcelasDisponiveis = (tipo: string) => {
+    const metodo = obterMetodoSelecionado(tipo);
+    if (!metodo || tipo !== 'cartao_credito') return [];
+    
+    return metodo.parcelas
+      .filter(parcela => parcela.ativo)
+      .sort((a, b) => a.quantidade - b.quantidade);
+  };
+
+  // Função para calcular valor da parcela
+  const calcularValorParcela = (valor: number, parcelas: number, taxa: number) => {
+    const valorComTaxa = valor * (1 + taxa / 100);
+    return valorComTaxa / parcelas;
+  };
+
+  // Função para calcular valor com taxa (para cartão de débito)
+  const calcularValorComTaxa = (valor: number, taxa: number) => {
+    return valor * (1 + taxa / 100);
   };
 
   return (
@@ -385,7 +700,7 @@ export default function Financeiro() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => handleMarcarComoPago(item.id!, 'receber', item.tipo_origem)}
+                              onClick={() => abrirModalPagamento(item, 'receber')}
                             >
                               <Receipt className="h-4 w-4 mr-2" />
                               Receber
@@ -494,7 +809,7 @@ export default function Financeiro() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => handleMarcarComoPago(item.id!, 'pagar', item.tipo_origem)}
+                              onClick={() => abrirModalPagamento(item, 'pagar')}
                             >
                               <CreditCard className="h-4 w-4 mr-2" />
                               Pagar
@@ -644,6 +959,510 @@ export default function Financeiro() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Pagamento */}
+      <Dialog open={modalPagamento} onOpenChange={setModalPagamento}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5" />
+              Realizar Pagamento
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Informações da conta */}
+            <div className="p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-semibold mb-2 text-base">Conta a Pagar</h4>
+              <p className="text-sm text-muted-foreground">
+                {contaSelecionada?.fornecedor || 'Fornecedor não informado'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {contaSelecionada?.descricao}
+              </p>
+              <p className="text-lg font-bold text-destructive">
+                {formatarValor(dadosPagamento.valor)}
+              </p>
+            </div>
+
+            {/* Método de pagamento e Data */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Método de Pagamento</Label>
+                <Select 
+                  value={dadosPagamento.metodoPagamento} 
+                  onValueChange={(value: any) => setDadosPagamento({...dadosPagamento, metodoPagamento: value})}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o método de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {metodosPagamento.map((metodo) => (
+                      <SelectItem key={metodo.id} value={metodo.tipo}>
+                        <div className="flex items-center gap-2">
+                          {obterIconeMetodoPagamento(metodo.tipo)}
+                          <span>{metodo.nome}</span>
+                          {metodo.taxa > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              ({metodo.taxa}% taxa)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Data do Pagamento</Label>
+                <Input
+                  type="date"
+                  className="h-10"
+                  value={dadosPagamento.dataPagamento}
+                  onChange={(e) => setDadosPagamento({...dadosPagamento, dataPagamento: e.target.value})}
+                />
+              </div>
+            </div>
+
+
+            {/* Seleção de parcelas (para cartão de crédito) */}
+            {dadosPagamento.metodoPagamento === 'cartao_credito' && (() => {
+              const parcelasDisponiveis = obterParcelasDisponiveis(dadosPagamento.metodoPagamento);
+              return parcelasDisponiveis.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Parcelas</Label>
+                  <Select 
+                    value={dadosPagamento.parcelas?.toString() || '1'} 
+                    onValueChange={(value) => {
+                      const parcelas = parseInt(value);
+                      const metodo = obterMetodoSelecionado(dadosPagamento.metodoPagamento);
+                      const parcelaSelecionada = metodo?.parcelas.find(p => p.quantidade === parcelas);
+                      
+                      setDadosPagamento({
+                        ...dadosPagamento, 
+                        parcelas,
+                        taxaParcela: parcelaSelecionada?.taxa || 0
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Selecione o número de parcelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parcelasDisponiveis.map((parcela) => {
+                        const valorParcela = calcularValorParcela(dadosPagamento.valor, parcela.quantidade, parcela.taxa);
+                        const valorTotal = valorParcela * parcela.quantidade;
+                        return (
+                          <SelectItem key={parcela.id} value={parcela.quantidade.toString()}>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{parcela.quantidade}x</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className="font-medium">
+                                  {formatarValor(valorParcela)}/mês
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Total: {formatarValor(valorTotal)}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
+
+
+            {/* Número do documento (para transferência/boleto) */}
+            {(dadosPagamento.metodoPagamento === 'transferencia' || dadosPagamento.metodoPagamento === 'boleto') && (
+              <div className="space-y-2">
+                <Label className="text-sm">Número do Documento</Label>
+                <Input
+                  className="h-10"
+                  placeholder="Ex: 123456789"
+                  value={dadosPagamento.numeroDocumento}
+                  onChange={(e) => setDadosPagamento({...dadosPagamento, numeroDocumento: e.target.value})}
+                />
+              </div>
+            )}
+
+            {/* Dados bancários (para transferência) */}
+            {dadosPagamento.metodoPagamento === 'transferencia' && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">Banco</Label>
+                  <Input
+                    className="h-10"
+                    placeholder="Ex: 001"
+                    value={dadosPagamento.bancoOrigem}
+                    onChange={(e) => setDadosPagamento({...dadosPagamento, bancoOrigem: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Agência</Label>
+                  <Input
+                    className="h-10"
+                    placeholder="Ex: 1234"
+                    value={dadosPagamento.agenciaOrigem}
+                    onChange={(e) => setDadosPagamento({...dadosPagamento, agenciaOrigem: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Conta</Label>
+                  <Input
+                    className="h-10"
+                    placeholder="Ex: 12345-6"
+                    value={dadosPagamento.contaOrigem}
+                    onChange={(e) => setDadosPagamento({...dadosPagamento, contaOrigem: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Upload de comprovante e Observações */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Comprovante (Opcional)</Label>
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Clique para fazer upload
+                  </p>
+                  <Input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="mt-2 h-9"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setDadosPagamento({...dadosPagamento, comprovante: file});
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Observações (Opcional)</Label>
+                <Textarea
+                  className="min-h-[120px] text-sm"
+                  placeholder="Adicione observações sobre o pagamento..."
+                  value={dadosPagamento.observacoes}
+                  onChange={(e) => setDadosPagamento({...dadosPagamento, observacoes: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setModalPagamento(false)}
+                className="flex-1 h-10"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={processarPagamento}
+                className="flex-1 h-10 bg-gradient-primary"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Confirmar Pagamento
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Recebimento */}
+      <Dialog open={modalRecebimento} onOpenChange={setModalRecebimento}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Receipt className="h-5 w-5" />
+              Receber Pagamento
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Informações da conta */}
+            <div className="p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-semibold mb-2 text-base">Conta a Receber</h4>
+              <p className="text-sm text-muted-foreground">
+                {contaSelecionada?.cliente_nome || 'Cliente não informado'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {contaSelecionada?.descricao}
+              </p>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Valor original: {formatarValor(valorOriginalRecebimento)}
+                  </p>
+                  {valorEditadoRecebimento !== valorOriginalRecebimento && (
+                    <p className="text-sm text-orange-600 font-medium">
+                      Valor restante: {formatarValor(valorOriginalRecebimento - valorEditadoRecebimento)}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Valor a receber:</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditandoValorRecebimento(!editandoValorRecebimento)}
+                    >
+                      {editandoValorRecebimento ? 'Cancelar' : 'Editar'}
+                    </Button>
+                  </div>
+                  
+                  {editandoValorRecebimento ? (
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Digite o valor a receber"
+                        value={valorEditadoRecebimento}
+                        onChange={(e) => setValorEditadoRecebimento(parseFloat(e.target.value) || 0)}
+                        className="h-10"
+                      />
+                      
+                      {/* Mostrar valor restante */}
+                      {(() => {
+                        const valorCalculado = dadosRecebimento.metodoPagamento === 'cartao_debito' 
+                          ? calcularValorComTaxa(valorOriginalRecebimento, dadosRecebimento.taxaParcela || 0)
+                          : calcularValorParcela(valorOriginalRecebimento, dadosRecebimento.parcelas || 1, dadosRecebimento.taxaParcela || 0) * (dadosRecebimento.parcelas || 1);
+                        
+                        const valorRestante = valorCalculado - valorEditadoRecebimento;
+                        
+                        return (
+                          <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>Valor calculado:</span>
+                              <span className="font-medium">{formatarValor(valorCalculado)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>Valor a receber:</span>
+                              <span className="font-medium text-success">{formatarValor(valorEditadoRecebimento)}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            // Não alterar dadosRecebimento.valor, apenas sair do modo de edição
+                            setEditandoValorRecebimento(false);
+                          }}
+                        >
+                          Confirmar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const valorCalculado = dadosRecebimento.metodoPagamento === 'cartao_debito' 
+                              ? calcularValorComTaxa(valorOriginalRecebimento, dadosRecebimento.taxaParcela || 0)
+                              : calcularValorParcela(valorOriginalRecebimento, dadosRecebimento.parcelas || 1, dadosRecebimento.taxaParcela || 0) * (dadosRecebimento.parcelas || 1);
+                            setValorEditadoRecebimento(valorCalculado);
+                            setEditandoValorRecebimento(false);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-lg font-bold text-success">
+                      {formatarValor(valorEditadoRecebimento)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Método de recebimento e Data */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Método de Recebimento</Label>
+                <Select 
+                  value={dadosRecebimento.metodoPagamento} 
+                  onValueChange={(value: any) => setDadosRecebimento({...dadosRecebimento, metodoPagamento: value})}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o método de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {metodosPagamento.map((metodo) => (
+                      <SelectItem key={metodo.id} value={metodo.tipo}>
+                        <div className="flex items-center gap-2">
+                          {obterIconeMetodoPagamento(metodo.tipo)}
+                          <span>{metodo.nome}</span>
+                          {metodo.taxa > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              ({metodo.taxa}% taxa)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Data do Recebimento</Label>
+                <Input
+                  type="date"
+                  className="h-10"
+                  value={dadosRecebimento.dataRecebimento}
+                  onChange={(e) => setDadosRecebimento({...dadosRecebimento, dataRecebimento: e.target.value})}
+                />
+              </div>
+            </div>
+
+
+            {/* Seleção de parcelas (para cartão de crédito) */}
+            {dadosRecebimento.metodoPagamento === 'cartao_credito' && (() => {
+              const parcelasDisponiveis = obterParcelasDisponiveis(dadosRecebimento.metodoPagamento);
+              return parcelasDisponiveis.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Parcelas</Label>
+                  <Select 
+                    value={dadosRecebimento.parcelas?.toString() || '1'} 
+                    onValueChange={(value) => {
+                      const parcelas = parseInt(value);
+                      const metodo = obterMetodoSelecionado(dadosRecebimento.metodoPagamento);
+                      const parcelaSelecionada = metodo?.parcelas.find(p => p.quantidade === parcelas);
+                      
+                      setDadosRecebimento({
+                        ...dadosRecebimento, 
+                        parcelas,
+                        taxaParcela: parcelaSelecionada?.taxa || 0
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Selecione o número de parcelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parcelasDisponiveis.map((parcela) => {
+                        const valorParcela = calcularValorParcela(dadosRecebimento.valor, parcela.quantidade, parcela.taxa);
+                        const valorTotal = valorParcela * parcela.quantidade;
+                        return (
+                          <SelectItem key={parcela.id} value={parcela.quantidade.toString()}>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{parcela.quantidade}x</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className="font-medium">
+                                  {formatarValor(valorParcela)}/mês
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Total: {formatarValor(valorTotal)}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
+
+
+            {/* Desconto e Juros */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Desconto (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="h-10"
+                  placeholder="0,00"
+                  value={dadosRecebimento.desconto}
+                  onChange={(e) => setDadosRecebimento({...dadosRecebimento, desconto: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Juros (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="h-10"
+                  placeholder="0,00"
+                  value={dadosRecebimento.juros}
+                  onChange={(e) => setDadosRecebimento({...dadosRecebimento, juros: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+            </div>
+
+            {/* Upload de comprovante e Observações */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Comprovante (Opcional)</Label>
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Clique para fazer upload
+                  </p>
+                  <Input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="mt-2 h-9"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setDadosRecebimento({...dadosRecebimento, comprovante: file});
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Observações (Opcional)</Label>
+                <Textarea
+                  className="min-h-[120px] text-sm"
+                  placeholder="Adicione observações sobre o recebimento..."
+                  value={dadosRecebimento.observacoes}
+                  onChange={(e) => setDadosRecebimento({...dadosRecebimento, observacoes: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setModalRecebimento(false)}
+                className="flex-1 h-10"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={processarRecebimento}
+                className="flex-1 h-10 bg-gradient-primary"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Confirmar Recebimento
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
