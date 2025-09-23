@@ -969,7 +969,7 @@ export default function Vendas() {
                       size="sm"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Venda
+                      Cancelar Venda
                     </Button>
                   </div>
                   {vendaSelecionada.status !== 'pendente' && (

@@ -76,7 +76,7 @@ export const usePagamentos = () => {
 
   // Função para calcular o valor restante para pagamento a prazo
   const calcularValorRestantePrazo = (metodosPagamento: MetodoPagamento[], total: number) => {
-    if (metodosPagamento.length === 0) return 0;
+    if (metodosPagamento.length === 0) return total;
     
     const totalPago = metodosPagamento.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
     return Math.max(0, total - totalPago);
@@ -232,7 +232,7 @@ export const usePagamentos = () => {
         ...pagamentoPrazo,
         juros: pagamentoPrazo.juros === "" ? null : pagamentoPrazo.juros,
         dias: pagamentoPrazo.dias === "" ? null : pagamentoPrazo.dias,
-        valorOriginal: metodosFinais.length > 0 ? calcularValorRestantePrazo(metodosFinais, total) : total // O valor original é o valor restante para pagamento a prazo
+        valorOriginal: metodosFinais.length > 0 ? calcularValorRestantePrazo(metodosFinais, subtotal - valorDesconto) : (subtotal - valorDesconto) // O valor original é o valor restante para pagamento a prazo (sem juros)
       } : undefined,
       subtotal: parseFloat(subtotal.toString()),
       desconto: parseFloat(valorDesconto.toString()),
