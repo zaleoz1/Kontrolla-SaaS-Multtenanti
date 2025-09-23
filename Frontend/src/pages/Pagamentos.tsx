@@ -205,9 +205,7 @@ export default function Pagamentos() {
 
   // Função para calcular o total a cobrar (incluindo taxas de cartão de débito e juros de parcelamento)
   const calcularTotalACobrar = () => {
-    if (usarPagamentoPrazo && clienteSelecionado) {
-      return pagamentoPrazo.valorComJuros; // Inclui juros de parcelamento
-    }
+    // NÃO incluir pagamento a prazo no cálculo - apenas métodos de pagamento à vista
     
     if (metodosPagamento.length > 0) {
       return metodosPagamento.reduce((sum, m) => {
@@ -835,18 +833,14 @@ export default function Pagamentos() {
 
             ${vendaFinalizada?.pagamento_prazo ? `
               <div>
-                <div>Valor Original: ${(vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                })}</div>
-                <div>Juros (${vendaFinalizada.pagamento_prazo.juros}%): +${(vendaFinalizada.pagamento_prazo.valorComJuros - (vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total)).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                })}</div>
                 <div><strong>Valor a Prazo: ${vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
                   style: 'currency',
                   currency: 'BRL'
                 })}</strong></div>
+                <div>Juros (${vendaFinalizada.pagamento_prazo.juros}%): +${(vendaFinalizada.pagamento_prazo.valorComJuros - (vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total)).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                })}</div>
                 <div>Vencimento: ${new Date(vendaFinalizada.pagamento_prazo.dataVencimento).toLocaleDateString('pt-BR')}</div>
               </div>
             ` : ''}
@@ -2065,29 +2059,83 @@ export default function Pagamentos() {
                   {/* Pagamento a prazo */}
                   {usarPagamentoPrazo && clienteSelecionado && (
                         <div className="pt-2 border-t border-slate-300">
-                      <div className="flex justify-between text-xs text-purple-600">
-                        <span>Total a Prazo:</span>
-                        <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL"
-                        })}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Vencimento:</span>
-                        <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
-                      </div>
+                      {/* Quando é apenas pagamento a prazo (sem métodos múltiplos), dar mais destaque */}
+                      {metodosPagamento.length === 0 && !metodoPagamentoUnico ? (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-sm font-bold text-purple-800">Total a Prazo:</span>
+                            </div>
+                            <span className="text-lg font-bold text-purple-600">
+                              {pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-200">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-3 w-3 text-slate-500" />
+                              <span className="text-xs font-medium text-slate-700">Vencimento:</span>
+                            </div>
+                            <span className="text-sm font-semibold text-slate-800">
+                              {pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-sm font-bold text-purple-800">Total a Prazo:</span>
+                            </div>
+                            <span className="text-lg font-bold text-purple-600">
+                              {pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-200">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-3 w-3 text-slate-500" />
+                              <span className="text-xs font-medium text-slate-700">Vencimento:</span>
+                            </div>
+                            <span className="text-sm font-semibold text-slate-800">
+                              {pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="border-t pt-2 space-y-1">
-                    {/* Total a Cobrar - só aparece para cartão de crédito ou débito */}
+                    {/* Total a Cobrar - sempre mostra o valor com juros quando há cartão de crédito ou débito */}
                     {(() => {
                       const temCartaoCredito = metodoPagamentoUnico === "cartao_credito" || 
                         metodosPagamento.some(m => m.metodo === "cartao_credito");
                       const temCartaoDebito = metodoPagamentoUnico === "cartao_debito" || 
                         metodosPagamento.some(m => m.metodo === "cartao_debito");
                       
+                      // Sempre mostrar quando há cartão de crédito ou débito, pois sempre há valor a cobrar (com ou sem juros)
                       if (temCartaoCredito || temCartaoDebito) {
+                        const totalACobrar = calcularTotalACobrar();
+                        
+                        // Calcular valor original baseado nos métodos de pagamento à vista (sem pagamento a prazo)
+                        let valorOriginal = total;
+                        if (metodosPagamento.length > 0) {
+                          valorOriginal = metodosPagamento.reduce((sum, m) => {
+                            return sum + parseValorComVirgula(m.valor);
+                          }, 0);
+                        } else if (metodoPagamentoUnico === "dinheiro") {
+                          valorOriginal = parseValorComVirgula(valorDinheiro);
+                        } else if (metodoPagamentoUnico === "cartao_credito" || metodoPagamentoUnico === "cartao_debito") {
+                          valorOriginal = total;
+                        }
+                        
                         return (
                           <div className="flex justify-between items-center p-2 bg-red-50 rounded border border-red-200">
                             <div className="flex items-center space-x-1">
@@ -2095,7 +2143,7 @@ export default function Pagamentos() {
                               <span className="text-xs font-medium text-red-800">Total a Cobrar:</span>
                             </div>
                             <span className="text-sm font-bold text-red-600">
-                              {calcularTotalACobrar().toLocaleString("pt-BR", {
+                              {totalACobrar.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}
@@ -2106,34 +2154,46 @@ export default function Pagamentos() {
                       return null;
                     })()}
 
-                    {/* Total a Receber */}
-                    <div className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-medium text-green-800">Total a Receber:</span>
-                      </div>
-                      <span className="text-sm font-bold text-green-600">
-                        {calcularTotalPago().toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                })}
-                              </span>
-                            </div>
+                    {/* Total a Receber - só aparece se não for apenas pagamento a prazo */}
+                    {!usarPagamentoPrazo && (
+                      <div className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                          <span className="text-xs font-medium text-green-800">Total a Receber:</span>
+                        </div>
+                        <span className="text-sm font-bold text-green-600">
+                          {calcularTotalPago().toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL"
+                                  })}
+                                </span>
+                              </div>
+                    )}
 
                     {/* Status do Pagamento */}
                     {(() => {
                       const statusPagamento = calcularStatusPagamento();
                       
+                      // Se for apenas pagamento a prazo (sem métodos de pagamento à vista), não mostrar "Falta Receber"
+                      if (usarPagamentoPrazo && metodosPagamento.length === 0 && !metodoPagamentoUnico) {
+                        return null;
+                      }
+                      
                       if (statusPagamento.faltaPagar > 0) {
                         // Verificar se é pagamento múltiplo com prazo ativo
                         const isPagamentoMultiploComPrazo = metodosPagamento.length > 0 && usarPagamentoPrazo && clienteSelecionado;
+                        
+                        // Se for pagamento múltiplo com prazo, não mostrar o card laranja
+                        if (isPagamentoMultiploComPrazo) {
+                          return null;
+                        }
                         
                         return (
                           <div className="flex justify-between items-center p-2 bg-orange-50 rounded border border-orange-200">
                             <div className="flex items-center space-x-1">
                               <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
                               <span className="text-xs font-medium text-orange-800">
-                                {isPagamentoMultiploComPrazo ? "Total a Prazo:" : "Falta Receber:"}
+                                Falta Receber:
                               </span>
                             </div>
                             <span className="text-sm font-bold text-orange-600">
