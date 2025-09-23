@@ -434,9 +434,9 @@ router.post('/', validateVenda, async (req, res) => {
 
     // Salvar pagamento a prazo (se houver) - agora como conta a receber
     if (pagamento_prazo) {
-      // O valor original é sempre o total da venda (sem juros)
-      const valorOriginal = total;
-      const valorComJuros = pagamento_prazo.valorComJuros || total;
+      // Usar o valor original que vem do frontend (já calculado corretamente)
+      const valorOriginal = pagamento_prazo.valorOriginal || total;
+      const valorComJuros = pagamento_prazo.valorComJuros || valorOriginal;
       const dias = pagamento_prazo.dias ? parseInt(pagamento_prazo.dias) : null;
       const juros = pagamento_prazo.juros ? parseFloat(pagamento_prazo.juros) : 0;
       const dataVencimento = new Date(pagamento_prazo.dataVencimento).toISOString().split('T')[0];
