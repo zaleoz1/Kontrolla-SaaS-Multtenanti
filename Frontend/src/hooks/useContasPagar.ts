@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useCrudApi } from './useApi';
-import { API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS, API_CONFIG } from '../config/api';
 
 // Interfaces para contas a pagar
 export interface ContaPagar {
@@ -127,6 +127,45 @@ export function useContasPagar() {
     }
   }, [atualizarConta]);
 
+  const processarPagamento = useCallback(async (id: number, dadosPagamento: {
+    dataPagamento: string;
+    metodoPagamento: string;
+    observacoes?: string;
+    comprovante?: File;
+    numeroDocumento?: string;
+    bancoOrigem?: string;
+    agenciaOrigem?: string;
+    contaOrigem?: string;
+    parcelas?: number;
+    taxaParcela?: number;
+  }) => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.FINANCIAL.ACCOUNTS_PAYABLE}/${id}/pagar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(dadosPagamento)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao processar pagamento');
+      }
+
+      const result = await response.json();
+      
+      // Atualizar lista local
+      await buscarContas();
+      
+      return result;
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+      throw error;
+    }
+  }, [buscarContas]);
+
   return {
     ...api,
     contas,
@@ -137,5 +176,6 @@ export function useContasPagar() {
     atualizarConta,
     deletarConta,
     marcarComoPago,
+    processarPagamento,
   };
 }

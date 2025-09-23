@@ -586,9 +586,27 @@ export default function Pagamentos() {
     total
   );
   
+  // Validação adicional para pagamento múltiplo
+  const validarPagamentoMultiplo = () => {
+    if (metodosPagamento.length > 0) {
+      // Verificar se todos os métodos têm forma de pagamento e valor preenchidos
+      const metodoIncompleto = metodosPagamento.find(m => 
+        !m.metodo || 
+        !m.valor || 
+        parseFloat(m.valor.replace(',', '.')) <= 0
+      );
+      
+      if (metodoIncompleto) {
+        return false;
+      }
+    }
+    return true;
+  };
+  
   const formularioValido = (validacaoFormulario === "Pagamento a prazo configurado" || 
     validacaoFormulario === "Preencha todos os campos obrigatórios") &&
-    (!usarPagamentoPrazo || (usarPagamentoPrazo && pagamentoPrazo.dias && pagamentoPrazo.dias.trim() !== ""));
+    (!usarPagamentoPrazo || (usarPagamentoPrazo && pagamentoPrazo.dias && pagamentoPrazo.dias.trim() !== "")) &&
+    validarPagamentoMultiplo();
 
   const fecharVenda = () => {
     setVendaFinalizada(null);

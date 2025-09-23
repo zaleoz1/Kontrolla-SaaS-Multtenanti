@@ -10,7 +10,9 @@ export interface FinanceiroStats {
     saidas: number;
     total_entradas: number;
     total_saidas: number;
+    total_vendas_pagas: number;
     fluxo_caixa: number;
+    saldo_atual: number;
     contas_receber: {
       total_contas: number;
       valor_pendente: number;

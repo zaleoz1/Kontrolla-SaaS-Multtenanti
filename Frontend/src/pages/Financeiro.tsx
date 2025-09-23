@@ -139,7 +139,8 @@ export default function Financeiro() {
     loading: loadingContasPagar, 
     error: errorContasPagar,
     buscarContas: buscarContasPagar,
-    marcarComoPago: marcarContaPagarComoPago
+    marcarComoPago: marcarContaPagarComoPago,
+    processarPagamento: processarPagamentoContaPagar
   } = useContasPagar();
   
   const { 
@@ -300,7 +301,7 @@ export default function Financeiro() {
   const fluxoCaixa = Number(stats?.stats?.fluxo_caixa) || 0;
   const totalEntradas = Number(stats?.stats?.total_entradas) || 0;
   const totalSaidas = Number(stats?.stats?.total_saidas) || 0;
-  const saldoAtual = totalEntradas - totalSaidas;
+  const saldoAtual = Number((stats?.stats as any)?.saldo_atual) || 0;
 
   // Função para calcular dias de vencimento
   const calcularDiasVencimento = (dataVencimento: string) => {
@@ -417,13 +418,19 @@ export default function Financeiro() {
   // Função para processar pagamento
   const processarPagamento = async () => {
     try {
-      // Aqui você pode adicionar lógica para salvar o comprovante se necessário
-      // Por enquanto, vamos usar a função existente
-      await marcarContaPagarComoPago(
-        dadosPagamento.contaId, 
-        dadosPagamento.dataPagamento, 
-        dadosPagamento.tipo_origem as 'conta_pagar' | 'transacao'
-      );
+      // Usar a nova função de processamento de pagamento
+      await processarPagamentoContaPagar(dadosPagamento.contaId, {
+        dataPagamento: dadosPagamento.dataPagamento,
+        metodoPagamento: dadosPagamento.metodoPagamento,
+        observacoes: dadosPagamento.observacoes,
+        comprovante: dadosPagamento.comprovante,
+        numeroDocumento: dadosPagamento.numeroDocumento,
+        bancoOrigem: dadosPagamento.bancoOrigem,
+        agenciaOrigem: dadosPagamento.agenciaOrigem,
+        contaOrigem: dadosPagamento.contaOrigem,
+        parcelas: dadosPagamento.parcelas,
+        taxaParcela: dadosPagamento.taxaParcela
+      });
       
       setModalPagamento(false);
       await recarregarDados();
