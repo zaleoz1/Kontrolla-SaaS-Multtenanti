@@ -152,6 +152,30 @@ export default function Financeiro() {
   // Hook para métodos de pagamento
   const { metodosPagamento } = useMetodosPagamento();
 
+  // Métodos de pagamento fixos para o modal "Realizar Pagamento"
+  const metodosPagamentoFixos = [
+    { id: 1, tipo: 'pix', nome: 'PIX', taxa: 0 },
+    { id: 2, tipo: 'dinheiro', nome: 'Dinheiro', taxa: 0 },
+    { id: 3, tipo: 'cartao_credito', nome: 'Cartão de Crédito', taxa: 0, parcelas: [
+      { id: 1, quantidade: 1, taxa: 0, ativo: true },
+      { id: 2, quantidade: 2, taxa: 0, ativo: true },
+      { id: 3, quantidade: 3, taxa: 0, ativo: true },
+      { id: 4, quantidade: 4, taxa: 0, ativo: true },
+      { id: 5, quantidade: 5, taxa: 0, ativo: true },
+      { id: 6, quantidade: 6, taxa: 0, ativo: true },
+      { id: 7, quantidade: 7, taxa: 0, ativo: true },
+      { id: 8, quantidade: 8, taxa: 0, ativo: true },
+      { id: 9, quantidade: 9, taxa: 0, ativo: true },
+      { id: 10, quantidade: 10, taxa: 0, ativo: true },
+      { id: 11, quantidade: 11, taxa: 0, ativo: true },
+      { id: 12, quantidade: 12, taxa: 0, ativo: true }
+    ]},
+    { id: 4, tipo: 'cartao_debito', nome: 'Cartão de Débito', taxa: 0 },
+    { id: 5, tipo: 'transferencia', nome: 'Transferência Bancária', taxa: 0 },
+    { id: 6, tipo: 'boleto', nome: 'Boleto Bancário', taxa: 0 },
+    { id: 7, tipo: 'cheque', nome: 'Cheque', taxa: 0 }
+  ];
+
   // Atualizar método padrão quando os métodos de pagamento forem carregados (apenas na inicialização)
   useEffect(() => {
     if (metodosPagamento.length > 0 && dadosPagamento.metodoPagamento === 'pix' && dadosRecebimento.metodoPagamento === 'pix') {
@@ -164,7 +188,7 @@ export default function Financeiro() {
   // Atualizar parcelas quando método de pagamento for cartão de crédito ou débito
   useEffect(() => {
     if (dadosPagamento.metodoPagamento === 'cartao_credito') {
-      const parcelasDisponiveis = obterParcelasDisponiveis(dadosPagamento.metodoPagamento);
+      const parcelasDisponiveis = obterParcelasFixasDisponiveis(dadosPagamento.metodoPagamento);
       if (parcelasDisponiveis.length > 0) {
         const primeiraParcela = parcelasDisponiveis[0];
         setDadosPagamento(prev => ({ 
@@ -175,7 +199,7 @@ export default function Financeiro() {
       }
     } else if (dadosPagamento.metodoPagamento === 'cartao_debito') {
       // Para cartão de débito, aplicar apenas a taxa sem parcelas
-      const metodo = obterMetodoSelecionado(dadosPagamento.metodoPagamento);
+      const metodo = obterMetodoFixoSelecionado(dadosPagamento.metodoPagamento);
       if (metodo) {
         setDadosPagamento(prev => ({ 
           ...prev, 
@@ -328,21 +352,21 @@ export default function Financeiro() {
     let taxaInicial = 0;
     
     if (metodoPadrao === 'cartao_credito') {
-      const parcelasDisponiveis = obterParcelasDisponiveis(metodoPadrao);
+      const parcelasDisponiveis = obterParcelasFixasDisponiveis(metodoPadrao);
       if (parcelasDisponiveis.length > 0) {
         parcelasIniciais = parcelasDisponiveis[0].quantidade;
         taxaInicial = parcelasDisponiveis[0].taxa;
       }
     } else if (metodoPadrao === 'cartao_debito') {
       // Para cartão de débito, usar apenas a taxa do método
-      const metodo = metodosPagamento.find(m => m.tipo === metodoPadrao);
+      const metodo = metodosPagamentoFixos.find(m => m.tipo === metodoPadrao);
       if (metodo) {
         parcelasIniciais = 1;
         taxaInicial = metodo.taxa;
       }
     } else if (metodoPadrao === 'pix') {
       // Para PIX, usar a taxa do método PIX se disponível
-      const metodo = metodosPagamento.find(m => m.tipo === 'pix');
+      const metodo = metodosPagamentoFixos.find(m => m.tipo === 'pix');
       if (metodo) {
         parcelasIniciais = 1;
         taxaInicial = metodo.taxa;
@@ -472,9 +496,24 @@ export default function Financeiro() {
     return metodosPagamento.find(metodo => metodo.tipo === tipo);
   };
 
+  // Função para obter método de pagamento fixo selecionado (para modal de pagamento)
+  const obterMetodoFixoSelecionado = (tipo: string) => {
+    return metodosPagamentoFixos.find(metodo => metodo.tipo === tipo);
+  };
+
   // Função para obter parcelas disponíveis para um método
   const obterParcelasDisponiveis = (tipo: string) => {
     const metodo = obterMetodoSelecionado(tipo);
+    if (!metodo || tipo !== 'cartao_credito') return [];
+    
+    return metodo.parcelas
+      .filter(parcela => parcela.ativo)
+      .sort((a, b) => a.quantidade - b.quantidade);
+  };
+
+  // Função para obter parcelas disponíveis para um método fixo (para modal de pagamento)
+  const obterParcelasFixasDisponiveis = (tipo: string) => {
+    const metodo = obterMetodoFixoSelecionado(tipo);
     if (!metodo || tipo !== 'cartao_credito') return [];
     
     return metodo.parcelas
@@ -491,6 +530,17 @@ export default function Financeiro() {
   // Função para calcular valor com taxa (para cartão de débito)
   const calcularValorComTaxa = (valor: number, taxa: number) => {
     return valor * (1 + taxa / 100);
+  };
+
+  // Função para calcular valor total a cobrar com taxas
+  const calcularValorTotalCobrar = () => {
+    if (dadosRecebimento.metodoPagamento === 'cartao_debito') {
+      return calcularValorComTaxa(valorOriginalRecebimento, dadosRecebimento.taxaParcela || 0);
+    } else if (dadosRecebimento.metodoPagamento === 'cartao_credito') {
+      return calcularValorParcela(valorOriginalRecebimento, dadosRecebimento.parcelas || 1, dadosRecebimento.taxaParcela || 0) * (dadosRecebimento.parcelas || 1);
+    } else {
+      return valorOriginalRecebimento;
+    }
   };
 
   return (
@@ -999,7 +1049,7 @@ export default function Financeiro() {
                     <SelectValue placeholder="Selecione o método de pagamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {metodosPagamento.map((metodo) => (
+                    {metodosPagamentoFixos.map((metodo) => (
                       <SelectItem key={metodo.id} value={metodo.tipo}>
                         <div className="flex items-center gap-2">
                           {obterIconeMetodoPagamento(metodo.tipo)}
@@ -1030,7 +1080,7 @@ export default function Financeiro() {
 
             {/* Seleção de parcelas (para cartão de crédito) */}
             {dadosPagamento.metodoPagamento === 'cartao_credito' && (() => {
-              const parcelasDisponiveis = obterParcelasDisponiveis(dadosPagamento.metodoPagamento);
+              const parcelasDisponiveis = obterParcelasFixasDisponiveis(dadosPagamento.metodoPagamento);
               return parcelasDisponiveis.length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-sm">Parcelas</Label>
@@ -1038,7 +1088,7 @@ export default function Financeiro() {
                     value={dadosPagamento.parcelas?.toString() || '1'} 
                     onValueChange={(value) => {
                       const parcelas = parseInt(value);
-                      const metodo = obterMetodoSelecionado(dadosPagamento.metodoPagamento);
+                      const metodo = obterMetodoFixoSelecionado(dadosPagamento.metodoPagamento);
                       const parcelaSelecionada = metodo?.parcelas.find(p => p.quantidade === parcelas);
                       
                       setDadosPagamento({
@@ -1206,6 +1256,11 @@ export default function Financeiro() {
                   <p className="text-sm text-muted-foreground">
                     Valor original: {formatarValor(valorOriginalRecebimento)}
                   </p>
+                  {(dadosRecebimento.metodoPagamento === 'cartao_credito' || dadosRecebimento.metodoPagamento === 'cartao_debito') && (
+                    <p className="text-sm font-medium text-blue-600">
+                      Total a cobrar: {formatarValor(calcularValorTotalCobrar())}
+                    </p>
+                  )}
                   {valorEditadoRecebimento !== valorOriginalRecebimento && (
                     <p className="text-sm text-orange-600 font-medium">
                       Valor restante: {formatarValor(valorOriginalRecebimento - valorEditadoRecebimento)}
