@@ -1237,6 +1237,35 @@ router.get('/stats/overview', async (req, res) => {
       params
     );
 
+    // Calcular vendas pagas (soma dos pagamentos efetivos das vendas)
+    let vendasWhereClause = 'WHERE v.tenant_id = ?';
+    let vendasParams = [req.user.tenant_id];
+
+    // Aplicar filtro de período para vendas
+    switch (periodo) {
+      case 'hoje':
+        vendasWhereClause += ' AND DATE(v.data_venda) = CURDATE()';
+        break;
+      case 'semana':
+        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        break;
+      case 'mes':
+        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        break;
+      case 'ano':
+        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        break;
+    }
+
+    const vendasPagas = await query(
+      `SELECT 
+        COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as total_vendas_pagas
+      FROM vendas v
+      LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+      ${vendasWhereClause}`,
+      vendasParams
+    );
+
     // Contas a receber (APENAS da tabela contas_receber)
     const contasReceber = await query(
       `SELECT 
@@ -1262,12 +1291,49 @@ router.get('/stats/overview', async (req, res) => {
       [req.user.tenant_id, req.user.tenant_id]
     );
 
-    const fluxoCaixa = transacoesStats[0].total_entradas - transacoesStats[0].total_saidas;
+    // Calcular todas as transações de saída (independente do período) para o saldo atual
+    const todasSaidas = await query(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN tipo = 'saida' AND status = 'concluida' THEN valor ELSE 0 END), 0) as total_saidas_geral
+      FROM transacoes 
+      WHERE tenant_id = ?`,
+      [req.user.tenant_id]
+    );
+
+    // Calcular todas as vendas pagas (independente do período) para o saldo atual
+    const todasVendasPagas = await query(
+      `SELECT 
+        COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as total_vendas_pagas_geral
+      FROM vendas v
+      LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
+      WHERE v.tenant_id = ?`,
+      [req.user.tenant_id]
+    );
+
+    // Calcular todas as transações de entrada (independente do período) para o saldo atual
+    const todasEntradas = await query(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN tipo = 'entrada' AND status = 'concluida' THEN valor ELSE 0 END), 0) as total_entradas_geral
+      FROM transacoes 
+      WHERE tenant_id = ?`,
+      [req.user.tenant_id]
+    );
+
+    // Calcular saldo atual: vendas pagas + transações de entrada - transações de saída (TODAS, não apenas do período)
+    const totalVendasPagas = Number(todasVendasPagas[0].total_vendas_pagas_geral) || 0;
+    const totalEntradasTransacoes = Number(todasEntradas[0].total_entradas_geral) || 0;
+    const totalSaidasTransacoes = Number(todasSaidas[0].total_saidas_geral) || 0;
+    
+    const saldoAtual = totalVendasPagas + totalEntradasTransacoes - totalSaidasTransacoes;
+    // Fluxo de caixa: vendas pagas + transações de entrada - transações de saída (do período)
+    const fluxoCaixa = totalVendasPagas + Number(transacoesStats[0].total_entradas) - Number(transacoesStats[0].total_saidas);
 
     res.json({
       stats: {
         ...transacoesStats[0],
+        total_vendas_pagas: totalVendasPagas,
         fluxo_caixa: fluxoCaixa,
+        saldo_atual: saldoAtual,
         contas_receber: contasReceber[0],
         contas_pagar: contasPagar[0]
       },
@@ -1275,6 +1341,95 @@ router.get('/stats/overview', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao buscar estatísticas financeiras:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Processar pagamento de conta a pagar
+router.post('/contas-pagar/:id/pagar', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      dataPagamento,
+      metodoPagamento,
+      observacoes,
+      comprovante,
+      numeroDocumento,
+      bancoOrigem,
+      agenciaOrigem,
+      contaOrigem,
+      parcelas = 1,
+      taxaParcela = 0
+    } = req.body;
+
+    // Buscar conta a pagar
+    const contas = await query(
+      `SELECT cp.*, f.nome as fornecedor_nome, func.nome as funcionario_nome
+       FROM contas_pagar cp
+       LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+       LEFT JOIN funcionarios func ON cp.funcionario_id = func.id
+       WHERE cp.id = ? AND cp.tenant_id = ?`,
+      [id, req.user.tenant_id]
+    );
+
+    if (contas.length === 0) {
+      return res.status(404).json({
+        error: 'Conta a pagar não encontrada'
+      });
+    }
+
+    const conta = contas[0];
+
+    // Executar todas as operações em uma transação
+    const result = await transaction(async (connection) => {
+      // Atualizar conta a pagar como paga
+      await connection.execute(
+        `UPDATE contas_pagar SET 
+         status = 'pago', 
+         data_pagamento = ?,
+         observacoes = CONCAT(COALESCE(observacoes, ''), ' | Pago em ', ?, ' via ', ?)
+         WHERE id = ? AND tenant_id = ?`,
+        [dataPagamento, dataPagamento, metodoPagamento, id, req.user.tenant_id]
+      );
+
+      // Criar transação de saída para o valor pago
+      const transacaoId = await connection.execute(
+        `INSERT INTO transacoes (
+          tenant_id, tipo, categoria, descricao, valor, data_transacao,
+          metodo_pagamento, conta, fornecedor_id, cliente_id, observacoes, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id,
+          'saida',
+          conta.categoria || 'pagamento',
+          `Pagamento - ${conta.descricao}`,
+          conta.valor,
+          dataPagamento,
+          metodoPagamento,
+          'caixa',
+          conta.fornecedor_id,
+          null,
+          observacoes || `Pagamento de conta a pagar #${id}`,
+          'concluida'
+        ]
+      );
+
+      return {
+        contaId: id,
+        transacaoId: transacaoId.insertId,
+        valorPago: conta.valor
+      };
+    });
+
+    res.json({
+      message: 'Pagamento processado com sucesso',
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Erro ao processar pagamento de conta a pagar:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
