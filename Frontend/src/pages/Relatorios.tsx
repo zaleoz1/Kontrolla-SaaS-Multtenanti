@@ -237,13 +237,14 @@ export default function Relatorios() {
   };
 
 
+
   // Função para baixar relatório
   const baixarRelatorio = (tipo: string, formato: string) => {
     const nomeArquivo = `relatorio_${tipo}_${new Date().toISOString().split('T')[0]}`;
     
     switch (tipo) {
       case 'vendas':
-        // Usar o relatório detalhado em PDF
+        // Usar o relatório detalhado em PDF profissional
         gerarRelatorioVendasDetalhado();
         break;
       case 'produtos':
@@ -486,16 +487,32 @@ export default function Relatorios() {
                         <Eye className="h-4 w-4 mr-2" />
                         Ver
                       </Button>
-                      <Select onValueChange={(formato) => baixarRelatorio(relatorio.tipo, formato)}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Baixar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="csv">CSV</SelectItem>
-                          <SelectItem value="json">JSON</SelectItem>
-                          <SelectItem value="pdf">PDF</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {relatorio.tipo === 'vendas' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
+                          disabled={relatorio.loading || loadingVendasDetalhado || !dadosVendasDetalhado}
+                        >
+                          {loadingVendasDetalhado ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                          )}
+                          PDF
+                        </Button>
+                      ) : (
+                        <Select onValueChange={(formato) => baixarRelatorio(relatorio.tipo, formato)}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Baixar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="csv">CSV</SelectItem>
+                            <SelectItem value="json">JSON</SelectItem>
+                            <SelectItem value="pdf">PDF</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -553,115 +570,6 @@ export default function Relatorios() {
         </div>
       </div>
 
-      {/* Relatório Detalhado de Vendas */}
-      <Card className="bg-gradient-card shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Relatório Detalhado de Vendas por Período
-            </span>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => gerarRelatorioVendasDetalhado()}
-                disabled={loadingVendasDetalhado || !dadosVendasDetalhado}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Baixar PDF
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingVendasDetalhado ? (
-            <div className="h-64 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : dadosVendasDetalhado ? (
-            <div className="space-y-6">
-              {/* Resumo Geral */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                  <p className="text-2xl font-bold text-primary">
-                    {formatarMoeda(dadosVendasDetalhado.resumo_geral.receita_total)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Total de Vendas</p>
-                </div>
-                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                  <p className="text-2xl font-bold text-success">
-                    {dadosVendasDetalhado.resumo_geral.total_vendas}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Número de Vendas</p>
-                </div>
-                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                  <p className="text-2xl font-bold text-info">
-                    {formatarMoeda(dadosVendasDetalhado.resumo_geral.ticket_medio)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                </div>
-              </div>
-
-              {/* Formas de Pagamento */}
-              <div>
-                <h4 className="font-semibold mb-3">Formas de Pagamento</h4>
-                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                  {dadosVendasDetalhado.formas_pagamento.map((forma: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                      <span className="text-sm font-medium">{forma.metodo_pagamento}</span>
-                      <span className="text-sm font-semibold">{formatarMoeda(forma.valor_total)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Vendas por Categoria */}
-              <div>
-                <h4 className="font-semibold mb-3">Vendas por Categoria</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {dadosVendasDetalhado.vendas_por_categoria.slice(0, 5).map((categoria: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{categoria.categoria_nome || 'Sem categoria'}</p>
-                        <p className="text-xs text-muted-foreground">{categoria.quantidade_vendida} unidades</p>
-                      </div>
-                      <div className="text-right ml-2">
-                        <p className="text-sm font-semibold">{formatarMoeda(categoria.faturamento)}</p>
-                        <p className="text-xs text-muted-foreground">{categoria.percentual.toFixed(1)}%</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Vendas por Data */}
-              <div>
-                <h4 className="font-semibold mb-3">Vendas por Data (Últimos 7 dias)</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {dadosVendasDetalhado.vendas_por_data.slice(0, 7).map((venda: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                      <span className="text-sm font-medium">{new Date(venda.data_venda).toLocaleDateString('pt-BR')}</span>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">{formatarMoeda(venda.valor_total)}</p>
-                        <p className="text-xs text-muted-foreground">{venda.quantidade_vendas} vendas</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
-              <div className="text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Nenhum dado encontrado</p>
-                <p className="text-xs text-muted-foreground">Ajuste o período para ver o relatório detalhado</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Gráficos com Dados Reais */}
       <div className="grid gap-6 md:grid-cols-2">
