@@ -46,13 +46,22 @@ router.get('/vendas-periodo', async (req, res) => {
     console.log('🔍 Query params values:', queryParams.map(p => p === null ? 'NULL' : p === undefined ? 'UNDEFINED' : p));
     
     // Consulta com LIMIT e OFFSET como valores literais
+    // Usar valores reais dos pagamentos da tabela venda_pagamentos
     let querySql = `SELECT 
       DATE(v.data_venda) as periodo,
       COUNT(*) as total_vendas,
       COUNT(CASE WHEN v.status = 'pago' THEN 1 END) as vendas_pagas,
       COUNT(CASE WHEN v.status = 'pendente' THEN 1 END) as vendas_pendentes,
-      COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as receita_total,
-      COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio
+      COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+        (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+         FROM venda_pagamentos vp 
+         WHERE vp.venda_id = v.id), v.total
+      ) ELSE 0 END), 0) as receita_total,
+      COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+        (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+         FROM venda_pagamentos vp 
+         WHERE vp.venda_id = v.id), v.total
+      ) ELSE NULL END), 0) as ticket_medio
      FROM vendas v 
      WHERE v.tenant_id = ? AND DATE(v.data_venda) BETWEEN ? AND ?
      GROUP BY DATE(v.data_venda)
@@ -64,11 +73,20 @@ router.get('/vendas-periodo', async (req, res) => {
     
     const vendas = await query(querySql, queryParams);
 
-    // Total geral
+    // Total geral - usar valores reais dos pagamentos
     const [totalGeral] = await query(
       `SELECT 
         COUNT(*) as total_vendas,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_total
+        COALESCE(SUM(CASE WHEN status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = vendas.id), total
+        ) ELSE 0 END), 0) as receita_total,
+        COALESCE(AVG(CASE WHEN status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = vendas.id), total
+        ) ELSE NULL END), 0) as ticket_medio
        FROM vendas 
        WHERE tenant_id = ? AND DATE(data_venda) BETWEEN ? AND ?`,
       [tenantId, data_inicio, data_fim]
@@ -125,7 +143,13 @@ router.get('/produtos-vendidos', async (req, res) => {
         c.nome as categoria_nome,
         SUM(vi.quantidade) as total_vendido,
         COUNT(DISTINCT vi.venda_id) as total_vendas,
-        SUM(vi.preco_total) as receita_total,
+        SUM(CASE WHEN v.status = 'pago' THEN 
+          vi.preco_total * COALESCE(
+            (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+             FROM venda_pagamentos vp 
+             WHERE vp.venda_id = v.id) / v.total, 1
+          ) 
+        ELSE 0 END) as receita_total,
         AVG(vi.preco_unitario) as preco_medio_venda
        FROM venda_itens vi
        JOIN produtos p ON vi.produto_id = p.id
@@ -214,8 +238,16 @@ router.get('/analise-clientes', async (req, res) => {
       `SELECT 
         c.id, c.nome, c.email, c.telefone, c.vip,
         COALESCE(COUNT(v.id), 0) as total_vendas,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as valor_total,
-        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as valor_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE NULL END), 0) as ticket_medio,
         MAX(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as ultima_compra,
         MIN(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as primeira_compra
        FROM clientes c
@@ -234,8 +266,16 @@ router.get('/analise-clientes', async (req, res) => {
       `SELECT 
         COUNT(DISTINCT c.id) as total_clientes_ativos,
         COUNT(DISTINCT CASE WHEN c.vip = 1 THEN c.id END) as clientes_vip,
-        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio_geral,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as receita_total_clientes
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE NULL END), 0) as ticket_medio_geral,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as receita_total_clientes
        FROM clientes c
        LEFT JOIN vendas v ON c.id = v.cliente_id 
          AND v.tenant_id = c.tenant_id
@@ -301,7 +341,13 @@ router.get('/cliente-compras/:clienteId', async (req, res) => {
       `SELECT 
         p.id, p.nome, p.categoria_id, cat.nome as categoria_nome,
         SUM(vi.quantidade) as total_quantidade,
-        SUM(vi.preco_total) as total_gasto,
+        SUM(CASE WHEN v.status = 'pago' THEN 
+          vi.preco_total * COALESCE(
+            (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+             FROM venda_pagamentos vp 
+             WHERE vp.venda_id = v.id) / v.total, 1
+          ) 
+        ELSE 0 END) as total_gasto,
         AVG(vi.preco_unitario) as preco_medio,
         COUNT(DISTINCT v.id) as vezes_comprado
        FROM vendas v
@@ -321,8 +367,16 @@ router.get('/cliente-compras/:clienteId', async (req, res) => {
     const [stats] = await query(
       `SELECT 
         COUNT(v.id) as total_vendas,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as valor_total,
-        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as valor_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE NULL END), 0) as ticket_medio,
         MAX(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as ultima_compra,
         MIN(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as primeira_compra
        FROM vendas v
@@ -551,8 +605,16 @@ router.get('/performance-vendas', async (req, res) => {
         u.id, u.nome as nome_agrupamento,
         COUNT(v.id) as total_vendas,
         COUNT(CASE WHEN v.status = 'pago' THEN 1 END) as vendas_pagas,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as receita_total,
-        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as receita_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE NULL END), 0) as ticket_medio
        FROM vendas v
        JOIN usuarios u ON v.usuario_id = u.id
        WHERE v.tenant_id = ? AND DATE(v.data_venda) BETWEEN ? AND ?
@@ -564,8 +626,16 @@ router.get('/performance-vendas', async (req, res) => {
         cat.id, cat.nome as nome_agrupamento,
         COUNT(DISTINCT v.id) as total_vendas,
         COUNT(DISTINCT CASE WHEN v.status = 'pago' THEN v.id END) as vendas_pagas,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as receita_total,
-        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as receita_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE NULL END), 0) as ticket_medio
        FROM vendas v
        JOIN venda_itens vi ON v.id = vi.venda_id
        JOIN produtos p ON vi.produto_id = p.id
@@ -579,8 +649,16 @@ router.get('/performance-vendas', async (req, res) => {
         c.id, c.nome as nome_agrupamento,
         COUNT(v.id) as total_vendas,
         COUNT(CASE WHEN v.status = 'pago' THEN 1 END) as vendas_pagas,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as receita_total,
-        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as receita_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE NULL END), 0) as ticket_medio
        FROM vendas v
        LEFT JOIN clientes c ON v.cliente_id = c.id
        WHERE v.tenant_id = ? AND DATE(v.data_venda) BETWEEN ? AND ?
@@ -625,8 +703,16 @@ router.get('/vendas-periodo-detalhado', async (req, res) => {
     const [resumoGeral] = await query(
       `SELECT 
         COUNT(*) as total_vendas,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as receita_total,
-        COALESCE(AVG(CASE WHEN status = 'pago' THEN total ELSE NULL END), 0) as ticket_medio,
+        COALESCE(SUM(CASE WHEN status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = vendas.id), total
+        ) ELSE 0 END), 0) as receita_total,
+        COALESCE(AVG(CASE WHEN status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = vendas.id), total
+        ) ELSE NULL END), 0) as ticket_medio,
         COUNT(CASE WHEN status = 'pago' THEN 1 END) as vendas_pagas,
         COUNT(CASE WHEN status = 'pendente' THEN 1 END) as vendas_pendentes
        FROM vendas 
@@ -634,15 +720,16 @@ router.get('/vendas-periodo-detalhado', async (req, res) => {
       [tenantId, data_inicio, data_fim]
     );
 
-    // 2. Vendas por Forma de Pagamento
+    // 2. Vendas por Forma de Pagamento - usar valores reais dos pagamentos
     const formasPagamento = await query(
       `SELECT
-        forma_pagamento as metodo_pagamento,
-        COUNT(*) as quantidade,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as valor_total
-       FROM vendas
-       WHERE tenant_id = ? AND DATE(data_venda) BETWEEN ? AND ?
-       GROUP BY forma_pagamento
+        vp.metodo as metodo_pagamento,
+        COUNT(DISTINCT v.id) as quantidade,
+        COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as valor_total
+       FROM vendas v
+       JOIN venda_pagamentos vp ON v.id = vp.venda_id
+       WHERE v.tenant_id = ? AND DATE(v.data_venda) BETWEEN ? AND ? AND v.status = 'pago'
+       GROUP BY vp.metodo
        ORDER BY valor_total DESC`,
       [tenantId, data_inicio, data_fim]
     );
@@ -652,7 +739,13 @@ router.get('/vendas-periodo-detalhado', async (req, res) => {
       `SELECT 
         c.nome as categoria_nome,
         SUM(vi.quantidade) as quantidade_vendida,
-        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN vi.preco_total ELSE 0 END), 0) as faturamento,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN 
+          vi.preco_total * COALESCE(
+            (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+             FROM venda_pagamentos vp 
+             WHERE vp.venda_id = v.id) / v.total, 1
+          ) 
+        ELSE 0 END), 0) as faturamento,
         COUNT(DISTINCT v.id) as total_vendas
        FROM venda_itens vi
        JOIN vendas v ON vi.venda_id = v.id
@@ -667,12 +760,16 @@ router.get('/vendas-periodo-detalhado', async (req, res) => {
     // 4. Vendas por Data
     const vendasPorData = await query(
       `SELECT 
-        DATE(data_venda) as data_venda,
+        DATE(v.data_venda) as data_venda,
         COUNT(*) as quantidade_vendas,
-        COALESCE(SUM(CASE WHEN status = 'pago' THEN total ELSE 0 END), 0) as valor_total
-       FROM vendas 
-       WHERE tenant_id = ? AND DATE(data_venda) BETWEEN ? AND ?
-       GROUP BY DATE(data_venda)
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) 
+           FROM venda_pagamentos vp 
+           WHERE vp.venda_id = v.id), v.total
+        ) ELSE 0 END), 0) as valor_total
+       FROM vendas v
+       WHERE v.tenant_id = ? AND DATE(v.data_venda) BETWEEN ? AND ?
+       GROUP BY DATE(v.data_venda)
        ORDER BY data_venda DESC`,
       [tenantId, data_inicio, data_fim]
     );

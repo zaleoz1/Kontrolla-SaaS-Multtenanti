@@ -1300,16 +1300,6 @@ router.get('/stats/overview', async (req, res) => {
       [req.user.tenant_id]
     );
 
-    // Calcular todas as vendas pagas (independente do período) para o saldo atual
-    const todasVendasPagas = await query(
-      `SELECT 
-        COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) as total_vendas_pagas_geral
-      FROM vendas v
-      LEFT JOIN venda_pagamentos vp ON v.id = vp.venda_id
-      WHERE v.tenant_id = ?`,
-      [req.user.tenant_id]
-    );
-
     // Calcular todas as transações de entrada (independente do período) para o saldo atual
     const todasEntradas = await query(
       `SELECT 
@@ -1319,19 +1309,18 @@ router.get('/stats/overview', async (req, res) => {
       [req.user.tenant_id]
     );
 
-    // Calcular saldo atual: vendas pagas + transações de entrada - transações de saída (TODAS, não apenas do período)
-    const totalVendasPagas = Number(todasVendasPagas[0].total_vendas_pagas_geral) || 0;
+    // Calcular saldo atual: apenas transações de entrada - transações de saída (TODAS, não apenas do período)
     const totalEntradasTransacoes = Number(todasEntradas[0].total_entradas_geral) || 0;
     const totalSaidasTransacoes = Number(todasSaidas[0].total_saidas_geral) || 0;
     
-    const saldoAtual = totalVendasPagas + totalEntradasTransacoes - totalSaidasTransacoes;
-    // Fluxo de caixa: vendas pagas + transações de entrada - transações de saída (do período)
-    const fluxoCaixa = totalVendasPagas + Number(transacoesStats[0].total_entradas) - Number(transacoesStats[0].total_saidas);
+    const saldoAtual = totalEntradasTransacoes - totalSaidasTransacoes;
+    // Fluxo de caixa: apenas transações de entrada - transações de saída (do período)
+    const fluxoCaixa = Number(transacoesStats[0].total_entradas) - Number(transacoesStats[0].total_saidas);
 
     res.json({
       stats: {
         ...transacoesStats[0],
-        total_vendas_pagas: totalVendasPagas,
+        total_vendas_pagas: 0, // Removido: vendas agora são transações
         fluxo_caixa: fluxoCaixa,
         saldo_atual: saldoAtual,
         contas_receber: contasReceber[0],

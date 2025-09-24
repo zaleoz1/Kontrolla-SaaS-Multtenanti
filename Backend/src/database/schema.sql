@@ -279,6 +279,7 @@ CREATE TABLE IF NOT EXISTS transacoes (
     conta VARCHAR(100) NOT NULL,
     fornecedor_id INT,
     cliente_id INT,
+    venda_id INT,
     observacoes TEXT,
     anexos JSON,
     status ENUM('pendente', 'concluida', 'cancelada') DEFAULT 'pendente',
@@ -286,7 +287,8 @@ CREATE TABLE IF NOT EXISTS transacoes (
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
+    FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE SET NULL
 );
 
 
