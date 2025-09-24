@@ -25,7 +25,7 @@ import {
 import { useRelatorios } from "@/hooks/useRelatorios";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
-import { gerarRelatorioVendasPDF, gerarRelatorioProdutosPDF, gerarRelatorioClientesPDF } from "@/utils/gerarPDF";
+import { gerarRelatorioVendasPDF, gerarRelatorioProdutosPDF, gerarRelatorioClientesPDF, gerarRelatorioFinanceiroPDF, gerarRelatorioEstoquePDF } from "@/utils/gerarPDF";
 
 export default function Relatorios() {
   const { user } = useAuth();
@@ -37,7 +37,6 @@ export default function Relatorios() {
     useRelatorioAnaliseClientes,
     useRelatorioFinanceiro,
     useRelatorioControleEstoque,
-    useRelatorioPerformanceVendas,
     useCategorias
   } = useRelatorios();
 
@@ -66,7 +65,6 @@ export default function Relatorios() {
   const { dados: dadosClientes, loading: loadingClientes } = useRelatorioAnaliseClientes(dataInicio, dataFim, 'compras');
   const { dados: dadosFinanceiro, loading: loadingFinanceiro } = useRelatorioFinanceiro(dataInicio, dataFim, 'transacoes');
   const { dados: dadosEstoque, loading: loadingEstoque } = useRelatorioControleEstoque('geral', categoriaSelecionada === 'todas' ? undefined : categoriaSelecionada);
-  const { dados: dadosPerformance, loading: loadingPerformance } = useRelatorioPerformanceVendas(dataInicio, dataFim, 'vendedor');
 
   const relatorios = [
     {
@@ -119,16 +117,6 @@ export default function Relatorios() {
       loading: loadingEstoque,
       dados: dadosEstoque
     },
-    {
-      titulo: "Performance de Vendas",
-      descricao: "Métricas e KPIs de vendas",
-      icone: LineChart,
-      tipo: "performance",
-      ultimaGeracao: new Date().toISOString().split('T')[0],
-      cor: "bg-secondary/10 text-secondary",
-      loading: loadingPerformance,
-      dados: dadosPerformance
-    }
   ];
 
   const relatoriosRecentes = [
@@ -326,8 +314,65 @@ export default function Relatorios() {
     gerarRelatorioProdutosPDF(dadosFormatados, formatarMoeda);
   };
 
+  // Função para gerar relatório financeiro em PDF profissional
+  const gerarRelatorioFinanceiroDetalhado = () => {
+    if (!dadosFinanceiro || !user) return;
+
+    // Transformar dados para o formato esperado pela função PDF
+    const dadosFormatados = {
+      periodo: {
+        data_inicio: dataInicio,
+        data_fim: dataFim
+      },
+      responsavel: {
+        nome: `${user.nome} ${user.sobrenome}`.trim(),
+        email: user.email
+      },
+      resumo: {
+        total_transacoes: dadosFinanceiro.resumo?.total_transacoes || 0,
+        total_entradas: dadosFinanceiro.resumo?.total_entradas || 0,
+        total_saidas: dadosFinanceiro.resumo?.total_saidas || 0,
+        valor_entradas: dadosFinanceiro.resumo?.valor_entradas || 0,
+        valor_saidas: dadosFinanceiro.resumo?.valor_saidas || 0
+      },
+      transacoes: dadosFinanceiro.transacoes || []
+    };
+
+    gerarRelatorioFinanceiroPDF(dadosFormatados, formatarMoeda);
+  };
+
+  // Função para gerar relatório de estoque em PDF profissional
+  const gerarRelatorioEstoqueDetalhado = () => {
+    if (!dadosEstoque || !user) return;
+
+    // Transformar dados para o formato esperado pela função PDF
+    const dadosFormatados = {
+      periodo: {
+        data_inicio: dataInicio,
+        data_fim: dataFim
+      },
+      responsavel: {
+        nome: `${user.nome} ${user.sobrenome}`.trim(),
+        email: user.email
+      },
+      estatisticas: {
+        total_produtos: dadosEstoque.estatisticas?.total_produtos || 0,
+        sem_estoque: dadosEstoque.estatisticas?.sem_estoque || 0,
+        estoque_baixo: dadosEstoque.estatisticas?.estoque_baixo || 0,
+        estoque_normal: dadosEstoque.estatisticas?.estoque_normal || 0,
+        total_unidades: dadosEstoque.estatisticas?.total_unidades || 0,
+        valor_total_estoque: dadosEstoque.estatisticas?.valor_total_estoque || 0
+      },
+      produtos: dadosEstoque.produtos || [],
+      tipo: 'geral',
+      categoria_id: categoriaSelecionada === 'todas' ? undefined : categoriaSelecionada
+    };
+
+    gerarRelatorioEstoquePDF(dadosFormatados, formatarMoeda);
+  };
+
   // Função para gerar relatório de clientes em PDF profissional
-  const gerarRelatorioClientesDetalhado = () => {
+  const gerarRelatorioClientesDetalhado = async () => {
     if (!dadosClientes || !user) return;
 
     // Validar e calcular valores com segurança
@@ -337,27 +382,74 @@ export default function Relatorios() {
       const valor = Number(c.valor_total) || 0;
       return acc + valor;
     }, 0) || 0;
-    const ticketMedio = totalClientes > 0 ? receitaTotal / totalClientes : 0;
 
     // Debug logs
     console.log('Debug - dadosClientes:', dadosClientes);
     console.log('Debug - totalClientes:', totalClientes);
     console.log('Debug - clientesVip:', clientesVip);
     console.log('Debug - receitaTotal:', receitaTotal);
-    console.log('Debug - ticketMedio:', ticketMedio);
 
-    // Transformar clientes para incluir dados seguros
-    const clientesFormatados = dadosClientes.clientes?.map(cliente => ({
-      nome: cliente.nome || 'Cliente sem nome',
-      email: cliente.email || 'email@exemplo.com',
-      telefone: cliente.telefone || 'Não informado',
-      vip: Boolean(cliente.vip),
-      total_vendas: Number(cliente.total_vendas) || 0,
-      valor_total: Number(cliente.valor_total) || 0,
-      ticket_medio: Number(cliente.ticket_medio) || 0,
-      ultima_compra: cliente.ultima_compra || 'Nunca',
-      primeira_compra: cliente.primeira_compra || 'Nunca'
-    })) || [];
+    // Buscar dados detalhados de compras para os top 5 clientes
+    const top5Clientes = dadosClientes.clientes?.slice(0, 5) || [];
+    const clientesComDetalhes = await Promise.all(
+      top5Clientes.map(async (cliente) => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/relatorios/cliente-compras/${cliente.id}?data_inicio=${dataInicio}&data_fim=${dataFim}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          const dadosDetalhados = await response.json();
+          
+          return {
+            id: cliente.id,
+            nome: cliente.nome || 'Cliente sem nome',
+            email: cliente.email || 'email@exemplo.com',
+            telefone: cliente.telefone || 'Não informado',
+            vip: Boolean(cliente.vip),
+            total_vendas: Number(cliente.total_vendas) || 0,
+            valor_total: Number(cliente.valor_total) || 0,
+            ultima_compra: cliente.ultima_compra || 'Nunca',
+            primeira_compra: cliente.primeira_compra || 'Nunca',
+            vendas_detalhadas: dadosDetalhados.vendas || [],
+            produtos_comprados: dadosDetalhados.produtos_comprados || []
+          };
+        } catch (error) {
+          console.error('Erro ao buscar dados detalhados do cliente:', error);
+          return {
+            id: cliente.id,
+            nome: cliente.nome || 'Cliente sem nome',
+            email: cliente.email || 'email@exemplo.com',
+            telefone: cliente.telefone || 'Não informado',
+            vip: Boolean(cliente.vip),
+            total_vendas: Number(cliente.total_vendas) || 0,
+            valor_total: Number(cliente.valor_total) || 0,
+            ultima_compra: cliente.ultima_compra || 'Nunca',
+            primeira_compra: cliente.primeira_compra || 'Nunca',
+            vendas_detalhadas: [],
+            produtos_comprados: []
+          };
+        }
+      })
+    );
+
+    // Transformar todos os clientes para incluir dados seguros
+    const clientesFormatados = dadosClientes.clientes?.map(cliente => {
+      const clienteComDetalhes = clientesComDetalhes.find(c => c.id === cliente.id);
+      return {
+        id: cliente.id,
+        nome: cliente.nome || 'Cliente sem nome',
+        email: cliente.email || 'email@exemplo.com',
+        telefone: cliente.telefone || 'Não informado',
+        vip: Boolean(cliente.vip),
+        total_vendas: Number(cliente.total_vendas) || 0,
+        valor_total: Number(cliente.valor_total) || 0,
+        ultima_compra: cliente.ultima_compra || 'Nunca',
+        primeira_compra: cliente.primeira_compra || 'Nunca',
+        vendas_detalhadas: clienteComDetalhes?.vendas_detalhadas || [],
+        produtos_comprados: clienteComDetalhes?.produtos_comprados || []
+      };
+    }) || [];
 
     // Criar faixas de valor para análise
     const faixasValor = [
@@ -393,8 +485,7 @@ export default function Relatorios() {
       resumo_geral: {
         total_clientes: Number(totalClientes) || 0,
         clientes_vip: Number(clientesVip) || 0,
-        receita_total: Number(receitaTotal) || 0,
-        ticket_medio: Number(ticketMedio) || 0
+        receita_total: Number(receitaTotal) || 0
       },
       clientes: clientesFormatados,
       clientes_por_faixa_valor: clientesPorFaixa
@@ -409,7 +500,7 @@ export default function Relatorios() {
 
 
   // Função para baixar relatório
-  const baixarRelatorio = (tipo: string, formato: string) => {
+  const baixarRelatorio = async (tipo: string, formato: string) => {
     const nomeArquivo = `relatorio_${tipo}_${new Date().toISOString().split('T')[0]}`;
     
     switch (tipo) {
@@ -437,7 +528,7 @@ export default function Relatorios() {
             gerarJSON(dadosClientes, nomeArquivo);
           } else {
             // Usar o relatório detalhado em PDF profissional
-            gerarRelatorioClientesDetalhado();
+            await gerarRelatorioClientesDetalhado();
           }
         }
         break;
@@ -448,7 +539,8 @@ export default function Relatorios() {
           } else if (formato === 'json') {
             gerarJSON(dadosFinanceiro, nomeArquivo);
           } else {
-            gerarPDF(dadosFinanceiro, nomeArquivo, tipo);
+            // Usar o relatório detalhado em PDF profissional
+            gerarRelatorioFinanceiroDetalhado();
           }
         }
         break;
@@ -459,18 +551,8 @@ export default function Relatorios() {
           } else if (formato === 'json') {
             gerarJSON(dadosEstoque, nomeArquivo);
           } else {
-            gerarPDF(dadosEstoque, nomeArquivo, tipo);
-          }
-        }
-        break;
-      case 'performance':
-        if (dadosPerformance?.performance) {
-          if (formato === 'csv') {
-            gerarCSV(dadosPerformance.performance, nomeArquivo);
-          } else if (formato === 'json') {
-            gerarJSON(dadosPerformance, nomeArquivo);
-          } else {
-            gerarPDF(dadosPerformance, nomeArquivo, tipo);
+            // Usar o relatório detalhado em PDF profissional
+            gerarRelatorioEstoqueDetalhado();
           }
         }
         break;
@@ -647,9 +729,6 @@ export default function Relatorios() {
                             {relatorio.tipo === 'estoque' && 'produtos' in relatorio.dados && (
                               <span>{relatorio.dados.produtos.length} produtos</span>
                             )}
-                            {relatorio.tipo === 'performance' && 'performance' in relatorio.dados && (
-                              <span>{relatorio.dados.performance.length} registros</span>
-                            )}
                           </div>
                         )}
                       </div>
@@ -689,6 +768,26 @@ export default function Relatorios() {
                           size="sm" 
                           onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
                           disabled={relatorio.loading || !dadosClientes || !user}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          PDF
+                        </Button>
+                      ) : relatorio.tipo === 'financeiro' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
+                          disabled={relatorio.loading || !dadosFinanceiro || !user}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          PDF
+                        </Button>
+                      ) : relatorio.tipo === 'estoque' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
+                          disabled={relatorio.loading || !dadosEstoque || !user}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           PDF

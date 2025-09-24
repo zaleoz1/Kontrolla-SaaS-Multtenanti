@@ -106,7 +106,6 @@ CREATE TABLE IF NOT EXISTS clientes (
     observacoes TEXT,
     status ENUM('ativo', 'inativo') DEFAULT 'ativo',
     vip BOOLEAN DEFAULT FALSE,
-    limite_credito DECIMAL(10,2) DEFAULT 0.00,
     total_compras DECIMAL(10,2) DEFAULT 0.00,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

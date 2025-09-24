@@ -206,35 +206,42 @@ router.get('/analise-clientes', async (req, res) => {
         orderBy = 'total_vendas DESC';
     }
 
-    // Buscar análise de clientes - consulta básica
+    // Buscar análise de clientes com dados reais de compras
     const limitNum = parseInt(limit) || 50;
     const offsetNum = parseInt(offset) || 0;
     
     const clientes = await query(
       `SELECT 
         c.id, c.nome, c.email, c.telefone, c.vip,
-        0 as total_vendas,
-        0 as valor_total,
-        0 as ticket_medio,
-        NULL as ultima_compra,
-        NULL as primeira_compra
+        COALESCE(COUNT(v.id), 0) as total_vendas,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as valor_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio,
+        MAX(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as ultima_compra,
+        MIN(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as primeira_compra
        FROM clientes c
+       LEFT JOIN vendas v ON c.id = v.cliente_id 
+         AND v.tenant_id = c.tenant_id
+         AND DATE(v.data_venda) BETWEEN ? AND ?
        WHERE c.tenant_id = ?
-       ORDER BY c.nome
+       GROUP BY c.id, c.nome, c.email, c.telefone, c.vip
+       ORDER BY ${orderBy}
        LIMIT ${limitNum} OFFSET ${offsetNum}`,
-      [req.user.tenant_id]
+      [data_inicio, data_fim, req.user.tenant_id]
     );
 
-    // Estatísticas gerais - consulta básica
+    // Estatísticas gerais com dados reais
     const [stats] = await query(
       `SELECT 
-        COUNT(*) as total_clientes_ativos,
-        COUNT(CASE WHEN vip = 1 THEN 1 END) as clientes_vip,
-        0 as ticket_medio_geral,
-        0 as receita_total_clientes
-       FROM clientes 
-       WHERE tenant_id = ?`,
-      [req.user.tenant_id]
+        COUNT(DISTINCT c.id) as total_clientes_ativos,
+        COUNT(DISTINCT CASE WHEN c.vip = 1 THEN c.id END) as clientes_vip,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio_geral,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as receita_total_clientes
+       FROM clientes c
+       LEFT JOIN vendas v ON c.id = v.cliente_id 
+         AND v.tenant_id = c.tenant_id
+         AND DATE(v.data_venda) BETWEEN ? AND ?
+       WHERE c.tenant_id = ?`,
+      [data_inicio, data_fim, req.user.tenant_id]
     );
 
     res.json({
@@ -245,6 +252,94 @@ router.get('/analise-clientes', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao gerar relatório de análise de clientes:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Relatório detalhado de compras por cliente
+router.get('/cliente-compras/:clienteId', async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    const { data_inicio, data_fim } = req.query;
+
+    if (!data_inicio || !data_fim) {
+      return res.status(400).json({
+        error: 'Data de início e fim são obrigatórias'
+      });
+    }
+
+    // Buscar dados do cliente
+    const [cliente] = await query(
+      `SELECT id, nome, email, telefone, vip FROM clientes 
+       WHERE id = ? AND tenant_id = ?`,
+      [clienteId, req.user.tenant_id]
+    );
+
+    if (!cliente) {
+      return res.status(404).json({
+        error: 'Cliente não encontrado'
+      });
+    }
+
+    // Buscar vendas do cliente no período
+    const vendas = await query(
+      `SELECT 
+        v.id, v.numero_venda, v.data_venda, v.status, v.total, v.forma_pagamento,
+        u.nome as vendedor_nome
+       FROM vendas v
+       LEFT JOIN usuarios u ON v.usuario_id = u.id
+       WHERE v.cliente_id = ? AND v.tenant_id = ? 
+         AND DATE(v.data_venda) BETWEEN ? AND ?
+       ORDER BY v.data_venda DESC`,
+      [clienteId, req.user.tenant_id, data_inicio, data_fim]
+    );
+
+    // Buscar produtos mais comprados pelo cliente
+    const produtosComprados = await query(
+      `SELECT 
+        p.id, p.nome, p.categoria_id, cat.nome as categoria_nome,
+        SUM(vi.quantidade) as total_quantidade,
+        SUM(vi.preco_total) as total_gasto,
+        AVG(vi.preco_unitario) as preco_medio,
+        COUNT(DISTINCT v.id) as vezes_comprado
+       FROM vendas v
+       JOIN venda_itens vi ON v.id = vi.venda_id
+       JOIN produtos p ON vi.produto_id = p.id
+       LEFT JOIN categorias cat ON p.categoria_id = cat.id
+       WHERE v.cliente_id = ? AND v.tenant_id = ? 
+         AND v.status = 'pago'
+         AND DATE(v.data_venda) BETWEEN ? AND ?
+       GROUP BY p.id, p.nome, p.categoria_id, cat.nome
+       ORDER BY total_quantidade DESC, total_gasto DESC
+       LIMIT 20`,
+      [clienteId, req.user.tenant_id, data_inicio, data_fim]
+    );
+
+    // Estatísticas do cliente
+    const [stats] = await query(
+      `SELECT 
+        COUNT(v.id) as total_vendas,
+        COALESCE(SUM(CASE WHEN v.status = 'pago' THEN v.total ELSE 0 END), 0) as valor_total,
+        COALESCE(AVG(CASE WHEN v.status = 'pago' THEN v.total ELSE NULL END), 0) as ticket_medio,
+        MAX(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as ultima_compra,
+        MIN(CASE WHEN v.status = 'pago' THEN v.data_venda ELSE NULL END) as primeira_compra
+       FROM vendas v
+       WHERE v.cliente_id = ? AND v.tenant_id = ? 
+         AND DATE(v.data_venda) BETWEEN ? AND ?`,
+      [clienteId, req.user.tenant_id, data_inicio, data_fim]
+    );
+
+    res.json({
+      cliente,
+      vendas,
+      produtos_comprados: produtosComprados,
+      estatisticas: stats,
+      periodo: { data_inicio, data_fim }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar compras do cliente:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

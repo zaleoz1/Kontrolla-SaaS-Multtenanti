@@ -464,11 +464,27 @@ router.post('/', validateVenda, async (req, res) => {
     }
 
     // Atualizar total de compras do cliente (se houver)
+    // Somar apenas o valor pago à vista (métodos de pagamento), não incluir pagamentos a prazo
     if (cliente_id) {
-      await query(
-        'UPDATE clientes SET total_compras = total_compras + ? WHERE id = ?',
-        [total, cliente_id]
-      );
+      let valorPagoAVista = 0;
+      
+      // Se há métodos de pagamento à vista, somar apenas esses valores
+      if (metodos_pagamento && metodos_pagamento.length > 0) {
+        valorPagoAVista = metodos_pagamento.reduce((sum, metodo) => {
+          return sum + (parseFloat(metodo.valor) || 0);
+        }, 0);
+      } else if (!pagamento_prazo) {
+        // Se não há pagamento a prazo e não há métodos de pagamento, usar o total da venda
+        valorPagoAVista = total;
+      }
+      
+      // Atualizar total_compras apenas com o valor pago à vista
+      if (valorPagoAVista > 0) {
+        await query(
+          'UPDATE clientes SET total_compras = total_compras + ? WHERE id = ?',
+          [valorPagoAVista, cliente_id]
+        );
+      }
     }
 
     // Buscar venda criada com métodos de pagamento
@@ -534,7 +550,7 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
 
     // Verificar se venda existe
     const existingVendas = await query(
-      'SELECT id, status FROM vendas WHERE id = ? AND tenant_id = ?',
+      'SELECT id, status, cliente_id, total FROM vendas WHERE id = ? AND tenant_id = ?',
       [id, req.user.tenant_id]
     );
 
@@ -566,8 +582,42 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
       );
     }
 
+    // Reverter total_compras do cliente (se houver)
+    if (venda.cliente_id) {
+      // Buscar métodos de pagamento da venda para calcular o valor pago à vista
+      const metodosPagamento = await query(
+        'SELECT valor FROM venda_pagamentos WHERE venda_id = ?',
+        [id]
+      );
+      
+      let valorPagoAVista = 0;
+      if (metodosPagamento.length > 0) {
+        // Se há métodos de pagamento, somar apenas esses valores
+        valorPagoAVista = metodosPagamento.reduce((sum, metodo) => {
+          return sum + (parseFloat(metodo.valor) || 0);
+        }, 0);
+      } else {
+        // Se não há métodos de pagamento, usar o total da venda
+        valorPagoAVista = venda.total;
+      }
+      
+      // Reverter o total_compras do cliente
+      if (valorPagoAVista > 0) {
+        await query(
+          'UPDATE clientes SET total_compras = total_compras - ? WHERE id = ?',
+          [valorPagoAVista, venda.cliente_id]
+        );
+      }
+    }
+
     // Deletar itens da venda
     await query('DELETE FROM venda_itens WHERE venda_id = ?', [id]);
+
+    // Deletar métodos de pagamento da venda
+    await query('DELETE FROM venda_pagamentos WHERE venda_id = ?', [id]);
+
+    // Deletar contas a receber relacionadas à venda
+    await query('DELETE FROM contas_receber WHERE venda_id = ?', [id]);
 
     // Deletar venda
     await query('DELETE FROM vendas WHERE id = ? AND tenant_id = ?', [id, req.user.tenant_id]);

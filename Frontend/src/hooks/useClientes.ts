@@ -22,8 +22,9 @@ export interface Cliente {
   observacoes?: string;
   status: 'ativo' | 'inativo';
   vip: boolean;
-  limite_credito: number;
   total_compras: number;
+  total_pagar?: number;
+  quantidade_contas_pendentes?: number;
   data_criacao: string;
   data_atualizacao: string;
 }
@@ -122,6 +123,16 @@ export function useClientes() {
     }
   }, [api, buscarClientes]);
 
+  const buscarTotalPagar = useCallback(async (id: number) => {
+    try {
+      const response = await api.makeRequest(`${API_ENDPOINTS.CLIENTS.LIST}/${id}/total-pagar`);
+      return response;
+    } catch (error) {
+      console.error('Erro ao buscar total a pagar do cliente:', error);
+      throw error;
+    }
+  }, [api]);
+
   // Remover carregamento automático para evitar conflitos
 
   return {
@@ -134,6 +145,7 @@ export function useClientes() {
     criarCliente,
     atualizarCliente,
     deletarCliente,
+    buscarTotalPagar,
   };
 }
 

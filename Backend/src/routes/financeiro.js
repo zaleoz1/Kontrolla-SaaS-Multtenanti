@@ -1525,6 +1525,14 @@ router.post('/contas-receber/:id/pagar', validateId, handleValidationErrors, asy
            VALUES (?, ?, ?, ?)`,
           [conta.venda_id, metodoPagamento, valorRecebidoNum, valorRecebidoNum]
         );
+
+        // Atualizar total_compras do cliente com o valor recebido
+        if (conta.cliente_id) {
+          await connection.execute(
+            `UPDATE clientes SET total_compras = total_compras + ? WHERE id = ?`,
+            [valorRecebidoNum, conta.cliente_id]
+          );
+        }
       }
 
       // Criar transação de entrada para o valor recebido
