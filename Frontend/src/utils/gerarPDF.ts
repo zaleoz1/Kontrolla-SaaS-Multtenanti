@@ -35,327 +35,223 @@ export interface DadosRelatorioVendas {
   }>;
 }
 
-export const gerarRelatorioVendasPDF = (dados: DadosRelatorioVendas, formatarMoeda: (valor: number) => string) => {
+export const gerarRelatorioVendasPDF = (
+  dados: DadosRelatorioVendas,
+  formatarMoeda: (valor: number) => string
+) => {
   const { periodo, responsavel, resumo_geral, formas_pagamento, vendas_por_categoria, vendas_por_data } = dados;
-  
-  // Formatar datas
-  const dataInicioFormatada = new Date(periodo.data_inicio).toLocaleDateString('pt-BR');
-  const dataFimFormatada = new Date(periodo.data_fim).toLocaleDateString('pt-BR');
-  
+
+  // Datas formatadas
+  const dataInicio = new Date(periodo.data_inicio).toLocaleDateString('pt-BR');
+  const dataFim = new Date(periodo.data_fim).toLocaleDateString('pt-BR');
+
   // Mapear formas de pagamento
   const formasPagamentoMap: Record<string, string> = {
-    'dinheiro': 'Dinheiro',
-    'cartao_credito': 'Cartão Crédito',
-    'cartao_debito': 'Cartão Débito',
-    'pix': 'Pix',
-    'transferencia': 'Transferência',
-    'boleto': 'Boleto',
-    'cheque': 'Cheque',
-    'prazo': 'A Prazo',
-    'outros': 'Outros'
+    dinheiro: 'Dinheiro',
+    cartao_credito: 'Cartão Crédito',
+    cartao_debito: 'Cartão Débito',
+    pix: 'Pix',
+    transferencia: 'Transferência',
+    boleto: 'Boleto',
+    cheque: 'Cheque',
+    prazo: 'A Prazo',
+    outros: 'Outros',
   };
 
-  // Criar novo documento PDF
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  let yPosition = 20;
 
-  // Cores do tema profissional
-  const primaryColor = [31, 41, 55]; // #1f2937 - Cinza escuro
-  const secondaryColor = [107, 114, 128]; // #6b7280 - Cinza médio
-  const accentColor = [59, 130, 246]; // #3b82f6 - Azul corporativo
-  const successColor = [16, 185, 129]; // #10b981 - Verde corporativo
-  const warningColor = [245, 158, 11]; // #f59e0b - Amarelo corporativo
-  const lightGray = [249, 250, 251]; // #f9fafb - Cinza claro
-  const borderColor = [229, 231, 235]; // #e5e7eb - Cinza borda
+  // Paleta de cores
+  const primary: [number, number, number] = [31, 41, 55]; // cinza escuro
+  const secondary: [number, number, number] = [107, 114, 128]; // cinza médio
+  const accent: [number, number, number] = [59, 130, 246]; // azul
+  const light: [number, number, number] = [249, 250, 251];
+  const border: [number, number, number] = [229, 231, 235];
 
-  // Função para adicionar linha horizontal
-  const addHorizontalLine = (y: number, color = secondaryColor) => {
+  // Helpers
+  const line = (y: number, color: [number, number, number] = border) => {
     doc.setDrawColor(color[0], color[1], color[2]);
     doc.setLineWidth(0.5);
     doc.line(20, y, pageWidth - 20, y);
   };
 
-  // Função para adicionar texto com estilo
-  const addStyledText = (text: string, x: number, y: number, options: any = {}) => {
-    const defaultOptions = {
-      fontSize: 12,
-      color: [0, 0, 0],
-      align: 'left' as const,
-      font: 'helvetica' as const
-    };
-    const finalOptions = { ...defaultOptions, ...options };
-    
-    doc.setFontSize(finalOptions.fontSize);
-    doc.setTextColor(finalOptions.color[0], finalOptions.color[1], finalOptions.color[2]);
-    doc.setFont(finalOptions.font, finalOptions.align === 'center' ? 'bold' : 'normal');
-    doc.text(text, x, y, { align: finalOptions.align });
+  const text = (
+    content: string,
+    x: number,
+    y: number,
+    opts: { size?: number; color?: [number, number, number]; align?: 'left' | 'center' | 'right'; bold?: boolean } = {}
+  ) => {
+    const { size = 11, color = primary, align = 'left', bold = false } = opts;
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.setTextColor(color[0], color[1], color[2]);
+    doc.text(content, x, y, { align });
   };
 
-  // Função para adicionar retângulo colorido
-  const addColoredRect = (x: number, y: number, width: number, height: number, color: number[]) => {
-    doc.setFillColor(color[0], color[1], color[2]);
-    doc.rect(x, y, width, height, 'F');
+  const rect = (x: number, y: number, w: number, h: number, fill: [number, number, number] = light) => {
+    doc.setFillColor(fill[0], fill[1], fill[2]);
+    doc.setDrawColor(border[0], border[1], border[2]);
+    doc.rect(x, y, w, h, 'FD');
   };
 
-  // Cabeçalho profissional
-  addColoredRect(0, 0, pageWidth, 35, primaryColor);
-  
-  // Logo/Identificação da empresa
-  addStyledText('KONTROLLA SAAS', 20, 12, {
-    fontSize: 16,
-    color: [255, 255, 255],
-    align: 'left',
-    font: 'helvetica'
-  });
-  
-  addStyledText('Sistema de Gestão Empresarial', 20, 18, {
-    fontSize: 10,
-    color: [209, 213, 219],
-    align: 'left',
-    font: 'helvetica'
-  });
-  
-  // Título do relatório
-  addStyledText('RELATÓRIO DE VENDAS POR PERÍODO', pageWidth / 2, 15, {
-    fontSize: 18,
-    color: [255, 255, 255],
-    align: 'center',
-    font: 'helvetica'
-  });
-  
-  addStyledText(`Período: ${dataInicioFormatada} a ${dataFimFormatada}`, pageWidth / 2, 22, {
-    fontSize: 12,
-    color: [209, 213, 219],
-    align: 'center',
-    font: 'helvetica'
-  });
-  
-  // Data de geração
-  addStyledText(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - 20, 12, {
-    fontSize: 10,
-    color: [209, 213, 219],
-    align: 'right',
-    font: 'helvetica'
-  });
+  // Cabeçalho fixo
+  const header = () => {
+    doc.setFillColor(primary[0], primary[1], primary[2]);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    text('RELATÓRIO DE VENDAS POR PERÍODO', pageWidth / 2, 15, {
+      size: 16,
+      color: [255, 255, 255],
+      align: 'center',
+      bold: true,
+    });
+    text(`Período: ${dataInicio} a ${dataFim}`, pageWidth / 2, 22, {
+      size: 12,
+      color: [209, 213, 219],
+      align: 'center',
+    });
+  };
 
-  yPosition = 50;
+  // Rodapé fixo
+  const footer = () => {
+    const y = pageHeight - 15;
+    line(y - 5);
+    text('Kontrolla SaaS - Sistema de Gestão Empresarial', pageWidth / 2, y, {
+      size: 9,
+      color: primary,
+      align: 'center',
+    });
+  };
 
-  // Informações do responsável
-  addStyledText(`Responsável: ${responsavel.nome}`, 20, yPosition, { fontSize: 10, color: secondaryColor });
-  addStyledText(`Email: ${responsavel.email}`, 20, yPosition + 5, { fontSize: 10, color: secondaryColor });
+  // Função para verificar se precisa de nova página
+  const checkNewPage = (requiredSpace: number = 50) => {
+    if (y > pageHeight - requiredSpace) {
+      doc.addPage();
+      y = 20; // Posição inicial sem header nas páginas seguintes
+    }
+  };
 
-  yPosition += 20;
-  addHorizontalLine(yPosition);
-  yPosition += 10;
-
-  // 1. Resumo Geral do Período
-  addStyledText('1. RESUMO GERAL DO PERÍODO', 20, yPosition, { fontSize: 16, color: primaryColor, font: 'helvetica' });
-  yPosition += 15;
-
-  // Cards de resumo responsivos (2 colunas)
-  const cardWidth = (pageWidth - 50) / 2;
-  const cardHeight = 35;
-  const cardSpacing = 15;
-
-  // Card 1: Total de Vendas
-  addColoredRect(20, yPosition, cardWidth, cardHeight, lightGray);
-  doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-  doc.setLineWidth(1);
-  doc.rect(20, yPosition, cardWidth, cardHeight);
-  
-  addStyledText('TOTAL DE VENDAS', 30, yPosition + 10, { fontSize: 10, color: secondaryColor, font: 'helvetica' });
-  addStyledText(formatarMoeda(resumo_geral.receita_total), 30, yPosition + 22, { fontSize: 18, color: accentColor, font: 'helvetica' });
-
-  // Card 2: Número de Vendas
-  addColoredRect(20 + cardWidth + cardSpacing, yPosition, cardWidth, cardHeight, lightGray);
-  doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-  doc.setLineWidth(1);
-  doc.rect(20 + cardWidth + cardSpacing, yPosition, cardWidth, cardHeight);
-  
-  addStyledText('NÚMERO DE VENDAS', 30 + cardWidth + cardSpacing, yPosition + 10, { fontSize: 10, color: secondaryColor, font: 'helvetica' });
-  addStyledText(resumo_geral.total_vendas.toString(), 30 + cardWidth + cardSpacing, yPosition + 22, { fontSize: 18, color: successColor, font: 'helvetica' });
-
-  yPosition += cardHeight + 20;
-
-  // Formas de Pagamento
-  addStyledText('2. FORMAS DE PAGAMENTO', 20, yPosition, { fontSize: 16, color: primaryColor, font: 'helvetica' });
-  yPosition += 10;
-
-  // Tabela de formas de pagamento responsiva
-  const formasPagamentoData = formas_pagamento.map((forma) => [
-    formasPagamentoMap[forma.metodo_pagamento] || forma.metodo_pagamento,
-    formatarMoeda(forma.valor_total)
-  ]);
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [['Forma de Pagamento', 'Valor Total']],
-    body: formasPagamentoData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [primaryColor[0], primaryColor[1], primaryColor[2]],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 11
-    },
-    bodyStyles: {
-      fontSize: 10,
-      textColor: [31, 41, 55]
-    },
-    columnStyles: {
-      0: { halign: 'left', cellWidth: 'auto' },
-      1: { halign: 'right', cellWidth: 50 }
-    },
-    styles: {
-      lineColor: [borderColor[0], borderColor[1], borderColor[2]],
-      lineWidth: 0.5
-    },
-    margin: { left: 20, right: 20 }
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // 3. Vendas por Categoria de Produto
-  addStyledText('3. VENDAS POR CATEGORIA DE PRODUTO', 20, yPosition, { fontSize: 16, color: primaryColor, font: 'helvetica' });
-  yPosition += 10;
-
-  const categoriaData = vendas_por_categoria.map((cat) => [
-    cat.categoria_nome || 'Sem categoria',
-    formatarMoeda(cat.faturamento),
-    `${cat.percentual.toFixed(1)}%`
-  ]);
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [['Categoria', 'Faturamento (R$)', '% do Total']],
-    body: categoriaData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [primaryColor[0], primaryColor[1], primaryColor[2]],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 11
-    },
-    bodyStyles: {
-      fontSize: 10,
-      textColor: [31, 41, 55]
-    },
-    columnStyles: {
-      0: { halign: 'left', cellWidth: 'auto' },
-      1: { halign: 'right', cellWidth: 50 },
-      2: { halign: 'center', cellWidth: 30 }
-    },
-    styles: {
-      lineColor: [borderColor[0], borderColor[1], borderColor[2]],
-      lineWidth: 0.5
-    },
-    margin: { left: 20, right: 20 }
-  });
-
-  yPosition = (doc as any).lastAutoTable.finalY + 15;
-
-  // 4. Vendas por Data
-  addStyledText('4. VENDAS POR DATA', 20, yPosition, { fontSize: 16, color: primaryColor, font: 'helvetica' });
-  yPosition += 10;
-
-  const vendasData = vendas_por_data.map((venda) => [
-    new Date(venda.data_venda).toLocaleDateString('pt-BR'),
-    formatarMoeda(venda.valor_total)
-  ]);
-
-  // Adicionar linha de total
-  const totalValor = vendas_por_data.reduce((acc, venda) => acc + venda.valor_total, 0);
-  vendasData.push(['TOTAL', formatarMoeda(totalValor)]);
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [['Data', 'Valor Total (R$)']],
-    body: vendasData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [primaryColor[0], primaryColor[1], primaryColor[2]],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 11
-    },
-    bodyStyles: {
-      fontSize: 10,
-      textColor: [31, 41, 55]
-    },
-    columnStyles: {
-      0: { halign: 'left', cellWidth: 'auto' },
-      1: { halign: 'right', cellWidth: 50 }
-    },
-    styles: {
-      lineColor: [borderColor[0], borderColor[1], borderColor[2]],
-      lineWidth: 0.5
-    },
-    margin: { left: 20, right: 20 },
-    didDrawPage: (data: any) => {
-      // Destacar linha de total
-      const lastRow = data.table.body[data.table.body.length - 1];
-      if (lastRow && lastRow[0] === 'TOTAL') {
-        doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-        doc.rect(data.table.startX, data.cursor.y - 6, data.table.width, 6, 'F');
+  // Aplicar header e footer seletivamente
+  const applyHeaderFooter = () => {
+    const count = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= count; i++) {
+      doc.setPage(i);
+      if (i === 1) {
+        // Apenas header na primeira página
+        header();
+      } else {
+        // Apenas footer nas páginas seguintes
+        footer();
       }
     }
+  };
+
+  let y = 45; // Posição inicial considerando o header na primeira página
+
+  // Responsável
+  text(`Responsável: ${responsavel.nome.replace(/\s+/g, ' ').trim()}`, 20, y, { size: 10, color: secondary });
+  text(`Email: ${responsavel.email}`, 20, y + 6, { size: 10, color: secondary });
+  y += 18;
+  line(y);
+  y += 12;
+
+  // Resumo
+  text('1. RESUMO GERAL DO PERÍODO', 20, y, { size: 14, bold: true });
+  y += 10;
+  text('Receita Total: ', 20, y, { size: 12, bold: true });
+  text(formatarMoeda(resumo_geral.receita_total), 20 + doc.getTextWidth('Receita Total: '), y, { size: 12 });
+  y += 6;
+  text('Número de Vendas: ', 20, y, { size: 12, bold: true });
+  text(resumo_geral.total_vendas.toString(), 20 + doc.getTextWidth('Número de Vendas: '), y, { size: 12 });
+  y += 15;
+
+  // Verificar espaço para formas de pagamento
+  checkNewPage(60);
+
+  // Formas de pagamento
+  text('2. FORMAS DE PAGAMENTO', 20, y, { size: 14, bold: true });
+  y += 8;
+  autoTable(doc, {
+    startY: y,
+    head: [['Forma de Pagamento', 'Valor Total']],
+    body: formas_pagamento.map(f => [
+      formasPagamentoMap[f.metodo_pagamento] || f.metodo_pagamento,
+      formatarMoeda(f.valor_total),
+    ]),
+    theme: 'grid',
+    margin: { left: 20, right: 20 },
+    styles: { fontSize: 10, lineColor: [border[0], border[1], border[2]], lineWidth: 0.2 },
+    headStyles: { fillColor: [primary[0], primary[1], primary[2]], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 'auto' }, 1: { halign: 'right', cellWidth: 50 } },
   });
+  y = (doc as any).lastAutoTable.finalY + 15;
 
-  yPosition = (doc as any).lastAutoTable.finalY + 20;
+  // Verificar espaço para vendas por categoria
+  checkNewPage(60);
 
-  // 5. Observações
-  addStyledText('5. OBSERVAÇÕES', 20, yPosition, { fontSize: 16, color: primaryColor, font: 'helvetica' });
-  yPosition += 10;
+  // Vendas por categoria
+  text('3. VENDAS POR CATEGORIA DE PRODUTO', 20, y, { size: 14, bold: true });
+  y += 8;
+  autoTable(doc, {
+    startY: y,
+    head: [['Categoria', 'Faturamento', '%']],
+    body: vendas_por_categoria.map(c => [
+      c.categoria_nome || 'Sem categoria',
+      formatarMoeda(c.faturamento),
+      `${c.percentual.toFixed(1)}%`,
+    ]),
+    theme: 'grid',
+    margin: { left: 20, right: 20 },
+    styles: { fontSize: 10, lineColor: [border[0], border[1], border[2]], lineWidth: 0.2 },
+    headStyles: { fillColor: [primary[0], primary[1], primary[2]], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 'auto' }, 1: { halign: 'right', cellWidth: 50 }, 2: { halign: 'center', cellWidth: 30 } },
+  });
+  y = (doc as any).lastAutoTable.finalY + 15;
 
-  addColoredRect(20, yPosition, pageWidth - 40, 25, lightGray);
-  doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-  doc.setLineWidth(1);
-  doc.rect(20, yPosition, pageWidth - 40, 25);
+  // Verificar espaço para vendas por data
+  checkNewPage(60);
 
-  const observacoes = [
-    '• Relatório gerado automaticamente pelo sistema Kontrolla SaaS',
+  // Vendas por data
+  text('4. VENDAS POR DATA', 20, y, { size: 14, bold: true });
+  y += 8;
+  const vendasData = vendas_por_data.map(v => [
+    new Date(v.data_venda).toLocaleDateString('pt-BR'),
+    formatarMoeda(v.valor_total),
+  ]);
+  const total = vendas_por_data.reduce((s, v) => s + v.valor_total, 0);
+  vendasData.push(['TOTAL', formatarMoeda(total)]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Data', 'Valor']],
+    body: vendasData,
+    theme: 'grid',
+    margin: { left: 20, right: 20 },
+    styles: { fontSize: 10, lineColor: [border[0], border[1], border[2]], lineWidth: 0.2 },
+    headStyles: { fillColor: [primary[0], primary[1], primary[2]], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 'auto' }, 1: { halign: 'right', cellWidth: 50 } },
+  });
+  y = (doc as any).lastAutoTable.finalY + 15;
+
+  // Verificar espaço para observações
+  checkNewPage(80);
+
+  // Observações
+  text('5. OBSERVAÇÕES', 20, y, { size: 14, bold: true });
+  y += 8;
+  rect(20, y, pageWidth - 40, 35);
+  const obs = [
+    '• Relatório gerado automaticamente pelo sistema KontrollaPro',
+    `• Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
     '• Dados baseados em vendas com status "pago"',
-    `• Período: ${dataInicioFormatada} a ${dataFimFormatada}`,
-    '• Relatório confidencial - uso interno'
+    `• Período: ${dataInicio} a ${dataFim}`,
+    '• Relatório confidencial - uso interno',
   ];
+  obs.forEach((o, i) => text(o, 25, y + 8 + i * 6, { size: 9 }));
+  y += 40;
 
-  observacoes.forEach((obs, index) => {
-    addStyledText(obs, 30, yPosition + 6 + (index * 4), { fontSize: 9, color: [31, 41, 55] });
-  });
+  // Aplicar header/rodapé em todas as páginas
+  applyHeaderFooter();
 
-  yPosition += 35;
-
-  // 6. Conclusão
-  addStyledText('6. CONCLUSÃO', 20, yPosition, { fontSize: 16, color: primaryColor, font: 'helvetica' });
-  yPosition += 10;
-
-  addColoredRect(20, yPosition, pageWidth - 40, 20, lightGray);
-  doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-  doc.setLineWidth(1);
-  doc.rect(20, yPosition, pageWidth - 40, 20);
-
-  addStyledText('Este relatório apresenta uma análise detalhada das vendas do período, fornecendo insights valiosos para tomada de decisões estratégicas e identificação de oportunidades de crescimento.', 30, yPosition + 6, { fontSize: 9, color: [31, 41, 55] });
-
-  // Rodapé profissional
-  const footerY = pageHeight - 25;
-  addHorizontalLine(footerY - 15, borderColor);
-  
-  addStyledText('Kontrolla SaaS - Sistema de Gestão Empresarial', pageWidth / 2, footerY - 8, { 
-    fontSize: 9, 
-    color: primaryColor, 
-    align: 'center',
-    font: 'helvetica'
-  });
-  
-  addStyledText(`Relatório gerado automaticamente em ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, footerY, { 
-    fontSize: 8, 
-    color: secondaryColor, 
-    align: 'center' 
-  });
-
-  // Salvar o PDF
-  const nomeArquivo = `relatorio_vendas_detalhado_${new Date().toISOString().split('T')[0]}.pdf`;
-  doc.save(nomeArquivo);
+  doc.save(`relatorio_vendas_${new Date().toISOString().split('T')[0]}.pdf`);
 };
