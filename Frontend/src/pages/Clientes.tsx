@@ -471,22 +471,24 @@ export default function Clientes() {
                 </div>
 
                 <div className="pt-4 border-t border-border/50">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${(Number(totaisPagar[cliente.id]?.total_pagar) || 0) > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">Total Gasto</p>
                       <p className="font-semibold text-primary text-lg">{formatarMoeda(Number(cliente.total_compras) || 0)}</p>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Total a Pagar</p>
-                      <p className="font-semibold text-orange-600 text-lg">
-                        {formatarMoeda(Number(totaisPagar[cliente.id]?.total_pagar) || 0)}
-                      </p>
-                      {totaisPagar[cliente.id]?.quantidade_contas > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {totaisPagar[cliente.id].quantidade_contas} {totaisPagar[cliente.id].quantidade_contas === 1 ? 'conta' : 'contas'} pendente{totaisPagar[cliente.id].quantidade_contas !== 1 ? 's' : ''}
+                    {(Number(totaisPagar[cliente.id]?.total_pagar) || 0) > 0 && (
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Total a Pagar</p>
+                        <p className="font-semibold text-orange-600 text-lg">
+                          {formatarMoeda(Number(totaisPagar[cliente.id]?.total_pagar) || 0)}
                         </p>
-                      )}
-                    </div>
+                        {totaisPagar[cliente.id]?.quantidade_contas > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {totaisPagar[cliente.id].quantidade_contas} {totaisPagar[cliente.id].quantidade_contas === 1 ? 'conta' : 'contas'} pendente{totaisPagar[cliente.id].quantidade_contas !== 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

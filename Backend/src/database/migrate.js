@@ -61,6 +61,23 @@ async function runMigrations() {
       console.log('⚠️ Erro na migração de pagamentos a prazo (pode ser normal se já aplicada):', migrationError.message);
     }
 
+    // Verificar se precisa executar migração de venda_id na tabela transacoes
+    try {
+      console.log('🔍 Verificando se precisa executar migração de venda_id em transacoes...');
+      const [columns] = await query("SHOW COLUMNS FROM transacoes LIKE 'venda_id'");
+      
+      if (columns.length === 0) {
+        console.log('📝 Executando migração de venda_id em transacoes...');
+        const { default: migrateVendaIdTransacoes } = await import('./migrate_venda_id_transacoes.js');
+        await migrateVendaIdTransacoes();
+        console.log('✅ Migração de venda_id em transacoes concluída!');
+      } else {
+        console.log('✅ Migração de venda_id em transacoes já aplicada!');
+      }
+    } catch (migrationError) {
+      console.log('⚠️ Erro na migração de venda_id em transacoes (pode ser normal se já aplicada):', migrationError.message);
+    }
+
     console.log('✅ Migração concluída com sucesso!');
     console.log('📊 Banco de dados criado e configurado');
     

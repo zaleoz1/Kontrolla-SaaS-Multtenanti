@@ -5,6 +5,21 @@ import { validateVenda, validateId, validatePagination, validateSearch, handleVa
 
 const router = express.Router();
 
+// Função auxiliar para obter nome do método de pagamento
+function getPaymentMethodName(metodo) {
+  const metodos = {
+    'dinheiro': 'Dinheiro',
+    'cartao_credito': 'Cartão de Crédito',
+    'cartao_debito': 'Cartão de Débito',
+    'pix': 'PIX',
+    'transferencia': 'Transferência',
+    'boleto': 'Boleto',
+    'cheque': 'Cheque',
+    'prazo': 'A Prazo'
+  };
+  return metodos[metodo] || metodo;
+}
+
 // Aplicar autenticação em todas as rotas
 router.use(authenticateToken);
 
@@ -422,6 +437,38 @@ router.post('/', validateVenda, async (req, res) => {
             valorOriginal
           ]
         );
+
+        // Criar transação de entrada para pagamentos à vista
+        if (metodo.metodo !== 'prazo') {
+          const valorTransacao = parseFloat(metodo.valor) - (metodo.troco || 0);
+          
+          // Calcular valor com taxa se aplicável
+          let valorComTaxa = valorOriginal;
+          if (metodo.taxaParcela && metodo.taxaParcela > 0) {
+            valorComTaxa = valorOriginal * (1 + metodo.taxaParcela / 100);
+          }
+
+          await query(
+            `INSERT INTO transacoes (
+              tenant_id, tipo, categoria, descricao, valor, data_transacao,
+              metodo_pagamento, conta, cliente_id, observacoes, status, venda_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              req.user.tenant_id,
+              'entrada',
+              'Vendas',
+              `Venda #${numeroVenda} - ${getPaymentMethodName(metodo.metodo)}`,
+              valorComTaxa,
+              new Date().toISOString().split('T')[0],
+              metodo.metodo,
+              'Caixa',
+              cliente_id,
+              `Pagamento à vista da venda #${numeroVenda}`,
+              'concluida',
+              vendaId
+            ]
+          );
+        }
       }
     } else if (forma_pagamento && !pagamento_prazo) {
       // Fallback para método único (compatibilidade) - apenas se não há pagamento a prazo
@@ -429,6 +476,28 @@ router.post('/', validateVenda, async (req, res) => {
         `INSERT INTO venda_pagamentos (venda_id, metodo, valor, troco)
          VALUES (?, ?, ?, ?)`,
         [vendaId, forma_pagamento, total, 0]
+      );
+
+      // Criar transação de entrada para método único
+      await query(
+        `INSERT INTO transacoes (
+          tenant_id, tipo, categoria, descricao, valor, data_transacao,
+          metodo_pagamento, conta, cliente_id, observacoes, status, venda_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id,
+          'entrada',
+          'Vendas',
+          `Venda #${numeroVenda} - ${getPaymentMethodName(forma_pagamento)}`,
+          total,
+          new Date().toISOString().split('T')[0],
+          forma_pagamento,
+          'Caixa',
+          cliente_id,
+          `Pagamento à vista da venda #${numeroVenda}`,
+          'concluida',
+          vendaId
+        ]
       );
     }
 
