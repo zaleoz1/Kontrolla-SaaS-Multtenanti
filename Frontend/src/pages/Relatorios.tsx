@@ -23,10 +23,12 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useRelatorios } from "@/hooks/useRelatorios";
+import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
-import { gerarRelatorioVendasPDF } from "@/utils/gerarPDF";
+import { gerarRelatorioVendasPDF, gerarRelatorioProdutosPDF, gerarRelatorioClientesPDF } from "@/utils/gerarPDF";
 
 export default function Relatorios() {
+  const { user } = useAuth();
   const {
     useMetricasRapidas,
     useRelatorioVendasPeriodo,
@@ -236,6 +238,174 @@ export default function Relatorios() {
     gerarRelatorioVendasPDF(dadosVendasDetalhado, formatarMoeda);
   };
 
+  // Função para gerar relatório de produtos em PDF profissional
+  const gerarRelatorioProdutosDetalhado = () => {
+    if (!dadosProdutos || !user) return;
+
+    // Validar e calcular valores com segurança
+    const totalVendido = dadosProdutos.produtos?.reduce((acc, p) => {
+      const valor = Number(p.total_vendido) || 0;
+      return acc + valor;
+    }, 0) || 0;
+    
+    const receitaTotal = dadosProdutos.produtos?.reduce((acc, p) => {
+      const valor = Number(p.receita_total) || 0;
+      return acc + valor;
+    }, 0) || 0;
+    
+    const ticketMedio = totalVendido > 0 ? receitaTotal / totalVendido : 0;
+
+    // Debug logs
+    console.log('Debug - dadosProdutos:', dadosProdutos);
+    console.log('Debug - totalVendido:', totalVendido);
+    console.log('Debug - receitaTotal:', receitaTotal);
+    console.log('Debug - ticketMedio:', ticketMedio);
+
+    // Transformar produtos para incluir percentual
+    const produtosComPercentual = dadosProdutos.produtos?.map(produto => {
+      const totalVendidoProduto = Number(produto.total_vendido) || 0;
+      const receitaTotalProduto = Number(produto.receita_total) || 0;
+      
+      return {
+        nome: produto.nome || 'Produto sem nome',
+        categoria_nome: produto.categoria_nome || 'Sem categoria',
+        total_vendido: totalVendidoProduto,
+        receita_total: receitaTotalProduto,
+        percentual: receitaTotal > 0 ? (receitaTotalProduto / receitaTotal) * 100 : 0
+      };
+    }) || [];
+
+    // Agrupar por categoria para vendas_por_categoria
+    const vendasPorCategoria = produtosComPercentual.reduce((acc, produto) => {
+      const categoria = produto.categoria_nome || 'Sem categoria';
+      const existing = acc.find(item => item.categoria_nome === categoria);
+      
+      if (existing) {
+        existing.quantidade_vendida += Number(produto.total_vendido) || 0;
+        existing.faturamento += Number(produto.receita_total) || 0;
+      } else {
+        acc.push({
+          categoria_nome: categoria,
+          quantidade_vendida: Number(produto.total_vendido) || 0,
+          faturamento: Number(produto.receita_total) || 0,
+          percentual: 0
+        });
+      }
+      
+      return acc;
+    }, [] as Array<{categoria_nome: string, quantidade_vendida: number, faturamento: number, percentual: number}>);
+
+    // Calcular percentuais das categorias
+    vendasPorCategoria.forEach(categoria => {
+      categoria.percentual = receitaTotal > 0 ? (categoria.faturamento / receitaTotal) * 100 : 0;
+    });
+
+    // Transformar dados para o formato esperado pela função PDF
+    const dadosFormatados = {
+      periodo: {
+        data_inicio: dataInicio,
+        data_fim: dataFim
+      },
+      responsavel: {
+        nome: `${user.nome} ${user.sobrenome}`.trim(),
+        email: user.email
+      },
+      resumo_geral: {
+        total_produtos: Number(dadosProdutos.produtos?.length) || 0,
+        total_vendido: Number(totalVendido) || 0,
+        receita_total: Number(receitaTotal) || 0,
+        ticket_medio: Number(ticketMedio) || 0
+      },
+      produtos: produtosComPercentual,
+      vendas_por_categoria: vendasPorCategoria
+    };
+
+    // Debug final
+    console.log('Debug - dadosFormatados:', dadosFormatados);
+
+    gerarRelatorioProdutosPDF(dadosFormatados, formatarMoeda);
+  };
+
+  // Função para gerar relatório de clientes em PDF profissional
+  const gerarRelatorioClientesDetalhado = () => {
+    if (!dadosClientes || !user) return;
+
+    // Validar e calcular valores com segurança
+    const totalClientes = dadosClientes.clientes?.length || 0;
+    const clientesVip = dadosClientes.clientes?.filter(c => c.vip).length || 0;
+    const receitaTotal = dadosClientes.clientes?.reduce((acc, c) => {
+      const valor = Number(c.valor_total) || 0;
+      return acc + valor;
+    }, 0) || 0;
+    const ticketMedio = totalClientes > 0 ? receitaTotal / totalClientes : 0;
+
+    // Debug logs
+    console.log('Debug - dadosClientes:', dadosClientes);
+    console.log('Debug - totalClientes:', totalClientes);
+    console.log('Debug - clientesVip:', clientesVip);
+    console.log('Debug - receitaTotal:', receitaTotal);
+    console.log('Debug - ticketMedio:', ticketMedio);
+
+    // Transformar clientes para incluir dados seguros
+    const clientesFormatados = dadosClientes.clientes?.map(cliente => ({
+      nome: cliente.nome || 'Cliente sem nome',
+      email: cliente.email || 'email@exemplo.com',
+      telefone: cliente.telefone || 'Não informado',
+      vip: Boolean(cliente.vip),
+      total_vendas: Number(cliente.total_vendas) || 0,
+      valor_total: Number(cliente.valor_total) || 0,
+      ticket_medio: Number(cliente.ticket_medio) || 0,
+      ultima_compra: cliente.ultima_compra || 'Nunca',
+      primeira_compra: cliente.primeira_compra || 'Nunca'
+    })) || [];
+
+    // Criar faixas de valor para análise
+    const faixasValor = [
+      { faixa: 'Até R$ 100', min: 0, max: 100 },
+      { faixa: 'R$ 100 - R$ 500', min: 100, max: 500 },
+      { faixa: 'R$ 500 - R$ 1.000', min: 500, max: 1000 },
+      { faixa: 'R$ 1.000 - R$ 5.000', min: 1000, max: 5000 },
+      { faixa: 'Acima de R$ 5.000', min: 5000, max: Infinity }
+    ];
+
+    const clientesPorFaixa = faixasValor.map(faixa => {
+      const quantidade = clientesFormatados.filter(cliente => 
+        cliente.valor_total >= faixa.min && cliente.valor_total < faixa.max
+      ).length;
+      
+      return {
+        faixa: faixa.faixa,
+        quantidade,
+        percentual: totalClientes > 0 ? (quantidade / totalClientes) * 100 : 0
+      };
+    });
+
+    // Transformar dados para o formato esperado pela função PDF
+    const dadosFormatados = {
+      periodo: {
+        data_inicio: dataInicio,
+        data_fim: dataFim
+      },
+      responsavel: {
+        nome: `${user.nome} ${user.sobrenome}`.trim(),
+        email: user.email
+      },
+      resumo_geral: {
+        total_clientes: Number(totalClientes) || 0,
+        clientes_vip: Number(clientesVip) || 0,
+        receita_total: Number(receitaTotal) || 0,
+        ticket_medio: Number(ticketMedio) || 0
+      },
+      clientes: clientesFormatados,
+      clientes_por_faixa_valor: clientesPorFaixa
+    };
+
+    // Debug final
+    console.log('Debug - dadosFormatados clientes:', dadosFormatados);
+
+    gerarRelatorioClientesPDF(dadosFormatados, formatarMoeda);
+  };
+
 
 
   // Função para baixar relatório
@@ -254,7 +424,8 @@ export default function Relatorios() {
           } else if (formato === 'json') {
             gerarJSON(dadosProdutos, nomeArquivo);
           } else {
-            gerarPDF(dadosProdutos, nomeArquivo, tipo);
+            // Usar o relatório detalhado em PDF profissional
+            gerarRelatorioProdutosDetalhado();
           }
         }
         break;
@@ -265,7 +436,8 @@ export default function Relatorios() {
           } else if (formato === 'json') {
             gerarJSON(dadosClientes, nomeArquivo);
           } else {
-            gerarPDF(dadosClientes, nomeArquivo, tipo);
+            // Usar o relatório detalhado em PDF profissional
+            gerarRelatorioClientesDetalhado();
           }
         }
         break;
@@ -499,6 +671,26 @@ export default function Relatorios() {
                           ) : (
                             <Download className="h-4 w-4 mr-2" />
                           )}
+                          PDF
+                        </Button>
+                      ) : relatorio.tipo === 'produtos' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
+                          disabled={relatorio.loading || !dadosProdutos || !user}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          PDF
+                        </Button>
+                      ) : relatorio.tipo === 'clientes' ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
+                          disabled={relatorio.loading || !dadosClientes || !user}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
                           PDF
                         </Button>
                       ) : (
