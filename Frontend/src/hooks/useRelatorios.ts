@@ -31,9 +31,51 @@ export interface RelatorioAnaliseClientes {
   vip: boolean;
   total_vendas: number;
   valor_total: number;
-  ticket_medio: number;
   ultima_compra: string;
   primeira_compra: string;
+}
+
+export interface VendaCliente {
+  id: number;
+  numero_venda: string;
+  data_venda: string;
+  status: string;
+  total: number;
+  forma_pagamento: string;
+  vendedor_nome: string;
+}
+
+export interface ProdutoComprado {
+  id: number;
+  nome: string;
+  categoria_id: number;
+  categoria_nome: string;
+  total_quantidade: number;
+  total_gasto: number;
+  preco_medio: number;
+  vezes_comprado: number;
+}
+
+export interface DadosComprasCliente {
+  cliente: {
+    id: number;
+    nome: string;
+    email: string;
+    telefone: string;
+    vip: boolean;
+  };
+  vendas: VendaCliente[];
+  produtos_comprados: ProdutoComprado[];
+  estatisticas: {
+    total_vendas: number;
+    valor_total: number;
+    ultima_compra: string;
+    primeira_compra: string;
+  };
+  periodo: {
+    data_inicio: string;
+    data_fim: string;
+  };
 }
 
 export interface RelatorioFinanceiro {
@@ -279,6 +321,38 @@ export const useRelatorios = () => {
     return { dados, loading, refetch: fetchDados };
   };
 
+  // Hook para buscar dados detalhados de compras por cliente
+  const useComprasCliente = (clienteId: number, dataInicio: string, dataFim: string) => {
+    const [dados, setDados] = useState<DadosComprasCliente | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const fetchDados = async () => {
+      if (!clienteId || !dataInicio || !dataFim) return;
+      
+      try {
+        setLoading(true);
+        const response = await api.get(`/relatorios/cliente-compras/${clienteId}`, {
+          params: {
+            data_inicio: dataInicio,
+            data_fim: dataFim
+          }
+        });
+        setDados(response.data as DadosComprasCliente);
+      } catch (err) {
+        console.error('Erro ao buscar compras do cliente:', err);
+        setError('Erro ao carregar dados do cliente');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      fetchDados();
+    }, [clienteId, dataInicio, dataFim]);
+
+    return { dados, loading, refetch: fetchDados };
+  };
+
   // Hook para relatório financeiro
   const useRelatorioFinanceiro = (dataInicio: string, dataFim: string, tipo: string = 'transacoes') => {
     const [dados, setDados] = useState<RelatorioFinanceiro | null>(null);
@@ -445,6 +519,7 @@ export const useRelatorios = () => {
     useRelatorioVendasDetalhado,
     useRelatorioProdutosVendidos,
     useRelatorioAnaliseClientes,
+    useComprasCliente,
     useRelatorioFinanceiro,
     useRelatorioControleEstoque,
     useRelatorioPerformanceVendas,

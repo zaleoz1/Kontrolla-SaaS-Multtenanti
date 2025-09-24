@@ -68,6 +68,47 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
   }
 });
 
+// Buscar total a pagar de um cliente específico
+router.get('/:id/total-pagar', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se cliente existe
+    const clientes = await query(
+      'SELECT id FROM clientes WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+
+    if (clientes.length === 0) {
+      return res.status(404).json({
+        error: 'Cliente não encontrado'
+      });
+    }
+
+    // Buscar contas a receber pendentes do cliente
+    const contasPendentes = await query(
+      `SELECT 
+        COALESCE(SUM(valor), 0) as total_pendente,
+        COUNT(*) as quantidade_contas
+      FROM contas_receber 
+      WHERE cliente_id = ? AND tenant_id = ? AND status IN ('pendente', 'vencido')`,
+      [id, req.user.tenant_id]
+    );
+
+    console.log(`🔍 Buscando total a pagar para cliente ${id}:`, contasPendentes[0]);
+
+    res.json({
+      total_pagar: contasPendentes[0].total_pendente,
+      quantidade_contas: contasPendentes[0].quantidade_contas
+    });
+  } catch (error) {
+    console.error('Erro ao buscar total a pagar do cliente:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Buscar cliente por ID
 router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
   try {
@@ -116,8 +157,7 @@ router.post('/', validateCliente, async (req, res) => {
       nome_fantasia,
       observacoes,
       status = 'ativo',
-      vip = false,
-      limite_credito = 0
+      vip = false
     } = req.body;
 
     // Verificar se já existe cliente com mesmo CPF/CNPJ
@@ -168,13 +208,13 @@ router.post('/', validateCliente, async (req, res) => {
         tenant_id, nome, email, telefone, cpf_cnpj, tipo_pessoa, endereco,
         cidade, estado, cep, data_nascimento, sexo, razao_social,
         inscricao_estadual, inscricao_municipal, nome_fantasia, observacoes,
-        status, vip, limite_credito
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        status, vip
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, nome, email, telefone, cpf_cnpj, tipo_pessoa,
         endereco, cidade, estado, cep, dataNascimentoFormatted, sexo, razao_social,
         inscricao_estadual, inscricao_municipal, nome_fantasia, observacoes,
-        status, vip, limite_credito
+        status, vip
       ]
     );
 
@@ -218,8 +258,7 @@ router.put('/:id', validateId, validateCliente, handleValidationErrors, async (r
       nome_fantasia,
       observacoes,
       status,
-      vip,
-      limite_credito
+      vip
     } = req.body;
 
     // Verificar se cliente existe
@@ -282,13 +321,13 @@ router.put('/:id', validateId, validateCliente, handleValidationErrors, async (r
         nome = ?, email = ?, telefone = ?, cpf_cnpj = ?, tipo_pessoa = ?,
         endereco = ?, cidade = ?, estado = ?, cep = ?, data_nascimento = ?,
         sexo = ?, razao_social = ?, inscricao_estadual = ?, inscricao_municipal = ?,
-        nome_fantasia = ?, observacoes = ?, status = ?, vip = ?, limite_credito = ?
+        nome_fantasia = ?, observacoes = ?, status = ?, vip = ?
       WHERE id = ? AND tenant_id = ?`,
       [
         nome, email, telefone, cpf_cnpj, tipo_pessoa, endereco, cidade, estado,
         cep, dataNascimentoFormatted, sexo, razao_social, inscricao_estadual,
         inscricao_municipal, nome_fantasia, observacoes, status, vip,
-        limite_credito, id, req.user.tenant_id
+        id, req.user.tenant_id
       ]
     );
 

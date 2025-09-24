@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCrudApi } from "@/hooks/useApi";
-import { API_ENDPOINTS } from "@/config/api";
+import { API_ENDPOINTS, API_CONFIG } from "@/config/api";
 import { 
   Plus, 
   Search, 
@@ -47,8 +47,9 @@ interface Cliente {
   observacoes?: string;
   status: 'ativo' | 'inativo';
   vip: boolean;
-  limite_credito: number;
   total_compras: number;
+  total_pagar?: number;
+  quantidade_contas_pendentes?: number;
   data_criacao: string;
   data_atualizacao: string;
 }
@@ -78,6 +79,7 @@ export default function Clientes() {
   const [termoBusca, setTermoBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [totaisPagar, setTotaisPagar] = useState<Record<number, { total_pagar: number; quantidade_contas: number }>>({});
   const navigate = useNavigate();
 
   // Hooks para API
@@ -89,6 +91,18 @@ export default function Clientes() {
     carregarClientes();
     carregarEstatisticas();
   }, [paginaAtual, termoBusca, filtroStatus]);
+
+  // Dados dos clientes
+  const clientes = clientesApi.data?.clientes || [];
+  const pagination = clientesApi.data?.pagination;
+  const stats = statsApi.data?.stats;
+
+  // Carregar totais a pagar quando os clientes mudarem
+  useEffect(() => {
+    if (clientes.length > 0) {
+      carregarTotaisPagar();
+    }
+  }, [clientes]);
 
   // Função para carregar clientes
   const carregarClientes = async () => {
@@ -118,6 +132,52 @@ export default function Clientes() {
       await statsApi.makeRequest(API_ENDPOINTS.CLIENTS.STATS);
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
+
+  // Função para carregar totais a pagar dos clientes
+  const carregarTotaisPagar = async () => {
+    try {
+      const promises = clientes.map(async (cliente) => {
+        try {
+          const url = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.CLIENTS.LIST}/${cliente.id}/total-pagar`;
+          const token = localStorage.getItem('token');
+          console.log(`🔗 Chamando URL: ${url}`);
+          console.log(`🔑 Token: ${token ? 'Presente' : 'Ausente'}`);
+          
+          const response = await fetch(url, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`✅ Total a pagar para cliente ${cliente.id}:`, data);
+            return { clienteId: cliente.id, data };
+          } else {
+            // Se a resposta não for ok, tentar ler o texto para debug
+            const text = await response.text();
+            console.error(`Erro ${response.status} ao buscar total a pagar do cliente ${cliente.id}:`, text);
+            return { clienteId: cliente.id, data: { total_pagar: 0, quantidade_contas: 0 } };
+          }
+        } catch (error) {
+          console.error(`Erro ao buscar total a pagar do cliente ${cliente.id}:`, error);
+          return { clienteId: cliente.id, data: { total_pagar: 0, quantidade_contas: 0 } };
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const novosTotais: Record<number, { total_pagar: number; quantidade_contas: number }> = {};
+      
+      results.forEach(({ clienteId, data }) => {
+        novosTotais[clienteId] = data;
+      });
+
+      setTotaisPagar(novosTotais);
+    } catch (error) {
+      console.error('Erro ao carregar totais a pagar:', error);
     }
   };
 
@@ -151,11 +211,6 @@ export default function Clientes() {
         return <Badge variant="secondary">Desconhecido</Badge>;
     }
   };
-
-  // Dados dos clientes
-  const clientes = clientesApi.data?.clientes || [];
-  const pagination = clientesApi.data?.pagination;
-  const stats = statsApi.data?.stats;
 
   // Função para formatar endereço completo
   const formatarEndereco = (cliente: Cliente) => {
@@ -415,14 +470,23 @@ export default function Clientes() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Total Gasto</p>
-                    <p className="font-semibold text-primary">{formatarMoeda(Number(cliente.total_compras) || 0)}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Limite Crédito</p>
-                    <p className="font-semibold">{formatarMoeda(Number(cliente.limite_credito) || 0)}</p>
+                <div className="pt-4 border-t border-border/50">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Total Gasto</p>
+                      <p className="font-semibold text-primary text-lg">{formatarMoeda(Number(cliente.total_compras) || 0)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Total a Pagar</p>
+                      <p className="font-semibold text-orange-600 text-lg">
+                        {formatarMoeda(Number(totaisPagar[cliente.id]?.total_pagar) || 0)}
+                      </p>
+                      {totaisPagar[cliente.id]?.quantidade_contas > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {totaisPagar[cliente.id].quantidade_contas} {totaisPagar[cliente.id].quantidade_contas === 1 ? 'conta' : 'contas'} pendente{totaisPagar[cliente.id].quantidade_contas !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
