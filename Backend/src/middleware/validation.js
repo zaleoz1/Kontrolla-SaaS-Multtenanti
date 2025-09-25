@@ -308,6 +308,10 @@ export const validateProduto = [
       }
       return true;
     }),
+  body('tipo_preco')
+    .optional()
+    .isIn(['unidade', 'kg', 'litros'])
+    .withMessage('Tipo de preço deve ser "unidade", "kg" ou "litros"'),
   body('estoque')
     .optional()
     .custom((value) => {

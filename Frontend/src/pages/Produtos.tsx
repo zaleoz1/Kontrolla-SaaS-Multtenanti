@@ -39,6 +39,7 @@ interface Produto {
   descricao?: string;
   preco: number;
   preco_promocional?: number;
+  tipo_preco: 'unidade' | 'kg' | 'litros';
   estoque: number;
   estoque_minimo: number;
   codigo_barras?: string;
@@ -180,6 +181,18 @@ export default function Produtos() {
       style: 'currency',
       currency: 'BRL'
     }).format(preco);
+  };
+
+  const obterUnidadeEstoque = (tipo_preco: string) => {
+    switch (tipo_preco) {
+      case 'kg':
+        return 'kg';
+      case 'litros':
+        return 'L';
+      case 'unidade':
+      default:
+        return 'un.';
+    }
   };
 
   const todosProdutos = produtosApi.data?.produtos || [];
@@ -442,7 +455,9 @@ export default function Produtos() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Estoque:</span>
                     <div className="flex items-center space-x-2">
-                      <span className="font-medium">{produto.estoque} un.</span>
+                      <span className="font-medium">
+                        {produto.estoque} {obterUnidadeEstoque(produto.tipo_preco)}
+                      </span>
                       {produto.estoque <= produto.estoque_minimo && produto.estoque > 0 && (
                         <AlertTriangle className="h-4 w-4 text-warning" />
                       )}
