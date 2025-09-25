@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,10 +89,12 @@ export default function NovoProduto() {
     fornecedor_id: undefined,
     marca: "",
     modelo: "",
-    status: "rascunho",
+    status: "ativo",
     destaque: false,
     imagens: []
   });
+
+  const [errosValidacao, setErrosValidacao] = useState<Record<string, boolean>>({});
 
 
 
@@ -214,6 +216,105 @@ export default function NovoProduto() {
 
   const atualizarProduto = (campo: keyof Produto, valor: any) => {
     setProduto(prev => ({ ...prev, [campo]: valor }));
+  };
+
+  const gerarCodigoBarras = () => {
+    // Gerar código de barras EAN-13 (13 dígitos)
+    // Primeiros 3 dígitos: código do país (789 = Brasil)
+    const pais = '789';
+    
+    // Próximos 4 dígitos: código da empresa (simulado)
+    const empresa = Math.floor(Math.random() * 9000 + 1000).toString();
+    
+    // Próximos 5 dígitos: código do produto
+    const produto = Math.floor(Math.random() * 90000 + 10000).toString();
+    
+    // Código sem dígito verificador
+    const codigoSemVerificador = pais + empresa + produto;
+    
+    // Calcular dígito verificador EAN-13
+    let soma = 0;
+    for (let i = 0; i < 12; i++) {
+      const digito = parseInt(codigoSemVerificador[i]);
+      soma += (i % 2 === 0) ? digito : digito * 3;
+    }
+    const digitoVerificador = ((10 - (soma % 10)) % 10).toString();
+    
+    const codigoCompleto = codigoSemVerificador + digitoVerificador;
+    atualizarProduto("codigo_barras", codigoCompleto);
+    toast.success('Código de barras gerado com sucesso!');
+  };
+
+  const gerarSKU = () => {
+    // Gerar SKU baseado no nome do produto e categoria
+    const nome = produto.nome.trim().toUpperCase();
+    const categoria = produto.categoria || 'GEN';
+    
+    // Pegar primeiras 3 letras do nome
+    const prefixoNome = nome.substring(0, 3).replace(/[^A-Z]/g, 'X');
+    
+    // Pegar primeiras 3 letras da categoria
+    const prefixoCategoria = categoria.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+    
+    // Gerar número sequencial de 4 dígitos
+    const numero = Math.floor(Math.random() * 9000 + 1000);
+    
+    // Gerar letra final
+    const letraFinal = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    
+    const sku = `${prefixoCategoria}-${prefixoNome}-${numero}${letraFinal}`;
+    atualizarProduto("sku", sku);
+    toast.success('SKU gerado com sucesso!');
+  };
+
+  const validarCamposObrigatorios = () => {
+    const erros: Record<string, boolean> = {};
+    
+    // Nome do Produto
+    if (!produto.nome || produto.nome.trim().length < 2) {
+      erros.nome = true;
+    }
+    
+    // Categoria
+    if (!produto.categoria_id) {
+      erros.categoria = true;
+    }
+    
+    // Fornecedor - permitir null (nenhum fornecedor)
+    // Não validar pois null é um valor válido
+    
+    // Código de Barras
+    if (!produto.codigo_barras || produto.codigo_barras.trim().length === 0) {
+      erros.codigo_barras = true;
+    }
+    
+    // SKU
+    if (!produto.sku || produto.sku.trim().length === 0) {
+      erros.sku = true;
+    }
+    
+    // Tipo de Preço (sempre tem valor padrão, mas vamos validar)
+    if (!produto.tipo_preco) {
+      erros.tipo_preco = true;
+    }
+    
+    // Preço de Venda
+    if (!produto.preco || produto.preco <= 0) {
+      erros.preco = true;
+    }
+    
+    // Quantidade em Estoque
+    if (produto.estoque === null || produto.estoque < 0) {
+      erros.estoque = true;
+    }
+    
+    // Estoque Mínimo
+    if (produto.estoque_minimo === null || produto.estoque_minimo < 0) {
+      erros.estoque_minimo = true;
+    }
+    
+    setErrosValidacao(erros);
+    return Object.keys(erros).length === 0;
   };
 
   const redimensionarImagem = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.8): Promise<string> => {
@@ -377,15 +478,9 @@ export default function NovoProduto() {
 
   const salvarProduto = async () => {
     try {
-      // Validar se o preço é válido
-      if (!produto.preco || produto.preco <= 0) {
-        toast.error('Preço deve ser maior que zero');
-        return;
-      }
-
-      // Validar se o nome é válido
-      if (!produto.nome || produto.nome.trim().length < 2) {
-        toast.error('Nome deve ter pelo menos 2 caracteres');
+      // Validar campos obrigatórios
+      if (!validarCamposObrigatorios()) {
+        toast.error('Preencha todos os campos obrigatórios');
         return;
       }
 
@@ -435,7 +530,36 @@ export default function NovoProduto() {
     }
   };
 
-  const formularioValido = produto.nome && produto.preco && produto.preco > 0;
+  const formularioValido = useMemo(() => {
+    // Nome do Produto
+    if (!produto.nome || produto.nome.trim().length < 2) return false;
+    
+    // Categoria
+    if (!produto.categoria_id) return false;
+    
+    // Fornecedor - permitir null (nenhum fornecedor)
+    // Não precisa validar pois null é um valor válido
+    
+    // Código de Barras
+    if (!produto.codigo_barras || produto.codigo_barras.trim().length === 0) return false;
+    
+    // SKU
+    if (!produto.sku || produto.sku.trim().length === 0) return false;
+    
+    // Tipo de Preço
+    if (!produto.tipo_preco) return false;
+    
+    // Preço de Venda
+    if (!produto.preco || produto.preco <= 0) return false;
+    
+    // Quantidade em Estoque
+    if (produto.estoque === null || produto.estoque < 0) return false;
+    
+    // Estoque Mínimo
+    if (produto.estoque_minimo === null || produto.estoque_minimo < 0) return false;
+    
+    return true;
+  }, [produto.nome, produto.categoria_id, produto.fornecedor_id, produto.codigo_barras, produto.sku, produto.tipo_preco, produto.preco, produto.estoque, produto.estoque_minimo]);
 
   return (
     <div className="space-y-6">
@@ -518,9 +642,18 @@ export default function NovoProduto() {
                     <Input
                       placeholder="Ex: Meu Produto Premium"
                       value={produto.nome}
-                      onChange={(e) => atualizarProduto("nome", e.target.value)}
-                      className="mt-1"
+                      onChange={(e) => {
+                        atualizarProduto("nome", e.target.value);
+                        // Limpar erro quando o usuário começar a digitar
+                        if (errosValidacao.nome) {
+                          setErrosValidacao(prev => ({ ...prev, nome: false }));
+                        }
+                      }}
+                      className={`mt-1 ${errosValidacao.nome ? 'border-red-500 focus:border-red-500' : ''}`}
                     />
+                    {errosValidacao.nome && (
+                      <p className="text-xs text-red-500 mt-1">Nome do produto é obrigatório</p>
+                    )}
                   </div>
 
                   <div>
@@ -535,7 +668,7 @@ export default function NovoProduto() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Categoria</label>
+                      <label className="text-sm font-medium">Categoria *</label>
                       <div className="space-y-2">
                         <select
                           value={produto.categoria_id || ""}
@@ -544,8 +677,12 @@ export default function NovoProduto() {
                             const categoriaNome = e.target.selectedOptions[0]?.text || "";
                             atualizarProduto("categoria_id", categoriaId);
                             atualizarProduto("categoria", categoriaNome);
+                            // Limpar erro quando o usuário selecionar uma categoria
+                            if (errosValidacao.categoria) {
+                              setErrosValidacao(prev => ({ ...prev, categoria: false }));
+                            }
                           }}
-                          className="w-full p-2 border rounded-md bg-background"
+                          className={`w-full p-2 border rounded-md bg-background ${errosValidacao.categoria ? 'border-red-500 focus:border-red-500' : ''}`}
                         >
                           <option value="">Selecione uma categoria</option>
                           {categorias.map((categoria) => (
@@ -603,6 +740,9 @@ export default function NovoProduto() {
                             </Button>
                           </div>
                         )}
+                        {errosValidacao.categoria && (
+                          <p className="text-xs text-red-500">Categoria é obrigatória</p>
+                        )}
                       </div>
                     </div>
 
@@ -652,23 +792,73 @@ export default function NovoProduto() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Código de Barras</label>
+                      <label className="text-sm font-medium">Código de Barras *</label>
+                      <div className="flex space-x-2 mt-1">
                       <Input
                         placeholder="7891234567890"
                         value={produto.codigo_barras}
-                        onChange={(e) => atualizarProduto("codigo_barras", e.target.value)}
-                        className="mt-1"
-                      />
+                          onChange={(e) => {
+                            atualizarProduto("codigo_barras", e.target.value);
+                            // Limpar erro quando o usuário começar a digitar
+                            if (errosValidacao.codigo_barras) {
+                              setErrosValidacao(prev => ({ ...prev, codigo_barras: false }));
+                            }
+                          }}
+                          className={`flex-1 ${errosValidacao.codigo_barras ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={gerarCodigoBarras}
+                          disabled={!produto.nome.trim()}
+                          title="Gerar código de barras EAN-13"
+                        >
+                          Gerar
+                        </Button>
+                      </div>
+                      {errosValidacao.codigo_barras ? (
+                        <p className="text-xs text-red-500 mt-1">Código de barras é obrigatório</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {!produto.nome.trim() ? "Digite o nome do produto para gerar código" : "Código EAN-13 válido para o Brasil"}
+                        </p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">SKU</label>
+                      <label className="text-sm font-medium">SKU *</label>
+                      <div className="flex space-x-2 mt-1">
                       <Input
                         placeholder="Código interno do produto"
                         value={produto.sku}
-                        onChange={(e) => atualizarProduto("sku", e.target.value)}
-                        className="mt-1"
-                      />
+                          onChange={(e) => {
+                            atualizarProduto("sku", e.target.value);
+                            // Limpar erro quando o usuário começar a digitar
+                            if (errosValidacao.sku) {
+                              setErrosValidacao(prev => ({ ...prev, sku: false }));
+                            }
+                          }}
+                          className={`flex-1 ${errosValidacao.sku ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={gerarSKU}
+                          disabled={!produto.nome.trim()}
+                          title="Gerar SKU baseado no nome e categoria"
+                        >
+                          Gerar
+                        </Button>
+                      </div>
+                      {errosValidacao.sku ? (
+                        <p className="text-xs text-red-500 mt-1">SKU é obrigatório</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {!produto.nome.trim() ? "Digite o nome do produto para gerar SKU" : "Formato: CAT-NOM-1234A"}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -697,7 +887,7 @@ export default function NovoProduto() {
                       </p>
                     </div>
 
-                    <div className="flex items-center space-x-2 mt-6">
+                    <div className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         id="destaque"
@@ -726,18 +916,28 @@ export default function NovoProduto() {
                     <label className="text-sm font-medium">Tipo de Preço *</label>
                     <select
                       value={produto.tipo_preco}
-                      onChange={(e) => atualizarProduto("tipo_preco", e.target.value as "unidade" | "kg" | "litros")}
-                      className="w-full mt-1 p-2 border rounded-md bg-background"
+                      onChange={(e) => {
+                        atualizarProduto("tipo_preco", e.target.value as "unidade" | "kg" | "litros");
+                        // Limpar erro quando o usuário selecionar um tipo
+                        if (errosValidacao.tipo_preco) {
+                          setErrosValidacao(prev => ({ ...prev, tipo_preco: false }));
+                        }
+                      }}
+                      className={`w-full mt-1 p-2 border rounded-md bg-background ${errosValidacao.tipo_preco ? 'border-red-500 focus:border-red-500' : ''}`}
                     >
                       <option value="unidade">Por Unidade</option>
                       <option value="kg">Por Quilograma (KG)</option>
                       <option value="litros">Por Litros</option>
                     </select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {produto.tipo_preco === "unidade" && "Preço por unidade do produto"}
-                      {produto.tipo_preco === "kg" && "Preço por quilograma (útil para produtos vendidos por peso)"}
-                      {produto.tipo_preco === "litros" && "Preço por litro (útil para líquidos vendidos por volume)"}
-                    </p>
+                    {errosValidacao.tipo_preco ? (
+                      <p className="text-xs text-red-500 mt-1">Tipo de preço é obrigatório</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {produto.tipo_preco === "unidade" && "Preço por unidade do produto"}
+                        {produto.tipo_preco === "kg" && "Preço por quilograma (útil para produtos vendidos por peso)"}
+                        {produto.tipo_preco === "litros" && "Preço por litro (útil para líquidos vendidos por volume)"}
+                      </p>
+                    )}
                   </div>
 
                   {/* Preços baseados no tipo selecionado */}
@@ -755,9 +955,18 @@ export default function NovoProduto() {
                         min="0"
                         placeholder="0,00"
                         value={produto.preco || ""}
-                        onChange={(e) => atualizarProduto("preco", e.target.value ? parseFloat(e.target.value) : null)}
-                        className="mt-1"
+                        onChange={(e) => {
+                          atualizarProduto("preco", e.target.value ? parseFloat(e.target.value) : null);
+                          // Limpar erro quando o usuário começar a digitar
+                          if (errosValidacao.preco) {
+                            setErrosValidacao(prev => ({ ...prev, preco: false }));
+                          }
+                        }}
+                        className={`mt-1 ${errosValidacao.preco ? 'border-red-500 focus:border-red-500' : ''}`}
                       />
+                      {errosValidacao.preco && (
+                        <p className="text-xs text-red-500 mt-1">Preço de venda é obrigatório</p>
+                      )}
                     </div>
 
                     <div>
@@ -869,14 +1078,24 @@ export default function NovoProduto() {
                         min="0"
                         placeholder={produto.tipo_preco === "unidade" ? "0" : "0,00"}
                         value={produto.estoque || ""}
-                        onChange={(e) => atualizarProduto("estoque", e.target.value ? parseFloat(e.target.value) : null)}
-                        className="mt-1"
+                        onChange={(e) => {
+                          atualizarProduto("estoque", e.target.value ? parseFloat(e.target.value) : null);
+                          // Limpar erro quando o usuário começar a digitar
+                          if (errosValidacao.estoque) {
+                            setErrosValidacao(prev => ({ ...prev, estoque: false }));
+                          }
+                        }}
+                        className={`mt-1 ${errosValidacao.estoque ? 'border-red-500 focus:border-red-500' : ''}`}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {produto.tipo_preco === "unidade" && "Número de unidades disponíveis"}
-                        {produto.tipo_preco === "kg" && "Peso total em quilogramas (ex: 15.5 para 15,5kg)"}
-                        {produto.tipo_preco === "litros" && "Volume total em litros (ex: 2.5 para 2,5L)"}
-                      </p>
+                      {errosValidacao.estoque ? (
+                        <p className="text-xs text-red-500 mt-1">Quantidade em estoque é obrigatória</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {produto.tipo_preco === "unidade" && "Número de unidades disponíveis"}
+                          {produto.tipo_preco === "kg" && "Peso total em quilogramas (ex: 15.5 para 15,5kg)"}
+                          {produto.tipo_preco === "litros" && "Volume total em litros (ex: 2.5 para 2,5L)"}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -891,14 +1110,24 @@ export default function NovoProduto() {
                         min="0"
                         placeholder={produto.tipo_preco === "unidade" ? "0" : "0,00"}
                         value={produto.estoque_minimo || ""}
-                        onChange={(e) => atualizarProduto("estoque_minimo", e.target.value ? parseFloat(e.target.value) : null)}
-                        className="mt-1"
+                        onChange={(e) => {
+                          atualizarProduto("estoque_minimo", e.target.value ? parseFloat(e.target.value) : null);
+                          // Limpar erro quando o usuário começar a digitar
+                          if (errosValidacao.estoque_minimo) {
+                            setErrosValidacao(prev => ({ ...prev, estoque_minimo: false }));
+                          }
+                        }}
+                        className={`mt-1 ${errosValidacao.estoque_minimo ? 'border-red-500 focus:border-red-500' : ''}`}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {produto.tipo_preco === "unidade" && "Quantidade mínima antes do alerta"}
-                        {produto.tipo_preco === "kg" && "Peso mínimo antes do alerta (ex: 5.0 para 5kg)"}
-                        {produto.tipo_preco === "litros" && "Volume mínimo antes do alerta (ex: 1.0 para 1L)"}
-                      </p>
+                      {errosValidacao.estoque_minimo ? (
+                        <p className="text-xs text-red-500 mt-1">Estoque mínimo é obrigatório</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {produto.tipo_preco === "unidade" && "Quantidade mínima antes do alerta"}
+                          {produto.tipo_preco === "kg" && "Peso mínimo antes do alerta (ex: 5.0 para 5kg)"}
+                          {produto.tipo_preco === "litros" && "Volume mínimo antes do alerta (ex: 1.0 para 1L)"}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -936,9 +1165,9 @@ export default function NovoProduto() {
                             O estoque será controlado pelo peso total em quilogramas. 
                             Exemplo: se você tem 10 sacos de 5kg cada, o estoque total será 50kg.
                           </p>
-                        </div>
-                      </div>
                     </div>
+                    </div>
+                  </div>
                   )}
 
                   {produto.tipo_preco === "litros" && (
@@ -951,8 +1180,8 @@ export default function NovoProduto() {
                             O estoque será controlado pelo volume total em litros. 
                             Exemplo: se você tem 5 garrafas de 2L cada, o estoque total será 10L.
                           </p>
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                     </div>
                   )}
                 </CardContent>
@@ -1055,67 +1284,69 @@ export default function NovoProduto() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Grid de Imagens */}
-              <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
-                {produto.imagens.map((imagem, index) => (
-                  <div key={index} className="relative aspect-square group">
-                    <img 
-                      src={imagem} 
-                      alt={`Imagem ${index + 1}`}
-                      className="w-full h-full object-cover rounded-lg border border-border cursor-pointer"
-                      onClick={() => setImagemPreview(imagem)}
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setImagemPreview(imagem);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removerImagem(index);
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                      {index + 1}
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Slot para nova imagem */}
-                {produto.imagens.length < 5 && (
-                  <div className="aspect-square">
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                      <div className="w-full h-full border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center hover:border-primary/50 transition-colors">
-                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-xs text-muted-foreground text-center">
-                          Adicionar Imagem
-                        </p>
+              {produto.imagens.length > 0 && (
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
+                  {produto.imagens.map((imagem, index) => (
+                    <div key={index} className="relative aspect-square group">
+                      <img 
+                        src={imagem} 
+                        alt={`Imagem ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg border border-border cursor-pointer"
+                        onClick={() => setImagemPreview(imagem)}
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImagemPreview(imagem);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removerImagem(index);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </label>
-                    <input
-                      id="image-upload"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </div>
+                      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Slot para nova imagem */}
+                  {produto.imagens.length < 5 && (
+                    <div className="aspect-square">
+                      <label htmlFor="image-upload" className="cursor-pointer">
+                        <div className="w-full h-full border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center hover:border-primary/50 transition-colors">
+                          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                          <p className="text-xs text-muted-foreground text-center">
+                            Adicionar Imagem
+                          </p>
+                        </div>
+                      </label>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Área de Upload Principal */}
               {produto.imagens.length === 0 && (
