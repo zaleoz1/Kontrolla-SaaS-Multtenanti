@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useOperador } from "@/contexts/OperadorContext";
 
 // Interface para dados do usuário
 interface User {
@@ -58,6 +59,13 @@ interface PropsSidebar {
 
 // Componente principal da Sidebar
 export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSidebar) {
+  const { operadorSelecionado } = useOperador();
+
+  // Se não há operador selecionado, não renderizar a sidebar
+  if (!operadorSelecionado) {
+    return null;
+  }
+
   return (
     <>
       {/* Overlay para mobile - só aparece quando sidebar está aberta */}

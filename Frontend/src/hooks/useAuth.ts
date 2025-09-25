@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from './useApi';
 import { API_ENDPOINTS } from '@/config/api';
+import { useOperador } from '@/contexts/OperadorContext';
 
 interface User {
   id: number;
@@ -29,6 +30,7 @@ export function useAuth() {
 
   const api = useApi();
   const navigate = useNavigate();
+  const { limparOperador } = useOperador();
 
   // Verificar se há token no localStorage
   useEffect(() => {
@@ -70,6 +72,9 @@ export function useAuth() {
       });
 
       if (response.token && response.user) {
+        // Limpar operador selecionado no login
+        limparOperador();
+        
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         
@@ -89,7 +94,7 @@ export function useAuth() {
         error: error.message || 'Erro ao fazer login' 
       };
     }
-  }, [api]);
+  }, [api, limparOperador]);
 
   const signup = useCallback(async (userData: any) => {
     try {
@@ -99,6 +104,9 @@ export function useAuth() {
       });
 
       if (response.token && response.user) {
+        // Limpar operador selecionado no signup
+        limparOperador();
+        
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         
@@ -118,7 +126,7 @@ export function useAuth() {
         error: error.message || 'Erro ao criar conta' 
       };
     }
-  }, [api]);
+  }, [api, limparOperador]);
 
   const logout = useCallback(async () => {
     try {
@@ -131,6 +139,9 @@ export function useAuth() {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     } finally {
+      // Limpar operador selecionado no logout
+      limparOperador();
+      
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setAuthState({
@@ -140,7 +151,7 @@ export function useAuth() {
       });
       navigate('/login');
     }
-  }, [api, navigate]);
+  }, [api, navigate, limparOperador]);
 
   const verifyToken = useCallback(async () => {
     try {

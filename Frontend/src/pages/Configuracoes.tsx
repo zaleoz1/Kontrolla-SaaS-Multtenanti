@@ -745,7 +745,6 @@ export default function Configuracoes() {
     setUsuarioEditando({
       nome: "",
       sobrenome: "",
-      email: "",
       codigo: "",
       role: rolePadrao,
       status: "ativo",
@@ -1629,7 +1628,7 @@ export default function Configuracoes() {
                               </div>
                               <div>
                                 <h3 className="font-semibold text-lg">{usuario.nome} {usuario.sobrenome}</h3>
-                                <p className="text-sm text-muted-foreground">{usuario.email}</p>
+                                <p className="text-sm text-muted-foreground">Código: {usuario.codigo}</p>
                               </div>
                               <div className="flex items-center space-x-2">
                                 {obterBadgeRole(usuario.role)}
@@ -2755,17 +2754,7 @@ export default function Configuracoes() {
                                 />
                               </div>
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="email_usuario" className="text-sm font-medium">Email *</Label>
-                              <Input
-                                id="email_usuario"
-                                type="email"
-                                value={usuarioEditando.email}
-                                onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, email: e.target.value } : null)}
-                                placeholder="email@exemplo.com"
-                                className="h-10"
-                              />
-                            </div>
+                            {/* Campo de email removido - administradores não precisam de email */}
                             <div className="space-y-2">
                               <Label htmlFor="codigo_usuario" className="text-sm font-medium">
                                 Código de Acesso

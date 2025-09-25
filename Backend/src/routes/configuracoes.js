@@ -990,7 +990,7 @@ router.get('/administradores', validateSearchAdministradores, async (req, res) =
     
     let sql = `
       SELECT 
-        id, nome, sobrenome, email, codigo, role, status, 
+        id, nome, sobrenome, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao,
         criado_por
       FROM administradores 
@@ -1000,9 +1000,9 @@ router.get('/administradores', validateSearchAdministradores, async (req, res) =
     
     // Filtros opcionais
     if (busca) {
-      sql += ' AND (nome LIKE ? OR sobrenome LIKE ? OR email LIKE ?)';
+      sql += ' AND (nome LIKE ? OR sobrenome LIKE ?)';
       const buscaParam = `%${busca}%`;
-      params.push(buscaParam, buscaParam, buscaParam);
+      params.push(buscaParam, buscaParam);
     }
     
     if (role && role !== 'todos') {
@@ -1034,7 +1034,7 @@ router.get('/administradores/:id', async (req, res) => {
     
     const administradores = await query(
       `SELECT 
-        id, nome, sobrenome, email, codigo, role, status, 
+        id, nome, sobrenome, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao, data_atualizacao,
         criado_por
       FROM administradores 
@@ -1057,33 +1057,23 @@ router.get('/administradores/:id', async (req, res) => {
 router.post('/administradores', validateCreateAdministrador, async (req, res) => {
   try {
     const tenantId = req.user.tenant_id;
-    const { nome, sobrenome, email, role, status, permissoes } = req.body;
+    const { nome, sobrenome, role, status, permissoes } = req.body;
     const criadoPor = null; // Primeiro administrador não tem criado_por
-    
-    // Verificar se email já existe no tenant
-    const emailExistente = await query(
-      'SELECT id FROM administradores WHERE email = ? AND tenant_id = ?',
-      [email, tenantId]
-    );
-    
-    if (emailExistente.length > 0) {
-      return res.status(400).json({ error: 'Email já está em uso neste tenant' });
-    }
     
     // Gerar código único
     const codigo = gerarCodigo();
     
     const result = await query(
       `INSERT INTO administradores 
-       (tenant_id, nome, sobrenome, email, codigo, role, status, permissoes, criado_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tenantId, nome, sobrenome, email, codigo, role, status, JSON.stringify(permissoes), criadoPor]
+       (tenant_id, nome, sobrenome, codigo, role, status, permissoes, criado_por)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenantId, nome, sobrenome, codigo, role, status, JSON.stringify(permissoes), criadoPor]
     );
     
     // Buscar o administrador criado
     const novoAdministrador = await query(
       `SELECT 
-        id, nome, sobrenome, email, codigo, role, status, 
+        id, nome, sobrenome, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao,
         criado_por
       FROM administradores 
@@ -1107,7 +1097,7 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
   try {
     const { id } = req.params;
     const tenantId = req.user.tenant_id;
-    const { nome, sobrenome, email, role, status, permissoes, gerarNovoCodigo } = req.body;
+    const { nome, sobrenome, role, status, permissoes, gerarNovoCodigo } = req.body;
     
     // Verificar se administrador existe
     const administradorExistente = await query(
@@ -1117,18 +1107,6 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
     
     if (administradorExistente.length === 0) {
       return res.status(404).json({ error: 'Administrador não encontrado' });
-    }
-    
-    // Verificar se email já existe em outro administrador
-    if (email) {
-      const emailExistente = await query(
-        'SELECT id FROM administradores WHERE email = ? AND tenant_id = ? AND id != ?',
-        [email, tenantId, id]
-      );
-      
-      if (emailExistente.length > 0) {
-        return res.status(400).json({ error: 'Email já está em uso por outro administrador' });
-      }
     }
     
     // Preparar campos para atualização
@@ -1142,10 +1120,6 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
     if (sobrenome) {
       campos.push('sobrenome = ?');
       valores.push(sobrenome);
-    }
-    if (email) {
-      campos.push('email = ?');
-      valores.push(email);
     }
     if (gerarNovoCodigo) {
       const novoCodigo = gerarCodigo();
@@ -1181,7 +1155,7 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
     // Buscar o administrador atualizado
     const administradorAtualizado = await query(
       `SELECT 
-        id, nome, sobrenome, email, role, status, 
+        id, nome, sobrenome, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao, data_atualizacao,
         criado_por
       FROM administradores 

@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar"; 
 import { Header } from "./Header";
-import { useAuth } from "@/hooks/useAuth"; 
+import { OperadorRequired } from "./OperadorRequired";
+import { useAuth } from "@/hooks/useAuth";
+import { useOperador } from "@/contexts/OperadorContext"; 
 
 // Componente principal de layout da aplicação
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { operadorSelecionado } = useOperador();
   const location = useLocation();
   
   // Verificar se estamos em páginas que usam ConfiguracoesSidebar
@@ -58,7 +61,7 @@ export function AppLayout() {
   return (
     // Container principal usando flexbox, ocupando toda a altura da tela
     <div className="flex h-screen w-full bg-background">
-      {/* Barra lateral fixa à esquerda */}
+      {/* Barra lateral fixa à esquerda - só aparece se houver operador selecionado */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={closeSidebar} 
@@ -67,15 +70,20 @@ export function AppLayout() {
         onLogout={logout}
       />
       {/* Área principal do layout */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${!operadorSelecionado ? 'w-full' : ''}`}>
         {/* Cabeçalho fixo no topo */}
         <Header onMenuClick={toggleSidebar} />
         {/* Conteúdo principal, com rolagem vertical e espaçamento */}
         <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
           {/* Centraliza o conteúdo e limita a largura máxima */}
           <div className="max-w-7xl mx-auto">
-            {/* Renderiza o conteúdo das rotas filhas */}
-            <Outlet />
+            {/* Se não há operador selecionado, mostrar mensagem */}
+            {!operadorSelecionado ? (
+              <OperadorRequired />
+            ) : (
+              /* Renderiza o conteúdo das rotas filhas */
+              <Outlet />
+            )}
           </div>
         </main>
       </div> 
