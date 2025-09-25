@@ -118,6 +118,7 @@ export default function Configuracoes() {
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [mostrarSenhas, setMostrarSenhas] = useState(false);
+  const [mostrarCodigo, setMostrarCodigo] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   // Estados para métodos de pagamento (agora usando dados do hook)
@@ -184,6 +185,13 @@ export default function Configuracoes() {
   useEffect(() => {
     carregarUsuarios();
   }, [buscaUsuario, filtroRoleUsuario, filtroStatusUsuario]);
+
+  // Carregar usuários quando a aba de administração for ativada
+  useEffect(() => {
+    if (abaAtiva === "administracao") {
+      carregarUsuarios();
+    }
+  }, [abaAtiva]);
 
   // Sincronizar métodos de pagamento do banco com estado local
   useEffect(() => {
@@ -738,7 +746,7 @@ export default function Configuracoes() {
       nome: "",
       sobrenome: "",
       email: "",
-      senha: "",
+      codigo: "",
       role: rolePadrao,
       status: "ativo",
       permissoes: obterPermissoesPorRole(rolePadrao)
@@ -2759,28 +2767,53 @@ export default function Configuracoes() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="senha_usuario" className="text-sm font-medium">
-                                Senha {!usuarioEditando.id && "*"}
+                              <Label htmlFor="codigo_usuario" className="text-sm font-medium">
+                                Código de Acesso
                               </Label>
-                              <div className="relative">
-                                <Input
-                                  id="senha_usuario"
-                                  type={mostrarSenha ? "text" : "password"}
-                                  value={usuarioEditando.senha ?? ""}
-                                  onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, senha: e.target.value } : null)}
-                                  placeholder="Digite a senha"
-                                  className="h-10 pr-10"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                                  onClick={() => setMostrarSenha(!mostrarSenha)}
-                                >
-                                  {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
+                              <div className="flex space-x-2">
+                                <div className="relative flex-1">
+                                  <Input
+                                    id="codigo_usuario"
+                                    type={mostrarCodigo ? "text" : "password"}
+                                    value={usuarioEditando.codigo ?? ""}
+                                    onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, codigo: e.target.value } : null)}
+                                    placeholder="Código será gerado automaticamente"
+                                    className="h-10 pr-10"
+                                    readOnly={!!usuarioEditando.id}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setMostrarCodigo(!mostrarCodigo)}
+                                  >
+                                    {mostrarCodigo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  </Button>
+                                </div>
+                                {usuarioEditando.id && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Gerar novo código
+                                      const novoCodigo = Math.random().toString(36).substring(2, 10).toUpperCase();
+                                      setUsuarioEditando(prev => prev ? { ...prev, codigo: novoCodigo, gerarNovoCodigo: true } : null);
+                                    }}
+                                    className="h-10 px-3"
+                                  >
+                                    <Key className="h-4 w-4 mr-1" />
+                                    Novo
+                                  </Button>
+                                )}
                               </div>
+                              <p className="text-xs text-muted-foreground">
+                                {usuarioEditando.id 
+                                  ? "Clique em 'Novo' para gerar um novo código" 
+                                  : "Um código será gerado automaticamente ao salvar"
+                                }
+                              </p>
                             </div>
                           </div>
                         </div>

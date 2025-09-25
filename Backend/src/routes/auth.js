@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { query, queryWithResult } from '../database/connection.js';
 import { 
   authenticateToken, 
@@ -82,6 +83,12 @@ router.post('/signup', validateSignup, async (req, res) => {
     }
     console.log('🏷️ Slug final do tenant:', finalSlug);
 
+    // Truncar campos para evitar erro de tamanho
+    const truncateField = (field, maxLength) => {
+      if (!field) return null;
+      return field.length > maxLength ? field.substring(0, maxLength) : field;
+    };
+
     // Criar tenant
     console.log('💾 Inserindo tenant no banco...');
     const tenantResult = await queryWithResult(
@@ -91,11 +98,23 @@ router.post('/signup', validateSignup, async (req, res) => {
         razao_social, nome_fantasia, inscricao_estadual, inscricao_municipal
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        company, finalSlug, email, phone, 'ativo', selectedPlan, tipoPessoa,
-        tipoPessoa === 'juridica' ? cpfCnpj : null,
-        tipoPessoa === 'fisica' ? cpfCnpj : null,
-        endereco, cidade, estado, cep,
-        razaoSocial, nomeFantasia, inscricaoEstadual, inscricaoMunicipal
+        truncateField(company, 255), 
+        finalSlug, 
+        truncateField(email, 255), 
+        truncateField(phone, 20), 
+        'ativo', 
+        selectedPlan, 
+        tipoPessoa,
+        tipoPessoa === 'juridica' ? truncateField(cpfCnpj, 18) : null,
+        tipoPessoa === 'fisica' ? truncateField(cpfCnpj, 14) : null,
+        truncateField(endereco, 65535), 
+        truncateField(cidade, 100), 
+        truncateField(estado, 2), 
+        truncateField(cep, 10),
+        truncateField(razaoSocial, 255), 
+        truncateField(nomeFantasia, 255), 
+        truncateField(inscricaoEstadual, 20), 
+        truncateField(inscricaoMunicipal, 20)
       ]
     );
 
@@ -116,6 +135,26 @@ router.post('/signup', validateSignup, async (req, res) => {
 
     const usuarioId = usuarioResult.insertId;
     console.log('✅ Usuário criado com ID:', usuarioId);
+
+    // Criar administrador automaticamente com os dados de cadastro
+    console.log('👑 Criando administrador automaticamente...');
+    const permissoesAdministrador = ["todos"]; // Administrador tem todas as permissões
+    
+    // Gerar código único para o administrador
+    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let codigo = '';
+    for (let i = 0; i < 8; i++) {
+      codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+    }
+    
+    const administradorResult = await queryWithResult(
+      `INSERT INTO administradores (tenant_id, nome, sobrenome, email, codigo, role, status, permissoes, criado_por) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenantId, firstName, lastName, email, codigo, 'administrador', 'ativo', JSON.stringify(permissoesAdministrador), null]
+    );
+
+    const administradorId = administradorResult.insertId;
+    console.log('✅ Administrador criado automaticamente com ID:', administradorId, 'Código:', codigo);
 
     // Criar sessão
     console.log('🔑 Criando sessão...');
@@ -329,8 +368,14 @@ router.put('/change-password', authenticateToken, async (req, res) => {
 // Rota para logout (invalidar sessão)
 router.post('/logout', authenticateToken, async (req, res) => {
   try {
-    // Invalidar a sessão atual
-    await invalidateSession(req.session.token);
+    // Invalidar a sessão atual usando o sessionToken do JWT
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sua-chave-secreta');
+      await invalidateSession(decoded.sessionToken);
+    }
     
     res.json({
       message: 'Logout realizado com sucesso'
