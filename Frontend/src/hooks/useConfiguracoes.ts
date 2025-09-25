@@ -104,6 +104,21 @@ interface DadosBancarios {
   data_atualizacao?: string;
 }
 
+interface Administrador {
+  id?: number;
+  nome: string;
+  sobrenome: string;
+  email: string;
+  senha?: string;
+  role: 'administrador' | 'gerente' | 'vendedor';
+  status: 'ativo' | 'inativo' | 'suspenso';
+  permissoes: string[];
+  ultimo_acesso?: string;
+  data_criacao?: string;
+  data_atualizacao?: string;
+  criado_por?: number;
+}
+
 export const useConfiguracoes = () => {
   const [dadosConta, setDadosConta] = useState<DadosConta | null>(null);
   const [dadosTenant, setDadosTenant] = useState<DadosTenant | null>(null);
@@ -111,6 +126,7 @@ export const useConfiguracoes = () => {
   const [metodosPagamento, setMetodosPagamento] = useState<MetodoPagamento[]>([]);
   const [pixConfiguracao, setPixConfiguracao] = useState<PixConfiguracao | null>(null);
   const [dadosBancarios, setDadosBancarios] = useState<DadosBancarios | null>(null);
+  const [administradores, setAdministradores] = useState<Administrador[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { makeRequest } = useApi();
@@ -528,6 +544,119 @@ export const useConfiguracoes = () => {
     }
   };
 
+  // ===== FUNÇÕES PARA ADMINISTRADORES =====
+
+  // Buscar administradores
+  const buscarAdministradores = async (filtros?: { busca?: string; role?: string; status?: string }) => {
+    try {
+      const params = new URLSearchParams();
+      if (filtros?.busca) params.append('busca', filtros.busca);
+      if (filtros?.role) params.append('role', filtros.role);
+      if (filtros?.status) params.append('status', filtros.status);
+      
+      const queryString = params.toString();
+      const url = queryString ? `/configuracoes/administradores?${queryString}` : '/configuracoes/administradores';
+      
+      const response = await makeRequest(url, { method: 'GET' });
+      if (response) {
+        setAdministradores(response);
+        return response;
+      }
+    } catch (err) {
+      console.error('Erro ao buscar administradores:', err);
+      setError('Erro ao carregar administradores');
+      throw err;
+    }
+  };
+
+  // Buscar administrador por ID
+  const buscarAdministrador = async (id: number) => {
+    try {
+      const response = await makeRequest(`/configuracoes/administradores/${id}`, { method: 'GET' });
+      return response;
+    } catch (err) {
+      console.error('Erro ao buscar administrador:', err);
+      throw err;
+    }
+  };
+
+  // Criar administrador
+  const criarAdministrador = async (dados: Omit<Administrador, 'id'>) => {
+    try {
+      const response = await makeRequest('/configuracoes/administradores', { 
+        method: 'POST', 
+        body: dados
+      });
+      if (response.administrador) {
+        setAdministradores(prev => [...prev, response.administrador]);
+      }
+      return response;
+    } catch (err) {
+      console.error('Erro ao criar administrador:', err);
+      throw err;
+    }
+  };
+
+  // Atualizar administrador
+  const atualizarAdministrador = async (id: number, dados: Partial<Administrador>) => {
+    try {
+      const response = await makeRequest(`/configuracoes/administradores/${id}`, { 
+        method: 'PUT', 
+        body: dados
+      });
+      if (response.administrador) {
+        setAdministradores(prev => 
+          prev.map(admin => admin.id === id ? response.administrador : admin)
+        );
+      }
+      return response;
+    } catch (err) {
+      console.error('Erro ao atualizar administrador:', err);
+      throw err;
+    }
+  };
+
+  // Deletar administrador
+  const deletarAdministrador = async (id: number) => {
+    try {
+      const response = await makeRequest(`/configuracoes/administradores/${id}`, { 
+        method: 'DELETE'
+      });
+      setAdministradores(prev => prev.filter(admin => admin.id !== id));
+      return response;
+    } catch (err) {
+      console.error('Erro ao deletar administrador:', err);
+      throw err;
+    }
+  };
+
+  // Atualizar último acesso
+  const atualizarUltimoAcesso = async (id: number) => {
+    try {
+      const response = await makeRequest(`/configuracoes/administradores/${id}/ultimo-acesso`, { 
+        method: 'PUT'
+      });
+      return response;
+    } catch (err) {
+      console.error('Erro ao atualizar último acesso:', err);
+      throw err;
+    }
+  };
+
+  // Validar senha do operador
+  const validarSenhaOperador = async (id: number, senha: string) => {
+    try {
+      const response = await makeRequest(`/configuracoes/administradores/${id}/validar-senha`, {
+        method: 'POST',
+        body: { senha }
+      });
+      return response;
+    } catch (err) {
+      console.error('Erro ao validar senha do operador:', err);
+      throw err;
+    }
+  };
+
   // Sincronizar estados de edição com dados originais
   useEffect(() => {
     if (dadosConta) {
@@ -553,6 +682,7 @@ export const useConfiguracoes = () => {
     metodosPagamento,
     pixConfiguracao,
     dadosBancarios,
+    administradores,
     dadosContaEditando,
     dadosTenantEditando,
     configuracoesEditando,
@@ -581,6 +711,13 @@ export const useConfiguracoes = () => {
     salvarPixConfiguracao,
     salvarDadosBancarios,
     deletarPixConfiguracao,
-    deletarDadosBancarios
+    deletarDadosBancarios,
+    buscarAdministradores,
+    buscarAdministrador,
+    criarAdministrador,
+    atualizarAdministrador,
+    deletarAdministrador,
+    atualizarUltimoAcesso,
+    validarSenhaOperador
   };
 };

@@ -11,7 +11,8 @@ import {
   ArrowLeft,
   LogOut,
   Users,
-  UserCog
+  UserCog,
+  X
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -19,6 +20,8 @@ interface ConfiguracoesSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 // Definição das abas de configurações
@@ -86,34 +89,65 @@ const configuracoesTabs = [
 export function ConfiguracoesSidebar({ 
   activeTab, 
   onTabChange, 
-  onLogout 
+  onLogout,
+  isOpen,
+  onClose
 }: ConfiguracoesSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
   return (
-    <div className="flex h-screen w-80 flex-col bg-sidebar border-r border-sidebar-border">
-      {/* Header do sidebar */}
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border bg-gradient-primary px-6">
-        <div className="flex items-center space-x-2">
-          <Settings className="h-6 w-6 text-white" />
-          <span className="text-lg font-bold text-white">Configurações</span>
+    <>
+      {/* Overlay para mobile - só aparece quando sidebar está aberta */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Container principal da sidebar */}
+      <div className={cn(
+        "fixed lg:static inset-y-0 left-0 z-50 flex h-full w-80 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        {/* Header do sidebar */}
+        <div className="flex h-16 items-center justify-between border-b border-sidebar-border bg-gradient-primary px-6 flex-shrink-0">
+          <div className="flex items-center space-x-2">
+            <Settings className="h-6 w-6 text-white" />
+            <span className="text-lg font-bold text-white">Configurações</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard")}
+              className="text-white hover:bg-white/20"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            {/* Botão de fechar para mobile */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="lg:hidden text-white hover:bg-white/20"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/dashboard")}
-          className="text-white hover:bg-white/20"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-      </div>
 
       {/* Navegação das abas */}
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
         {configuracoesTabs.map((tab) => {
           const Icon = tab.icone;
           const handleClick = () => {
+            // Fecha o sidebar em mobile ao clicar em um item
+            if (window.innerWidth < 1024) {
+              onClose();
+            }
+            
             if (tab.isExternal && tab.path) {
               navigate(tab.path);
             } else {
@@ -151,18 +185,19 @@ export function ConfiguracoesSidebar({
         })}
       </nav>
 
-      {/* Ações rápidas na parte inferior */}
-      <div className="border-t border-sidebar-border p-4 space-y-2">
-        <Button 
-          onClick={onLogout}
-          variant="outline" 
-          size="sm" 
-          className="w-full justify-start text-destructive hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Sair
-        </Button>
+        {/* Ações rápidas na parte inferior */}
+        <div className="border-t border-sidebar-border p-4 space-y-2 flex-shrink-0">
+          <Button 
+            onClick={onLogout}
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start text-destructive hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
