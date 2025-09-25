@@ -120,20 +120,30 @@ router.post('/', validateProduto, async (req, res) => {
       sku,
       preco,
       preco_promocional,
+      tipo_preco = 'unidade',
       estoque = 0,
       estoque_minimo = 0,
-      peso,
-      largura,
-      altura,
-      comprimento,
       fornecedor_id,
       marca,
       modelo,
-      garantia,
       status = 'ativo',
       destaque = false,
       imagens = []
     } = req.body;
+
+    // Preparar valores para preco_por_kg e preco_por_litros baseado no tipo_preco
+    let preco_por_kg = null;
+    let preco_por_litros = null;
+    
+    if (tipo_preco === 'kg') {
+      preco_por_kg = preco;
+      console.log('🔍 Produto por KG - preco_por_kg:', preco_por_kg);
+    } else if (tipo_preco === 'litros') {
+      preco_por_litros = preco;
+      console.log('🔍 Produto por Litros - preco_por_litros:', preco_por_litros);
+    }
+    
+    console.log('🔍 Valores finais - tipo_preco:', tipo_preco, 'preco_por_kg:', preco_por_kg, 'preco_por_litros:', preco_por_litros);
 
     // Verificar se categoria existe (se fornecida)
     if (categoria_id) {
@@ -180,14 +190,13 @@ router.post('/', validateProduto, async (req, res) => {
     const result = await queryWithResult(
       `INSERT INTO produtos (
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
-        preco_promocional, estoque, estoque_minimo, peso, largura, altura,
-        comprimento, fornecedor_id, marca, modelo, garantia, status, destaque, imagens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
+        estoque_minimo, fornecedor_id, marca, modelo, status, destaque, imagens
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
-        preco, preco_promocional, estoque, estoque_minimo, peso, largura,
-        altura, comprimento, fornecedor_id, marca, modelo, garantia, status,
-        destaque, JSON.stringify(imagens)
+        preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
+        estoque, estoque_minimo, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagens)
       ]
     );
 
@@ -224,20 +233,30 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       sku,
       preco,
       preco_promocional,
+      tipo_preco,
       estoque,
       estoque_minimo,
-      peso,
-      largura,
-      altura,
-      comprimento,
       fornecedor_id,
       marca,
       modelo,
-      garantia,
       status,
       destaque,
       imagens
     } = req.body;
+
+    // Preparar valores para preco_por_kg e preco_por_litros baseado no tipo_preco
+    let preco_por_kg = null;
+    let preco_por_litros = null;
+    
+    if (tipo_preco === 'kg') {
+      preco_por_kg = preco;
+      console.log('🔍 Atualização - Produto por KG - preco_por_kg:', preco_por_kg);
+    } else if (tipo_preco === 'litros') {
+      preco_por_litros = preco;
+      console.log('🔍 Atualização - Produto por Litros - preco_por_litros:', preco_por_litros);
+    }
+    
+    console.log('🔍 Atualização - Valores finais - tipo_preco:', tipo_preco, 'preco_por_kg:', preco_por_kg, 'preco_por_litros:', preco_por_litros);
 
     // Verificar se produto existe
     const existingProdutos = await query(
@@ -296,15 +315,14 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
     await query(
       `UPDATE produtos SET 
         categoria_id = ?, nome = ?, descricao = ?, codigo_barras = ?, sku = ?,
-        preco = ?, preco_promocional = ?, estoque = ?, estoque_minimo = ?,
-        peso = ?, largura = ?, altura = ?, comprimento = ?, fornecedor_id = ?,
-        marca = ?, modelo = ?, garantia = ?, status = ?, destaque = ?, imagens = ?
+        preco = ?, preco_promocional = ?, tipo_preco = ?, preco_por_kg = ?, 
+        preco_por_litros = ?, estoque = ?, estoque_minimo = ?, fornecedor_id = ?, 
+        marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?
       WHERE id = ? AND tenant_id = ?`,
       [
         categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
-        estoque, estoque_minimo, peso, largura, altura, comprimento, fornecedor_id,
-        marca, modelo, garantia, status, destaque, JSON.stringify(imagens),
-        id, req.user.tenant_id
+        tipo_preco, preco_por_kg, preco_por_litros, estoque, estoque_minimo, 
+        fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagens), id, req.user.tenant_id
       ]
     );
 

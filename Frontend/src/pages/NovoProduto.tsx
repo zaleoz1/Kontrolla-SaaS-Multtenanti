@@ -15,7 +15,6 @@ import {
   Package,
   DollarSign,
   BarChart3,
-  Settings,
   AlertCircle,
   CheckCircle,
   Image as ImageIcon,
@@ -30,18 +29,14 @@ interface Produto {
   categoria_id?: number;
   preco: number | null;
   preco_promocional?: number | null;
+  tipo_preco: "unidade" | "kg" | "litros";
   codigo_barras: string;
   sku: string;
   estoque: number | null;
   estoque_minimo: number | null;
-  peso: number | null;
-  largura: number | null;
-  altura: number | null;
-  comprimento: number | null;
   fornecedor_id?: number;
   marca: string;
   modelo: string;
-  garantia: string;
   status: "ativo" | "inativo" | "rascunho";
   destaque: boolean;
   imagens: string[];
@@ -86,18 +81,14 @@ export default function NovoProduto() {
     categoria_id: undefined,
     preco: null,
     preco_promocional: null,
+    tipo_preco: "unidade",
     codigo_barras: "",
     sku: "",
     estoque: null,
     estoque_minimo: null,
-    peso: null,
-    largura: null,
-    altura: null,
-    comprimento: null,
     fornecedor_id: undefined,
     marca: "",
     modelo: "",
-    garantia: "",
     status: "rascunho",
     destaque: false,
     imagens: []
@@ -161,18 +152,14 @@ export default function NovoProduto() {
         categoria_id: produtoData.categoria_id || undefined,
         preco: produtoData.preco || null,
         preco_promocional: produtoData.preco_promocional || null,
+        tipo_preco: produtoData.tipo_preco || "unidade",
         codigo_barras: produtoData.codigo_barras || "",
         sku: produtoData.sku || "",
         estoque: produtoData.estoque || null,
         estoque_minimo: produtoData.estoque_minimo || null,
-        peso: produtoData.peso || null,
-        largura: produtoData.largura || null,
-        altura: produtoData.altura || null,
-        comprimento: produtoData.comprimento || null,
         fornecedor_id: produtoData.fornecedor_id || undefined,
         marca: produtoData.marca || "",
         modelo: produtoData.modelo || "",
-        garantia: produtoData.garantia || "",
         status: produtoData.status || "ativo",
         destaque: produtoData.destaque || false,
         imagens: imagens
@@ -411,16 +398,12 @@ export default function NovoProduto() {
         sku: produto.sku?.trim() || null,
         preco: parseFloat(String(produto.preco)),
         preco_promocional: produto.preco_promocional ? parseFloat(String(produto.preco_promocional)) : null,
+        tipo_preco: produto.tipo_preco || 'unidade',
         estoque: parseInt(String(produto.estoque)) || 0,
         estoque_minimo: parseInt(String(produto.estoque_minimo)) || 0,
-        peso: produto.peso ? parseFloat(String(produto.peso)) : null,
-        largura: produto.largura ? parseFloat(String(produto.largura)) : null,
-        altura: produto.altura ? parseFloat(String(produto.altura)) : null,
-        comprimento: produto.comprimento ? parseFloat(String(produto.comprimento)) : null,
         fornecedor_id: produto.fornecedor_id || null,
         marca: produto.marca?.trim() || null,
         modelo: produto.modelo?.trim() || null,
-        garantia: produto.garantia?.trim() || null,
         status: produto.status || 'ativo',
         destaque: produto.destaque || false,
         imagens: produto.imagens || []
@@ -508,7 +491,7 @@ export default function NovoProduto() {
         {/* Coluna Esquerda - Formulário */}
         <div className="lg:col-span-2">
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="basico" className="flex items-center space-x-2">
                 <Package className="h-4 w-4" />
                 <span>Básico</span>
@@ -520,10 +503,6 @@ export default function NovoProduto() {
               <TabsTrigger value="estoque" className="flex items-center space-x-2">
                 <BarChart3 className="h-4 w-4" />
                 <span>Estoque</span>
-              </TabsTrigger>
-              <TabsTrigger value="avancado" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Avançado</span>
               </TabsTrigger>
             </TabsList>
 
@@ -694,6 +673,45 @@ export default function NovoProduto() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Card de Status */}
+              <Card className="bg-gradient-card shadow-card">
+                <CardHeader>
+                  <CardTitle>Status do Produto</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium">Status</label>
+                      <select
+                        value={produto.status}
+                        onChange={(e) => atualizarProduto("status", e.target.value as Produto["status"])}
+                        className="w-full mt-1 p-2 border rounded-md bg-background"
+                      >
+                        <option value="rascunho">Rascunho</option>
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Rascunho: produto não visível no catálogo | Ativo: produto visível | Inativo: produto oculto
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2 mt-6">
+                      <input
+                        type="checkbox"
+                        id="destaque"
+                        checked={produto.destaque}
+                        onChange={(e) => atualizarProduto("destaque", e.target.checked)}
+                        className="rounded"
+                      />
+                      <label htmlFor="destaque" className="text-sm font-medium">
+                        Produto em Destaque
+                      </label>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Aba Preço */}
@@ -703,9 +721,34 @@ export default function NovoProduto() {
                   <CardTitle>Configurações de Preço</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Tipo de Preço */}
+                  <div>
+                    <label className="text-sm font-medium">Tipo de Preço *</label>
+                    <select
+                      value={produto.tipo_preco}
+                      onChange={(e) => atualizarProduto("tipo_preco", e.target.value as "unidade" | "kg" | "litros")}
+                      className="w-full mt-1 p-2 border rounded-md bg-background"
+                    >
+                      <option value="unidade">Por Unidade</option>
+                      <option value="kg">Por Quilograma (KG)</option>
+                      <option value="litros">Por Litros</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {produto.tipo_preco === "unidade" && "Preço por unidade do produto"}
+                      {produto.tipo_preco === "kg" && "Preço por quilograma (útil para produtos vendidos por peso)"}
+                      {produto.tipo_preco === "litros" && "Preço por litro (útil para líquidos vendidos por volume)"}
+                    </p>
+                  </div>
+
+                  {/* Preços baseados no tipo selecionado */}
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Preço de Venda *</label>
+                      <label className="text-sm font-medium">
+                        Preço de Venda * 
+                        {produto.tipo_preco === "unidade" && " (por unidade)"}
+                        {produto.tipo_preco === "kg" && " (por KG)"}
+                        {produto.tipo_preco === "litros" && " (por litro)"}
+                      </label>
                       <Input
                         type="number"
                         step="0.01"
@@ -718,7 +761,12 @@ export default function NovoProduto() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Preço Promocional</label>
+                      <label className="text-sm font-medium">
+                        Preço Promocional
+                        {produto.tipo_preco === "unidade" && " (por unidade)"}
+                        {produto.tipo_preco === "kg" && " (por KG)"}
+                        {produto.tipo_preco === "litros" && " (por litro)"}
+                      </label>
                       <Input
                         type="number"
                         step="0.01"
@@ -731,6 +779,8 @@ export default function NovoProduto() {
                     </div>
                   </div>
 
+
+                  {/* Cálculo de economia */}
                   {produto.preco_promocional && produto.preco_promocional > 0 && produto.preco && produto.preco > 0 && (
                     <div className="p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between">
@@ -747,6 +797,37 @@ export default function NovoProduto() {
                       </div>
                     </div>
                   )}
+
+                  {/* Informações adicionais baseadas no tipo */}
+                  {produto.tipo_preco === "kg" && (
+                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <div className="flex items-start space-x-2">
+                        <div className="h-2 w-2 bg-blue-500 rounded-full mt-2"></div>
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-900">Preço por KG</p>
+                          <p className="text-blue-700">
+                            Este produto será vendido por peso. O preço será calculado automaticamente 
+                            baseado no peso do produto e no preço por KG definido.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {produto.tipo_preco === "litros" && (
+                    <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                      <div className="flex items-start space-x-2">
+                        <div className="h-2 w-2 bg-green-500 rounded-full mt-2"></div>
+                        <div className="text-sm">
+                          <p className="font-medium text-green-900">Preço por Litros</p>
+                          <p className="text-green-700">
+                            Este produto será vendido por volume. O preço será calculado automaticamente 
+                            baseado no volume do produto e no preço por litro definido.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -758,37 +839,77 @@ export default function NovoProduto() {
                   <CardTitle>Controle de Estoque</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Informação sobre o tipo de estoque */}
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-2 w-2 bg-primary rounded-full"></div>
+                      <span className="text-sm font-medium">
+                        {produto.tipo_preco === "unidade" && "Estoque por Unidades"}
+                        {produto.tipo_preco === "kg" && "Estoque por Peso (KG)"}
+                        {produto.tipo_preco === "litros" && "Estoque por Volume (Litros)"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {produto.tipo_preco === "unidade" && "Controle a quantidade de unidades disponíveis"}
+                      {produto.tipo_preco === "kg" && "Controle o peso total disponível em quilogramas"}
+                      {produto.tipo_preco === "litros" && "Controle o volume total disponível em litros"}
+                    </p>
+                  </div>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Quantidade em Estoque</label>
+                      <label className="text-sm font-medium">
+                        {produto.tipo_preco === "unidade" && "Quantidade em Estoque"}
+                        {produto.tipo_preco === "kg" && "Peso Total Disponível (KG)"}
+                        {produto.tipo_preco === "litros" && "Volume Total Disponível (L)"}
+                      </label>
                       <Input
                         type="number"
+                        step={produto.tipo_preco === "unidade" ? "1" : "0.01"}
                         min="0"
-                        placeholder="0"
+                        placeholder={produto.tipo_preco === "unidade" ? "0" : "0,00"}
                         value={produto.estoque || ""}
-                        onChange={(e) => atualizarProduto("estoque", e.target.value ? parseInt(e.target.value) : null)}
+                        onChange={(e) => atualizarProduto("estoque", e.target.value ? parseFloat(e.target.value) : null)}
                         className="mt-1"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {produto.tipo_preco === "unidade" && "Número de unidades disponíveis"}
+                        {produto.tipo_preco === "kg" && "Peso total em quilogramas (ex: 15.5 para 15,5kg)"}
+                        {produto.tipo_preco === "litros" && "Volume total em litros (ex: 2.5 para 2,5L)"}
+                      </p>
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Estoque Mínimo</label>
+                      <label className="text-sm font-medium">
+                        {produto.tipo_preco === "unidade" && "Estoque Mínimo"}
+                        {produto.tipo_preco === "kg" && "Peso Mínimo (KG)"}
+                        {produto.tipo_preco === "litros" && "Volume Mínimo (L)"}
+                      </label>
                       <Input
                         type="number"
+                        step={produto.tipo_preco === "unidade" ? "1" : "0.01"}
                         min="0"
-                        placeholder="0"
+                        placeholder={produto.tipo_preco === "unidade" ? "0" : "0,00"}
                         value={produto.estoque_minimo || ""}
-                        onChange={(e) => atualizarProduto("estoque_minimo", e.target.value ? parseInt(e.target.value) : null)}
+                        onChange={(e) => atualizarProduto("estoque_minimo", e.target.value ? parseFloat(e.target.value) : null)}
                         className="mt-1"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {produto.tipo_preco === "unidade" && "Quantidade mínima antes do alerta"}
+                        {produto.tipo_preco === "kg" && "Peso mínimo antes do alerta (ex: 5.0 para 5kg)"}
+                        {produto.tipo_preco === "litros" && "Volume mínimo antes do alerta (ex: 1.0 para 1L)"}
+                      </p>
                     </div>
                   </div>
 
+                  {/* Alertas de estoque adaptados ao tipo */}
                   {produto.estoque !== null && produto.estoque_minimo !== null && produto.estoque <= produto.estoque_minimo && produto.estoque_minimo > 0 && (
                     <div className="flex items-center space-x-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
                       <AlertCircle className="h-4 w-4 text-warning" />
                       <span className="text-sm text-warning-foreground">
-                        Estoque baixo! Quantidade atual ({produto.estoque}) está no limite mínimo ({produto.estoque_minimo})
+                        {produto.tipo_preco === "unidade" && `Estoque baixo! Quantidade atual (${produto.estoque}) está no limite mínimo (${produto.estoque_minimo})`}
+                        {produto.tipo_preco === "kg" && `Estoque baixo! Peso atual (${produto.estoque}kg) está no limite mínimo (${produto.estoque_minimo}kg)`}
+                        {produto.tipo_preco === "litros" && `Estoque baixo! Volume atual (${produto.estoque}L) está no limite mínimo (${produto.estoque_minimo}L)`}
                       </span>
                     </div>
                   )}
@@ -797,103 +918,43 @@ export default function NovoProduto() {
                     <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                       <AlertCircle className="h-4 w-4 text-destructive" />
                       <span className="text-sm text-destructive-foreground">
-                        Produto sem estoque!
+                        {produto.tipo_preco === "unidade" && "Produto sem estoque!"}
+                        {produto.tipo_preco === "kg" && "Produto sem peso disponível!"}
+                        {produto.tipo_preco === "litros" && "Produto sem volume disponível!"}
                       </span>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            {/* Aba Avançado */}
-            <TabsContent value="avancado" className="space-y-4">
-              <Card className="bg-gradient-card shadow-card">
-                <CardHeader>
-                  <CardTitle>Configurações Avançadas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium">Peso (kg)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        value={produto.peso || ""}
-                        onChange={(e) => atualizarProduto("peso", e.target.value ? parseFloat(e.target.value) : null)}
-                        className="mt-1"
-                      />
+                  {/* Informações adicionais baseadas no tipo */}
+                  {produto.tipo_preco === "kg" && (
+                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <div className="flex items-start space-x-2">
+                        <div className="h-2 w-2 bg-blue-500 rounded-full mt-2"></div>
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-900">Controle por Peso</p>
+                          <p className="text-blue-700">
+                            O estoque será controlado pelo peso total em quilogramas. 
+                            Exemplo: se você tem 10 sacos de 5kg cada, o estoque total será 50kg.
+                          </p>
+                        </div>
+                      </div>
                     </div>
+                  )}
 
-                    <div>
-                      <label className="text-sm font-medium">Garantia</label>
-                      <Input
-                        placeholder="Ex: 12 meses"
-                        value={produto.garantia}
-                        onChange={(e) => atualizarProduto("garantia", e.target.value)}
-                        className="mt-1"
-                      />
+                  {produto.tipo_preco === "litros" && (
+                    <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                      <div className="flex items-start space-x-2">
+                        <div className="h-2 w-2 bg-green-500 rounded-full mt-2"></div>
+                        <div className="text-sm">
+                          <p className="font-medium text-green-900">Controle por Volume</p>
+                          <p className="text-green-700">
+                            O estoque será controlado pelo volume total em litros. 
+                            Exemplo: se você tem 5 garrafas de 2L cada, o estoque total será 10L.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Dimensões (cm)</label>
-                    <div className="grid gap-2 mt-1 md:grid-cols-3">
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="Largura"
-                        value={produto.largura || ""}
-                        onChange={(e) => atualizarProduto("largura", e.target.value ? parseFloat(e.target.value) : null)}
-                      />
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="Altura"
-                        value={produto.altura || ""}
-                        onChange={(e) => atualizarProduto("altura", e.target.value ? parseFloat(e.target.value) : null)}
-                      />
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="Comprimento"
-                        value={produto.comprimento || ""}
-                        onChange={(e) => atualizarProduto("comprimento", e.target.value ? parseFloat(e.target.value) : null)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium">Status</label>
-                      <select
-                        value={produto.status}
-                        onChange={(e) => atualizarProduto("status", e.target.value as Produto["status"])}
-                        className="w-full mt-1 p-2 border rounded-md bg-background"
-                      >
-                        <option value="rascunho">Rascunho</option>
-                        <option value="ativo">Ativo</option>
-                        <option value="inativo">Inativo</option>
-                      </select>
-                    </div>
-
-                    <div className="flex items-center space-x-2 mt-6">
-                      <input
-                        type="checkbox"
-                        id="destaque"
-                        checked={produto.destaque}
-                        onChange={(e) => atualizarProduto("destaque", e.target.checked)}
-                        className="rounded"
-                      />
-                      <label htmlFor="destaque" className="text-sm font-medium">
-                        Produto em Destaque
-                      </label>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -946,10 +1007,24 @@ export default function NovoProduto() {
                         R$ {produto.preco ? Number(produto.preco).toFixed(2) : "0,00"}
                       </span>
                     )}
+                    
+                    {/* Mostrar tipo de preço */}
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {produto.tipo_preco === "unidade" && "Por unidade"}
+                        {produto.tipo_preco === "kg" && "Por KG"}
+                        {produto.tipo_preco === "litros" && "Por litro"}
+                      </Badge>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Estoque: {produto.estoque || 0} un.</span>
+                    <span>
+                      Estoque: {produto.estoque || 0} 
+                      {produto.tipo_preco === "unidade" && " un."}
+                      {produto.tipo_preco === "kg" && "kg"}
+                      {produto.tipo_preco === "litros" && "L"}
+                    </span>
                     <span>SKU: {produto.sku || "N/A"}</span>
                   </div>
 
