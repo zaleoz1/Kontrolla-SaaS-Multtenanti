@@ -22,7 +22,8 @@ import {
   Calendar,
   Briefcase,
   UserCheck,
-  UserCog
+  UserCog,
+  Menu
 } from "lucide-react";
 
 export default function Funcionarios() {
@@ -42,6 +43,7 @@ export default function Funcionarios() {
   const [filtroStatusFuncionario, setFiltroStatusFuncionario] = useState("todos");
   const [filtroCargoFuncionario, setFiltroCargoFuncionario] = useState("todos");
   const [abaAtiva, setAbaAtiva] = useState("funcionarios");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
 
   // Carregar funcionários quando o componente montar
@@ -192,10 +194,26 @@ export default function Funcionarios() {
         activeTab={abaAtiva}
         onTabChange={handleMudarAba}
         onLogout={handleLogout}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Conteúdo principal */}
       <div className="flex-1 overflow-y-auto">
+        {/* Header mobile com botão de menu */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b bg-background">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold">Funcionários</h1>
+          <div className="w-9" /> {/* Espaçador para centralizar o título */}
+        </div>
+        
         <div className="p-6 space-y-6">
           {/* Header da Página */}
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">

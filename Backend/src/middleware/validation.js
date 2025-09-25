@@ -939,3 +939,132 @@ export const validateMetodosPagamentoLote = [
     .withMessage('Taxa da parcela deve ser um número entre 0 e 100'),
   handleValidationErrors
 ];
+
+// ===== VALIDAÇÕES PARA ADMINISTRADORES =====
+
+// Validação para criar administrador
+export const validateCreateAdministrador = [
+  body('nome')
+    .notEmpty()
+    .withMessage('Nome é obrigatório')
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Nome deve ter entre 2 e 255 caracteres')
+    .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
+    .withMessage('Nome deve conter apenas letras e espaços'),
+  body('sobrenome')
+    .notEmpty()
+    .withMessage('Sobrenome é obrigatório')
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Sobrenome deve ter entre 2 e 255 caracteres')
+    .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
+    .withMessage('Sobrenome deve conter apenas letras e espaços'),
+  body('email')
+    .notEmpty()
+    .withMessage('Email é obrigatório')
+    .isEmail()
+    .withMessage('Email deve ter um formato válido')
+    .normalizeEmail(),
+  body('senha')
+    .notEmpty()
+    .withMessage('Senha é obrigatória')
+    .isLength({ min: 6, max: 255 })
+     .withMessage('Senha deve ter entre 6 e 255 caracteres'),
+  body('role')
+    .notEmpty()
+    .withMessage('Role é obrigatório')
+    .isIn(['administrador', 'gerente', 'vendedor'])
+    .withMessage('Role deve ser: administrador, gerente ou vendedor'),
+  body('status')
+    .optional()
+    .isIn(['ativo', 'inativo', 'suspenso'])
+    .withMessage('Status deve ser: ativo, inativo ou suspenso'),
+  body('permissoes')
+    .optional()
+    .isArray()
+    .withMessage('Permissões deve ser um array')
+    .custom((value) => {
+      if (value && !Array.isArray(value)) {
+        throw new Error('Permissões deve ser um array');
+      }
+      const permissoesValidas = ['vendas', 'estoque', 'clientes', 'funcionarios', 'relatorios', 'financeiro', 'configuracoes', 'administracao', 'todos'];
+      if (value) {
+        for (const permissao of value) {
+          if (!permissoesValidas.includes(permissao)) {
+            throw new Error(`Permissão inválida: ${permissao}`);
+          }
+        }
+      }
+      return true;
+    }),
+  handleValidationErrors
+];
+
+// Validação para atualizar administrador
+export const validateUpdateAdministrador = [
+  body('nome')
+    .optional()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Nome deve ter entre 2 e 255 caracteres')
+    .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
+    .withMessage('Nome deve conter apenas letras e espaços'),
+  body('sobrenome')
+    .optional()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Sobrenome deve ter entre 2 e 255 caracteres')
+    .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
+    .withMessage('Sobrenome deve conter apenas letras e espaços'),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Email deve ter um formato válido')
+    .normalizeEmail(),
+  body('senha')
+    .optional()
+    .isLength({ min: 6, max: 255 })
+    .withMessage('Senha deve ter entre 6 e 255 caracteres'),
+  body('role')
+    .optional()
+    .isIn(['administrador', 'gerente', 'vendedor'])
+    .withMessage('Role deve ser: administrador, gerente ou vendedor'),
+  body('status')
+    .optional()
+    .isIn(['ativo', 'inativo', 'suspenso'])
+    .withMessage('Status deve ser: ativo, inativo ou suspenso'),
+  body('permissoes')
+    .optional()
+    .isArray()
+    .withMessage('Permissões deve ser um array')
+    .custom((value) => {
+      if (value && !Array.isArray(value)) {
+        throw new Error('Permissões deve ser um array');
+      }
+      const permissoesValidas = ['vendas', 'estoque', 'clientes', 'funcionarios', 'relatorios', 'financeiro', 'configuracoes', 'administracao', 'todos'];
+      if (value) {
+        for (const permissao of value) {
+          if (!permissoesValidas.includes(permissao)) {
+            throw new Error(`Permissão inválida: ${permissao}`);
+          }
+        }
+      }
+      return true;
+    }),
+  handleValidationErrors
+];
+
+// Validação para parâmetros de busca de administradores
+export const validateSearchAdministradores = [
+  query('busca')
+    .optional()
+    .isLength({ min: 1, max: 255 })
+    .withMessage('Busca deve ter entre 1 e 255 caracteres')
+    .escape(),
+  query('role')
+    .optional()
+    .isIn(['todos', 'administrador', 'gerente', 'vendedor'])
+    .withMessage('Role deve ser: todos, administrador, gerente ou vendedor'),
+  query('status')
+    .optional()
+    .isIn(['todos', 'ativo', 'inativo', 'suspenso'])
+    .withMessage('Status deve ser: todos, ativo, inativo ou suspenso'),
+  handleValidationErrors
+];

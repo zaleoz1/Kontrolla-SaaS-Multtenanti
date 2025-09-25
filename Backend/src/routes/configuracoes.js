@@ -8,7 +8,10 @@ import {
   handleValidationErrors, 
   validateMetodoPagamento, 
   validateParcelaMetodoPagamento, 
-  validateMetodosPagamentoLote 
+  validateMetodosPagamentoLote,
+  validateCreateAdministrador,
+  validateUpdateAdministrador,
+  validateSearchAdministradores
 } from '../middleware/validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -963,6 +966,330 @@ router.delete('/dados-bancarios', async (req, res) => {
     res.json({ success: true, message: 'Dados bancários removidos com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar dados bancários:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ===== ROTAS PARA ADMINISTRADORES =====
+
+// Buscar todos os administradores do tenant
+router.get('/administradores', validateSearchAdministradores, async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const { busca, role, status } = req.query;
+    
+    let sql = `
+      SELECT 
+        id, nome, sobrenome, email, role, status, 
+        permissoes, ultimo_acesso, data_criacao,
+        criado_por
+      FROM administradores 
+      WHERE tenant_id = ?
+    `;
+    const params = [tenantId];
+    
+    // Filtros opcionais
+    if (busca) {
+      sql += ' AND (nome LIKE ? OR sobrenome LIKE ? OR email LIKE ?)';
+      const buscaParam = `%${busca}%`;
+      params.push(buscaParam, buscaParam, buscaParam);
+    }
+    
+    if (role && role !== 'todos') {
+      sql += ' AND role = ?';
+      params.push(role);
+    }
+    
+    if (status && status !== 'todos') {
+      sql += ' AND status = ?';
+      params.push(status);
+    }
+    
+    sql += ' ORDER BY data_criacao DESC';
+    
+    const administradores = await query(sql, params);
+    
+    res.json(administradores);
+  } catch (error) {
+    console.error('Erro ao buscar administradores:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Buscar administrador por ID
+router.get('/administradores/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenant_id;
+    
+    const administradores = await query(
+      `SELECT 
+        id, nome, sobrenome, email, role, status, 
+        permissoes, ultimo_acesso, data_criacao, data_atualizacao,
+        criado_por
+      FROM administradores 
+      WHERE id = ? AND tenant_id = ?`,
+      [id, tenantId]
+    );
+    
+    if (administradores.length === 0) {
+      return res.status(404).json({ error: 'Administrador não encontrado' });
+    }
+    
+    res.json(administradores[0]);
+  } catch (error) {
+    console.error('Erro ao buscar administrador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Criar novo administrador
+router.post('/administradores', validateCreateAdministrador, async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const { nome, sobrenome, email, senha, role, status, permissoes } = req.body;
+    const criadoPor = null; // Primeiro administrador não tem criado_por
+    
+    // Verificar se email já existe no tenant
+    const emailExistente = await query(
+      'SELECT id FROM administradores WHERE email = ? AND tenant_id = ?',
+      [email, tenantId]
+    );
+    
+    if (emailExistente.length > 0) {
+      return res.status(400).json({ error: 'Email já está em uso neste tenant' });
+    }
+    
+    // Hash da senha
+    const bcrypt = await import('bcrypt');
+    const senhaHash = await bcrypt.hash(senha, 10);
+    
+    const result = await query(
+      `INSERT INTO administradores 
+       (tenant_id, nome, sobrenome, email, senha, role, status, permissoes, criado_por)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenantId, nome, sobrenome, email, senhaHash, role, status, JSON.stringify(permissoes), criadoPor]
+    );
+    
+    // Buscar o administrador criado
+    const novoAdministrador = await query(
+      `SELECT 
+        id, nome, sobrenome, email, role, status, 
+        permissoes, ultimo_acesso, data_criacao,
+        criado_por
+      FROM administradores 
+      WHERE id = ?`,
+      [result.insertId]
+    );
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Administrador criado com sucesso',
+      administrador: novoAdministrador[0]
+    });
+  } catch (error) {
+    console.error('Erro ao criar administrador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Atualizar administrador
+router.put('/administradores/:id', validateUpdateAdministrador, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenant_id;
+    const { nome, sobrenome, email, senha, role, status, permissoes } = req.body;
+    
+    // Verificar se administrador existe
+    const administradorExistente = await query(
+      'SELECT id FROM administradores WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+    
+    if (administradorExistente.length === 0) {
+      return res.status(404).json({ error: 'Administrador não encontrado' });
+    }
+    
+    // Verificar se email já existe em outro administrador
+    if (email) {
+      const emailExistente = await query(
+        'SELECT id FROM administradores WHERE email = ? AND tenant_id = ? AND id != ?',
+        [email, tenantId, id]
+      );
+      
+      if (emailExistente.length > 0) {
+        return res.status(400).json({ error: 'Email já está em uso por outro administrador' });
+      }
+    }
+    
+    // Preparar campos para atualização
+    const campos = [];
+    const valores = [];
+    
+    if (nome) {
+      campos.push('nome = ?');
+      valores.push(nome);
+    }
+    if (sobrenome) {
+      campos.push('sobrenome = ?');
+      valores.push(sobrenome);
+    }
+    if (email) {
+      campos.push('email = ?');
+      valores.push(email);
+    }
+    if (senha) {
+      const bcrypt = await import('bcrypt');
+      const senhaHash = await bcrypt.hash(senha, 10);
+      campos.push('senha = ?');
+      valores.push(senhaHash);
+    }
+    if (role) {
+      campos.push('role = ?');
+      valores.push(role);
+    }
+    if (status) {
+      campos.push('status = ?');
+      valores.push(status);
+    }
+    if (permissoes) {
+      campos.push('permissoes = ?');
+      valores.push(JSON.stringify(permissoes));
+    }
+    
+    if (campos.length === 0) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+    
+    valores.push(id, tenantId);
+    
+    await query(
+      `UPDATE administradores 
+       SET ${campos.join(', ')}, data_atualizacao = CURRENT_TIMESTAMP
+       WHERE id = ? AND tenant_id = ?`,
+      valores
+    );
+    
+    // Buscar o administrador atualizado
+    const administradorAtualizado = await query(
+      `SELECT 
+        id, nome, sobrenome, email, role, status, 
+        permissoes, ultimo_acesso, data_criacao, data_atualizacao,
+        criado_por
+      FROM administradores 
+      WHERE id = ? AND tenant_id = ?`,
+      [id, tenantId]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Administrador atualizado com sucesso',
+      administrador: administradorAtualizado[0]
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar administrador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Deletar administrador
+router.delete('/administradores/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenant_id;
+    
+    // Verificar se administrador existe
+    const administradorExistente = await query(
+      'SELECT id FROM administradores WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+    
+    if (administradorExistente.length === 0) {
+      return res.status(404).json({ error: 'Administrador não encontrado' });
+    }
+    
+    // Verificar se não é o próprio usuário
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: 'Você não pode deletar sua própria conta' });
+    }
+    
+    await query(
+      'DELETE FROM administradores WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+    
+    res.json({ success: true, message: 'Administrador deletado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar administrador:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Atualizar último acesso do administrador
+router.put('/administradores/:id/ultimo-acesso', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenant_id;
+    
+    await query(
+      'UPDATE administradores SET ultimo_acesso = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+    
+    res.json({ success: true, message: 'Último acesso atualizado' });
+  } catch (error) {
+    console.error('Erro ao atualizar último acesso:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para validar senha do operador
+router.post('/administradores/:id/validar-senha', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { senha } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    if (!senha) {
+      return res.status(400).json({ error: 'Senha é obrigatória' });
+    }
+
+    // Buscar administrador
+    const administradores = await query(
+      'SELECT * FROM administradores WHERE id = ? AND tenant_id = ? AND status = "ativo"',
+      [id, tenantId]
+    );
+
+    if (administradores.length === 0) {
+      return res.status(404).json({ error: 'Administrador não encontrado ou inativo' });
+    }
+
+    const administrador = administradores[0];
+
+    // Validar senha
+    const bcrypt = await import('bcrypt');
+    const senhaValida = await bcrypt.compare(senha, administrador.senha);
+
+    if (!senhaValida) {
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
+
+    // Atualizar último acesso
+    await query(
+      'UPDATE administradores SET ultimo_acesso = CURRENT_TIMESTAMP WHERE id = ?',
+      [id]
+    );
+
+    // Retornar dados do administrador (sem a senha)
+    const { senha: _, ...administradorSemSenha } = administrador;
+    
+    res.json({ 
+      success: true,
+      message: 'Senha validada com sucesso',
+      administrador: administradorSemSenha
+    });
+  } catch (error) {
+    console.error('Erro ao validar senha:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

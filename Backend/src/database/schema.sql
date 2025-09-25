@@ -446,6 +446,26 @@ CREATE TABLE IF NOT EXISTS dados_bancarios (
     UNIQUE KEY unique_tenant_bancario (tenant_id)
 );
 
+-- Tabela de administradores (usuários do sistema)
+CREATE TABLE IF NOT EXISTS administradores (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tenant_id INT NOT NULL,
+    nome VARCHAR(255) NOT NULL,
+    sobrenome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    role ENUM('administrador', 'gerente', 'vendedor') NOT NULL DEFAULT 'vendedor',
+    status ENUM('ativo', 'inativo', 'suspenso') NOT NULL DEFAULT 'ativo',
+    permissoes JSON,
+    ultimo_acesso TIMESTAMP NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por INT,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (criado_por) REFERENCES administradores(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_tenant_email (tenant_id, email)
+);
+
 -- Índices para melhor performance
 CREATE INDEX idx_usuarios_tenant ON usuarios(tenant_id);
 CREATE INDEX idx_usuarios_email ON usuarios(email);
@@ -471,6 +491,10 @@ CREATE INDEX idx_pix_configuracoes_tenant ON pix_configuracoes(tenant_id);
 CREATE INDEX idx_pix_configuracoes_chave ON pix_configuracoes(chave_pix);
 CREATE INDEX idx_dados_bancarios_tenant ON dados_bancarios(tenant_id);
 CREATE INDEX idx_dados_bancarios_banco ON dados_bancarios(banco);
+CREATE INDEX idx_administradores_tenant ON administradores(tenant_id);
+CREATE INDEX idx_administradores_email ON administradores(email);
+CREATE INDEX idx_administradores_role ON administradores(role);
+CREATE INDEX idx_administradores_status ON administradores(status);
 
 -- Índices para busca
 CREATE INDEX idx_clientes_nome ON clientes(nome);

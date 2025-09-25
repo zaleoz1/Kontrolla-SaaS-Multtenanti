@@ -67,7 +67,8 @@ import {
   Clock,
   UserCheck,
   UserCog,
-  CheckCircle2
+  CheckCircle2,
+  Menu
 } from "lucide-react";
 
 export default function Configuracoes() {
@@ -80,6 +81,7 @@ export default function Configuracoes() {
     metodosPagamento,
     pixConfiguracao,
     dadosBancarios,
+    administradores,
     dadosContaEditando,
     dadosTenantEditando,
     configuracoesEditando,
@@ -101,7 +103,13 @@ export default function Configuracoes() {
     adicionarParcela,
     deletarParcela,
     salvarPixConfiguracao,
-    salvarDadosBancarios
+    salvarDadosBancarios,
+    buscarAdministradores,
+    buscarAdministrador,
+    criarAdministrador,
+    atualizarAdministrador,
+    deletarAdministrador,
+    atualizarUltimoAcesso
   } = useConfiguracoes();
 
 
@@ -165,11 +173,17 @@ export default function Configuracoes() {
   const [filtroStatusUsuario, setFiltroStatusUsuario] = useState("todos");
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Carregar dados quando o componente montar
   useEffect(() => {
     carregarUsuarios();
   }, []);
+
+  // Recarregar usuários quando filtros mudarem
+  useEffect(() => {
+    carregarUsuarios();
+  }, [buscaUsuario, filtroRoleUsuario, filtroStatusUsuario]);
 
   // Sincronizar métodos de pagamento do banco com estado local
   useEffect(() => {
@@ -699,58 +713,14 @@ export default function Configuracoes() {
   const carregarUsuarios = async () => {
     setCarregandoUsuarios(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // const response = await api.get('/usuarios');
-      // setUsuarios(response.data);
+      const filtros = {
+        busca: buscaUsuario || undefined,
+        role: filtroRoleUsuario !== 'todos' ? filtroRoleUsuario : undefined,
+        status: filtroStatusUsuario !== 'todos' ? filtroStatusUsuario : undefined
+      };
       
-      // Dados mock para demonstração
-      const usuariosMock = [
-        {
-          id: 1,
-          nome: "Admin",
-          sobrenome: "Sistema",
-          email: "admin@sistema.com",
-          role: "administrador",
-          status: "ativo",
-          ultimo_acesso: "2024-01-18T14:30:00Z",
-          data_criacao: "2024-01-01T10:00:00Z",
-          permissoes: ["todos"]
-        },
-        {
-          id: 2,
-          nome: "Maria",
-          sobrenome: "Santos",
-          email: "maria@empresa.com",
-          role: "gerente",
-          status: "ativo",
-          ultimo_acesso: "2024-01-18T12:15:00Z",
-          data_criacao: "2024-01-05T09:30:00Z",
-          permissoes: ["vendas", "estoque", "relatorios", "funcionarios"]
-        },
-        {
-          id: 3,
-          nome: "João",
-          sobrenome: "Silva",
-          email: "joao@empresa.com",
-          role: "vendedor",
-          status: "ativo",
-          ultimo_acesso: "2024-01-18T11:45:00Z",
-          data_criacao: "2024-01-10T14:20:00Z",
-          permissoes: ["vendas", "clientes"]
-        },
-        {
-          id: 4,
-          nome: "Ana",
-          sobrenome: "Costa",
-          email: "ana@empresa.com",
-          role: "vendedor",
-          status: "inativo",
-          ultimo_acesso: "2024-01-15T16:30:00Z",
-          data_criacao: "2024-01-12T11:10:00Z",
-          permissoes: ["vendas", "clientes"]
-        }
-      ];
-      setUsuarios(usuariosMock);
+      const administradoresData = await buscarAdministradores(filtros);
+      setUsuarios(administradoresData || []);
     } catch (error) {
       toast({
         title: "Erro",
@@ -763,13 +733,15 @@ export default function Configuracoes() {
   };
 
   const handleNovoUsuario = () => {
+    const rolePadrao = "vendedor";
     setUsuarioEditando({
       nome: "",
       sobrenome: "",
       email: "",
-      role: "vendedor",
+      senha: "",
+      role: rolePadrao,
       status: "ativo",
-      permissoes: []
+      permissoes: obterPermissoesPorRole(rolePadrao)
     });
     setMostrarFormUsuario(true);
   };
@@ -784,12 +756,11 @@ export default function Configuracoes() {
 
     setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // if (usuarioEditando.id) {
-      //   await api.put(`/usuarios/${usuarioEditando.id}`, usuarioEditando);
-      // } else {
-      //   await api.post('/usuarios', usuarioEditando);
-      // }
+      if (usuarioEditando.id) {
+        await atualizarAdministrador(usuarioEditando.id, usuarioEditando);
+      } else {
+        await criarAdministrador(usuarioEditando);
+      }
       
       toast({
         title: "Sucesso",
@@ -816,8 +787,7 @@ export default function Configuracoes() {
 
     setSalvando(true);
     try {
-      // Aqui você implementaria a chamada para a API
-      // await api.delete(`/usuarios/${id}`);
+      await deletarAdministrador(id);
       
       toast({
         title: "Sucesso",
@@ -837,16 +807,8 @@ export default function Configuracoes() {
     }
   };
 
-  const usuariosFiltrados = usuarios.filter(usuario => {
-    const matchBusca = usuario.nome.toLowerCase().includes(buscaUsuario.toLowerCase()) ||
-                      usuario.sobrenome.toLowerCase().includes(buscaUsuario.toLowerCase()) ||
-                      usuario.email.toLowerCase().includes(buscaUsuario.toLowerCase());
-    
-    const matchRole = filtroRoleUsuario === "todos" || usuario.role === filtroRoleUsuario;
-    const matchStatus = filtroStatusUsuario === "todos" || usuario.status === filtroStatusUsuario;
-    
-    return matchBusca && matchRole && matchStatus;
-  });
+  // Os usuários já vêm filtrados da API, então usamos diretamente
+  const usuariosFiltrados = usuarios;
 
   const obterBadgeRole = (role: string) => {
     switch (role) {
@@ -866,7 +828,7 @@ export default function Configuracoes() {
       case "administrador":
         return ["todos"];
       case "gerente":
-        return ["vendas", "estoque", "relatorios", "funcionarios", "clientes"];
+        return ["vendas", "estoque", "relatorios", "funcionarios", "clientes", "financeiro"];
       case "vendedor":
         return ["vendas", "clientes"];
       default:
@@ -964,10 +926,26 @@ export default function Configuracoes() {
         activeTab={abaAtiva}
         onTabChange={handleMudarAba}
         onLogout={handleLogout}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Conteúdo principal */}
       <div className="flex-1 overflow-y-auto">
+        {/* Header mobile com botão de menu */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b bg-background">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold">Configurações</h1>
+          <div className="w-9" /> {/* Espaçador para centralizar o título */}
+        </div>
+        
         <div className="p-6 space-y-6">
 
       {/* Conteúdo das configurações baseado na aba ativa */}
@@ -1632,9 +1610,9 @@ export default function Configuracoes() {
                     </div>
                   </div>
                 ) : (
-                  <div className="divide-y">
+                  <div className="space-y-4">
                     {usuariosFiltrados.map((usuario) => (
-                      <div key={usuario.id} className="p-4 hover:bg-muted/50 transition-colors">
+                      <div key={usuario.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors shadow-sm">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-2">
@@ -2820,7 +2798,7 @@ export default function Configuracoes() {
                               <Label htmlFor="role_usuario" className="text-sm font-medium">Role *</Label>
                               <Select 
                                 value={usuarioEditando.role} 
-                                onValueChange={(value) => {
+                                onValueChange={(value: 'administrador' | 'gerente' | 'vendedor') => {
                                   const permissoesPadrao = obterPermissoesPorRole(value);
                                   setUsuarioEditando(prev => prev ? { 
                                     ...prev, 
@@ -2858,7 +2836,7 @@ export default function Configuracoes() {
                               <Label htmlFor="status_usuario" className="text-sm font-medium">Status</Label>
                               <Select 
                                 value={usuarioEditando.status} 
-                                onValueChange={(value) => setUsuarioEditando(prev => prev ? { ...prev, status: value } : null)}
+                                onValueChange={(value: 'ativo' | 'inativo' | 'suspenso') => setUsuarioEditando(prev => prev ? { ...prev, status: value } : null)}
                               >
                                 <SelectTrigger className="h-10">
                                   <SelectValue />
