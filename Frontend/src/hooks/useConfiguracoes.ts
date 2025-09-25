@@ -643,16 +643,16 @@ export const useConfiguracoes = () => {
     }
   };
 
-  // Validar senha do operador
-  const validarSenhaOperador = async (id: number, senha: string) => {
+  // Validar código do operador
+  const validarCodigoOperador = async (id: number, codigo: string) => {
     try {
-      const response = await makeRequest(`/configuracoes/administradores/${id}/validar-senha`, {
+      const response = await makeRequest(`/configuracoes/administradores/${id}/validar-codigo`, {
         method: 'POST',
-        body: { senha }
+        body: { codigo }
       });
       return response;
     } catch (err) {
-      console.error('Erro ao validar senha do operador:', err);
+      console.error('Erro ao validar código do operador:', err);
       throw err;
     }
   };
@@ -718,6 +718,6 @@ export const useConfiguracoes = () => {
     atualizarAdministrador,
     deletarAdministrador,
     atualizarUltimoAcesso,
-    validarSenhaOperador
+    validarCodigoOperador
   };
 };

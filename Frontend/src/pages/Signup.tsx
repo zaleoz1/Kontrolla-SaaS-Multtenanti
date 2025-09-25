@@ -176,6 +176,38 @@ export default function Signup() {
       return;
     }
     
+    // Função para truncar campos conforme limites do banco
+    const truncateField = (field: string, maxLength: number) => {
+      if (!field) return field;
+      return field.length > maxLength ? field.substring(0, maxLength) : field;
+    };
+    
+    // Preparar dados com truncamento
+    const dadosTruncados = {
+      firstName: truncateField(formData.firstName, 255),
+      lastName: truncateField(formData.lastName, 255),
+      email: truncateField(formData.email, 255),
+      phone: truncateField(formData.phone, 20),
+      company: truncateField(formData.company, 255),
+      tipoPessoa: formData.tipoPessoa,
+      cpfCnpj: formData.tipoPessoa === 'juridica' 
+        ? truncateField(formData.cpfCnpj, 18) 
+        : truncateField(formData.cpfCnpj, 14),
+      cep: truncateField(formData.cep, 10),
+      endereco: truncateField(formData.endereco, 65535),
+      cidade: truncateField(formData.cidade, 100),
+      estado: truncateField(formData.estado, 2),
+      razaoSocial: truncateField(formData.razaoSocial, 255),
+      nomeFantasia: truncateField(formData.nomeFantasia, 255),
+      inscricaoEstadual: truncateField(formData.inscricaoEstadual, 20),
+      inscricaoMunicipal: truncateField(formData.inscricaoMunicipal, 20),
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      selectedPlan: formData.selectedPlan,
+      acceptTerms: formData.acceptTerms,
+      acceptMarketing: formData.acceptMarketing
+    };
+    
     setIsLoading(true);
     
     try {
@@ -184,28 +216,7 @@ export default function Signup() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          company: formData.company,
-          tipoPessoa: formData.tipoPessoa,
-          cpfCnpj: formData.cpfCnpj,
-          cep: formData.cep,
-          endereco: formData.endereco,
-          cidade: formData.cidade,
-          estado: formData.estado,
-          razaoSocial: formData.razaoSocial,
-          nomeFantasia: formData.nomeFantasia,
-          inscricaoEstadual: formData.inscricaoEstadual,
-          inscricaoMunicipal: formData.inscricaoMunicipal,
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-          selectedPlan: formData.selectedPlan,
-          acceptTerms: formData.acceptTerms,
-          acceptMarketing: formData.acceptMarketing
-        }),
+        body: JSON.stringify(dadosTruncados),
       });
 
       const data = await response.json();

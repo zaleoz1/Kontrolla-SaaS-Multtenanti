@@ -14,41 +14,90 @@ export const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Para teste, usar dados fixos sem verificação JWT
     console.log('🔍 Token recebido:', token);
+
+    // Verificar e decodificar o JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sua-chave-secreta');
+    console.log('🔍 Token decodificado:', decoded);
+
+    // Buscar sessão ativa no banco de dados
+    const sessoes = await query(
+      `SELECT s.*, u.id as usuario_id, u.nome, u.sobrenome, u.email, u.role, u.status, u.tenant_id, t.nome as tenant_nome, t.slug as tenant_slug
+       FROM sessoes_usuario s
+       JOIN usuarios u ON s.usuario_id = u.id
+       JOIN tenants t ON u.tenant_id = t.id
+       WHERE s.token_sessao = ? AND s.ativa = TRUE AND s.data_expiracao > NOW()`,
+      [decoded.sessionToken]
+    );
+
+    if (sessoes.length === 0) {
+      console.log('❌ Sessão não encontrada ou expirada');
+      return res.status(401).json({
+        error: 'Sessão inválida ou expirada'
+      });
+    }
+
+    const sessao = sessoes[0];
+    console.log('✅ Sessão válida encontrada para usuário:', sessao.usuario_id, 'tenant:', sessao.tenant_id);
+
+    // Verificar se o usuário está ativo
+    if (sessao.status !== 'ativo') {
+      console.log('❌ Usuário inativo');
+      return res.status(401).json({
+        error: 'Usuário inativo'
+      });
+    }
+
+    // Verificar se o tenant está ativo
+    const tenantStatus = await query(
+      'SELECT status FROM tenants WHERE id = ?',
+      [sessao.tenant_id]
+    );
+
+    if (tenantStatus.length === 0 || tenantStatus[0].status !== 'ativo') {
+      console.log('❌ Tenant inativo');
+      return res.status(401).json({
+        error: 'Conta suspensa'
+      });
+    }
+
+    // Definir dados do usuário na requisição
     req.user = {
-      id: 1,
-      nome: 'Isaléo',
-      sobrenome: 'Guimarães',
-      email: 'isaleoguimaraes284@gmail.com',
-      role: 'admin',
-      status: 'ativo',
-      tenant_id: 1,
-      tenant_nome: 'Empresa Teste',
-      tenant_slug: 'empresa-teste'
+      id: sessao.usuario_id,
+      nome: sessao.nome,
+      sobrenome: sessao.sobrenome,
+      email: sessao.email,
+      role: sessao.role,
+      status: sessao.status,
+      tenant_id: sessao.tenant_id,
+      tenant_nome: sessao.tenant_nome,
+      tenant_slug: sessao.tenant_slug
     };
     
     req.session = {
-      id: 1,
+      id: sessao.id,
       token: token,
-      ip_address: '::1'
+      ip_address: sessao.ip_address
     };
 
+    console.log('✅ Usuário autenticado:', req.user.nome, 'Tenant:', req.user.tenant_id);
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
+      console.log('❌ Token JWT inválido');
       return res.status(401).json({
         error: 'Token inválido'
       });
     }
     
     if (error.name === 'TokenExpiredError') {
+      console.log('❌ Token JWT expirado');
       return res.status(401).json({
         error: 'Token expirado'
       });
     }
 
-    console.error('Erro na autenticação:', error);
+    console.error('❌ Erro na autenticação:', error);
     return res.status(500).json({
       error: 'Erro interno do servidor'
     });

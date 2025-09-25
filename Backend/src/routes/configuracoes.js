@@ -4,6 +4,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+
+// Função para gerar código único
+function gerarCodigo() {
+  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let codigo = '';
+  for (let i = 0; i < 8; i++) {
+    codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+  }
+  return codigo;
+}
 import { 
   handleValidationErrors, 
   validateMetodoPagamento, 
@@ -980,7 +990,7 @@ router.get('/administradores', validateSearchAdministradores, async (req, res) =
     
     let sql = `
       SELECT 
-        id, nome, sobrenome, email, role, status, 
+        id, nome, sobrenome, email, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao,
         criado_por
       FROM administradores 
@@ -1024,7 +1034,7 @@ router.get('/administradores/:id', async (req, res) => {
     
     const administradores = await query(
       `SELECT 
-        id, nome, sobrenome, email, role, status, 
+        id, nome, sobrenome, email, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao, data_atualizacao,
         criado_por
       FROM administradores 
@@ -1047,7 +1057,7 @@ router.get('/administradores/:id', async (req, res) => {
 router.post('/administradores', validateCreateAdministrador, async (req, res) => {
   try {
     const tenantId = req.user.tenant_id;
-    const { nome, sobrenome, email, senha, role, status, permissoes } = req.body;
+    const { nome, sobrenome, email, role, status, permissoes } = req.body;
     const criadoPor = null; // Primeiro administrador não tem criado_por
     
     // Verificar se email já existe no tenant
@@ -1060,21 +1070,20 @@ router.post('/administradores', validateCreateAdministrador, async (req, res) =>
       return res.status(400).json({ error: 'Email já está em uso neste tenant' });
     }
     
-    // Hash da senha
-    const bcrypt = await import('bcrypt');
-    const senhaHash = await bcrypt.hash(senha, 10);
+    // Gerar código único
+    const codigo = gerarCodigo();
     
     const result = await query(
       `INSERT INTO administradores 
-       (tenant_id, nome, sobrenome, email, senha, role, status, permissoes, criado_por)
+       (tenant_id, nome, sobrenome, email, codigo, role, status, permissoes, criado_por)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tenantId, nome, sobrenome, email, senhaHash, role, status, JSON.stringify(permissoes), criadoPor]
+      [tenantId, nome, sobrenome, email, codigo, role, status, JSON.stringify(permissoes), criadoPor]
     );
     
     // Buscar o administrador criado
     const novoAdministrador = await query(
       `SELECT 
-        id, nome, sobrenome, email, role, status, 
+        id, nome, sobrenome, email, codigo, role, status, 
         permissoes, ultimo_acesso, data_criacao,
         criado_por
       FROM administradores 
@@ -1098,7 +1107,7 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
   try {
     const { id } = req.params;
     const tenantId = req.user.tenant_id;
-    const { nome, sobrenome, email, senha, role, status, permissoes } = req.body;
+    const { nome, sobrenome, email, role, status, permissoes, gerarNovoCodigo } = req.body;
     
     // Verificar se administrador existe
     const administradorExistente = await query(
@@ -1138,11 +1147,10 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
       campos.push('email = ?');
       valores.push(email);
     }
-    if (senha) {
-      const bcrypt = await import('bcrypt');
-      const senhaHash = await bcrypt.hash(senha, 10);
-      campos.push('senha = ?');
-      valores.push(senhaHash);
+    if (gerarNovoCodigo) {
+      const novoCodigo = gerarCodigo();
+      campos.push('codigo = ?');
+      valores.push(novoCodigo);
     }
     if (role) {
       campos.push('role = ?');
@@ -1243,15 +1251,15 @@ router.put('/administradores/:id/ultimo-acesso', async (req, res) => {
   }
 });
 
-// Rota para validar senha do operador
-router.post('/administradores/:id/validar-senha', async (req, res) => {
+// Rota para validar código do operador
+router.post('/administradores/:id/validar-codigo', async (req, res) => {
   try {
     const { id } = req.params;
-    const { senha } = req.body;
+    const { codigo } = req.body;
     const tenantId = req.user.tenant_id;
 
-    if (!senha) {
-      return res.status(400).json({ error: 'Senha é obrigatória' });
+    if (!codigo) {
+      return res.status(400).json({ error: 'Código é obrigatório' });
     }
 
     // Buscar administrador
@@ -1266,12 +1274,9 @@ router.post('/administradores/:id/validar-senha', async (req, res) => {
 
     const administrador = administradores[0];
 
-    // Validar senha
-    const bcrypt = await import('bcrypt');
-    const senhaValida = await bcrypt.compare(senha, administrador.senha);
-
-    if (!senhaValida) {
-      return res.status(401).json({ error: 'Senha incorreta' });
+    // Validar código
+    if (administrador.codigo !== codigo) {
+      return res.status(401).json({ error: 'Código incorreto' });
     }
 
     // Atualizar último acesso
@@ -1280,16 +1285,16 @@ router.post('/administradores/:id/validar-senha', async (req, res) => {
       [id]
     );
 
-    // Retornar dados do administrador (sem a senha)
-    const { senha: _, ...administradorSemSenha } = administrador;
+    // Retornar dados do administrador (sem o código)
+    const { codigo: _, ...administradorSemCodigo } = administrador;
     
     res.json({ 
       success: true,
-      message: 'Senha validada com sucesso',
-      administrador: administradorSemSenha
+      message: 'Código validado com sucesso',
+      administrador: administradorSemCodigo
     });
   } catch (error) {
-    console.error('Erro ao validar senha:', error);
+    console.error('Erro ao validar código:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

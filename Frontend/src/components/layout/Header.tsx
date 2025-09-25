@@ -1,10 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Bell, Plus, Menu, User, ChevronDown, Shield, Crown, Star, UserCheck, Eye, EyeOff, Key } from "lucide-react";
+import { Bell, Plus, Menu, User, ChevronDown, Shield, Crown, Star, UserCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
@@ -26,12 +24,9 @@ export function Header({ onMenuClick }: PropsCabecalho) {
   const [operadorAtual, setOperadorAtual] = useState<any>(null);
   const [mostrarSelecaoOperador, setMostrarSelecaoOperador] = useState(false);
   const [administradores, setAdministradores] = useState<any[]>([]);
-  const [senhaOperador, setSenhaOperador] = useState("");
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [operadorSelecionado, setOperadorSelecionado] = useState<any>(null);
-  const [mostrarModalSenha, setMostrarModalSenha] = useState(false);
+  // Removidas variáveis de validação de senha - seleção agora é direta
   
-  const { buscarAdministradores, validarSenhaOperador } = useConfiguracoes();
+  const { buscarAdministradores, validarCodigoOperador } = useConfiguracoes();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,15 +35,33 @@ export function Header({ onMenuClick }: PropsCabecalho) {
     if (userData) {
       const userParsed = JSON.parse(userData);
       setUser(userParsed);
-    }
-
-    // Carregar operador atual do localStorage se existir
-    const operadorData = localStorage.getItem('operadorAtual');
-    if (operadorData) {
-      const operadorParsed = JSON.parse(operadorData);
-      setOperadorAtual(operadorParsed);
+      
+      // Carregar operador atual do localStorage se existir
+      const operadorData = localStorage.getItem('operadorAtual');
+      if (operadorData) {
+        setOperadorAtual(JSON.parse(operadorData));
+      }
+    } else {
+      // Se não há usuário logado, limpar operador
+      setOperadorAtual(null);
+      localStorage.removeItem('operadorAtual');
     }
   }, []);
+
+  // Monitorar mudanças no usuário para limpar operador quando necessário
+  useEffect(() => {
+    if (!user) {
+      // Se não há usuário logado, limpar operador
+      setOperadorAtual(null);
+      localStorage.removeItem('operadorAtual');
+    }
+  }, [user]);
+
+  // Função para limpar operador (útil para logout)
+  const limparOperador = () => {
+    setOperadorAtual(null);
+    localStorage.removeItem('operadorAtual');
+  };
 
   useEffect(() => {
     // Carregar administradores quando o modal for aberto
@@ -80,41 +93,21 @@ export function Header({ onMenuClick }: PropsCabecalho) {
   };
 
   const handleSelecionarOperador = (admin: any) => {
-    setOperadorSelecionado(admin);
+    // Seleção direta sem validação de senha - apenas para identificar o funcionário
+    setOperadorAtual(admin);
+    localStorage.setItem('operadorAtual', JSON.stringify(admin));
     setMostrarSelecaoOperador(false);
-    setMostrarModalSenha(true);
+    
+    toast({
+      title: "Sucesso",
+      description: `Operador alterado para ${admin.nome} ${admin.sobrenome} (${admin.role})`,
+      variant: "default"
+    });
   };
 
   const handleConfirmarSenha = async () => {
-    if (!operadorSelecionado || !senhaOperador) {
-      toast({
-        title: "Erro",
-        description: "Senha é obrigatória",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const response = await validarSenhaOperador(operadorSelecionado.id, senhaOperador);
-      
-      if (response.success) {
-        setOperadorAtual(response.administrador);
-        setMostrarModalSenha(false);
-        setSenhaOperador("");
-        toast({
-          title: "Sucesso",
-          description: `Operador alterado para ${response.administrador.nome} ${response.administrador.sobrenome}`,
-          variant: "default"
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao validar senha",
-        variant: "destructive"
-      });
-    }
+    // Esta função não é mais necessária, mas mantida para compatibilidade
+    // A seleção agora é direta sem validação de senha
   };
 
   const obterIconeRole = (role: string) => {
@@ -357,72 +350,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
         </div>
       </div>
 
-      {/* Modal de confirmação de senha */}
-      <Dialog open={mostrarModalSenha} onOpenChange={setMostrarModalSenha}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
-              Confirmar Senha do Operador
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {operadorSelecionado && (
-              <div className="p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <User className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{operadorSelecionado.nome} {operadorSelecionado.sobrenome}</h3>
-                    <p className="text-sm text-muted-foreground">{operadorSelecionado.email}</p>
-                    {obterIconeRole(operadorSelecionado.role)}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="senha-operador">Senha do Operador</Label>
-              <div className="relative">
-                <Input
-                  id="senha-operador"
-                  type={mostrarSenha ? "text" : "password"}
-                  value={senhaOperador}
-                  onChange={(e) => setSenhaOperador(e.target.value)}
-                  placeholder="Digite a senha do operador"
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setMostrarSenha(!mostrarSenha)}
-                >
-                  {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setMostrarModalSenha(false);
-                  setOperadorSelecionado(null);
-                  setSenhaOperador("");
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmarSenha}>
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de senha removido - seleção agora é direta */}
     </header>
   );
 }
