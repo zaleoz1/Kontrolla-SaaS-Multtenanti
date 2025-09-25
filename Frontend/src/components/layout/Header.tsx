@@ -1,12 +1,18 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Bell, Plus, Menu, User, ChevronDown, Shield, Crown, Star, UserCheck } from "lucide-react";
+import { Bell, Plus, Menu, User, ChevronDown, Crown, Shield, ShoppingBag } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { useConfiguracoes } from "@/hooks/useConfiguracoes";
-import { useToast } from "@/hooks/use-toast";
+import { useAdministradores } from "@/hooks/useAdministradores";
+import { useOperador } from "@/contexts/OperadorContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PropsCabecalho {
   onMenuClick: () => void;
@@ -14,160 +20,33 @@ interface PropsCabecalho {
 
 /**
  * Componente Header
- * Renderiza o cabeçalho da aplicação com barra de busca, botão de nova venda,
- * ícone de notificações e informações da loja.
+ * Renderiza o cabeçalho da aplicação com botão de menu e botão de nova venda.
  */
 export function Header({ onMenuClick }: PropsCabecalho) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<any>(null);
-  const [operadorAtual, setOperadorAtual] = useState<any>(null);
-  const [mostrarSelecaoOperador, setMostrarSelecaoOperador] = useState(false);
-  const [administradores, setAdministradores] = useState<any[]>([]);
-  // Removidas variáveis de validação de senha - seleção agora é direta
-  
-  const { buscarAdministradores, validarCodigoOperador } = useConfiguracoes();
-  const { toast } = useToast();
+  const { administradores, loading } = useAdministradores();
+  const { operadorSelecionado, setOperadorSelecionado } = useOperador();
 
+  // Validar se o operador selecionado ainda existe e está ativo
   useEffect(() => {
-    // Carregar dados do usuário do localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const userParsed = JSON.parse(userData);
-      setUser(userParsed);
+    if (operadorSelecionado && administradores.length > 0) {
+      const operadorExiste = administradores.find(
+        adm => adm.id === operadorSelecionado && adm.status === 'ativo'
+      );
       
-      // Carregar operador atual do localStorage se existir
-      const operadorData = localStorage.getItem('operadorAtual');
-      if (operadorData) {
-        setOperadorAtual(JSON.parse(operadorData));
+      if (!operadorExiste) {
+        // Se o operador não existe mais ou não está ativo, limpar a seleção
+        setOperadorSelecionado(null);
       }
-    } else {
-      // Se não há usuário logado, limpar operador
-      setOperadorAtual(null);
-      localStorage.removeItem('operadorAtual');
     }
-  }, []);
+  }, [administradores, operadorSelecionado, setOperadorSelecionado]);
 
-  // Monitorar mudanças no usuário para limpar operador quando necessário
-  useEffect(() => {
-    if (!user) {
-      // Se não há usuário logado, limpar operador
-      setOperadorAtual(null);
-      localStorage.removeItem('operadorAtual');
-    }
-  }, [user]);
-
-  // Função para limpar operador (útil para logout)
-  const limparOperador = () => {
-    setOperadorAtual(null);
-    localStorage.removeItem('operadorAtual');
+  // Função auxiliar para obter o operador atual
+  const getOperadorAtual = () => {
+    return administradores.find(adm => adm.id === operadorSelecionado);
   };
 
-  useEffect(() => {
-    // Carregar administradores quando o modal for aberto
-    if (mostrarSelecaoOperador) {
-      carregarAdministradores();
-    }
-  }, [mostrarSelecaoOperador]);
-
-  // Salvar operador no localStorage sempre que ele mudar
-  useEffect(() => {
-    if (operadorAtual) {
-      localStorage.setItem('operadorAtual', JSON.stringify(operadorAtual));
-    } else {
-      localStorage.removeItem('operadorAtual');
-    }
-  }, [operadorAtual]);
-
-  const carregarAdministradores = async () => {
-    try {
-      const admins = await buscarAdministradores({});
-      setAdministradores(admins || []);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar administradores",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleSelecionarOperador = (admin: any) => {
-    // Seleção direta sem validação de senha - apenas para identificar o funcionário
-    setOperadorAtual(admin);
-    localStorage.setItem('operadorAtual', JSON.stringify(admin));
-    setMostrarSelecaoOperador(false);
-    
-    toast({
-      title: "Sucesso",
-      description: `Operador alterado para ${admin.nome} ${admin.sobrenome} (${admin.role})`,
-      variant: "default"
-    });
-  };
-
-  const handleConfirmarSenha = async () => {
-    // Esta função não é mais necessária, mas mantida para compatibilidade
-    // A seleção agora é direta sem validação de senha
-  };
-
-  const obterIconeRole = (role: string) => {
-    switch (role) {
-      case "administrador":
-        return <Crown className="h-4 w-4 text-red-500" />;
-      case "gerente":
-        return <Star className="h-4 w-4 text-blue-500" />;
-      case "vendedor":
-        return <UserCheck className="h-4 w-4 text-green-500" />;
-      default:
-        return <User className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const obterNomeRole = (role: string) => {
-    switch (role) {
-      case "administrador":
-        return "Administrador";
-      case "gerente":
-        return "Gerente";
-      case "vendedor":
-        return "Vendedor";
-      default:
-        return "Desconhecido";
-    }
-  };
-
-  const obterIconeComNomeRole = (role: string) => {
-    switch (role) {
-      case "administrador":
-        return (
-          <div className="flex items-center space-x-2">
-            <Crown className="h-4 w-4 text-red-500" />
-            <span className="text-sm text-muted-foreground">Administrador</span>
-          </div>
-        );
-      case "gerente":
-        return (
-          <div className="flex items-center space-x-2">
-            <Star className="h-4 w-4 text-blue-500" />
-            <span className="text-sm text-muted-foreground">Gerente</span>
-          </div>
-        );
-      case "vendedor":
-        return (
-          <div className="flex items-center space-x-2">
-            <UserCheck className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-muted-foreground">Vendedor</span>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center space-x-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Desconhecido</span>
-          </div>
-        );
-    }
-  };
 
 
   // Verificar se está em páginas que não devem mostrar o header
@@ -197,7 +76,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
         </Button>
 
 
-        {/* Área de ações e informações - alinhada à direita */}
+        {/* Área de ações - alinhada à direita */}
         <div className="flex items-center space-x-4 ml-auto">   
           {/* Botão para criar nova venda */}
           <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/dashboard/nova-venda")}>
@@ -205,152 +84,97 @@ export function Header({ onMenuClick }: PropsCabecalho) {
             <span className="hidden sm:inline">Nova Venda</span>
           </Button>
 
-          {/* Informações do usuário e operador */}
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <div className="flex items-center space-x-3">
-                {/* Informações do operador atual ou botão de seleção */}
-              <div className="text-right hidden sm:block">
-                  {operadorAtual ? (
-                    <Dialog open={mostrarSelecaoOperador} onOpenChange={setMostrarSelecaoOperador}>
-                      <DialogTrigger asChild>
-                        <Card className="p-1.5 bg-muted/30 border-muted cursor-pointer hover:bg-muted/50 transition-colors">
-                          <CardContent className="p-0">
-                            <div className="flex items-center space-x-2">
-                              {obterIconeRole(operadorAtual.role)}
-                              <p className="text-base font-medium">{operadorAtual.nome} {operadorAtual.sobrenome}</p>
-                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5" />
-                            Selecionar Operador do Sistema
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="overflow-y-auto max-h-[60vh]">
-                          <div className="grid gap-3">
-                            {administradores.map((admin) => (
-                              <Card 
-                                key={admin.id} 
-                                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => handleSelecionarOperador(admin)}
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                      <div className="p-2 rounded-lg bg-primary/10">
-                                        <User className="h-5 w-5 text-primary" />
-                                      </div>
-                                      <div>
-                                        <h3 className="font-semibold">{admin.nome} {admin.sobrenome}</h3>
-                                        <p className="text-sm text-muted-foreground">{admin.email}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      {obterIconeComNomeRole(admin.role)}
-                                      <Badge variant={admin.status === "ativo" ? "default" : "secondary"}>
-                                        {admin.status}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  ) : (
-                    <Dialog open={mostrarSelecaoOperador} onOpenChange={setMostrarSelecaoOperador}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <User className="h-4 w-4" />
-                          <span className="hidden sm:inline">Trocar Operador</span>
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5" />
-                            Selecionar Operador do Sistema
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="overflow-y-auto max-h-[60vh]">
-                          <div className="grid gap-3">
-                            {administradores.map((admin) => (
-                              <Card 
-                                key={admin.id} 
-                                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => handleSelecionarOperador(admin)}
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                      <div className="p-2 rounded-lg bg-primary/10">
-                                        <User className="h-5 w-5 text-primary" />
-                                      </div>
-                                      <div>
-                                        <h3 className="font-semibold">{admin.nome} {admin.sobrenome}</h3>
-                                        <p className="text-sm text-muted-foreground">{admin.email}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      {obterIconeComNomeRole(admin.role)}
-                                      <Badge variant={admin.status === "ativo" ? "default" : "secondary"}>
-                                        {admin.status}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+          {/* Seletor de Operador */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+              >
+                {(() => {
+                  const operador = getOperadorAtual();
+                  if (operador) {
+                    switch (operador.role) {
+                      case 'administrador':
+                        return <Crown className="h-4 w-4 text-red-500" />;
+                      case 'gerente':
+                        return <Shield className="h-4 w-4 text-blue-500" />;
+                      case 'vendedor':
+                        return <ShoppingBag className="h-4 w-4 text-green-500" />;
+                      default:
+                        return <User className="h-4 w-4" />;
+                    }
+                  }
+                  return <User className="h-4 w-4" />;
+                })()}
+                <span className="hidden sm:inline">
+                  {operadorSelecionado 
+                    ? (() => {
+                        const operador = getOperadorAtual();
+                        return operador ? `${operador.nome} ${operador.sobrenome}` : 'Selecionar Operador';
+                      })()
+                    : 'Selecionar Operador'
+                  }
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Selecionar Operador</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {loading ? (
+                <DropdownMenuItem disabled>
+                  Carregando...
+                </DropdownMenuItem>
+              ) : (
+                <>
+                  {operadorSelecionado && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => setOperadorSelecionado(null)}
+                        className="text-muted-foreground"
+                      >
+                        Limpar Seleção
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
                   )}
-                </div>
-                
-                {/* Ícone de notificações com badge */}
-                <div className="relative">
-                  <Button variant="ghost" size="sm" className="relative">
-                    <Bell className="h-5 w-5" />
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                    >
-                      3
-                    </Badge>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/login")}
-                >
-                  Entrar
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => navigate("/signup")}
-                >
-                  Cadastrar
-                </Button>
-              </div>
-            )}
+                  {administradores
+                    .filter(adm => adm.status === 'ativo')
+                    .map((administrador) => (
+                      <DropdownMenuItem
+                        key={administrador.id}
+                        onClick={() => setOperadorSelecionado(administrador.id)}
+                        className="flex flex-col items-start"
+                      >
+                        <div className="font-medium">
+                          {administrador.nome} {administrador.sobrenome}
+                        </div>
+                        <div className="text-xs text-muted-foreground capitalize">
+                          {administrador.role}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Ícone de notificações com badge */}
+          <div className="relative">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="h-5 w-5" />
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+              >
+                3
+              </Badge>
+            </Button>
           </div>
         </div>
       </div>
-
-      {/* Modal de senha removido - seleção agora é direta */}
     </header>
   );
 }

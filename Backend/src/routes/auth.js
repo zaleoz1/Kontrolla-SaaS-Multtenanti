@@ -148,9 +148,9 @@ router.post('/signup', validateSignup, async (req, res) => {
     }
     
     const administradorResult = await queryWithResult(
-      `INSERT INTO administradores (tenant_id, nome, sobrenome, email, codigo, role, status, permissoes, criado_por) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tenantId, firstName, lastName, email, codigo, 'administrador', 'ativo', JSON.stringify(permissoesAdministrador), null]
+      `INSERT INTO administradores (tenant_id, nome, sobrenome, codigo, role, status, permissoes, criado_por) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tenantId, firstName, lastName, codigo, 'administrador', 'ativo', JSON.stringify(permissoesAdministrador), null]
     );
 
     const administradorId = administradorResult.insertId;

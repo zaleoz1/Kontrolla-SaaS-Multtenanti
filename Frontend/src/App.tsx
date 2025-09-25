@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { NotificationContainer } from "./components/ui/notification";
 import { useNotifications } from "./hooks/useNotifications";
+import { OperadorProvider } from "./contexts/OperadorContext";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
@@ -94,9 +95,11 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={clienteQuery}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
+      <OperadorProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </OperadorProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

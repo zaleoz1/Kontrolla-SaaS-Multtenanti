@@ -958,17 +958,8 @@ export const validateCreateAdministrador = [
     .withMessage('Sobrenome deve ter entre 2 e 255 caracteres')
     .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
     .withMessage('Sobrenome deve conter apenas letras e espaços'),
-  body('email')
-    .notEmpty()
-    .withMessage('Email é obrigatório')
-    .isEmail()
-    .withMessage('Email deve ter um formato válido')
-    .normalizeEmail(),
-  body('senha')
-    .notEmpty()
-    .withMessage('Senha é obrigatória')
-    .isLength({ min: 6, max: 255 })
-     .withMessage('Senha deve ter entre 6 e 255 caracteres'),
+  // Email removido - administradores não precisam de email
+  // Código é gerado automaticamente, não precisa de validação
   body('role')
     .notEmpty()
     .withMessage('Role é obrigatório')
@@ -1013,15 +1004,8 @@ export const validateUpdateAdministrador = [
     .withMessage('Sobrenome deve ter entre 2 e 255 caracteres')
     .matches(/^[a-zA-ZÀ-ÿ\s]+$/)
     .withMessage('Sobrenome deve conter apenas letras e espaços'),
-  body('email')
-    .optional()
-    .isEmail()
-    .withMessage('Email deve ter um formato válido')
-    .normalizeEmail(),
-  body('senha')
-    .optional()
-    .isLength({ min: 6, max: 255 })
-    .withMessage('Senha deve ter entre 6 e 255 caracteres'),
+  // Email removido - administradores não precisam de email
+  // Código é gerenciado separadamente, não precisa de validação
   body('role')
     .optional()
     .isIn(['administrador', 'gerente', 'vendedor'])
