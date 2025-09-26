@@ -2315,15 +2315,16 @@ export default function Pagamentos() {
           <Card className="max-w-2xl w-full max-h-[90vh] flex flex-col">
             <CardHeader className="pb-3 sm:pb-4 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg sm:text-xl flex items-center">
-                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3 text-blue-600" />
-                  Selecionar Parcelas
+                <CardTitle className="text-base sm:text-lg lg:text-xl flex items-center">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 mr-2 text-blue-600" />
+                  <span className="hidden sm:inline">Selecionar Parcelas</span>
+                  <span className="sm:hidden">Parcelas</span>
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleCancelarParcela}
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-slate-100"
+                  className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 p-0 hover:bg-slate-100"
                 >
                   <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
@@ -2332,14 +2333,14 @@ export default function Pagamentos() {
             
             <CardContent className="flex-1 overflow-hidden flex flex-col">
               {/* Header com informações */}
-              <div className="text-center mb-4 sm:mb-6 p-3 sm:p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-semibold text-slate-800 mb-2 text-sm sm:text-base">
+              <div className="text-center mb-3 sm:mb-4 lg:mb-6 p-2 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
+                <h4 className="font-semibold text-slate-800 mb-2 text-xs sm:text-sm lg:text-base">
                   Escolha o número de parcelas
                 </h4>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm">
-                  <div className="flex items-center justify-center space-x-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center space-y-1 sm:space-y-0 sm:space-x-3 lg:space-x-4 text-xs sm:text-sm">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <span className="text-slate-600">Valor para parcelas:</span>
-                    <span className="font-bold text-sm sm:text-lg text-green-600">
+                    <span className="font-bold text-xs sm:text-sm lg:text-lg text-green-600">
                       {valorParcelaModal.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -2347,9 +2348,9 @@ export default function Pagamentos() {
                     </span>
                   </div>
                   {parcelaSelecionada && (
-                    <div className="flex items-center justify-center space-x-2 text-blue-600">
+                    <div className="flex items-center justify-center space-x-1 sm:space-x-2 text-blue-600">
                       <span>•</span>
-                      <span className="font-medium">
+                      <span className="font-medium text-xs sm:text-sm">
                         {parcelaSelecionada.quantidade} parcela{parcelaSelecionada.quantidade > 1 ? "s" : ""}
                       </span>
                     </div>
@@ -2358,14 +2359,14 @@ export default function Pagamentos() {
               </div>
 
               {/* Lista de parcelas com scroll */}
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3 pr-1 sm:pr-2">
                 {parcelasDisponiveis.length === 0 ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-600 mb-2">
+                  <div className="text-center py-6 sm:py-8">
+                    <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-slate-600 mb-2">
                       Nenhuma parcela disponível
                     </h3>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-xs sm:text-sm text-slate-500">
                       Configure as parcelas nas configurações do sistema
                     </p>
                   </div>
@@ -2379,7 +2380,7 @@ export default function Pagamentos() {
                     return (
                       <div
                         key={parcela.id}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                        className={`p-3 sm:p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                           parcelaSelecionada?.id === parcela.id
                             ? "border-blue-500 bg-blue-50 shadow-md"
                             : "border-slate-200 hover:border-blue-300 hover:shadow-sm"
@@ -2387,24 +2388,24 @@ export default function Pagamentos() {
                         onClick={() => setParcelaSelecionada(parcela)}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          <div className="flex items-center space-x-2 sm:space-x-4">
+                            <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center ${
                               parcelaSelecionada?.id === parcela.id
                                 ? "border-blue-500 bg-blue-500"
                                 : "border-slate-300"
                             }`}>
                               {parcelaSelecionada?.id === parcela.id && (
-                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white"></div>
                               )}
                             </div>
                             
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-semibold text-lg">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-1 sm:space-x-2 mb-1">
+                                <span className="font-semibold text-sm sm:text-lg">
                                   {parcela.quantidade}x
                                 </span>
-                                <span className="text-slate-600">de</span>
-                                <span className="font-bold text-green-600">
+                                <span className="text-slate-600 text-xs sm:text-base">de</span>
+                                <span className="font-bold text-green-600 text-xs sm:text-base">
                                   {valorParcela.toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL"
@@ -2412,7 +2413,7 @@ export default function Pagamentos() {
                                 </span>
                               </div>
                               
-                              <div className="flex items-center space-x-2 text-sm text-slate-500">
+                              <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-slate-500">
                                 <span>
                                   {parcela.quantidade} parcela{parcela.quantidade > 1 ? "s" : ""}
                                 </span>
@@ -2436,15 +2437,15 @@ export default function Pagamentos() {
                             </div>
                           </div>
                           
-                          <div className="text-right">
-                            <div className="font-bold text-xl text-slate-800">
+                          <div className="text-right flex-shrink-0">
+                            <div className="font-bold text-sm sm:text-lg lg:text-xl text-slate-800">
                               {valorTotalComTaxa.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}
                             </div>
                             {valorJuros > 0 && (
-                              <div className="text-sm text-orange-600 font-medium">
+                              <div className="text-xs sm:text-sm text-orange-600 font-medium">
                                 +{valorJuros.toLocaleString("pt-BR", {
                                   style: "currency",
                                   currency: "BRL"
@@ -2460,22 +2461,24 @@ export default function Pagamentos() {
               </div>
 
               {/* Botões de ação */}
-              <div className="flex space-x-2 sm:space-x-3 pt-3 sm:pt-4 border-t">
+              <div className="flex space-x-2 sm:space-x-3 pt-2 sm:pt-3 lg:pt-4 border-t">
                 <Button
                   variant="outline"
                   onClick={handleCancelarParcela}
-                  className="flex-1 h-8 sm:h-12 text-xs sm:text-sm"
+                  className="flex-1 h-8 sm:h-10 lg:h-12 text-xs sm:text-sm"
                 >
                   <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Cancelar
+                  <span className="hidden sm:inline">Cancelar</span>
+                  <span className="sm:hidden">Cancelar</span>
                 </Button>
                 <Button
                   onClick={handleConfirmarParcela}
                   disabled={!parcelaSelecionada}
-                  className="flex-1 h-8 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 text-xs sm:text-sm"
+                  className="flex-1 h-8 sm:h-10 lg:h-12 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 text-xs sm:text-sm"
                 >
                   <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Confirmar Parcela
+                  <span className="hidden sm:inline">Confirmar Parcela</span>
+                  <span className="sm:hidden">Confirmar</span>
                 </Button>
               </div>
             </CardContent>
@@ -2485,35 +2488,36 @@ export default function Pagamentos() {
 
       {/* Modal PIX */}
       {mostrarModalPix && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-lg w-full mx-4">
-            <CardHeader className="pb-3">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <Card className="max-w-lg w-full mx-2 sm:mx-4">
+            <CardHeader className="pb-2 sm:pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg flex items-center">
+                <CardTitle className="text-sm sm:text-base lg:text-lg flex items-center">
                   <img 
                     src="/logopix.png" 
                     alt="PIX" 
-                    className="h-4 w-4 sm:h-5 sm:w-5 mr-2 object-contain"
+                    className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 mr-1 sm:mr-2 object-contain"
                   />
-                  Dados PIX
+                  <span className="hidden sm:inline">Dados PIX</span>
+                  <span className="sm:hidden">PIX</span>
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setMostrarModalPix(false)}
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 p-0"
                 >
                   <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4 lg:space-y-6">
               {pixConfiguracao ? (
                 <>
                   {/* QR Code */}
                   <div className="text-center">
-                    <h4 className="font-medium mb-3 text-slate-700">QR Code PIX</h4>
-                    <div className="bg-white p-4 rounded-lg border-2 border-slate-200 inline-block">
+                    <h4 className="font-medium mb-2 sm:mb-3 text-slate-700 text-sm sm:text-base">QR Code PIX</h4>
+                    <div className="bg-white p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200 inline-block">
                       {pixConfiguracao.qr_code ? (
                         <img 
                           src={pixConfiguracao.qr_code.startsWith('data:') 
@@ -2522,16 +2526,16 @@ export default function Pagamentos() {
                               ? pixConfiguracao.qr_code 
                               : `data:image/png;base64,${pixConfiguracao.qr_code}`} 
                           alt="QR Code PIX" 
-                          className="w-48 h-48 mx-auto object-contain"
+                          className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto object-contain"
                           onError={(e) => {
                             console.error('Erro ao carregar QR Code:', e);
                             e.currentTarget.style.display = 'none';
                           }}
                         />
                       ) : (
-                        <div className="w-48 h-48 mx-auto flex items-center justify-center bg-slate-100 rounded-lg">
+                        <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto flex items-center justify-center bg-slate-100 rounded-lg">
                           <div className="text-center">
-                            <QrCode className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                            <QrCode className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-slate-400 mx-auto mb-1 sm:mb-2" />
                             <p className="text-xs text-slate-500">
                               QR Code não configurado
                             </p>
@@ -2542,7 +2546,7 @@ export default function Pagamentos() {
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1 sm:mt-2 px-2">
                       {pixConfiguracao.qr_code 
                         ? "Escaneie o QR Code com seu aplicativo de pagamento"
                         : "Copie a chave PIX abaixo para fazer o pagamento"
@@ -2552,9 +2556,9 @@ export default function Pagamentos() {
 
                   {/* Chave PIX */}
                   <div>
-                    <h4 className="font-medium mb-2 text-slate-700">Chave PIX</h4>
-                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                      <p className="font-mono text-sm break-all text-center bg-white p-3 rounded border">
+                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Chave PIX</h4>
+                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                      <p className="font-mono text-xs sm:text-sm break-all text-center bg-white p-2 sm:p-3 rounded border">
                         {pixConfiguracao.chave_pix}
                       </p>
                     </div>
@@ -2562,26 +2566,26 @@ export default function Pagamentos() {
 
                   {/* Nome do Titular */}
                   <div className="text-center">
-                    <h4 className="font-medium mb-3 text-slate-700">Nome do Titular</h4>
-                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-lg font-semibold text-slate-800">{pixConfiguracao.nome_titular}</p>
+                    <h4 className="font-medium mb-2 sm:mb-3 text-slate-700 text-sm sm:text-base">Nome do Titular</h4>
+                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{pixConfiguracao.nome_titular}</p>
                     </div>
                   </div>
 
                 </>
               ) : (
-                <div className="text-center py-8">
-                  <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2 text-slate-600">
+                <div className="text-center py-6 sm:py-8">
+                  <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2 text-slate-600">
                     Configuração PIX não encontrada
                   </h3>
-                  <p className="text-sm text-slate-500 mb-4">
+                  <p className="text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4 px-2">
                     Configure as informações PIX nas configurações do sistema para usar esta funcionalidade.
                   </p>
                   <Button
                     variant="outline"
                     onClick={() => setMostrarModalPix(false)}
-                    className="w-full"
+                    className="w-full h-8 sm:h-10 text-xs sm:text-sm"
                   >
                     Fechar
                   </Button>
@@ -2594,52 +2598,53 @@ export default function Pagamentos() {
 
       {/* Modal Dados Bancários */}
       {mostrarModalDadosBancarios && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-lg w-full mx-4">
-            <CardHeader className="pb-3">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <Card className="max-w-lg w-full mx-2 sm:mx-4">
+            <CardHeader className="pb-2 sm:pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg flex items-center">
-                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
-                  Dados Bancários
+                <CardTitle className="text-sm sm:text-base lg:text-lg flex items-center">
+                  <Building2 className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 mr-1 sm:mr-2 text-blue-600" />
+                  <span className="hidden sm:inline">Dados Bancários</span>
+                  <span className="sm:hidden">Banco</span>
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setMostrarModalDadosBancarios(false)}
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 p-0"
                 >
                   <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4 lg:space-y-6">
               {carregandoDadosBancarios ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-slate-600">Carregando dados bancários...</p>
+                <div className="text-center py-6 sm:py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
+                  <p className="text-slate-600 text-sm sm:text-base">Carregando dados bancários...</p>
                 </div>
               ) : dadosBancarios ? (
                 <>
                   {/* Banco */}
                   <div>
-                    <h4 className="font-medium mb-2 text-slate-700">Banco</h4>
-                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-lg font-semibold text-slate-800">{dadosBancarios.banco}</p>
+                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Banco</h4>
+                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.banco}</p>
                     </div>
                   </div>
 
                   {/* Agência e Conta */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <h4 className="font-medium mb-2 text-slate-700">Agência</h4>
-                      <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                        <p className="text-lg font-semibold text-slate-800">{dadosBancarios.agencia}</p>
+                      <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Agência</h4>
+                      <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.agencia}</p>
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-medium mb-2 text-slate-700">Conta</h4>
-                      <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                        <p className="text-lg font-semibold text-slate-800">
+                      <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Conta</h4>
+                      <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">
                           {dadosBancarios.conta}-{dadosBancarios.digito}
                         </p>
                       </div>
@@ -2648,9 +2653,9 @@ export default function Pagamentos() {
 
                   {/* Tipo de Conta */}
                   <div>
-                    <h4 className="font-medium mb-2 text-slate-700">Tipo de Conta</h4>
-                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-lg font-semibold text-slate-800 capitalize">
+                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Tipo de Conta</h4>
+                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 capitalize">
                         {dadosBancarios.tipo_conta === 'corrente' ? 'Conta Corrente' : 'Conta Poupança'}
                       </p>
                     </div>
@@ -2658,34 +2663,34 @@ export default function Pagamentos() {
 
                   {/* Nome do Titular */}
                   <div>
-                    <h4 className="font-medium mb-2 text-slate-700">Nome do Titular</h4>
-                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-lg font-semibold text-slate-800">{dadosBancarios.nome_titular}</p>
+                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Nome do Titular</h4>
+                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.nome_titular}</p>
                     </div>
                   </div>
 
                   {/* CPF/CNPJ */}
                   <div>
-                    <h4 className="font-medium mb-2 text-slate-700">CPF/CNPJ</h4>
-                    <div className="bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-lg font-semibold text-slate-800">{dadosBancarios.cpf_cnpj}</p>
+                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">CPF/CNPJ</h4>
+                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.cpf_cnpj}</p>
                     </div>
                   </div>
 
                 </>
               ) : (
-                <div className="text-center py-8">
-                  <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2 text-slate-600">
+                <div className="text-center py-6 sm:py-8">
+                  <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2 text-slate-600">
                     Dados bancários não encontrados
                   </h3>
-                  <p className="text-sm text-slate-500 mb-4">
+                  <p className="text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4 px-2">
                     Configure os dados bancários nas configurações do sistema para usar esta funcionalidade.
                   </p>
                   <Button
                     variant="outline"
                     onClick={() => setMostrarModalDadosBancarios(false)}
-                    className="w-full"
+                    className="w-full h-8 sm:h-10 text-xs sm:text-sm"
                   >
                     Fechar
                   </Button>

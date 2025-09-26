@@ -14,7 +14,7 @@ import {
   LogOut,
   X
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useOperador } from "@/contexts/OperadorContext";
 
 // Interface para dados do usuário
@@ -60,6 +60,7 @@ interface PropsSidebar {
 // Componente principal da Sidebar
 export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSidebar) {
   const { operadorSelecionado } = useOperador();
+  const navigate = useNavigate();
 
   // Se não há operador selecionado, não renderizar a sidebar
   if (!operadorSelecionado) {
@@ -189,7 +190,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
           <Button 
             variant="ghost" 
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent mt-1"
-            onClick={onLogout}
+            onClick={() => navigate("/")}
           >
             <LogOut className="mr-3 h-4 w-4" />
             Sair
