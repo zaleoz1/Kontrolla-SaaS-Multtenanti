@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { 
   Settings, 
@@ -114,6 +115,43 @@ export default function Configuracoes() {
 
 
   const { toast } = useToast();
+  const { hasPermission, operador } = usePermissions();
+  
+  // Função para determinar se uma aba deve ser visível
+  const isTabVisible = (tabId: string) => {
+    // Para vendedores com permissão de configurações, permite acesso apenas a métodos de pagamento
+    if (operador?.role === 'vendedor' && hasPermission('configuracoes')) {
+      // Vendedores com configurações podem ver apenas métodos de pagamento
+      if (tabId === 'metodos-pagamento') {
+        return true;
+      }
+    }
+
+    // Para outras abas, verifica permissão específica
+    switch (tabId) {
+      case 'conta':
+        return hasPermission('configuracoes_gerais');
+      case 'administracao':
+        return hasPermission('configuracoes_administradores');
+      case 'pagamentos':
+        return hasPermission('configuracoes_gerais');
+      case 'metodos-pagamento':
+        return hasPermission('configuracoes_pagamentos');
+      case 'tema':
+        return hasPermission('configuracoes_gerais');
+      case 'notificacoes':
+        return hasPermission('configuracoes_gerais');
+      case 'seguranca':
+        return hasPermission('configuracoes_gerais');
+      case 'fornecedores':
+        return hasPermission('fornecedores');
+      case 'funcionarios':
+        return hasPermission('funcionarios');
+      default:
+        return false;
+    }
+  };
+
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -162,8 +200,14 @@ export default function Configuracoes() {
       setAbaAtiva(abaParam);
       // Limpar o parâmetro da URL após definir a aba
       setSearchParams({}, { replace: true });
+    } else {
+      // Se não há parâmetro de aba na URL, verificar se é vendedor com configurações
+      if (operador?.role === 'vendedor' && hasPermission('configuracoes')) {
+        // Vendedores com configurações abrem automaticamente na aba de métodos de pagamento
+        setAbaAtiva('metodos-pagamento');
+      }
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, operador, hasPermission]);
 
   // Estados para administração
   const [usuarios, setUsuarios] = useState([]);
@@ -958,7 +1002,7 @@ export default function Configuracoes() {
       {/* Conteúdo das configurações baseado na aba ativa */}
 
         {/* Dados da Conta */}
-        {abaAtiva === "conta" && (
+        {abaAtiva === "conta" && isTabVisible('conta') && (
           <div className="space-y-6 sm:space-y-8">
             {/* Header da Página */}
             <div className="w-full">
@@ -1484,7 +1528,7 @@ export default function Configuracoes() {
 
 
         {/* Administração */}
-        {abaAtiva === "administracao" && (
+        {abaAtiva === "administracao" && isTabVisible('administracao') && (
           <div className="space-y-6 sm:space-y-8">
             {/* Header da Página */}
             <div className="w-full">
@@ -1755,7 +1799,7 @@ export default function Configuracoes() {
 
 
         {/* Pagamentos e Assinatura */}
-        {abaAtiva === "pagamentos" && (
+        {abaAtiva === "pagamentos" && isTabVisible('pagamentos') && (
           <div className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="bg-gradient-card shadow-card">
@@ -1864,7 +1908,7 @@ export default function Configuracoes() {
         )}
 
         {/* Métodos de Pagamento */}
-        {abaAtiva === "metodos-pagamento" && (
+        {abaAtiva === "metodos-pagamento" && isTabVisible('metodos-pagamento') && (
           <div className="space-y-4 sm:space-y-6">
           <div className="grid gap-4 sm:gap-6">
             {/* Configuração de Métodos de Pagamento */}
@@ -1924,6 +1968,7 @@ export default function Configuracoes() {
                               }));
                             }}
                             className="w-16 sm:w-20 h-8 sm:h-9 text-xs sm:text-sm"
+                            readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                             disabled={key === 'pix' || key === 'dinheiro'}
                           />
                         </div>
@@ -1949,6 +1994,7 @@ export default function Configuracoes() {
                           }));
                         }}
                         className="h-8 sm:h-9 w-full sm:w-auto"
+                        disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                       >
                         {metodo.ativo ? (
                           <ToggleRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -1959,10 +2005,13 @@ export default function Configuracoes() {
                     </div>
                   </div>
                 ))}
-                <Button onClick={handleSalvarMetodosPagamento} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
-                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Métodos de Pagamento'}
-                </Button>
+                {/* Ocultar botão de salvar para vendedores */}
+                {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
+                  <Button onClick={handleSalvarMetodosPagamento} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    {salvando ? 'Salvando...' : 'Salvar Métodos de Pagamento'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -1987,6 +2036,7 @@ export default function Configuracoes() {
                       value={dadosPixEditando.chave_pix}
                       onChange={(e) => setDadosPixEditando(prev => ({ ...prev, chave_pix: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1997,6 +2047,7 @@ export default function Configuracoes() {
                       value={dadosPixEditando.nome_titular}
                       onChange={(e) => setDadosPixEditando(prev => ({ ...prev, nome_titular: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2007,6 +2058,7 @@ export default function Configuracoes() {
                       value={dadosPixEditando.cpf_cnpj}
                       onChange={(e) => setDadosPixEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2036,7 +2088,13 @@ export default function Configuracoes() {
                         className="hidden"
                         id="qr-code-upload"
                       />
-                      <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm h-8 sm:h-9">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild 
+                        className="text-xs sm:text-sm h-8 sm:h-9"
+                        disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
+                      >
                         <label htmlFor="qr-code-upload">
                           {dadosPixEditando.qr_code ? 'Alterar QR Code' : 'Selecionar Arquivo'}
                         </label>
@@ -2044,10 +2102,13 @@ export default function Configuracoes() {
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleSalvarDadosPix} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
-                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Configuração PIX'}
-                </Button>
+                {/* Ocultar botão de salvar para vendedores */}
+                {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
+                  <Button onClick={handleSalvarDadosPix} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    {salvando ? 'Salvando...' : 'Salvar Configuração PIX'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -2072,6 +2133,7 @@ export default function Configuracoes() {
                       value={dadosBancariosEditando.banco}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, banco: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2082,6 +2144,7 @@ export default function Configuracoes() {
                       value={dadosBancariosEditando.agencia}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, agencia: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2092,6 +2155,7 @@ export default function Configuracoes() {
                       value={dadosBancariosEditando.conta}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, conta: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2103,6 +2167,7 @@ export default function Configuracoes() {
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, digito: e.target.value }))}
                       maxLength={1}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2110,6 +2175,7 @@ export default function Configuracoes() {
                     <Select 
                       value={dadosBancariosEditando.tipo_conta} 
                       onValueChange={(value: "corrente" | "poupanca") => setDadosBancariosEditando(prev => ({ ...prev, tipo_conta: value }))}
+                      disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     >
                       <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
                         <SelectValue />
@@ -2138,13 +2204,17 @@ export default function Configuracoes() {
                       value={dadosBancariosEditando.cpf_cnpj}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
+                      readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
                 </div>
-                <Button onClick={handleSalvarDadosBancarios} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
-                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Dados Bancários'}
-                </Button>
+                {/* Ocultar botão de salvar para vendedores */}
+                {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
+                  <Button onClick={handleSalvarDadosBancarios} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    {salvando ? 'Salvando...' : 'Salvar Dados Bancários'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -2185,7 +2255,7 @@ export default function Configuracoes() {
         )}
 
         {/* Tema e Personalização */}
-        {abaAtiva === "tema" && (
+        {abaAtiva === "tema" && isTabVisible('tema') && (
           <div className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="bg-gradient-card shadow-card">
@@ -2321,7 +2391,7 @@ export default function Configuracoes() {
         )}
 
         {/* Notificações */}
-        {abaAtiva === "notificacoes" && (
+        {abaAtiva === "notificacoes" && isTabVisible('notificacoes') && (
           <div className="space-y-4">
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
@@ -2479,7 +2549,7 @@ export default function Configuracoes() {
         )}
 
         {/* Segurança */}
-        {abaAtiva === "seguranca" && (
+        {abaAtiva === "seguranca" && isTabVisible('seguranca') && (
           <div className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="bg-gradient-card shadow-card">
@@ -2643,14 +2713,17 @@ export default function Configuracoes() {
                             </div>
                             <h3 className="text-base sm:text-lg font-semibold">Parcelas Configuradas</h3>
                           </div>
-                          <Button
-                            onClick={handleAdicionarParcela}
-                            size="sm"
-                            className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
-                          >
-                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            Adicionar Parcela
-                          </Button>
+                          {/* Ocultar botão de adicionar parcela para vendedores */}
+                          {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
+                            <Button
+                              onClick={handleAdicionarParcela}
+                              size="sm"
+                              className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
+                            >
+                              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              Adicionar Parcela
+                            </Button>
+                          )}
                         </div>
                         
                         {/* Lista de Parcelas - Scrollable */}
@@ -2680,6 +2753,7 @@ export default function Configuracoes() {
                                           onChange={(e) => handleAtualizarParcela(index, 'quantidade', parseInt(e.target.value) || 1)}
                                           className="h-8 sm:h-9 text-xs sm:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                                           placeholder="Ex: 3"
+                                          readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                                         />
                                       </div>
                                       <div className="space-y-1">
@@ -2696,19 +2770,23 @@ export default function Configuracoes() {
                                           onChange={(e) => handleAtualizarParcela(index, 'taxa', parseFloat(e.target.value) || 0)}
                                           className="h-8 sm:h-9 text-xs sm:text-sm"
                                           placeholder="Ex: 2.5"
+                                          readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                                         />
                                       </div>
                                     </div>
                                     <div className="flex items-center justify-end lg:justify-start">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleRemoverParcela(index)}
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto h-8 sm:h-9 px-2 sm:px-3 text-xs"
-                                      >
-                                        <Trash2 className="h-3 w-3 mr-1" />
-                                        <span className="text-xs">Remover</span>
-                                      </Button>
+                                      {/* Ocultar botão de remover parcela para vendedores */}
+                                      {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleRemoverParcela(index)}
+                                          className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto h-8 sm:h-9 px-2 sm:px-3 text-xs"
+                                        >
+                                          <Trash2 className="h-3 w-3 mr-1" />
+                                          <span className="text-xs">Remover</span>
+                                        </Button>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -2723,21 +2801,36 @@ export default function Configuracoes() {
                 </CardContent>
                 <div className="bg-muted/30 px-3 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0">
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setMostrarModalParcelas(false)}
-                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
-                    >
-                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Cancelar
-                    </Button>
-                    <Button 
-                      onClick={handleSalvarParcelas}
-                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
-                    >
-                      <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Salvar Parcelas
-                    </Button>
+                    {/* Ocultar botões de cancelar e salvar para vendedores */}
+                    {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => setMostrarModalParcelas(false)}
+                          className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
+                        >
+                          <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          Cancelar
+                        </Button>
+                        <Button 
+                          onClick={handleSalvarParcelas}
+                          className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
+                        >
+                          <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          Salvar Parcelas
+                        </Button>
+                      </>
+                    ) : (
+                      /* Para vendedores, mostrar apenas botão de fechar */
+                      <Button
+                        variant="outline"
+                        onClick={() => setMostrarModalParcelas(false)}
+                        className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
+                      >
+                        <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        Fechar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -3011,6 +3104,19 @@ export default function Configuracoes() {
                   </div>
                 </div>
               </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Mensagem de acesso negado */}
+        {!isTabVisible('conta') && !isTabVisible('fornecedores') && !isTabVisible('funcionarios') && !isTabVisible('administracao') && !isTabVisible('metodos-pagamento') && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Acesso Negado</h3>
+              <p className="text-muted-foreground">
+                Você não tem permissão para acessar as configurações do sistema.
+              </p>
             </div>
           </div>
         )}

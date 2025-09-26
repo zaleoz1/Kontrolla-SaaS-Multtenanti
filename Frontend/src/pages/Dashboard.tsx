@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
- import { 
+import { 
   DollarSign, 
   ShoppingCart, 
   Package, 
@@ -18,12 +18,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard } from "@/hooks/useDashboard";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useState } from "react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('hoje');
   const [mudandoPeriodo, setMudandoPeriodo] = useState(false);
+  const { hasPermission } = usePermissions();
   
   const { 
     data, 
@@ -228,11 +230,14 @@ export default function Dashboard() {
             <span className="hidden sm:inline">Atualizar</span>
             <span className="sm:hidden">Atualizar</span>
           </Button>
-          <Button size="sm" className="bg-gradient-primary text-xs sm:text-sm" onClick={() => navigate("/dashboard/relatorios")}>
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Ver Relatórios</span>
-            <span className="sm:hidden">Relatórios</span>
-          </Button>
+          {/* Botão Ver Relatórios - só aparece se tiver permissão */}
+          {hasPermission('relatorios') && (
+            <Button size="sm" className="bg-gradient-primary text-xs sm:text-sm" onClick={() => navigate("/dashboard/relatorios")}>
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Ver Relatórios</span>
+              <span className="sm:hidden">Relatórios</span>
+            </Button>
+          )}
         </div>
 
         {/* Mobile Controls */}
@@ -276,10 +281,13 @@ export default function Dashboard() {
               <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
-            <Button size="sm" className="bg-gradient-primary flex-1 text-xs" onClick={() => navigate("/dashboard/relatorios")}>
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Relatórios
-            </Button>
+            {/* Botão Relatórios mobile - só aparece se tiver permissão */}
+            {hasPermission('relatorios') && (
+              <Button size="sm" className="bg-gradient-primary flex-1 text-xs" onClick={() => navigate("/dashboard/relatorios")}>
+                <TrendingUp className="h-3 w-3 mr-1" />
+                Relatórios
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -297,11 +305,14 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <CardTitle className="text-sm sm:text-lg font-semibold">Vendas Recentes</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/vendas")} className="w-full sm:w-auto text-xs sm:text-sm">
-                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Ver Todas</span>
-                <span className="sm:hidden">Ver Todas</span>
-              </Button>
+              {/* Botão Ver Todas - só aparece se tiver permissão de vendas */}
+              {hasPermission('vendas') && (
+                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/vendas")} className="w-full sm:w-auto text-xs sm:text-sm">
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Ver Todas</span>
+                  <span className="sm:hidden">Ver Todas</span>
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6">
@@ -425,18 +436,24 @@ export default function Dashboard() {
                       )}
                     </div>
                   ))}
-                  <Button size="sm" variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm" onClick={() => navigate("/dashboard/produtos")}>
-                    Gerenciar Estoque
-                  </Button>
+                  {/* Botão Gerenciar Estoque - só aparece se tiver permissão de produtos */}
+                  {hasPermission('produtos') && (
+                    <Button size="sm" variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm" onClick={() => navigate("/dashboard/produtos")}>
+                      Gerenciar Estoque
+                    </Button>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-6 sm:py-8 text-muted-foreground">
                   <Package className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
                   <p className="text-sm sm:text-base">Estoque em dia!</p>
                   <p className="text-xs sm:text-sm">Todos os produtos estão com estoque adequado</p>
-                  <Button size="sm" variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm" onClick={() => navigate("/dashboard/produtos")}>
-                    Ver Produtos
-                  </Button>
+                  {/* Botão Ver Produtos - só aparece se tiver permissão de produtos */}
+                  {hasPermission('produtos') && (
+                    <Button size="sm" variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm" onClick={() => navigate("/dashboard/produtos")}>
+                      Ver Produtos
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

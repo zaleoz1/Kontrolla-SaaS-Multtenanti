@@ -4,6 +4,8 @@ interface OperadorContextType {
   operadorSelecionado: number | null;
   setOperadorSelecionado: (id: number | null) => void;
   limparOperador: () => void;
+  operadorAtual: any | null;
+  setOperadorAtual: (operador: any | null) => void;
 }
 
 const OperadorContext = createContext<OperadorContextType | undefined>(undefined);
@@ -16,6 +18,7 @@ const OPERADOR_STORAGE_KEY = 'kontrolla_operador_selecionado';
 
 export function OperadorProvider({ children }: OperadorProviderProps) {
   const [operadorSelecionado, setOperadorSelecionado] = useState<number | null>(null);
+  const [operadorAtual, setOperadorAtual] = useState<any | null>(null);
 
   // Carregar operador do localStorage na inicialização
   useEffect(() => {
@@ -40,17 +43,25 @@ export function OperadorProvider({ children }: OperadorProviderProps) {
       localStorage.setItem(OPERADOR_STORAGE_KEY, id.toString());
     } else {
       localStorage.removeItem(OPERADOR_STORAGE_KEY);
+      setOperadorAtual(null);
     }
   };
 
   // Função para limpar o operador (usado no logout)
   const limparOperador = () => {
     setOperadorSelecionado(null);
+    setOperadorAtual(null);
     localStorage.removeItem(OPERADOR_STORAGE_KEY);
   };
 
   return (
-    <OperadorContext.Provider value={{ operadorSelecionado, setOperadorSelecionado: atualizarOperador, limparOperador }}>
+    <OperadorContext.Provider value={{ 
+      operadorSelecionado, 
+      setOperadorSelecionado: atualizarOperador, 
+      limparOperador,
+      operadorAtual,
+      setOperadorAtual
+    }}>
       {children}
     </OperadorContext.Provider>
   );
