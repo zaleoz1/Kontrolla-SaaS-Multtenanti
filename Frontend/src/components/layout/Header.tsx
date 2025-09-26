@@ -5,6 +5,7 @@ import { Bell, Plus, Menu, User, ChevronDown, Crown, Shield, ShoppingBag } from 
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useOperador } from "@/contexts/OperadorContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
   const location = useLocation();
   const { administradores, loading } = useAdministradores();
   const { operadorSelecionado, setOperadorSelecionado } = useOperador();
+  const { hasPermission } = usePermissions();
 
   // Validar se o operador selecionado ainda existe e está ativo
   useEffect(() => {
@@ -78,11 +80,13 @@ export function Header({ onMenuClick }: PropsCabecalho) {
 
         {/* Área de ações - alinhada à direita */}
         <div className="flex items-center space-x-4 ml-auto">   
-          {/* Botão para criar nova venda */}
-          <Button variant="outline" size="sm" className="gap-2 bg-green-400 hover:bg-green-600 text-white" onClick={() => navigate("/dashboard/nova-venda")}>
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Nova Venda</span>
-          </Button>
+          {/* Botão para criar nova venda - só aparece se tiver permissão */}
+          {hasPermission('vendas_criar') && (
+            <Button variant="outline" size="sm" className="gap-2 bg-green-400 hover:bg-green-600 text-white hover:text-white" onClick={() => navigate("/dashboard/nova-venda")}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nova Venda</span>
+            </Button>
+          )}
 
           {/* Seletor de Operador */}
           <DropdownMenu>
@@ -161,18 +165,20 @@ export function Header({ onMenuClick }: PropsCabecalho) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Ícone de notificações com badge */}
-          <div className="relative">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5" />
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-              >
-                3
-              </Badge>
-            </Button>
-          </div>
+          {/* Ícone de notificações com badge - só aparece se tiver permissão de dashboard */}
+          {hasPermission('dashboard') && (
+            <div className="relative">
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="h-5 w-5" />
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                >
+                  3
+                </Badge>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>

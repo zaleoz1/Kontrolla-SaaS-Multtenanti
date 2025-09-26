@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface ConfiguracoesSidebarProps {
   activeTab: string;
@@ -24,13 +25,14 @@ interface ConfiguracoesSidebarProps {
   onClose: () => void;
 }
 
-// Definição das abas de configurações
+// Definição das abas de configurações com permissões
 const configuracoesTabs = [
   { 
     id: "conta", 
     nome: "Conta", 
     icone: User, 
-    descricao: "Dados pessoais e da empresa" 
+    descricao: "Dados pessoais e da empresa",
+    permissao: "configuracoes_gerais"
   },
   { 
     id: "fornecedores", 
@@ -38,7 +40,8 @@ const configuracoesTabs = [
     icone: Building2, 
     descricao: "Gerenciar fornecedores",
     isExternal: true,
-    path: "/dashboard/fornecedores"
+    path: "/dashboard/fornecedores",
+    permissao: "fornecedores"
   },
   { 
     id: "funcionarios", 
@@ -46,43 +49,50 @@ const configuracoesTabs = [
     icone: Users, 
     descricao: "Gerenciar funcionários",
     isExternal: true,
-    path: "/dashboard/funcionarios"
+    path: "/dashboard/funcionarios",
+    permissao: "funcionarios"
   },
   { 
     id: "administracao", 
     nome: "Administração", 
     icone: UserCog, 
-    descricao: "Gerenciar usuários e permissões" 
+    descricao: "Gerenciar usuários e permissões",
+    permissao: "configuracoes_administradores"
   },
   { 
     id: "pagamentos", 
     nome: "Meu Plano", 
     icone: CreditCard, 
-    descricao: "Planos e assinatura" 
+    descricao: "Planos e assinatura",
+    permissao: "configuracoes_gerais"
   },
   { 
     id: "metodos-pagamento", 
     nome: "Métodos De Pagamentos", 
     icone: CreditCard, 
-    descricao: "Formas de pagamento" 
+    descricao: "Formas de pagamento",
+    permissao: "configuracoes_pagamentos"
   },
   { 
     id: "tema", 
     nome: "Tema", 
     icone: Palette, 
-    descricao: "Personalização visual" 
+    descricao: "Personalização visual",
+    permissao: "configuracoes_gerais"
   },
   { 
     id: "notificacoes", 
     nome: "Notificações", 
     icone: Bell, 
-    descricao: "Alertas e notificações" 
+    descricao: "Alertas e notificações",
+    permissao: "configuracoes_gerais"
   },
   { 
     id: "seguranca", 
     nome: "Segurança", 
     icone: Shield, 
-    descricao: "Configurações de segurança" 
+    descricao: "Configurações de segurança",
+    permissao: "configuracoes_gerais"
   }
 ];
 
@@ -95,6 +105,25 @@ export function ConfiguracoesSidebar({
 }: ConfiguracoesSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { hasPermission, operador } = usePermissions();
+
+  // Função para determinar se uma aba deve ser visível
+  const isTabVisible = (tab: typeof configuracoesTabs[0]) => {
+    // Se tem permissão específica da aba, mostra
+    if (hasPermission(tab.permissao as any)) {
+      return true;
+    }
+
+    // Para vendedores com permissão de configurações, mostra apenas métodos de pagamento
+    if (operador?.role === 'vendedor' && hasPermission('configuracoes')) {
+      // Vendedores com configurações podem ver apenas métodos de pagamento
+      if (tab.id === 'metodos-pagamento') {
+        return true;
+      }
+    }
+
+    return false;
+  };
 
   return (
     <>
@@ -140,26 +169,43 @@ export function ConfiguracoesSidebar({
 
       {/* Navegação das abas */}
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-        {configuracoesTabs.map((tab) => {
+        {configuracoesTabs
+          .filter((tab) => isTabVisible(tab))
+          .map((tab) => {
           const Icon = tab.icone;
-          const handleClick = () => {
-            // Fecha o sidebar em mobile ao clicar em um item
-            if (window.innerWidth < 1024) {
-              onClose();
-            }
-            
-            if (tab.isExternal && tab.path) {
-              navigate(tab.path);
-            } else {
-              // Se estamos em uma página externa (como funcionários), navegar para configurações com a aba específica
-              if (location.pathname !== '/dashboard/configuracoes') {
-                navigate(`/dashboard/configuracoes?aba=${tab.id}`);
-              } else {
-                // Se já estamos na página de configurações, apenas mudar a aba
-                onTabChange(tab.id);
+            const handleClick = () => {
+              // Fecha o sidebar em mobile ao clicar em um item
+              if (window.innerWidth < 1024) {
+                onClose();
               }
-            }
-          };
+              
+              // Para vendedores com configurações, redireciona para métodos de pagamento
+              if (operador?.role === 'vendedor' && hasPermission('configuracoes')) {
+                if (tab.isExternal && tab.path) {
+                  navigate(tab.path);
+                } else {
+                  // Vendedores sempre vão para métodos de pagamento nas configurações
+                  if (location.pathname !== '/dashboard/configuracoes') {
+                    navigate('/dashboard/configuracoes?aba=metodos-pagamento');
+                  } else {
+                    onTabChange('metodos-pagamento');
+                  }
+                }
+                return;
+              }
+              
+              if (tab.isExternal && tab.path) {
+                navigate(tab.path);
+              } else {
+                // Se estamos em uma página externa (como funcionários), navegar para configurações com a aba específica
+                if (location.pathname !== '/dashboard/configuracoes') {
+                  navigate(`/dashboard/configuracoes?aba=${tab.id}`);
+                } else {
+                  // Se já estamos na página de configurações, apenas mudar a aba
+                  onTabChange(tab.id);
+                }
+              }
+            };
           
           return (
             <button

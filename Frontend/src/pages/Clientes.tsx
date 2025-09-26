@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCrudApi } from "@/hooks/useApi";
 import { API_ENDPOINTS, API_CONFIG } from "@/config/api";
+import { usePermissions } from "@/hooks/usePermissions";
 import { 
   Plus, 
   Search, 
@@ -81,6 +82,7 @@ export default function Clientes() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totaisPagar, setTotaisPagar] = useState<Record<number, { total_pagar: number; quantidade_contas: number }>>({});
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
 
   // Hooks para API
   const clientesApi = useCrudApi<ClientesResponse>(API_ENDPOINTS.CLIENTS.LIST);
@@ -252,22 +254,26 @@ export default function Clientes() {
 
         {/* Botão - Desktop */}
         <div className="hidden md:flex items-center justify-end">
-          <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Cliente
-          </Button>
+          {hasPermission('clientes_criar') && (
+            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Cliente
+            </Button>
+          )}
         </div>
 
         {/* Botão - Mobile */}
         <div className="md:hidden w-full">
-          <Button 
-            className="w-full bg-gradient-primary text-xs sm:text-sm" 
-            onClick={() => navigate("/dashboard/novo-cliente")}
-          >
-            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Novo Cliente</span>
-            <span className="sm:hidden">Novo Cliente</span>
-          </Button>
+          {hasPermission('clientes_criar') && (
+            <Button 
+              className="w-full bg-gradient-primary text-xs sm:text-sm" 
+              onClick={() => navigate("/dashboard/novo-cliente")}
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="sm:hidden">Novo Cliente</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -559,27 +565,34 @@ export default function Clientes() {
                   </div>
                 )}
 
-                <div className="flex space-x-1.5 sm:space-x-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 text-xs sm:text-sm"
-                    onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
-                  >
-                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Editar</span>
-                    <span className="sm:hidden">Ed.</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="px-2 sm:px-3"
-                    onClick={() => deletarCliente(cliente.id)}
-                    disabled={clientesApi.loading}
-                  >
-                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-                </div>
+                {/* Ocultar botões de ação para vendedores */}
+                {(hasPermission('clientes_editar') || hasPermission('clientes_excluir')) && (
+                  <div className="flex space-x-1.5 sm:space-x-2 pt-2">
+                    {hasPermission('clientes_editar') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-xs sm:text-sm"
+                        onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
+                      >
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Editar</span>
+                        <span className="sm:hidden">Ed.</span>
+                      </Button>
+                    )}
+                    {hasPermission('clientes_excluir') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="px-2 sm:px-3"
+                        onClick={() => deletarCliente(cliente.id)}
+                        disabled={clientesApi.loading}
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -595,14 +608,16 @@ export default function Clientes() {
             <p className="text-sm sm:text-base text-muted-foreground mb-4">
               {termoBusca || filtroStatus ? "Tente ajustar sua busca ou filtros" : "Adicione seu primeiro cliente"}
             </p>
-            <Button 
-              className="bg-gradient-primary text-xs sm:text-sm"
-              onClick={() => navigate("/dashboard/novo-cliente")}
-            >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Adicionar Cliente</span>
-              <span className="sm:hidden">Adicionar</span>
-            </Button>
+            {hasPermission('clientes_criar') && (
+              <Button 
+                className="bg-gradient-primary text-xs sm:text-sm"
+                onClick={() => navigate("/dashboard/novo-cliente")}
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Adicionar Cliente</span>
+                <span className="sm:hidden">Adicionar</span>
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

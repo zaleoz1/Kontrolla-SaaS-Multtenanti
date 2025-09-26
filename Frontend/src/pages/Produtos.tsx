@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCrudApi } from "@/hooks/useApi";
 import { API_ENDPOINTS } from "@/config/api";
+import { usePermissions } from "@/hooks/usePermissions";
 import { 
   Plus, 
   Search, 
@@ -83,6 +84,7 @@ export default function Produtos() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   
   const produtosApi = useCrudApi<ProdutosResponse>(API_ENDPOINTS.PRODUCTS.LIST);
   const deleteApi = useCrudApi(API_ENDPOINTS.PRODUCTS.LIST);
@@ -241,22 +243,26 @@ export default function Produtos() {
 
         {/* Botão - Desktop */}
         <div className="hidden md:flex items-center justify-end">
-          <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-produto")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Produto
-          </Button>
+          {hasPermission('produtos_criar') && (
+            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-produto")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Produto
+            </Button>
+          )}
         </div>
 
         {/* Botão - Mobile */}
         <div className="md:hidden w-full">
-          <Button 
-            className="w-full bg-gradient-primary text-xs sm:text-sm" 
-            onClick={() => navigate("/dashboard/novo-produto")}
-          >
-            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Novo Produto</span>
-            <span className="sm:hidden">Novo Produto</span>
-          </Button>
+          {hasPermission('produtos_criar') && (
+            <Button 
+              className="w-full bg-gradient-primary text-xs sm:text-sm" 
+              onClick={() => navigate("/dashboard/novo-produto")}
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Produto</span>
+              <span className="sm:hidden">Novo Produto</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -561,31 +567,38 @@ export default function Produtos() {
                   )}
                 </div>
 
-                <div className="flex space-x-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 text-xs sm:text-sm"
-                    onClick={() => navigate(`/dashboard/novo-produto/${produto.id}`)}
-                  >
-                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Editar</span>
-                    <span className="sm:hidden">Ed.</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs sm:text-sm"
-                    onClick={() => handleExcluirProduto(produto.id, produto.nome)}
-                    disabled={deleteApi.loading}
-                  >
-                    {deleteApi.loading ? (
-                      <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                {/* Ocultar botões de ação para vendedores */}
+                {(hasPermission('produtos_editar') || hasPermission('produtos_excluir')) && (
+                  <div className="flex space-x-2 pt-2">
+                    {hasPermission('produtos_editar') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-xs sm:text-sm"
+                        onClick={() => navigate(`/dashboard/novo-produto/${produto.id}`)}
+                      >
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Editar</span>
+                        <span className="sm:hidden">Ed.</span>
+                      </Button>
                     )}
-                  </Button>
-                </div>
+                    {hasPermission('produtos_excluir') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs sm:text-sm"
+                        onClick={() => handleExcluirProduto(produto.id, produto.nome)}
+                        disabled={deleteApi.loading}
+                      >
+                        {deleteApi.loading ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -604,14 +617,16 @@ export default function Produtos() {
                 : "Adicione seu primeiro produto"
               }
             </p>
-            <Button 
-              className="bg-gradient-primary text-xs sm:text-sm"
-              onClick={() => navigate("/dashboard/novo-produto")}
-            >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Adicionar Produto</span>
-              <span className="sm:hidden">Adicionar</span>
-            </Button>
+            {hasPermission('produtos_criar') && (
+              <Button 
+                className="bg-gradient-primary text-xs sm:text-sm"
+                onClick={() => navigate("/dashboard/novo-produto")}
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Adicionar Produto</span>
+                <span className="sm:hidden">Adicionar</span>
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

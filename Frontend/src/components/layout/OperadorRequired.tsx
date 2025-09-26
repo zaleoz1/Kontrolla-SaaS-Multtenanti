@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { User, Crown, Shield, ShoppingBag, ArrowRight, Sparkles, CheckCircle, X, ChevronLeft, LogOut } from "lucide-react";
+import { User, Crown, Shield, ShoppingBag, ArrowRight, Sparkles, CheckCircle, X, ChevronLeft, LogOut, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useOperador } from "@/contexts/OperadorContext";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions, Permissions } from "@/hooks/usePermissions";
 
 /**
  * Componente exibido quando não há operador selecionado
@@ -14,7 +16,9 @@ export function OperadorRequired() {
   const { administradores, loading } = useAdministradores();
   const { setOperadorSelecionado } = useOperador();
   const { logout } = useAuth();
+  const { permissions } = usePermissions();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [showPermissions, setShowPermissions] = useState(false);
 
   // Variantes de animação
   const fadeInUp = {
@@ -57,6 +61,81 @@ export function OperadorRequired() {
   // Função para voltar à seleção de roles
   const handleBackToRoles = () => {
     setSelectedRole(null);
+  };
+
+  // Função para renderizar as permissões do operador
+  const renderPermissions = () => {
+    if (!permissions || Object.keys(permissions).length === 0) {
+      return null;
+    }
+
+    const permissionGroups = {
+      'Dashboard e Relatórios': ['dashboard', 'relatorios'],
+      'Clientes': ['clientes', 'clientes_criar', 'clientes_editar', 'clientes_excluir'],
+      'Produtos': ['produtos', 'produtos_criar', 'produtos_editar', 'produtos_excluir', 'catalogo'],
+      'Fornecedores': ['fornecedores', 'fornecedores_criar', 'fornecedores_editar', 'fornecedores_excluir'],
+      'Funcionários': ['funcionarios', 'funcionarios_criar', 'funcionarios_editar', 'funcionarios_excluir'],
+      'Vendas': ['vendas', 'vendas_criar', 'vendas_editar', 'vendas_cancelar', 'vendas_devolver'],
+      'Financeiro': ['financeiro', 'contas_receber', 'contas_pagar', 'transacoes', 'pagamentos'],
+      'NF-e': ['nfe', 'nfe_emitir', 'nfe_cancelar'],
+      'Configurações': ['configuracoes', 'configuracoes_gerais', 'configuracoes_pagamentos', 'configuracoes_administradores']
+    };
+
+    return (
+      <motion.div
+        variants={fadeInUp}
+        className="mt-8 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Permissões do Operador</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowPermissions(!showPermissions)}
+            className="text-white hover:bg-white/10"
+          >
+            {showPermissions ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPermissions ? 'Ocultar' : 'Mostrar'}
+          </Button>
+        </div>
+        
+        {showPermissions && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-4"
+          >
+            {Object.entries(permissionGroups).map(([groupName, groupPermissions]) => {
+              const hasAnyPermission = groupPermissions.some(perm => permissions[perm as keyof Permissions]);
+              if (!hasAnyPermission) return null;
+
+              return (
+                <div key={groupName} className="space-y-2">
+                  <h4 className="text-sm font-medium text-slate-300">{groupName}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {groupPermissions.map(permission => {
+                      const hasPermission = permissions[permission as keyof Permissions];
+                      if (!hasPermission) return null;
+
+                      return (
+                        <Badge
+                          key={permission}
+                          variant="secondary"
+                          className="bg-green-500/20 text-green-400 border-green-500/30"
+                        >
+                          {permission.replace(/_/g, ' ')}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </motion.div>
+    );
   };
 
   const operatorTypes = [
@@ -307,6 +386,9 @@ export function OperadorRequired() {
               )}
             </motion.div>
           )}
+
+          {/* Permissões do operador selecionado */}
+          {!selectedRole && renderPermissions()}
 
           {/* Botão de Logout - Posicionado abaixo dos cards */}
           {!selectedRole && (

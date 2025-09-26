@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useOperador } from "@/contexts/OperadorContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Interface para dados do usuário
 interface User {
@@ -38,15 +39,16 @@ interface Tenant {
 }
 
 // Array de objetos que define os itens de navegação da sidebar
+// Cada item agora inclui a permissão necessária para acessá-lo
 const navegacao = [
-  { nome: "Dashboard", href: "/dashboard", icone: LayoutDashboard },
-  { nome: "Produtos", href: "/dashboard/produtos", icone: Package },
-  { nome: "Vendas", href: "/dashboard/vendas", icone: ShoppingCart },
-  { nome: "Catálogo", href: "/dashboard/catalogo", icone: Store },
-  { nome: "Clientes", href: "/dashboard/clientes", icone: Users },
-  { nome: "Relatórios", href: "/dashboard/relatorios", icone: BarChart3 },
-  { nome: "Financeiro", href: "/dashboard/financeiro", icone: TrendingUp },
-  { nome: "NF-e", href: "/dashboard/nfe", icone: Receipt },
+  { nome: "Dashboard", href: "/dashboard", icone: LayoutDashboard, permissao: "dashboard" },
+  { nome: "Produtos", href: "/dashboard/produtos", icone: Package, permissao: "produtos" },
+  { nome: "Vendas", href: "/dashboard/vendas", icone: ShoppingCart, permissao: "vendas" },
+  { nome: "Catálogo", href: "/dashboard/catalogo", icone: Store, permissao: "catalogo" },
+  { nome: "Clientes", href: "/dashboard/clientes", icone: Users, permissao: "clientes" },
+  { nome: "Relatórios", href: "/dashboard/relatorios", icone: BarChart3, permissao: "relatorios" },
+  { nome: "Financeiro", href: "/dashboard/financeiro", icone: TrendingUp, permissao: "financeiro" },
+  { nome: "NF-e", href: "/dashboard/nfe", icone: Receipt, permissao: "nfe" },
 ];
 
 interface PropsSidebar {
@@ -60,6 +62,7 @@ interface PropsSidebar {
 // Componente principal da Sidebar
 export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSidebar) {
   const { operadorSelecionado } = useOperador();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   // Se não há operador selecionado, não renderizar a sidebar
@@ -113,34 +116,36 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
 
         {/* Navegação principal */}
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-          {navegacao.map((item) => (
-            // Cada item de navegação é um NavLink do React Router
-            <NavLink
-              key={item.nome}
-              to={item.href}
-              end={item.href === "/dashboard"}
-              onClick={() => {
-                // Fecha o sidebar em mobile ao clicar em um item
-                if (window.innerWidth < 1378) {
-                  onClose();
+          {navegacao
+            .filter((item) => hasPermission(item.permissao as any)) // Filtrar itens baseado em permissões
+            .map((item) => (
+              // Cada item de navegação é um NavLink do React Router
+              <NavLink
+                key={item.nome}
+                to={item.href}
+                end={item.href === "/dashboard"}
+                onClick={() => {
+                  // Fecha o sidebar em mobile ao clicar em um item
+                  if (window.innerWidth < 1378) {
+                    onClose();
+                  }
+                }}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isActive 
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                      : "text-sidebar-foreground"
+                  )
                 }
-              }}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
-                    : "text-sidebar-foreground"
-                )
-              }
-            >
-              {/* Ícone do item */}
-              <item.icone className="mr-3 h-5 w-5" />
-              {/* Nome do item */}
-              {item.nome}
-            </NavLink>
-          ))}
+              >
+                {/* Ícone do item */}
+                <item.icone className="mr-3 h-5 w-5" />
+                {/* Nome do item */}
+                {item.nome}
+              </NavLink>
+            ))}
         </nav>
 
         {/* Seção do usuário na parte inferior */}
@@ -163,28 +168,30 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
             </div>
           </div>
           
-          {/* Botão de configurações */}
-          <NavLink
-            to="/dashboard/configuracoes"
-            onClick={() => {
-              // Fecha o sidebar em mobile ao clicar em um item
-              if (window.innerWidth < 1378) {
-                onClose();
+          {/* Botão de configurações - só aparece se tiver permissão */}
+          {hasPermission('configuracoes') && (
+            <NavLink
+              to="/dashboard/configuracoes"
+              onClick={() => {
+                // Fecha o sidebar em mobile ao clicar em um item
+                if (window.innerWidth < 1378) {
+                  onClose();
+                }
+              }}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 w-full justify-start",
+                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  isActive 
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                    : "text-sidebar-foreground"
+                )
               }
-            }}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 w-full justify-start",
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isActive 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
-                  : "text-sidebar-foreground"
-              )
-            }
-          >
-            <Settings className="mr-3 h-4 w-4" />
-            Configurações
-          </NavLink>
+            >
+              <Settings className="mr-3 h-4 w-4" />
+              Configurações
+            </NavLink>
+          )}
           
           {/* Botão de sair */}
           <Button 
