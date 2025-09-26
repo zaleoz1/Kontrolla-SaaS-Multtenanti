@@ -562,21 +562,24 @@ export default function NovoProduto() {
   }, [produto.nome, produto.categoria_id, produto.fornecedor_id, produto.codigo_barras, produto.sku, produto.tipo_preco, produto.preco, produto.estoque, produto.estoque_minimo]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold">
+      <div className="w-full">
+        {/* Título e Descrição - Sempre no topo */}
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">
             {isEditMode ? 'Editar Produto' : 'Novo Produto'}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             {isEditMode 
               ? 'Edite as informações do produto' 
               : 'Adicione um novo produto ao seu catálogo'
             }
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+
+        {/* Botões - Desktop */}
+        <div className="hidden md:flex items-center space-x-2 justify-end">
           <Button variant="outline" onClick={() => navigate("/dashboard/produtos")}>
             <X className="h-4 w-4 mr-2" />
             Cancelar
@@ -597,36 +600,75 @@ export default function NovoProduto() {
             }
           </Button>
         </div>
+
+        {/* Botões - Mobile */}
+        <div className="md:hidden flex gap-2 w-full">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/dashboard/produtos")}
+            className="flex-1 text-xs sm:text-sm"
+          >
+            <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Cancelar</span>
+            <span className="sm:hidden">Cancelar</span>
+          </Button>
+          <Button 
+            className="flex-1 bg-gradient-primary text-xs sm:text-sm" 
+            onClick={salvarProduto}
+            disabled={!formularioValido || loading || carregandoProduto}
+          >
+            {loading ? (
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+            ) : (
+              <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">
+              {loading 
+                ? (isEditMode ? 'Atualizando...' : 'Salvando...') 
+                : (isEditMode ? 'Atualizar Produto' : 'Salvar Produto')
+              }
+            </span>
+            <span className="sm:hidden">
+              {loading 
+                ? (isEditMode ? 'Atualizando...' : 'Salvando...') 
+                : (isEditMode ? 'Atualizar' : 'Salvar')
+              }
+            </span>
+          </Button>
+        </div>
       </div>
 
       {/* Loading State para Edição */}
       {carregandoProduto && (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Carregando produto para edição...</p>
+        <div className="flex items-center justify-center py-6 sm:py-12">
+          <div className="text-center space-y-3 sm:space-y-4">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto text-primary" />
+            <p className="text-sm sm:text-base text-muted-foreground">Carregando produto para edição...</p>
           </div>
         </div>
       )}
 
       {/* Conteúdo Principal */}
       {!carregandoProduto && (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Coluna Esquerda - Formulário */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-2 lg:order-1">
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="basico" className="flex items-center space-x-2">
-                <Package className="h-4 w-4" />
-                <span>Básico</span>
+            <TabsList className="grid w-full grid-cols-3 h-auto">
+              <TabsTrigger value="basico" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Básico</span>
+                <span className="sm:hidden">Básico</span>
               </TabsTrigger>
-              <TabsTrigger value="preco" className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4" />
-                <span>Preço</span>
+              <TabsTrigger value="preco" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Preço</span>
+                <span className="sm:hidden">Preço</span>
               </TabsTrigger>
-              <TabsTrigger value="estoque" className="flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4" />
-                <span>Estoque</span>
+              <TabsTrigger value="estoque" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Estoque</span>
+                <span className="sm:hidden">Estoque</span>
               </TabsTrigger>
             </TabsList>
 
@@ -634,11 +676,11 @@ export default function NovoProduto() {
             <TabsContent value="basico" className="space-y-4">
               <Card className="bg-gradient-card shadow-card">
                 <CardHeader>
-                  <CardTitle>Informações Básicas</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Informações Básicas</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Nome do Produto *</label>
+                    <label className="text-xs sm:text-sm font-medium">Nome do Produto *</label>
                     <Input
                       placeholder="Ex: Meu Produto Premium"
                       value={produto.nome}
@@ -649,7 +691,7 @@ export default function NovoProduto() {
                           setErrosValidacao(prev => ({ ...prev, nome: false }));
                         }
                       }}
-                      className={`mt-1 ${errosValidacao.nome ? 'border-red-500 focus:border-red-500' : ''}`}
+                      className={`mt-1 text-xs sm:text-sm ${errosValidacao.nome ? 'border-red-500 focus:border-red-500' : ''}`}
                     />
                     {errosValidacao.nome && (
                       <p className="text-xs text-red-500 mt-1">Nome do produto é obrigatório</p>
@@ -657,18 +699,18 @@ export default function NovoProduto() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium">Descrição</label>
+                    <label className="text-xs sm:text-sm font-medium">Descrição</label>
                     <textarea
                       placeholder="Descreva as características do produto..."
                       value={produto.descricao}
                       onChange={(e) => atualizarProduto("descricao", e.target.value)}
-                      className="w-full mt-1 p-2 border rounded-md bg-background min-h-[100px] resize-none"
+                      className="w-full mt-1 p-2 border rounded-md bg-background min-h-[80px] sm:min-h-[100px] resize-none text-xs sm:text-sm"
                     />
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Categoria *</label>
+                      <label className="text-xs sm:text-sm font-medium">Categoria *</label>
                       <div className="space-y-2">
                         <select
                           value={produto.categoria_id || ""}
@@ -682,7 +724,7 @@ export default function NovoProduto() {
                               setErrosValidacao(prev => ({ ...prev, categoria: false }));
                             }
                           }}
-                          className={`w-full p-2 border rounded-md bg-background ${errosValidacao.categoria ? 'border-red-500 focus:border-red-500' : ''}`}
+                          className={`w-full p-2 border rounded-md bg-background text-xs sm:text-sm ${errosValidacao.categoria ? 'border-red-500 focus:border-red-500' : ''}`}
                         >
                           <option value="">Selecione uma categoria</option>
                           {categorias.map((categoria) => (
@@ -698,46 +740,50 @@ export default function NovoProduto() {
                             variant="outline"
                             size="sm"
                             onClick={() => setMostrarInputNovaCategoria(true)}
-                            className="w-full"
+                            className="w-full text-xs sm:text-sm"
                           >
                             + Nova Categoria
                           </Button>
                         ) : (
-                          <div className="flex space-x-2">
+                          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                             <Input
                               placeholder="Nome da nova categoria"
                               value={novaCategoria}
                               onChange={(e) => setNovaCategoria(e.target.value)}
-                              className="flex-1"
+                              className="flex-1 text-xs sm:text-sm"
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
                                   criarNovaCategoria();
                                 }
                               }}
                             />
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={criarNovaCategoria}
-                              disabled={!novaCategoria.trim() || loading}
-                            >
-                              {loading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <CheckCircle className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setMostrarInputNovaCategoria(false);
-                                setNovaCategoria("");
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={criarNovaCategoria}
+                                disabled={!novaCategoria.trim() || loading}
+                                className="text-xs sm:text-sm"
+                              >
+                                {loading ? (
+                                  <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setMostrarInputNovaCategoria(false);
+                                  setNovaCategoria("");
+                                }}
+                                className="text-xs sm:text-sm"
+                              >
+                                <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </div>
                           </div>
                         )}
                         {errosValidacao.categoria && (
@@ -747,29 +793,29 @@ export default function NovoProduto() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Marca</label>
+                      <label className="text-xs sm:text-sm font-medium">Marca</label>
                       <Input
                         placeholder="Ex: Samsung, Apple, Xiaomi..."
                         value={produto.marca}
                         onChange={(e) => atualizarProduto("marca", e.target.value)}
-                        className="mt-1"
+                        className="mt-1 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Modelo</label>
+                      <label className="text-xs sm:text-sm font-medium">Modelo</label>
                       <Input
                         placeholder="Ex: Meu Modelo"
                         value={produto.modelo}
                         onChange={(e) => atualizarProduto("modelo", e.target.value)}
-                        className="mt-1"
+                        className="mt-1 text-xs sm:text-sm"
                       />
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Fornecedor</label>
+                      <label className="text-xs sm:text-sm font-medium">Fornecedor</label>
                       <select
                         value={produto.fornecedor_id === null ? "0" : (produto.fornecedor_id || "")}
                         onChange={(e) => {
@@ -777,7 +823,7 @@ export default function NovoProduto() {
                           // Se for "0" (Sem fornecedor), enviar null para o backend
                           atualizarProduto("fornecedor_id", fornecedorId === 0 ? null : fornecedorId);
                         }}
-                        className="w-full mt-1 p-2 border rounded-md bg-background"
+                        className="w-full mt-1 p-2 border rounded-md bg-background text-xs sm:text-sm"
                       >
                         <option value="">Selecione um fornecedor</option>
                         <option value="0">Nenhum fornecedor</option>
@@ -790,10 +836,10 @@ export default function NovoProduto() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Código de Barras *</label>
-                      <div className="flex space-x-2 mt-1">
+                      <label className="text-xs sm:text-sm font-medium">Código de Barras *</label>
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-1">
                       <Input
                         placeholder="7891234567890"
                         value={produto.codigo_barras}
@@ -804,7 +850,7 @@ export default function NovoProduto() {
                               setErrosValidacao(prev => ({ ...prev, codigo_barras: false }));
                             }
                           }}
-                          className={`flex-1 ${errosValidacao.codigo_barras ? 'border-red-500 focus:border-red-500' : ''}`}
+                          className={`flex-1 text-xs sm:text-sm ${errosValidacao.codigo_barras ? 'border-red-500 focus:border-red-500' : ''}`}
                         />
                         <Button
                           type="button"
@@ -813,6 +859,7 @@ export default function NovoProduto() {
                           onClick={gerarCodigoBarras}
                           disabled={!produto.nome.trim()}
                           title="Gerar código de barras EAN-13"
+                          className="text-xs sm:text-sm"
                         >
                           Gerar
                         </Button>
@@ -827,8 +874,8 @@ export default function NovoProduto() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">SKU *</label>
-                      <div className="flex space-x-2 mt-1">
+                      <label className="text-xs sm:text-sm font-medium">SKU *</label>
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-1">
                       <Input
                         placeholder="Código interno do produto"
                         value={produto.sku}
@@ -839,7 +886,7 @@ export default function NovoProduto() {
                               setErrosValidacao(prev => ({ ...prev, sku: false }));
                             }
                           }}
-                          className={`flex-1 ${errosValidacao.sku ? 'border-red-500 focus:border-red-500' : ''}`}
+                          className={`flex-1 text-xs sm:text-sm ${errosValidacao.sku ? 'border-red-500 focus:border-red-500' : ''}`}
                         />
                         <Button
                           type="button"
@@ -848,6 +895,7 @@ export default function NovoProduto() {
                           onClick={gerarSKU}
                           disabled={!produto.nome.trim()}
                           title="Gerar SKU baseado no nome e categoria"
+                          className="text-xs sm:text-sm"
                         >
                           Gerar
                         </Button>
@@ -867,16 +915,16 @@ export default function NovoProduto() {
               {/* Card de Status */}
               <Card className="bg-gradient-card shadow-card">
                 <CardHeader>
-                  <CardTitle>Status do Produto</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Status do Produto</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Status</label>
+                      <label className="text-xs sm:text-sm font-medium">Status</label>
                       <select
                         value={produto.status}
                         onChange={(e) => atualizarProduto("status", e.target.value as Produto["status"])}
-                        className="w-full mt-1 p-2 border rounded-md bg-background"
+                        className="w-full mt-1 p-2 border rounded-md bg-background text-xs sm:text-sm"
                       >
                         <option value="rascunho">Rascunho</option>
                         <option value="ativo">Ativo</option>
@@ -895,7 +943,7 @@ export default function NovoProduto() {
                         onChange={(e) => atualizarProduto("destaque", e.target.checked)}
                         className="rounded"
                       />
-                      <label htmlFor="destaque" className="text-sm font-medium">
+                      <label htmlFor="destaque" className="text-xs sm:text-sm font-medium">
                         Produto em Destaque
                       </label>
                     </div>
@@ -908,12 +956,12 @@ export default function NovoProduto() {
             <TabsContent value="preco" className="space-y-4">
               <Card className="bg-gradient-card shadow-card">
                 <CardHeader>
-                  <CardTitle>Configurações de Preço</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Configurações de Preço</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Tipo de Preço */}
                   <div>
-                    <label className="text-sm font-medium">Tipo de Preço *</label>
+                    <label className="text-xs sm:text-sm font-medium">Tipo de Preço *</label>
                     <select
                       value={produto.tipo_preco}
                       onChange={(e) => {
@@ -923,7 +971,7 @@ export default function NovoProduto() {
                           setErrosValidacao(prev => ({ ...prev, tipo_preco: false }));
                         }
                       }}
-                      className={`w-full mt-1 p-2 border rounded-md bg-background ${errosValidacao.tipo_preco ? 'border-red-500 focus:border-red-500' : ''}`}
+                      className={`w-full mt-1 p-2 border rounded-md bg-background text-xs sm:text-sm ${errosValidacao.tipo_preco ? 'border-red-500 focus:border-red-500' : ''}`}
                     >
                       <option value="unidade">Por Unidade</option>
                       <option value="kg">Por Quilograma (KG)</option>
@@ -941,9 +989,9 @@ export default function NovoProduto() {
                   </div>
 
                   {/* Preços baseados no tipo selecionado */}
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">
+                      <label className="text-xs sm:text-sm font-medium">
                         Preço de Venda * 
                         {produto.tipo_preco === "unidade" && " (por unidade)"}
                         {produto.tipo_preco === "kg" && " (por KG)"}
@@ -962,7 +1010,7 @@ export default function NovoProduto() {
                             setErrosValidacao(prev => ({ ...prev, preco: false }));
                           }
                         }}
-                        className={`mt-1 ${errosValidacao.preco ? 'border-red-500 focus:border-red-500' : ''}`}
+                        className={`mt-1 text-xs sm:text-sm ${errosValidacao.preco ? 'border-red-500 focus:border-red-500' : ''}`}
                       />
                       {errosValidacao.preco && (
                         <p className="text-xs text-red-500 mt-1">Preço de venda é obrigatório</p>
@@ -970,7 +1018,7 @@ export default function NovoProduto() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">
+                      <label className="text-xs sm:text-sm font-medium">
                         Preço Promocional
                         {produto.tipo_preco === "unidade" && " (por unidade)"}
                         {produto.tipo_preco === "kg" && " (por KG)"}
@@ -983,7 +1031,7 @@ export default function NovoProduto() {
                         placeholder="0,00"
                         value={produto.preco_promocional || ""}
                         onChange={(e) => atualizarProduto("preco_promocional", e.target.value ? parseFloat(e.target.value) : null)}
-                        className="mt-1"
+                        className="mt-1 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
@@ -1045,14 +1093,14 @@ export default function NovoProduto() {
             <TabsContent value="estoque" className="space-y-4">
               <Card className="bg-gradient-card shadow-card">
                 <CardHeader>
-                  <CardTitle>Controle de Estoque</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Controle de Estoque</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Informação sobre o tipo de estoque */}
-                  <div className="p-3 rounded-lg bg-muted/30">
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/30">
                     <div className="flex items-center space-x-2">
                       <div className="h-2 w-2 bg-primary rounded-full"></div>
-                      <span className="text-sm font-medium">
+                      <span className="text-xs sm:text-sm font-medium">
                         {produto.tipo_preco === "unidade" && "Estoque por Unidades"}
                         {produto.tipo_preco === "kg" && "Estoque por Peso (KG)"}
                         {produto.tipo_preco === "litros" && "Estoque por Volume (Litros)"}
@@ -1065,9 +1113,9 @@ export default function NovoProduto() {
                     </p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">
+                      <label className="text-xs sm:text-sm font-medium">
                         {produto.tipo_preco === "unidade" && "Quantidade em Estoque"}
                         {produto.tipo_preco === "kg" && "Peso Total Disponível (KG)"}
                         {produto.tipo_preco === "litros" && "Volume Total Disponível (L)"}
@@ -1085,7 +1133,7 @@ export default function NovoProduto() {
                             setErrosValidacao(prev => ({ ...prev, estoque: false }));
                           }
                         }}
-                        className={`mt-1 ${errosValidacao.estoque ? 'border-red-500 focus:border-red-500' : ''}`}
+                        className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque ? 'border-red-500 focus:border-red-500' : ''}`}
                       />
                       {errosValidacao.estoque ? (
                         <p className="text-xs text-red-500 mt-1">Quantidade em estoque é obrigatória</p>
@@ -1099,7 +1147,7 @@ export default function NovoProduto() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">
+                      <label className="text-xs sm:text-sm font-medium">
                         {produto.tipo_preco === "unidade" && "Estoque Mínimo"}
                         {produto.tipo_preco === "kg" && "Peso Mínimo (KG)"}
                         {produto.tipo_preco === "litros" && "Volume Mínimo (L)"}
@@ -1117,7 +1165,7 @@ export default function NovoProduto() {
                             setErrosValidacao(prev => ({ ...prev, estoque_minimo: false }));
                           }
                         }}
-                        className={`mt-1 ${errosValidacao.estoque_minimo ? 'border-red-500 focus:border-red-500' : ''}`}
+                        className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_minimo ? 'border-red-500 focus:border-red-500' : ''}`}
                       />
                       {errosValidacao.estoque_minimo ? (
                         <p className="text-xs text-red-500 mt-1">Estoque mínimo é obrigatório</p>
@@ -1191,13 +1239,13 @@ export default function NovoProduto() {
         </div>
 
         {/* Coluna Direita - Preview e Imagens */}
-        <div className="space-y-4">
+        <div className="space-y-4 order-1 lg:order-2">
           {/* Preview do Produto */}
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle>Preview do Produto</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Preview do Produto</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               {produto.nome ? (
                 <div className="space-y-3">
                   <div className="aspect-square bg-muted/30 rounded-lg flex items-center justify-center">
@@ -1208,31 +1256,31 @@ export default function NovoProduto() {
                         className="w-full h-full object-cover rounded-lg"
                       />
                     ) : (
-                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <ImageIcon className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
                     )}
                   </div>
 
                   <div>
-                    <h3 className="font-semibold">{produto.nome}</h3>
+                    <h3 className="font-semibold text-sm sm:text-base truncate">{produto.nome}</h3>
                     {produto.categoria && (
-                      <Badge variant="outline" className="mt-1">
+                      <Badge variant="outline" className="mt-1 text-xs">
                         {produto.categoria}
                       </Badge>
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {produto.preco_promocional && produto.preco_promocional > 0 ? (
                       <div className="flex items-center space-x-2">
-                        <span className="text-lg font-bold text-primary">
+                        <span className="text-base sm:text-lg font-bold text-primary">
                           R$ {Number(produto.preco_promocional).toFixed(2)}
                         </span>
-                        <span className="text-sm text-muted-foreground line-through">
+                        <span className="text-xs sm:text-sm text-muted-foreground line-through">
                           R$ {produto.preco ? Number(produto.preco).toFixed(2) : "0,00"}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-lg font-bold text-primary">
+                      <span className="text-base sm:text-lg font-bold text-primary">
                         R$ {produto.preco ? Number(produto.preco).toFixed(2) : "0,00"}
                       </span>
                     )}
@@ -1247,26 +1295,26 @@ export default function NovoProduto() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm text-muted-foreground space-y-1 sm:space-y-0">
+                    <span className="truncate">
                       Estoque: {produto.estoque || 0} 
                       {produto.tipo_preco === "unidade" && " un."}
                       {produto.tipo_preco === "kg" && "kg"}
                       {produto.tipo_preco === "litros" && "L"}
                     </span>
-                    <span>SKU: {produto.sku || "N/A"}</span>
+                    <span className="truncate">SKU: {produto.sku || "N/A"}</span>
                   </div>
 
                   {produto.destaque && (
-                    <Badge className="bg-warning/80 text-warning-foreground">
+                    <Badge className="bg-warning/80 text-warning-foreground text-xs">
                       Destaque
                     </Badge>
                   )}
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-2" />
-                  <p>Preencha as informações básicas para ver o preview</p>
+                  <Package className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2" />
+                  <p className="text-xs sm:text-sm">Preencha as informações básicas para ver o preview</p>
                 </div>
               )}
             </CardContent>
@@ -1275,17 +1323,17 @@ export default function NovoProduto() {
           {/* Upload de Imagens */}
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between text-sm sm:text-base">
                 Imagens do Produto
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   {produto.imagens.length}/5 imagens
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               {/* Grid de Imagens */}
               {produto.imagens.length > 0 && (
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
+                <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3">
                   {produto.imagens.map((imagem, index) => (
                     <div key={index} className="relative aspect-square group">
                       <img 
@@ -1294,31 +1342,31 @@ export default function NovoProduto() {
                         className="w-full h-full object-cover rounded-lg border border-border cursor-pointer"
                         onClick={() => setImagemPreview(imagem)}
                       />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-2">
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-1 sm:space-x-2">
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-8 w-8 p-0"
+                          className="h-6 w-6 sm:h-8 sm:w-8 p-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             setImagemPreview(imagem);
                           }}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="h-8 w-8 p-0"
+                          className="h-6 w-6 sm:h-8 sm:w-8 p-0"
                           onClick={(e) => {
                             e.stopPropagation();
                             removerImagem(index);
                           }}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
-                      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-black/70 text-white text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded">
                         {index + 1}
                       </div>
                     </div>
@@ -1329,9 +1377,9 @@ export default function NovoProduto() {
                     <div className="aspect-square">
                       <label htmlFor="image-upload" className="cursor-pointer">
                         <div className="w-full h-full border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center hover:border-primary/50 transition-colors">
-                          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                          <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground mb-1 sm:mb-2" />
                           <p className="text-xs text-muted-foreground text-center">
-                            Adicionar Imagem
+                            Adicionar
                           </p>
                         </div>
                       </label>
@@ -1351,7 +1399,7 @@ export default function NovoProduto() {
               {/* Área de Upload Principal */}
               {produto.imagens.length === 0 && (
                 <div 
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-colors ${
                     isDragOver 
                       ? 'border-primary bg-primary/5' 
                       : 'border-muted-foreground/25 hover:border-primary/50'
@@ -1360,18 +1408,18 @@ export default function NovoProduto() {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <Upload className={`h-12 w-12 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <h3 className="text-lg font-medium mb-2">
+                  <Upload className={`h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <h3 className="text-sm sm:text-lg font-medium mb-2">
                     {isDragOver ? 'Solte as imagens aqui' : 'Adicionar Imagens do Produto'}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
                     {isDragOver 
                       ? 'As imagens serão redimensionadas automaticamente'
                       : 'Arraste e solte ou clique para selecionar até 5 imagens. Elas serão redimensionadas automaticamente para 800x800px.'
                     }
                   </p>
                   <div className="space-y-2">
-                    <Button asChild>
+                    <Button asChild className="text-xs sm:text-sm">
                       <label htmlFor="main-image-upload" className="cursor-pointer">
                         Selecionar Imagens
                       </label>
@@ -1408,50 +1456,50 @@ export default function NovoProduto() {
           {/* Validação do Formulário */}
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle>Status do Formulário</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Status do Formulário</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center space-x-2">
                 {produto.nome ? (
-                  <CheckCircle className="h-4 w-4 text-success" />
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="text-sm">Nome do produto</span>
+                <span className="text-xs sm:text-sm">Nome do produto</span>
               </div>
 
               <div className="flex items-center space-x-2">
                 {produto.categoria_id ? (
-                  <CheckCircle className="h-4 w-4 text-success" />
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="text-sm">Categoria (opcional)</span>
+                <span className="text-xs sm:text-sm">Categoria (opcional)</span>
               </div>
 
               <div className="flex items-center space-x-2">
                 {produto.preco && produto.preco > 0 ? (
-                  <CheckCircle className="h-4 w-4 text-success" />
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="text-sm">Preço de venda</span>
+                <span className="text-xs sm:text-sm">Preço de venda</span>
               </div>
 
               <div className="flex items-center space-x-2">
                 {produto.estoque !== null && produto.estoque >= 0 ? (
-                  <CheckCircle className="h-4 w-4 text-success" />
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="text-sm">Quantidade em estoque</span>
+                <span className="text-xs sm:text-sm">Quantidade em estoque</span>
               </div>
 
               {formularioValido && (
                 <div className="pt-2 border-t">
                   <div className="flex items-center space-x-2 text-success">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Formulário válido</span>
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium">Formulário válido</span>
                   </div>
                 </div>
               )}
@@ -1463,16 +1511,16 @@ export default function NovoProduto() {
 
       {/* Modal de Preview da Imagem */}
       {imagemPreview && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-[90vh] bg-background rounded-lg overflow-hidden">
-            <div className="absolute top-4 right-4 z-10">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="relative max-w-4xl max-h-[90vh] bg-background rounded-lg overflow-hidden w-full">
+            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => setImagemPreview(null)}
-                className="h-8 w-8 p-0"
+                className="h-6 w-6 sm:h-8 sm:w-8 p-0"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
             <img 

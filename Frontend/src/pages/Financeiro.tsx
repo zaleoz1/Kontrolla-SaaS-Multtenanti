@@ -551,16 +551,19 @@ export default function Financeiro() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold">Financeiro</h1>
-          <p className="text-muted-foreground">
+      <div className="w-full">
+        {/* Título e Descrição - Sempre no topo */}
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">Financeiro</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Controle financeiro e fluxo de caixa
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+
+        {/* Filtros e Ações - Desktop */}
+        <div className="hidden md:flex items-center space-x-2 justify-end">
           <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -581,85 +584,124 @@ export default function Financeiro() {
             Nova Transação
           </Button>
         </div>
+
+        {/* Filtros e Ações - Mobile */}
+        <div className="md:hidden space-y-3 w-full">
+          <div className="space-y-1 w-full">
+            <Label className="text-xs font-medium">Período:</Label>
+            <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hoje">Hoje</SelectItem>
+                <SelectItem value="semana">Esta Semana</SelectItem>
+                <SelectItem value="mes">Este Mês</SelectItem>
+                <SelectItem value="ano">Este Ano</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2 w-full">
+            <Button 
+              variant="outline" 
+              onClick={recarregarDados} 
+              disabled={loadingStats}
+              className="flex-1 text-xs sm:text-sm"
+            >
+              <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Atualizar</span>
+              <span className="sm:hidden">Atualizar</span>
+            </Button>
+            <Button 
+              className="flex-1 bg-gradient-primary text-xs sm:text-sm" 
+              onClick={() => navigate("/dashboard/nova-transacao")}
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Nova Transação</span>
+              <span className="sm:hidden">Nova</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">A Receber</p>
                 {loadingStats ? (
-                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-2xl font-bold text-success">
+                  <p className="text-sm sm:text-2xl font-bold text-success break-words">
                     {formatarValor(totalReceber)}
                   </p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-success/10">
-                <ArrowUpRight className="h-5 w-5 text-success" />
+              <div className="p-1 sm:p-2 rounded-lg bg-success/10 flex-shrink-0 self-start sm:self-auto">
+                <ArrowUpRight className="h-3 w-3 sm:h-5 sm:w-5 text-success" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">A Pagar</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">A Pagar</p>
                 {loadingStats ? (
-                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-2xl font-bold text-destructive">
+                  <p className="text-sm sm:text-2xl font-bold text-destructive break-words">
                     {formatarValor(totalPagar)}
                   </p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-destructive/10">
-                <ArrowDownRight className="h-5 w-5 text-destructive" />
+              <div className="p-1 sm:p-2 rounded-lg bg-destructive/10 flex-shrink-0 self-start sm:self-auto">
+                <ArrowDownRight className="h-3 w-3 sm:h-5 sm:w-5 text-destructive" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Fluxo de Caixa</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Fluxo de Caixa</p>
                 {loadingStats ? (
-                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className={`text-2xl font-bold ${fluxoCaixa >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  <p className={`text-sm sm:text-2xl font-bold break-words ${fluxoCaixa >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatarValor(fluxoCaixa)}
                   </p>
                 )}
               </div>
-              <div className={`p-2 rounded-lg ${fluxoCaixa >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
-                <Wallet className={`h-5 w-5 ${fluxoCaixa >= 0 ? 'text-success' : 'text-destructive'}`} />
+              <div className={`p-1 sm:p-2 rounded-lg flex-shrink-0 self-start sm:self-auto ${fluxoCaixa >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                <Wallet className={`h-3 w-3 sm:h-5 sm:w-5 ${fluxoCaixa >= 0 ? 'text-success' : 'text-destructive'}`} />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Saldo Atual</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Saldo Atual</p>
                 {loadingStats ? (
-                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-2xl font-bold text-primary">
+                  <p className="text-sm sm:text-2xl font-bold text-primary break-words">
                     {formatarValor(saldoAtual)}
                   </p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <DollarSign className="h-5 w-5 text-primary" />
+              <div className="p-1 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 self-start sm:self-auto">
+                <DollarSign className="h-3 w-3 sm:h-5 sm:w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -668,19 +710,31 @@ export default function Financeiro() {
 
       {/* Abas Financeiras */}
       <Tabs defaultValue="receber" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="receber">Contas a Receber</TabsTrigger>  
-          <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
-          <TabsTrigger value="transacoes">Transações</TabsTrigger>
-          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <TabsTrigger value="receber" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <span className="hidden sm:inline">Contas a Receber</span>
+            <span className="sm:hidden">Receber</span>
+          </TabsTrigger>  
+          <TabsTrigger value="pagar" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <span className="hidden sm:inline">Contas a Pagar</span>
+            <span className="sm:hidden">Pagar</span>
+          </TabsTrigger>
+          <TabsTrigger value="transacoes" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <span className="hidden sm:inline">Transações</span>
+            <span className="sm:hidden">Transações</span>
+          </TabsTrigger>
+          <TabsTrigger value="relatorios" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+            <span className="hidden sm:inline">Relatórios</span>
+            <span className="sm:hidden">Relatórios</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="receber" className="space-y-4">
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Contas a Receber</CardTitle>
-                <Badge variant="secondary">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <CardTitle className="text-sm sm:text-base">Contas a Receber</CardTitle>
+                <Badge variant="secondary" className="w-fit">
                   {loadingContasReceber ? '...' : contasReceber.length} pendentes
                 </Badge>
               </div>
@@ -717,14 +771,14 @@ export default function Financeiro() {
                   <p className="text-muted-foreground">Nenhuma conta a receber encontrada</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {contasReceber.map((item) => {
                     const dias = calcularDiasVencimento(item.data_vencimento);
                     return (
-                      <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <p className="font-semibold">{item.cliente_nome || 'Cliente não informado'}</p>
+                      <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-sm sm:text-base truncate">{item.cliente_nome || 'Cliente não informado'}</p>
                             {obterBadgeStatus(item.status, dias)}
                             {item.tipo_origem === 'venda' && (
                               <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
@@ -737,8 +791,8 @@ export default function Financeiro() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{item.descricao}</p>
-                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.descricao}</p>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                             <span>Vencimento: {formatarData(item.data_vencimento)}</span>
                             {item.parcela && <span>Parcela: {item.parcela}</span>}
                             <span className={`font-medium ${
@@ -750,19 +804,20 @@ export default function Financeiro() {
                             </span>
                           </div>
                         </div>
-                        <div className="text-right space-y-1">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
                           {/* Valor principal */}
-                          <p className="text-lg font-bold text-success">{formatarValor(Number(item.valor) || 0)}</p>
-                          
+                          <p className="text-sm sm:text-lg font-bold text-success break-words">{formatarValor(Number(item.valor) || 0)}</p>
                           
                           {item.status === 'pendente' && (
                             <Button 
                               size="sm" 
                               variant="outline"
                               onClick={() => abrirModalPagamento(item, 'receber')}
+                              className="text-xs sm:text-sm"
                             >
-                              <Receipt className="h-4 w-4 mr-2" />
-                              Receber
+                              <Receipt className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Receber</span>
+                              <span className="sm:hidden">Receber</span>
                             </Button>
                           )}
                         </div>
@@ -778,10 +833,10 @@ export default function Financeiro() {
         <TabsContent value="pagar" className="space-y-4">
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Contas a Pagar</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <CardTitle className="text-sm sm:text-base">Contas a Pagar</CardTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className="w-fit">
                     {loadingContasPagar ? '...' : contasPagar.length} pendentes
                   </Badge>
                   {contasPagar.some(conta => conta.tipo_conta === 'funcionario') && (
@@ -824,14 +879,14 @@ export default function Financeiro() {
                   <p className="text-muted-foreground">Nenhuma conta a pagar encontrada</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {contasPagar.map((item) => {
                     const dias = calcularDiasVencimento(item.data_vencimento);
                     return (
-                      <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <p className="font-semibold">{item.fornecedor}</p>
+                      <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-sm sm:text-base truncate">{item.fornecedor}</p>
                             {obterBadgeStatus(item.status, dias)}
                             {item.tipo_origem === 'transacao' && (
                               <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
@@ -849,8 +904,8 @@ export default function Financeiro() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{item.descricao}</p>
-                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.descricao}</p>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                             <span>Vencimento: {formatarData(item.data_vencimento)}</span>
                             {item.categoria && (
                               <Badge variant="outline" className="text-xs">{item.categoria}</Badge>
@@ -862,16 +917,18 @@ export default function Financeiro() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right space-y-1">
-                          <p className="text-lg font-bold text-destructive">{formatarValor(Number(item.valor) || 0)}</p>
+                        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
+                          <p className="text-sm sm:text-lg font-bold text-destructive break-words">{formatarValor(Number(item.valor) || 0)}</p>
                           {item.status === 'pendente' && (
                             <Button 
                               size="sm" 
                               variant="outline"
                               onClick={() => abrirModalPagamento(item, 'pagar')}
+                              className="text-xs sm:text-sm"
                             >
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              Pagar
+                              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Pagar</span>
+                              <span className="sm:hidden">Pagar</span>
                             </Button>
                           )}
                         </div>
@@ -887,7 +944,7 @@ export default function Financeiro() {
         <TabsContent value="transacoes" className="space-y-4">
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle>Transações Recentes</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Transações Recentes</CardTitle>
             </CardHeader>
             <CardContent>
               {errorTransacoes && (
@@ -923,33 +980,33 @@ export default function Financeiro() {
                   <p className="text-muted-foreground">Nenhuma transação encontrada</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {transacoes.map((transacao) => {
                     const dataHora = new Date(transacao.data_transacao);
                     const data = dataHora.toLocaleDateString("pt-BR");
                     const hora = dataHora.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
                     
                     return (
-                      <div key={transacao.id} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
-                        <div className="flex items-center space-x-4">
-                          <div className={`p-2 rounded-lg ${transacao.tipo === 'entrada' ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                      <div key={transacao.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
+                        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                          <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${transacao.tipo === 'entrada' ? 'bg-success/10' : 'bg-destructive/10'}`}>
                             {transacao.tipo === 'entrada' ? (
-                              <ArrowUpRight className="h-5 w-5 text-success" />
+                              <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
                             ) : (
-                              <ArrowDownRight className="h-5 w-5 text-destructive" />
+                              <ArrowDownRight className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
                             )}
                           </div>
-                          <div className="space-y-1">
-                            <p className="font-semibold">{transacao.descricao}</p>
-                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <p className="font-semibold text-sm sm:text-base line-clamp-1">{transacao.descricao}</p>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                               <span>{data} às {hora}</span>
                               <span>{transacao.metodo_pagamento}</span>
-                              {transacao.cliente_nome && <span>Cliente: {transacao.cliente_nome}</span>}
+                              {transacao.cliente_nome && <span className="truncate">Cliente: {transacao.cliente_nome}</span>}
                             </div>
                           </div>
                         </div>
-                        <div className="text-right space-y-1">
-                          <p className={`text-lg font-bold ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
+                        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
+                          <p className={`text-sm sm:text-lg font-bold break-words ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
                             {transacao.tipo === 'entrada' ? '+' : '-'}{formatarValor(Number(transacao.valor) || 0)}
                           </p>
                           {obterBadgeStatus(transacao.status)}
@@ -964,17 +1021,17 @@ export default function Financeiro() {
         </TabsContent>
 
         <TabsContent value="relatorios" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             <Card className="bg-gradient-card shadow-card">
-              <CardContent className="p-6 text-center">
-                <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Fluxo de Caixa</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+              <CardContent className="p-4 sm:p-6 text-center">
+                <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-primary mx-auto mb-3 sm:mb-4" />
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Fluxo de Caixa</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">
                   Relatório detalhado de entradas e saídas
                 </p>
                 <Button 
                   size="sm" 
-                  className="bg-gradient-primary"
+                  className="bg-gradient-primary text-xs sm:text-sm w-full sm:w-auto"
                   onClick={() => navigate('/relatorios/financeiro')}
                 >
                   Gerar Relatório
@@ -983,15 +1040,15 @@ export default function Financeiro() {
             </Card>
 
             <Card className="bg-gradient-card shadow-card">
-              <CardContent className="p-6 text-center">
-                <TrendingUp className="h-12 w-12 text-success mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">DRE Mensal</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+              <CardContent className="p-4 sm:p-6 text-center">
+                <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 text-success mx-auto mb-3 sm:mb-4" />
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">DRE Mensal</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">
                   Demonstrativo de resultados do exercício
                 </p>
                 <Button 
                   size="sm" 
-                  className="bg-gradient-primary"
+                  className="bg-gradient-primary text-xs sm:text-sm w-full sm:w-auto"
                   onClick={() => navigate('/relatorios/financeiro?tipo=dre')}
                 >
                   Gerar Relatório
@@ -1000,15 +1057,15 @@ export default function Financeiro() {
             </Card>
 
             <Card className="bg-gradient-card shadow-card">
-              <CardContent className="p-6 text-center">
-                <Building className="h-12 w-12 text-info mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Balanço</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+              <CardContent className="p-4 sm:p-6 text-center">
+                <Building className="h-8 w-8 sm:h-12 sm:w-12 text-info mx-auto mb-3 sm:mb-4" />
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Balanço</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">
                   Posição patrimonial da empresa  
                 </p>
                 <Button 
                   size="sm" 
-                  className="bg-gradient-primary"
+                  className="bg-gradient-primary text-xs sm:text-sm w-full sm:w-auto"
                   onClick={() => navigate('/relatorios/financeiro?tipo=balanco')}
                 >
                   Gerar Relatório
@@ -1021,11 +1078,11 @@ export default function Financeiro() {
 
       {/* Modal de Pagamento */}
       <Dialog open={modalPagamento} onOpenChange={setModalPagamento}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-2xl">
           <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <CreditCard className="h-5 w-5" />
-              Realizar Pagamento
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
+              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">Realizar Pagamento</span>
             </DialogTitle>
           </DialogHeader>
           
@@ -1218,20 +1275,21 @@ export default function Financeiro() {
             </div>
 
             {/* Botões */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button 
                 variant="outline" 
                 onClick={() => setModalPagamento(false)}
-                className="flex-1 h-10"
+                className="flex-1 h-10 text-xs sm:text-sm"
               >
                 Cancelar
               </Button>
               <Button 
                 onClick={processarPagamento}
-                className="flex-1 h-10 bg-gradient-primary"
+                className="flex-1 h-10 bg-gradient-primary text-xs sm:text-sm"
               >
-                <Check className="h-4 w-4 mr-2" />
-                Confirmar Pagamento
+                <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Confirmar Pagamento</span>
+                <span className="sm:hidden">Confirmar</span>
               </Button>
             </div>
           </div>
@@ -1240,11 +1298,11 @@ export default function Financeiro() {
 
       {/* Modal de Recebimento */}
       <Dialog open={modalRecebimento} onOpenChange={setModalRecebimento}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-2xl">
           <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Receipt className="h-5 w-5" />
-              Receber Pagamento
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">Receber Pagamento</span>
             </DialogTitle>
           </DialogHeader>
           
@@ -1508,20 +1566,21 @@ export default function Financeiro() {
             </div>
 
             {/* Botões */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button 
                 variant="outline" 
                 onClick={() => setModalRecebimento(false)}
-                className="flex-1 h-10"
+                className="flex-1 h-10 text-xs sm:text-sm"
               >
                 Cancelar
               </Button>
               <Button 
                 onClick={processarRecebimento}
-                className="flex-1 h-10 bg-gradient-primary"
+                className="flex-1 h-10 bg-gradient-primary text-xs sm:text-sm"
               >
-                <Check className="h-4 w-4 mr-2" />
-                Confirmar Recebimento
+                <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Confirmar Recebimento</span>
+                <span className="sm:hidden">Confirmar</span>
               </Button>
             </div>
           </div>

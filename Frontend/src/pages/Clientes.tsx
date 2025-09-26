@@ -239,92 +239,109 @@ export default function Clientes() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold">Clientes</h1>
-          <p className="text-muted-foreground">
+      <div className="w-full">
+        {/* Título e Descrição - Sempre no topo */}
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">Clientes</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie seus clientes e relacionamentos
           </p>
         </div>
-        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Cliente
-        </Button>
+
+        {/* Botão - Desktop */}
+        <div className="hidden md:flex items-center justify-end">
+          <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Cliente
+          </Button>
+        </div>
+
+        {/* Botão - Mobile */}
+        <div className="md:hidden w-full">
+          <Button 
+            className="w-full bg-gradient-primary text-xs sm:text-sm" 
+            onClick={() => navigate("/dashboard/novo-cliente")}
+          >
+            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Novo Cliente</span>
+            <span className="sm:hidden">Novo Cliente</span>
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Clientes</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Total de Clientes</p>
                 {statsApi.loading ? (
-                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-5 sm:h-8 w-16 sm:w-20" />
                 ) : (
-                  <p className="text-2xl font-bold">{stats?.total_clientes || 0}</p>
+                  <p className="text-sm sm:text-2xl font-bold text-primary break-words">{stats?.total_clientes || 0}</p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
+              <div className="p-1 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 self-start sm:self-auto">
+                <Users className="h-3 w-3 sm:h-5 sm:w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Clientes Ativos</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Clientes Ativos</p>
                 {statsApi.loading ? (
-                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-5 sm:h-8 w-16 sm:w-20" />
                 ) : (
-                  <p className="text-2xl font-bold">{stats?.clientes_ativos || 0}</p>
+                  <p className="text-sm sm:text-2xl font-bold text-success break-words">{stats?.clientes_ativos || 0}</p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-success/10">
-                <UserPlus className="h-5 w-5 text-success" />
+              <div className="p-1 sm:p-2 rounded-lg bg-success/10 flex-shrink-0 self-start sm:self-auto">
+                <UserPlus className="h-3 w-3 sm:h-5 sm:w-5 text-success" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Clientes VIP</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Clientes VIP</p>
                 {statsApi.loading ? (
-                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-5 sm:h-8 w-16 sm:w-20" />
                 ) : (
-                  <p className="text-2xl font-bold">{stats?.clientes_vip || 0}</p>
+                  <p className="text-sm sm:text-2xl font-bold text-warning break-words">{stats?.clientes_vip || 0}</p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Star className="h-5 w-5 text-warning" />
+              <div className="p-1 sm:p-2 rounded-lg bg-warning/10 flex-shrink-0 self-start sm:self-auto">
+                <Star className="h-3 w-3 sm:h-5 sm:w-5 text-warning" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Receita Total</p>
                 {statsApi.loading ? (
-                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-24" />
                 ) : (
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm sm:text-2xl font-bold text-accent break-words">
                     {formatarMoeda(Number(stats?.receita_total) || 0)}
                   </p>
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-accent/10">
-                <ShoppingBag className="h-5 w-5 text-accent" />
+              <div className="p-1 sm:p-2 rounded-lg bg-accent/10 flex-shrink-0 self-start sm:self-auto">
+                <ShoppingBag className="h-3 w-3 sm:h-5 sm:w-5 text-accent" />
               </div>
             </div>
           </CardContent>
@@ -352,8 +369,9 @@ export default function Clientes() {
 
       {/* Filtros */}
       <Card className="bg-gradient-card shadow-card">
-        <CardContent className="p-6">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+        <CardContent className="p-3 sm:p-6">
+          {/* Filtros - Desktop */}
+          <div className="hidden md:flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -385,111 +403,154 @@ export default function Clientes() {
               </Button>
             </div>
           </div>
+
+          {/* Filtros - Mobile */}
+          <div className="md:hidden space-y-3 w-full">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar clientes..."
+                value={termoBusca}
+                onChange={(e) => {
+                  setTermoBusca(e.target.value);
+                  setPaginaAtual(1); // Reset para primeira página ao buscar
+                }}
+                className="pl-8 sm:pl-10 text-xs sm:text-sm"
+              />
+            </div>
+            
+            <div className="flex gap-2 w-full">
+              <select
+                value={filtroStatus}
+                onChange={(e) => {
+                  setFiltroStatus(e.target.value);
+                  setPaginaAtual(1); // Reset para primeira página ao filtrar
+                }}
+                className="flex-1 px-2 py-2 border border-input bg-background rounded-md text-xs sm:text-sm"
+              >
+                <option value="">Status</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+              <Button 
+                variant="outline" 
+                onClick={recarregarDados}
+                className="text-xs sm:text-sm"
+              >
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Atualizar</span>
+                <span className="sm:hidden">Atualizar</span>
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       {/* Lista de Clientes */}
       {clientesApi.loading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
             <Card key={i} className="bg-gradient-card shadow-card">
-              <CardHeader className="pb-4">
-                <div className="flex items-center space-x-3">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg" />
+                  <Skeleton className="h-5 w-16 sm:h-6 sm:w-20" />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div>
+                  <Skeleton className="h-5 w-3/4 mb-2 sm:h-6" />
+                  <Skeleton className="h-3 w-1/2 sm:h-4" />
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-12 sm:h-4" />
+                    <Skeleton className="h-3 w-16 sm:h-4" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-12 sm:h-4" />
+                    <Skeleton className="h-3 w-16 sm:h-4" />
+                  </div>
                 </div>
-                <div className="flex space-x-2 pt-2">
-                  <Skeleton className="h-8 flex-1" />
-                  <Skeleton className="h-8 w-8" />
+                <div className="flex space-x-1.5 sm:space-x-2 pt-2">
+                  <Skeleton className="h-7 flex-1 sm:h-8" />
+                  <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {clientes.map((cliente) => (
             <Card key={cliente.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                      <span className="text-lg font-bold text-white">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                      <span className="text-xs sm:text-sm font-bold text-white">
                         {cliente.nome.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold flex items-center space-x-2">
-                        <span>{cliente.nome}</span>
-                        {cliente.vip && <Star className="h-4 w-4 text-warning fill-warning" />}
-                      </h3>
-                      <div className="text-sm text-muted-foreground">
-                        {cliente.tipo_pessoa === 'juridica' ? 'Pessoa Jurídica' : 'Pessoa Física'}
                       </div>
-                    </div>
+                  <div className="scale-90 sm:scale-100">
+                    {obterBadgeStatus(cliente.status)}
                   </div>
-                  {obterBadgeStatus(cliente.status)}
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div>
+                  <h3 className="font-semibold text-base sm:text-lg line-clamp-2 flex items-center space-x-2">
+                    <span>{cliente.nome}</span>
+                    {cliente.vip && <Star className="h-3 w-3 sm:h-4 sm:w-4 text-warning fill-warning flex-shrink-0" />}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {cliente.tipo_pessoa === 'juridica' ? 'Pessoa Jurídica' : 'Pessoa Física'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                   {cliente.email && (
                     <div className="flex items-center space-x-2 text-muted-foreground">
-                      <Mail className="h-4 w-4" />
+                      <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                       <span className="truncate">{cliente.email}</span>
                     </div>
                   )}
                   {cliente.telefone && (
                     <div className="flex items-center space-x-2 text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>{cliente.telefone}</span>
+                      <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                      <span className="truncate">{cliente.telefone}</span>
                     </div>
                   )}
                   <div className="flex items-center space-x-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span className="truncate">{formatarEndereco(cliente)}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Cliente desde {formatarData(cliente.data_criacao)}</span>
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="truncate text-xs">{formatarEndereco(cliente)}</span>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-border/50">
-                  <div className={`grid gap-4 ${(Number(totaisPagar[cliente.id]?.total_pagar) || 0) > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Total Gasto</p>
-                      <p className="font-semibold text-primary text-lg">{formatarMoeda(Number(cliente.total_compras) || 0)}</p>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-muted-foreground">Total Gasto:</span>
+                    <span className="font-semibold text-primary text-xs sm:text-sm">
+                      {formatarMoeda(Number(cliente.total_compras) || 0)}
+                    </span>
                     </div>
                     {(Number(totaisPagar[cliente.id]?.total_pagar) || 0) > 0 && (
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Total a Pagar</p>
-                        <p className="font-semibold text-orange-600 text-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm text-muted-foreground">A Pagar:</span>
+                      <div className="text-right">
+                        <span className="font-semibold text-orange-600 text-xs sm:text-sm">
                           {formatarMoeda(Number(totaisPagar[cliente.id]?.total_pagar) || 0)}
-                        </p>
+                        </span>
                         {totaisPagar[cliente.id]?.quantidade_contas > 0 && (
                           <p className="text-xs text-muted-foreground">
                             {totaisPagar[cliente.id].quantidade_contas} {totaisPagar[cliente.id].quantidade_contas === 1 ? 'conta' : 'contas'} pendente{totaisPagar[cliente.id].quantidade_contas !== 1 ? 's' : ''}
                           </p>
                         )}
                       </div>
+                      </div>
                     )}
-                  </div>
                 </div>
 
                 {cliente.cpf_cnpj && (
@@ -498,23 +559,25 @@ export default function Clientes() {
                   </div>
                 )}
 
-                <div className="flex space-x-2 pt-2">
+                <div className="flex space-x-1.5 sm:space-x-2 pt-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="flex-1"
+                    className="flex-1 text-xs sm:text-sm"
                     onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
                   >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Editar</span>
+                    <span className="sm:hidden">Ed.</span>
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="px-2 sm:px-3"
                     onClick={() => deletarCliente(cliente.id)}
                     disabled={clientesApi.loading}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -526,15 +589,19 @@ export default function Clientes() {
       {/* Estado Vazio */}
       {!clientesApi.loading && clientes.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-12 text-center">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
-            <p className="text-muted-foreground mb-4">
+          <CardContent className="p-6 sm:p-12 text-center">
+            <Users className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               {termoBusca || filtroStatus ? "Tente ajustar sua busca ou filtros" : "Adicione seu primeiro cliente"}
             </p>
-            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Cliente
+            <Button 
+              className="bg-gradient-primary text-xs sm:text-sm"
+              onClick={() => navigate("/dashboard/novo-cliente")}
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Adicionar Cliente</span>
+              <span className="sm:hidden">Adicionar</span>
             </Button>
           </CardContent>
         </Card>
@@ -543,8 +610,9 @@ export default function Clientes() {
       {/* Paginação */}
       {pagination && pagination.totalPages > 1 && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-4 sm:p-6">
+            {/* Desktop Layout */}
+            <div className="hidden sm:flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
                 Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} clientes
               </div>
@@ -582,6 +650,36 @@ export default function Clientes() {
                 >
                   Próxima
                 </Button>
+              </div>
+            </div>
+
+            {/* Mobile Layout - Apenas números das páginas */}
+            <div className="sm:hidden">
+              <div className="text-center mb-4">
+                <div className="text-xs text-muted-foreground mb-1">
+                  Página {pagination.page} de {pagination.totalPages}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} clientes
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-center space-x-1">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === paginaAtual ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPaginaAtual(pageNum)}
+                      disabled={clientesApi.loading}
+                      className="w-10 h-10 p-0 text-sm font-medium"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           </CardContent>

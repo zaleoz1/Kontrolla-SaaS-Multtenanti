@@ -903,68 +903,73 @@ export default function Pagamentos() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+      <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold flex items-center">
-            <CreditCard className="h-8 w-8 mr-3" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center">
+            <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3" />
             Terminal de Pagamento
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Configure o pagamento da venda
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
           <Button 
             variant="outline" 
             onClick={voltarParaVenda}
-            className="border-slate-300 text-slate-600 hover:bg-slate-50"
+            className="border-slate-300 text-slate-600 hover:bg-slate-50 h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Voltar
           </Button>
           <Button 
             onClick={salvarVenda}
             disabled={!formularioValido || salvandoVenda}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
             {salvandoVenda ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
             ) : (
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             )}
-            {salvandoVenda ? "Processando..." : "Finalizar Venda"}
+            <span className="hidden sm:inline">
+              {salvandoVenda ? "Processando..." : "Finalizar Venda"}
+            </span>
+            <span className="sm:hidden">
+              {salvandoVenda ? "Processando..." : "Finalizar"}
+            </span>
           </Button>
         </div>
       </div>
 
       {/* Layout Principal */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {/* Coluna Esquerda - Formas de Pagamento */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-4 sm:space-y-6 order-2 xl:order-1">
           {/* Método de Pagamento Único */}
           {metodosPagamento.length === 0 && (
             <Card className="border-green-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2 text-green-600" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg flex items-center">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-600" />
                   Forma de Pagamento
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-3 text-slate-700">
+                  <label className="block text-xs sm:text-sm font-medium mb-2 sm:mb-3 text-slate-700">
                     Selecione o método de pagamento
                   </label>
                   
                   {carregandoMetodos ? (
-                    <div className="flex items-center justify-center p-8 bg-slate-50 rounded-lg border-2 border-slate-200">
-                      <Loader2 className="h-6 w-6 text-slate-500 animate-spin mr-2" />
-                      <span className="text-slate-600">Carregando métodos...</span>
+                    <div className="flex items-center justify-center p-4 sm:p-8 bg-slate-50 rounded-lg border-2 border-slate-200">
+                      <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 text-slate-500 animate-spin mr-2" />
+                      <span className="text-xs sm:text-sm text-slate-600">Carregando métodos...</span>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                       {metodosDisponiveis.map((metodo) => {
                         const isSelected = metodoPagamentoUnico === metodo.tipo;
                         const isDisabled = (metodo.tipo === "cartao_credito" && metodosDisponiveis.length === 0) || 
@@ -993,7 +998,7 @@ export default function Pagamentos() {
                               handleSelecionarMetodoPagamento(metodo.tipo);
                             }}
                             className={`
-                              p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md
+                              p-1.5 sm:p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md
                               ${isSelected 
                                 ? 'border-green-500 bg-green-50 shadow-md' 
                                 : 'border-slate-200 hover:border-green-300 hover:bg-green-50'
@@ -1003,20 +1008,20 @@ export default function Pagamentos() {
                           >
                             <div className="text-center">
                               <div className={`
-                                w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center
+                                w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 rounded-full flex items-center justify-center
                                 ${isSelected ? 'bg-green-100' : 'bg-slate-100'}
                               `}>
-                                {metodo.tipo === "dinheiro" && <Banknote className="h-4 w-4 text-slate-600" />}
+                                {metodo.tipo === "dinheiro" && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-slate-600" />}
                                 {metodo.tipo === "pix" && (
                                   <img 
                                     src="/logopix.png" 
                                     alt="PIX" 
-                                    className="h-4 w-4 object-contain"
+                                    className="h-3 w-3 sm:h-4 sm:w-4 object-contain"
                                   />
                                 )}
-                                {metodo.tipo === "cartao_credito" && <CreditCard className="h-4 w-4 text-blue-600" />}
-                                {metodo.tipo === "cartao_debito" && <CreditCard className="h-4 w-4 text-blue-600" />}
-                                {metodo.tipo === "transferencia" && <Building2 className="h-4 w-4 text-blue-600" />}
+                                {metodo.tipo === "cartao_credito" && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />}
+                                {metodo.tipo === "cartao_debito" && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />}
+                                {metodo.tipo === "transferencia" && <Building2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />}
                               </div>
                               <h3 className="text-xs font-medium text-slate-800 mb-1 leading-tight">
                         {metodo.nome}
@@ -1041,17 +1046,17 @@ export default function Pagamentos() {
 
                 {/* Indicação de Parcelas para Cartão de Crédito */}
                 {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-200 shadow-sm">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 sm:p-3 rounded-lg border-2 border-blue-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <CreditCard className="h-4 w-4 text-blue-600" />
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-blue-800 mb-1 text-sm">
+                          <h4 className="font-semibold text-blue-800 mb-1 text-xs sm:text-sm">
                             Pagamento Parcelado
                           </h4>
-                          <div className="flex items-center space-x-3 text-xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3 text-xs">
                             <div className="flex items-center space-x-1">
                               <span className="text-blue-600 font-medium">
                                 {parcelaConfirmada.quantidade}x
@@ -1081,8 +1086,8 @@ export default function Pagamentos() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-base text-slate-800">
+                      <div className="text-left sm:text-right">
+                        <div className="font-bold text-sm sm:text-base text-slate-800">
                           {parcelaConfirmada.taxa > 0
                             ? (total * (1 + parcelaConfirmada.taxa / 100)).toLocaleString("pt-BR", {
                                 style: "currency",
@@ -1117,7 +1122,7 @@ export default function Pagamentos() {
                           }}
                           variant="ghost"
                           size="sm"
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 mt-1 text-xs"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 mt-1 text-xs h-6 sm:h-8"
                         >
                           <X className="h-3 w-3 mr-1" />
                           Alterar
@@ -1129,11 +1134,11 @@ export default function Pagamentos() {
 
                 {/* Campo de Valor em Dinheiro */}
                 {metodoPagamentoUnico === "dinheiro" && (
-                  <div className="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-200">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg border-2 border-yellow-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-yellow-800">
-                          <Banknote className="h-4 w-4 inline mr-1" />
+                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-yellow-800">
+                          <Banknote className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                           Valor recebido
                         </label>
                         <Input
@@ -1141,13 +1146,13 @@ export default function Pagamentos() {
                           value={valorDinheiro}
                           onChange={(e) => setValorDinheiro(e.target.value)}
                           placeholder="0,00"
-                          className="text-lg font-bold"
+                          className="text-sm sm:text-lg font-bold h-8 sm:h-10"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium mb-2 text-yellow-800">
-                          <Calculator className="h-4 w-4 inline mr-1" />
+                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-yellow-800">
+                          <Calculator className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                           Troco
                         </label>
                         <Input
@@ -1157,7 +1162,7 @@ export default function Pagamentos() {
                             maximumFractionDigits: 2
                           })}
                           disabled
-                          className="bg-yellow-100 text-yellow-800 text-lg font-bold"
+                          className="bg-yellow-100 text-yellow-800 text-sm sm:text-lg font-bold h-8 sm:h-10"
                         />
                       </div>
                     </div>
@@ -1166,18 +1171,18 @@ export default function Pagamentos() {
 
                 {/* Botão Visualizar Chave PIX */}
                 {metodoPagamentoUnico === "pix" && (
-                  <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-green-50 p-3 sm:p-4 rounded-lg border-2 border-green-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div>
-                        <h4 className="font-medium text-green-800 mb-1 flex items-center">
+                        <h4 className="font-medium text-green-800 mb-1 flex items-center text-sm sm:text-base">
                           <img 
                             src="/logopix.png" 
                             alt="PIX" 
-                            className="h-4 w-4 mr-1 object-contain"
+                            className="h-3 w-3 sm:h-4 sm:w-4 mr-1 object-contain"
                           />
                           Pagamento via PIX
                         </h4>
-                        <p className="text-sm text-green-600">
+                        <p className="text-xs sm:text-sm text-green-600">
                           {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
                         </p>
                       </div>
@@ -1185,15 +1190,15 @@ export default function Pagamentos() {
                         type="button"
                         onClick={() => setMostrarModalPix(true)}
                         disabled={!pixConfiguracao || carregandoPix}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
                       >
                         {carregandoPix ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
                         ) : (
                           <img 
                             src="/logopix.png" 
                             alt="PIX" 
-                            className="h-4 w-4 mr-2 object-contain"
+                            className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 object-contain"
                           />
                         )}
                         Visualizar Chave
@@ -1204,14 +1209,14 @@ export default function Pagamentos() {
 
                 {/* Botão Visualizar Dados Bancários */}
                 {metodoPagamentoUnico === "transferencia" && (
-                  <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border-2 border-blue-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div>
-                        <h4 className="font-medium text-blue-800 mb-1">
-                          <Building2 className="h-4 w-4 inline mr-1" />
+                        <h4 className="font-medium text-blue-800 mb-1 text-sm sm:text-base">
+                          <Building2 className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                           Transferência Bancária
                         </h4>
-                        <p className="text-sm text-blue-600">
+                        <p className="text-xs sm:text-sm text-blue-600">
                           {dadosBancarios ? 'Clique para visualizar os dados da conta' : 'Configure os dados bancários nas configurações'}
                         </p>
                       </div>
@@ -1219,12 +1224,12 @@ export default function Pagamentos() {
                         type="button"
                         onClick={() => setMostrarModalDadosBancarios(true)}
                         disabled={!dadosBancarios || carregandoDadosBancarios}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
                       >
                         {carregandoDadosBancarios ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
                         ) : (
-                          <Building2 className="h-4 w-4 mr-2" />
+                          <Building2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         )}
                         Visualizar Conta
                       </Button>
@@ -1321,11 +1326,12 @@ export default function Pagamentos() {
                     // Adicionar novo método de pagamento
                     setMetodosPagamento([{ metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                   }}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm"
                   disabled={carregandoMetodos}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Múltiplos Métodos de Pagamento
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Múltiplos Métodos de Pagamento</span>
+                  <span className="sm:hidden">Múltiplos Métodos</span>
                 </Button>
               </CardContent>
             </Card>
@@ -1334,10 +1340,10 @@ export default function Pagamentos() {
           {/* Múltiplos Métodos de Pagamento */}
           {metodosPagamento.length > 0 && (
             <Card className="border-blue-200">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center">
-                    <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                  <CardTitle className="text-base sm:text-lg flex items-center">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
                     Múltiplos Métodos
                   </CardTitle>
                   <div className="flex space-x-2">
@@ -1346,10 +1352,10 @@ export default function Pagamentos() {
                       onClick={() => {
                         setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                       }}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-white h-7 sm:h-8 text-xs"
                       disabled={carregandoMetodos}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Adicionar
                     </Button>
                     <Button
@@ -1366,15 +1372,15 @@ export default function Pagamentos() {
                           dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
                         });
                       }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-7 sm:h-8 text-xs"
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Único
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {/* Mostrar loading se estiver carregando */}
                 {carregandoMetodos && (
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1411,9 +1417,9 @@ export default function Pagamentos() {
                 )}
                 
                 {metodosPagamento.map((metodo, index) => (
-                  <div key={index} className="grid grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 sm:p-4 bg-slate-50 rounded-lg border">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-slate-700">
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-slate-700">
                         Método
                       </label>
                       {parseFloat(metodo.valor) <= 0 && (
@@ -1486,7 +1492,7 @@ export default function Pagamentos() {
                           novosMetodos[index].taxaParcela = undefined;
                           setMetodosPagamento(novosMetodos);
                         }}
-                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 h-8 sm:h-10 text-xs sm:text-sm"
                         disabled={carregandoMetodos}
                       >
                         <option value="">
@@ -1512,7 +1518,7 @@ export default function Pagamentos() {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-slate-700">
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-slate-700">
                         Valor
                       </label>
                       <Input
@@ -1524,7 +1530,7 @@ export default function Pagamentos() {
                           setMetodosPagamento(novosMetodos);
                         }}
                         placeholder="0,00"
-                        className="text-center"
+                        className="text-center h-8 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
                     
@@ -1535,9 +1541,9 @@ export default function Pagamentos() {
                         onClick={() => {
                           setMetodosPagamento(metodosPagamento.filter((_, i) => i !== index));
                         }}
-                        className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                        className="w-full border-red-300 text-red-600 hover:bg-red-50 h-8 sm:h-10"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </div>
@@ -1713,10 +1719,10 @@ export default function Pagamentos() {
 
           {/* Pagamento a Prazo */}
           <Card className="border-purple-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
-                  <Clock className="h-5 w-5 mr-2 text-purple-600" />
+            <CardHeader className="pb-3 sm:pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <CardTitle className="text-base sm:text-lg flex items-center">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-purple-600" />
                   Pagamento a Prazo
                 </CardTitle>
                 <div className="flex items-center space-x-2">
@@ -1728,7 +1734,7 @@ export default function Pagamentos() {
                     disabled={!clienteSelecionado || (metodosPagamento.length > 0 && handleCalcularValorRestantePrazo() <= 0)}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 disabled:opacity-50"
                   />
-                  <label htmlFor="usarPagamentoPrazo" className="text-sm font-medium text-slate-700">
+                  <label htmlFor="usarPagamentoPrazo" className="text-xs sm:text-sm font-medium text-slate-700">
                     Ativar pagamento a prazo
                   </label>
                 </div>
@@ -1826,14 +1832,14 @@ export default function Pagamentos() {
 
           {/* Campo de Desconto */}
           <Card className="border-orange-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center">
-                <Percent className="h-4 w-4 mr-2 text-orange-600" />
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base flex items-center">
+                <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-orange-600" />
                 Desconto
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
                 <div className="flex-1">
                   <label className="block text-xs font-medium mb-1 text-slate-600">
                     Porcentagem
@@ -1844,9 +1850,9 @@ export default function Pagamentos() {
                       value={desconto}
                       onChange={(e) => setDesconto(e.target.value)}
                       placeholder="0"
-                      className="text-center w-16 text-sm font-semibold h-8"
+                      className="text-center w-16 text-xs sm:text-sm font-semibold h-7 sm:h-8"
                     />
-                    <span className="text-sm font-medium text-slate-600">%</span>
+                    <span className="text-xs sm:text-sm font-medium text-slate-600">%</span>
                   </div>
                 </div>
                 
@@ -1855,7 +1861,7 @@ export default function Pagamentos() {
                     Valor
                   </label>
                   <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                    <span className="text-sm font-bold text-green-600">
+                    <span className="text-xs sm:text-sm font-bold text-green-600">
                       {valorDesconto.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -1871,54 +1877,54 @@ export default function Pagamentos() {
         </div>
 
         {/* Coluna Direita - Resumo da Venda */}
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 order-1 xl:order-2">
           {/* Resumo da Venda */}
-          <Card className="w-full flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[calc(100vh-150px)] min-h-0 sticky top-6">
-            <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0">
+          <Card className="w-full flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[28rem] sm:h-[26rem] md:h-[28rem] lg:h-[calc(100vh-150px)] min-h-0 sticky top-6">
+            <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0 pb-3 sm:pb-6">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center space-x-2 text-slate-800">
-                  <Receipt className="h-5 w-5" />
+                <CardTitle className="flex items-center space-x-2 text-slate-800 text-sm sm:text-base">
+                  <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>Resumo da Venda</span>
                 </CardTitle>
-                <Badge variant="secondary" className="bg-green-600 text-white">
+                <Badge variant="secondary" className="bg-green-600 text-white text-xs">
                   {carrinho.length} itens
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col p-0 bg-slate-50 min-h-0">
               {/* Área de Cliente */}
-              <div className="p-4 border-b flex-shrink-0">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">Cliente</h3>
+              <div className="p-3 sm:p-4 border-b flex-shrink-0">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Cliente</h3>
                 </div>
                 
                 {clienteSelecionado ? (
-                  <div className="bg-muted rounded-lg p-3">
-                    <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
+                  <div className="bg-muted rounded-lg p-2 sm:p-3">
+                    <p className="font-medium text-xs sm:text-sm">{clienteSelecionado.nome}</p>
                     <p className="text-muted-foreground text-xs">{clienteSelecionado.cpf_cnpj}</p>
                   </div>
                 ) : (
-                  <div className="bg-muted rounded-lg p-3 text-center">
-                    <p className="text-muted-foreground text-sm">Cliente não selecionado</p>
+                  <div className="bg-muted rounded-lg p-2 sm:p-3 text-center">
+                    <p className="text-muted-foreground text-xs sm:text-sm">Cliente não selecionado</p>
                   </div>
                 )}
               </div>
 
               {/* Lista de Itens do Carrinho */}
-              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
                 {carrinho.length === 0 ? (
-                  <div className="text-center py-8">
-                    <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Carrinho vazio</p>
-                    <p className="text-muted-foreground/60 text-sm">Adicione produtos para começar</p>
+                  <div className="text-center py-6 sm:py-8">
+                    <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                    <p className="text-muted-foreground text-xs sm:text-sm">Carrinho vazio</p>
+                    <p className="text-muted-foreground/60 text-xs">Adicione produtos para começar</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1 sm:space-y-2">
                     {carrinho.map((item) => (
-                      <div key={item.produto.id} className="bg-muted rounded-lg p-3">
-                        <div className="flex items-start justify-between mb-2">
+                      <div key={item.produto.id} className="bg-muted rounded-lg p-2 sm:p-3">
+                        <div className="flex items-start justify-between mb-1 sm:mb-2">
                           <div className="flex-1">
-                            <h4 className="font-medium text-sm line-clamp-2">
+                            <h4 className="font-medium text-xs line-clamp-1 sm:line-clamp-2">
                               {item.produto.nome}
                             </h4>
                             <p className="text-muted-foreground text-xs">
@@ -1934,7 +1940,7 @@ export default function Pagamentos() {
                           <div className="flex items-center space-x-2">
                             <span className="text-muted-foreground text-xs">Qtd: {item.quantidade}</span>
                           </div>
-                          <span className="text-green-600 font-bold text-sm">
+                          <span className="text-green-600 font-bold text-xs sm:text-sm">
                             {item.precoTotal.toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
@@ -1948,8 +1954,8 @@ export default function Pagamentos() {
               </div>
 
               {/* Resumo Financeiro */}
-              <div className="p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
-                <div className="space-y-2 text-sm">
+              <div className="p-3 sm:p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
+                <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal:</span>
                     <span>{subtotal.toLocaleString("pt-BR", {
@@ -2266,35 +2272,35 @@ export default function Pagamentos() {
 
       {/* Modal de Venda Finalizada */}
       {vendaFinalizada && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full mx-4">
-            <CardContent className="pt-6">
-              <div className="text-center mb-6">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="text-center mb-4 sm:mb-6">
+                <div className="mx-auto flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-green-100 mb-3 sm:mb-4">
+                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
-                <h3 className="text-lg font-medium mb-2">
+                <h3 className="text-base sm:text-lg font-medium mb-2">
                   Venda Realizada com Sucesso!
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Venda #{vendaFinalizada.numero_venda} foi criada
                 </p>
               </div>
               
-              <div className="flex flex-col space-y-3">
+              <div className="flex flex-col space-y-2 sm:space-y-3">
                 <Button 
                   onClick={imprimirNota} 
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm"
                 >
-                  <Printer className="h-4 w-4 mr-2" />
+                  <Printer className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Imprimir Nota
                 </Button>
                 <Button 
                   variant="outline" 
                   onClick={fecharVenda}
-                  className="w-full"
+                  className="w-full h-8 sm:h-10 text-xs sm:text-sm"
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Fechar
                 </Button>
               </div>
@@ -2305,35 +2311,35 @@ export default function Pagamentos() {
 
       {/* Modal de Parcelas */}
       {mostrarModalParcelas && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
           <Card className="max-w-2xl w-full max-h-[90vh] flex flex-col">
-            <CardHeader className="pb-4 border-b">
+            <CardHeader className="pb-3 sm:pb-4 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl flex items-center">
-                  <CreditCard className="h-6 w-6 mr-3 text-blue-600" />
+                <CardTitle className="text-lg sm:text-xl flex items-center">
+                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3 text-blue-600" />
                   Selecionar Parcelas
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleCancelarParcela}
-                  className="h-8 w-8 p-0 hover:bg-slate-100"
+                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-slate-100"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardHeader>
             
             <CardContent className="flex-1 overflow-hidden flex flex-col">
               {/* Header com informações */}
-              <div className="text-center mb-6 p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-semibold text-slate-800 mb-2">
+              <div className="text-center mb-4 sm:mb-6 p-3 sm:p-4 bg-slate-50 rounded-lg">
+                <h4 className="font-semibold text-slate-800 mb-2 text-sm sm:text-base">
                   Escolha o número de parcelas
                 </h4>
-                <div className="flex items-center justify-center space-x-4 text-sm">
-                  <div className="flex items-center space-x-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm">
+                  <div className="flex items-center justify-center space-x-2">
                     <span className="text-slate-600">Valor para parcelas:</span>
-                    <span className="font-bold text-lg text-green-600">
+                    <span className="font-bold text-sm sm:text-lg text-green-600">
                       {valorParcelaModal.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -2341,7 +2347,7 @@ export default function Pagamentos() {
                     </span>
                   </div>
                   {parcelaSelecionada && (
-                    <div className="flex items-center space-x-2 text-blue-600">
+                    <div className="flex items-center justify-center space-x-2 text-blue-600">
                       <span>•</span>
                       <span className="font-medium">
                         {parcelaSelecionada.quantidade} parcela{parcelaSelecionada.quantidade > 1 ? "s" : ""}
@@ -2454,21 +2460,21 @@ export default function Pagamentos() {
               </div>
 
               {/* Botões de ação */}
-              <div className="flex space-x-3 pt-4 border-t">
+              <div className="flex space-x-2 sm:space-x-3 pt-3 sm:pt-4 border-t">
                 <Button
                   variant="outline"
                   onClick={handleCancelarParcela}
-                  className="flex-1 h-12"
+                  className="flex-1 h-8 sm:h-12 text-xs sm:text-sm"
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleConfirmarParcela}
                   disabled={!parcelaSelecionada}
-                  className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                  className="flex-1 h-8 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 text-xs sm:text-sm"
                 >
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Confirmar Parcela
                 </Button>
               </div>
@@ -2479,15 +2485,15 @@ export default function Pagamentos() {
 
       {/* Modal PIX */}
       {mostrarModalPix && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-lg w-full mx-4">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
+                <CardTitle className="text-base sm:text-lg flex items-center">
                   <img 
                     src="/logopix.png" 
                     alt="PIX" 
-                    className="h-5 w-5 mr-2 object-contain"
+                    className="h-4 w-4 sm:h-5 sm:w-5 mr-2 object-contain"
                   />
                   Dados PIX
                 </CardTitle>
@@ -2495,13 +2501,13 @@ export default function Pagamentos() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setMostrarModalPix(false)}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6">
               {pixConfiguracao ? (
                 <>
                   {/* QR Code */}
@@ -2588,25 +2594,25 @@ export default function Pagamentos() {
 
       {/* Modal Dados Bancários */}
       {mostrarModalDadosBancarios && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-lg w-full mx-4">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
-                  <Building2 className="h-5 w-5 mr-2 text-blue-600" />
+                <CardTitle className="text-base sm:text-lg flex items-center">
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
                   Dados Bancários
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setMostrarModalDadosBancarios(false)}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6">
               {carregandoDadosBancarios ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>

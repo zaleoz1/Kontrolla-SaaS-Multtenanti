@@ -65,12 +65,12 @@ export function Header({ onMenuClick }: PropsCabecalho) {
     // Header principal com fundo e borda inferior
     <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
       <div className="flex h-full items-center justify-between px-6">
-        {/* Botão de menu para mobile */}
+        {/* Botão de menu para mobile e telas menores que 1378px */}
         <Button
           variant="ghost"
           size="sm"
           onClick={onMenuClick}
-          className="lg:hidden mr-2"
+          className="min-[1378px]:hidden mr-2"
         >
           <Menu className="h-5 w-5" />
         </Button>

@@ -1155,59 +1155,59 @@ export default function Relatorios() {
   // Modal de visualização de vendas
   const ModalVendas = () => (
     <Dialog open={modalVendasAberto} onOpenChange={setModalVendasAberto}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <BarChart3 className="h-5 w-5 mr-2" />
-            Vendas por Período - {formatarData(dataInicio)} a {formatarData(dataFim)}
+          <DialogTitle className="flex items-center text-sm sm:text-base">
+            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Vendas por Período - {formatarData(dataInicio)} a {formatarData(dataFim)}</span>
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Resumo Geral */}
           {dadosVendas && dadosVendas.total_geral && (
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-lg sm:text-2xl font-bold text-primary">
                       {formatarMoeda(dadosVendas.total_geral.receita_total)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Receita Total</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Receita Total</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-success">
+                    <p className="text-lg sm:text-2xl font-bold text-success">
                       {dadosVendas.total_geral.total_vendas}
                     </p>
-                    <p className="text-sm text-muted-foreground">Total de Vendas</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total de Vendas</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-info">
+                    <p className="text-lg sm:text-2xl font-bold text-info">
                       {dadosVendas.vendas.reduce((acc, venda) => acc + venda.vendas_pagas, 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Vendas Pagas</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Vendas Pagas</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-warning">
+                    <p className="text-lg sm:text-2xl font-bold text-warning">
                       {formatarMoeda(
                         dadosVendas.total_geral.ticket_medio || 
                         (dadosVendas.total_geral.total_vendas > 0 ? 
                           dadosVendas.total_geral.receita_total / dadosVendas.total_geral.total_vendas : 0)
                       )}
                     </p>
-                    <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Ticket Médio</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1221,33 +1221,33 @@ export default function Relatorios() {
             </div>
           ) : dadosVendas && dadosVendas.vendas.length > 0 ? (
             <Card>
-              <CardHeader>
-                <CardTitle>Detalhamento por Período</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm sm:text-base">Detalhamento por Período</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
+              <CardContent className="p-0 sm:p-6">
+                <div className="overflow-x-auto max-w-full">
+                  <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Período</TableHead>
-                        <TableHead className="text-right">Total Vendas</TableHead>
-                        <TableHead className="text-right">Vendas Pagas</TableHead>
-                        <TableHead className="text-right">Vendas Pendentes</TableHead>
-                        <TableHead className="text-right">Receita</TableHead>
-                        <TableHead className="text-right">Ticket Médio</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Período</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Total Vendas</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Vendas Pagas</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Vendas Pendentes</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Receita</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Ticket Médio</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {dadosVendas.vendas.map((venda, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-medium">{formatarData(venda.periodo)}</TableCell>
-                          <TableCell className="text-right">{venda.total_vendas}</TableCell>
-                          <TableCell className="text-right text-success">{venda.vendas_pagas}</TableCell>
-                          <TableCell className="text-right text-warning">{venda.vendas_pendentes}</TableCell>
-                          <TableCell className="text-right font-semibold">
+                          <TableCell className="font-medium text-xs sm:text-sm">{formatarData(venda.periodo)}</TableCell>
+                          <TableCell className="text-right text-xs sm:text-sm">{venda.total_vendas}</TableCell>
+                          <TableCell className="text-right text-success text-xs sm:text-sm">{venda.vendas_pagas}</TableCell>
+                          <TableCell className="text-right text-warning text-xs sm:text-sm">{venda.vendas_pendentes}</TableCell>
+                          <TableCell className="text-right font-semibold text-xs sm:text-sm">
                             {formatarMoeda(venda.receita_total)}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right text-xs sm:text-sm">
                             {formatarMoeda(venda.ticket_medio || (venda.total_vendas > 0 ? venda.receita_total / venda.total_vendas : 0))}
                           </TableCell>
                         </TableRow>
@@ -1272,10 +1272,11 @@ export default function Relatorios() {
           )}
 
           {/* Ações */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               variant="outline"
               onClick={() => setModalVendasAberto(false)}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Fechar
             </Button>
@@ -1285,8 +1286,9 @@ export default function Relatorios() {
                 setModalVendasAberto(false);
               }}
               disabled={!dadosVendas || dadosVendas.vendas.length === 0}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Baixar PDF
             </Button>
           </div>
@@ -1298,58 +1300,58 @@ export default function Relatorios() {
   // Modal de visualização de produtos
   const ModalProdutos = () => (
     <Dialog open={modalProdutosAberto} onOpenChange={setModalProdutosAberto}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <Package className="h-5 w-5 mr-2" />
-            Produtos Mais Vendidos - {formatarData(dataInicio)} a {formatarData(dataFim)}
+          <DialogTitle className="flex items-center text-sm sm:text-base">
+            <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Produtos Mais Vendidos - {formatarData(dataInicio)} a {formatarData(dataFim)}</span>
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Resumo Geral */}
           {dadosProdutos && dadosProdutos.produtos && (
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-lg sm:text-2xl font-bold text-primary">
                       {dadosProdutos.produtos.length}
                     </p>
-                    <p className="text-sm text-muted-foreground">Total de Produtos</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total de Produtos</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-success">
+                    <p className="text-lg sm:text-2xl font-bold text-success">
                       {dadosProdutos.produtos.reduce((acc, produto) => acc + (Number(produto.total_vendido) || 0), 0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Unidades Vendidas</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Unidades Vendidas</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-info">
+                    <p className="text-lg sm:text-2xl font-bold text-info">
                       {formatarMoeda(dadosProdutos.produtos.reduce((acc, produto) => acc + (Number(produto.receita_total) || 0), 0))}
                     </p>
-                    <p className="text-sm text-muted-foreground">Receita Total</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Receita Total</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-warning">
+                    <p className="text-lg sm:text-2xl font-bold text-warning">
                       {formatarMoeda(
                         dadosProdutos.produtos.reduce((acc, produto) => acc + (Number(produto.receita_total) || 0), 0) / 
                         Math.max(dadosProdutos.produtos.reduce((acc, produto) => acc + (Number(produto.total_vendido) || 0), 0), 1)
                       )}
                     </p>
-                    <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Ticket Médio</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1363,20 +1365,20 @@ export default function Relatorios() {
             </div>
           ) : dadosProdutos && dadosProdutos.produtos.length > 0 ? (
             <Card>
-              <CardHeader>
-                <CardTitle>Ranking de Produtos</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm sm:text-base">Ranking de Produtos</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
+              <CardContent className="p-0 sm:p-6">
+                <div className="overflow-x-auto max-w-full">
+                  <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>#</TableHead>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead className="text-right">Unidades Vendidas</TableHead>
-                        <TableHead className="text-right">Receita</TableHead>
-                        <TableHead className="text-right">% do Total</TableHead>
+                        <TableHead className="text-xs sm:text-sm">#</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Produto</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Categoria</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Unidades Vendidas</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Receita</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">% do Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1386,14 +1388,14 @@ export default function Relatorios() {
                         
                         return (
                           <TableRow key={index}>
-                            <TableCell className="font-medium">{index + 1}</TableCell>
-                            <TableCell className="font-medium">{produto.nome || 'Produto sem nome'}</TableCell>
-                            <TableCell className="text-muted-foreground">{produto.categoria_nome || 'Sem categoria'}</TableCell>
-                            <TableCell className="text-right font-semibold">{produto.total_vendido || 0}</TableCell>
-                            <TableCell className="text-right font-semibold text-primary">
+                            <TableCell className="font-medium text-xs sm:text-sm">{index + 1}</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{produto.nome || 'Produto sem nome'}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{produto.categoria_nome || 'Sem categoria'}</TableCell>
+                            <TableCell className="text-right font-semibold text-xs sm:text-sm">{produto.total_vendido || 0}</TableCell>
+                            <TableCell className="text-right font-semibold text-primary text-xs sm:text-sm">
                               {formatarMoeda(Number(produto.receita_total) || 0)}
                             </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
+                            <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">
                               {percentual.toFixed(1)}%
                             </TableCell>
                           </TableRow>
@@ -1419,10 +1421,11 @@ export default function Relatorios() {
           )}
 
           {/* Ações */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               variant="outline"
               onClick={() => setModalProdutosAberto(false)}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Fechar
             </Button>
@@ -1432,8 +1435,9 @@ export default function Relatorios() {
                 setModalProdutosAberto(false);
               }}
               disabled={!dadosProdutos || dadosProdutos.produtos.length === 0}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Baixar PDF
             </Button>
           </div>
@@ -1445,18 +1449,18 @@ export default function Relatorios() {
   // Modal de visualização de clientes
   const ModalClientes = () => (
     <Dialog open={modalClientesAberto} onOpenChange={setModalClientesAberto}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            Análise de Clientes - {formatarData(dataInicio)} a {formatarData(dataFim)}
+          <DialogTitle className="flex items-center text-sm sm:text-base">
+            <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Análise de Clientes - {formatarData(dataInicio)} a {formatarData(dataFim)}</span>
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Resumo Geral */}
           {dadosClientes && dadosClientes.clientes && (
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="text-center">
@@ -1516,7 +1520,7 @@ export default function Relatorios() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
                         <TableHead>#</TableHead>
@@ -1570,10 +1574,11 @@ export default function Relatorios() {
           )}
 
           {/* Ações */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               variant="outline"
               onClick={() => setModalClientesAberto(false)}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Fechar
             </Button>
@@ -1583,8 +1588,9 @@ export default function Relatorios() {
                 setModalClientesAberto(false);
               }}
               disabled={!dadosClientes || dadosClientes.clientes.length === 0}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Baixar PDF
             </Button>
           </div>
@@ -1596,18 +1602,18 @@ export default function Relatorios() {
   // Modal de visualização de financeiro
   const ModalFinanceiro = () => (
     <Dialog open={modalFinanceiroAberto} onOpenChange={setModalFinanceiroAberto}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <DollarSign className="h-5 w-5 mr-2" />
-            Relatório Financeiro - {formatarData(dataInicio)} a {formatarData(dataFim)}
+          <DialogTitle className="flex items-center text-sm sm:text-base">
+            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Relatório Financeiro - {formatarData(dataInicio)} a {formatarData(dataFim)}</span>
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Resumo Geral */}
           {dadosFinanceiro && dadosFinanceiro.resumo && (
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="text-center">
@@ -1667,7 +1673,7 @@ export default function Relatorios() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Data</TableHead>
@@ -1725,10 +1731,11 @@ export default function Relatorios() {
           )}
 
           {/* Ações */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               variant="outline"
               onClick={() => setModalFinanceiroAberto(false)}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Fechar
             </Button>
@@ -1738,8 +1745,9 @@ export default function Relatorios() {
                 setModalFinanceiroAberto(false);
               }}
               disabled={!dadosFinanceiro || !dadosFinanceiro.transacoes || dadosFinanceiro.transacoes.length === 0}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Baixar PDF
             </Button>
           </div>
@@ -1751,18 +1759,18 @@ export default function Relatorios() {
   // Modal de visualização de estoque
   const ModalEstoque = () => (
     <Dialog open={modalEstoqueAberto} onOpenChange={setModalEstoqueAberto}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <PieChart className="h-5 w-5 mr-2" />
-            Controle de Estoque - {formatarData(dataInicio)} a {formatarData(dataFim)}
+          <DialogTitle className="flex items-center text-sm sm:text-base">
+            <PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Controle de Estoque - {formatarData(dataInicio)} a {formatarData(dataFim)}</span>
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Resumo Geral */}
           {dadosEstoque && dadosEstoque.estatisticas && (
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="text-center">
@@ -1819,7 +1827,7 @@ export default function Relatorios() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Produto</TableHead>
@@ -1895,10 +1903,11 @@ export default function Relatorios() {
           )}
 
           {/* Ações */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               variant="outline"
               onClick={() => setModalEstoqueAberto(false)}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Fechar
             </Button>
@@ -1908,8 +1917,9 @@ export default function Relatorios() {
                 setModalEstoqueAberto(false);
               }}
               disabled={!dadosEstoque || !dadosEstoque.produtos || dadosEstoque.produtos.length === 0}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Baixar PDF
             </Button>
           </div>
@@ -1921,17 +1931,18 @@ export default function Relatorios() {
 
   return (
 
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
 
       {/* Header */}
 
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+      <div className="w-full">
 
-        <div>
+        {/* Título e Descrição - Sempre no topo */}
+        <div className="mb-4 md:mb-0">
 
-          <h1 className="text-3xl font-bold">Relatórios</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Relatórios</h1>
 
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
 
             Análises e insights sobre seu negócio
 
@@ -1939,7 +1950,8 @@ export default function Relatorios() {
 
         </div>
 
-        <div className="flex items-center space-x-2">
+        {/* Filtros - Desktop */}
+        <div className="hidden md:flex items-center space-x-2 justify-end">
 
           <div className="flex items-center space-x-2">
 
@@ -2031,13 +2043,118 @@ export default function Relatorios() {
 
         </div>
 
+        {/* Filtros - Mobile */}
+        <div className="md:hidden space-y-3 w-full">
+
+          <div className="grid grid-cols-2 gap-2 w-full">
+
+            <div className="space-y-1 min-w-0">
+
+              <Label htmlFor="data-inicio-mobile" className="text-xs font-medium">De:</Label>
+
+              <Input
+
+                id="data-inicio-mobile"
+
+                type="date"
+
+                value={dataInicio}
+
+                onChange={(e) => setDataInicio(e.target.value)}
+
+                className="w-full text-sm"
+
+              />
+
+            </div>
+
+            <div className="space-y-1 min-w-0">
+
+              <Label htmlFor="data-fim-mobile" className="text-xs font-medium">Até:</Label>
+
+              <Input
+
+                id="data-fim-mobile"
+
+                type="date"
+
+                value={dataFim}
+
+                onChange={(e) => setDataFim(e.target.value)}
+
+                className="w-full text-sm"
+
+              />
+
+            </div>
+
+          </div>
+
+          <div className="space-y-1 w-full">
+
+            <Label className="text-xs font-medium">Categoria:</Label>
+
+            <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
+
+              <SelectTrigger className="w-full">
+
+                <SelectValue placeholder="Todas as categorias" />
+
+              </SelectTrigger>
+
+              <SelectContent>
+
+                <SelectItem value="todas">Todas as categorias</SelectItem>
+
+                {categorias.map((categoria) => (
+
+                  <SelectItem key={categoria.id} value={categoria.id.toString()}>
+
+                    {categoria.nome}
+
+                  </SelectItem>
+
+                ))}
+
+              </SelectContent>
+
+            </Select>
+
+          </div>
+
+          <Button 
+
+            variant="outline" 
+
+            size="sm" 
+
+            className="w-full"
+
+            onClick={() => {
+
+              // Recarregar todos os dados
+
+              window.location.reload();
+
+            }}
+
+          >
+
+            <RefreshCw className="h-4 w-4 mr-2" />
+
+            Atualizar Dados
+
+          </Button>
+
+        </div>
+
       </div>
 
 
 
       {/* Métricas Rápidas */}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
 
         {loadingMetricas ? (
 
@@ -2123,29 +2240,29 @@ export default function Relatorios() {
 
             <Card key={index} className="bg-gradient-card shadow-card">
 
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
 
                 <div className="flex items-center justify-between">
 
-                  <div>
+                  <div className="flex-1 min-w-0">
 
-                    <p className="text-sm font-medium text-muted-foreground">{metrica.titulo}</p>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{metrica.titulo}</p>
 
-                    <p className="text-2xl font-bold">{metrica.valor}</p>
+                    <p className="text-lg sm:text-2xl font-bold truncate">{metrica.valor}</p>
 
                     <div className="flex items-center space-x-1 mt-1">
 
                       {metrica.tipoMudanca === "positiva" ? (
 
-                        <TrendingUp className="h-3 w-3 text-success" />
+                        <TrendingUp className="h-3 w-3 text-success flex-shrink-0" />
 
                       ) : (
 
-                        <TrendingDown className="h-3 w-3 text-destructive" />
+                        <TrendingDown className="h-3 w-3 text-destructive flex-shrink-0" />
 
                       )}
 
-                      <span className={`text-xs ${metrica.tipoMudanca === "positiva" ? "text-success" : "text-destructive"}`}>
+                      <span className={`text-xs ${metrica.tipoMudanca === "positiva" ? "text-success" : "text-destructive"} truncate`}>
 
                         {metrica.mudanca}
 
@@ -2155,9 +2272,9 @@ export default function Relatorios() {
 
                   </div>
 
-                  <div className="p-2 rounded-lg bg-primary/10">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 ml-2">
 
-                    <metrica.icone className="h-5 w-5 text-primary" />
+                    <metrica.icone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
 
                   </div>
 
@@ -2175,11 +2292,11 @@ export default function Relatorios() {
 
 
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
 
         {/* Relatórios Disponíveis */}
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-2 lg:order-1">
 
           <Card className="bg-gradient-card shadow-card">
 
@@ -2195,33 +2312,33 @@ export default function Relatorios() {
 
                 {relatorios.map((relatorio, index) => (
 
-                  <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                  <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0 w-full min-w-0">
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
 
-                      <div className={`p-3 rounded-lg ${relatorio.cor}`}>
+                      <div className={`p-2 sm:p-3 rounded-lg ${relatorio.cor} flex-shrink-0`}>
 
                         {relatorio.loading ? (
 
-                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
 
                         ) : (
 
-                          <relatorio.icone className="h-6 w-6" />
+                          <relatorio.icone className="h-5 w-5 sm:h-6 sm:w-6" />
 
                         )}
 
                       </div>
 
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
 
-                        <h3 className="font-semibold">{relatorio.titulo}</h3>
+                        <h3 className="font-semibold text-sm sm:text-base line-clamp-1">{relatorio.titulo}</h3>
 
-                        <p className="text-sm text-muted-foreground">{relatorio.descricao}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{relatorio.descricao}</p>
 
                         <p className="text-xs text-muted-foreground mt-1">
 
-                          Última atualização: {new Date(relatorio.ultimaGeracao).toLocaleDateString("pt-BR")}
+                          Atualizado: {new Date(relatorio.ultimaGeracao).toLocaleDateString("pt-BR")}
 
                         </p>
 
@@ -2231,7 +2348,7 @@ export default function Relatorios() {
 
                             {relatorio.tipo === 'vendas' && 'vendas' in relatorio.dados && (
 
-                              <span>{relatorio.dados.vendas.length} registros encontrados</span>
+                              <span>{relatorio.dados.vendas.length} registros</span>
 
                             )}
 
@@ -2267,7 +2384,7 @@ export default function Relatorios() {
 
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 self-end sm:self-auto flex-shrink-0">
 
                       {relatorio.tipo === 'vendas' ? (
                         <Button 
@@ -2275,8 +2392,9 @@ export default function Relatorios() {
                           size="sm" 
                           onClick={() => setModalVendasAberto(true)}
                           disabled={relatorio.loading}
+                          className="text-xs sm:text-sm hidden min-[550px]:flex"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Ver
                         </Button>
                       ) : relatorio.tipo === 'produtos' ? (
@@ -2285,8 +2403,9 @@ export default function Relatorios() {
                           size="sm" 
                           onClick={() => setModalProdutosAberto(true)}
                           disabled={relatorio.loading}
+                          className="text-xs sm:text-sm hidden min-[550px]:flex"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Ver
                         </Button>
                       ) : relatorio.tipo === 'clientes' ? (
@@ -2295,8 +2414,9 @@ export default function Relatorios() {
                           size="sm" 
                           onClick={() => setModalClientesAberto(true)}
                           disabled={relatorio.loading}
+                          className="text-xs sm:text-sm hidden min-[550px]:flex"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Ver
                         </Button>
                       ) : relatorio.tipo === 'financeiro' ? (
@@ -2305,8 +2425,9 @@ export default function Relatorios() {
                           size="sm" 
                           onClick={() => setModalFinanceiroAberto(true)}
                           disabled={relatorio.loading}
+                          className="text-xs sm:text-sm hidden min-[550px]:flex"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Ver
                         </Button>
                       ) : relatorio.tipo === 'estoque' ? (
@@ -2315,14 +2436,15 @@ export default function Relatorios() {
                           size="sm" 
                           onClick={() => setModalEstoqueAberto(true)}
                           disabled={relatorio.loading}
+                          className="text-xs sm:text-sm hidden min-[550px]:flex"
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Ver
                         </Button>
                       ) : (
-                      <Button variant="outline" size="sm" disabled={relatorio.loading}>
+                      <Button variant="outline" size="sm" disabled={relatorio.loading} className="text-xs sm:text-sm hidden min-[550px]:flex">
 
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
 
                         Ver
 
@@ -2341,19 +2463,22 @@ export default function Relatorios() {
 
                           disabled={relatorio.loading || loadingVendasDetalhado || !dadosVendasDetalhado}
 
+                          className="text-xs sm:text-sm"
+
                         >
 
                           {loadingVendasDetalhado ? (
 
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
 
                           ) : (
 
-                            <Download className="h-4 w-4 mr-2" />
+                            <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
 
                           )}
 
-                          PDF
+                          <span className="hidden sm:inline">PDF</span>
+                          <span className="sm:hidden">📄</span>
 
                         </Button>
 
@@ -2369,11 +2494,14 @@ export default function Relatorios() {
 
                           disabled={relatorio.loading || !dadosProdutos || !user}
 
+                          className="text-xs sm:text-sm"
+
                         >
 
-                          <Download className="h-4 w-4 mr-2" />
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
 
-                          PDF
+                          <span className="hidden sm:inline">PDF</span>
+                          <span className="sm:hidden">📄</span>
 
                         </Button>
 
@@ -2389,11 +2517,14 @@ export default function Relatorios() {
 
                           disabled={relatorio.loading || !dadosClientes || !user}
 
+                          className="text-xs sm:text-sm"
+
                         >
 
-                          <Download className="h-4 w-4 mr-2" />
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
 
-                          PDF
+                          <span className="hidden sm:inline">PDF</span>
+                          <span className="sm:hidden">📄</span>
 
                         </Button>
 
@@ -2409,11 +2540,14 @@ export default function Relatorios() {
 
                           disabled={relatorio.loading || !dadosFinanceiro || !user}
 
+                          className="text-xs sm:text-sm"
+
                         >
 
-                          <Download className="h-4 w-4 mr-2" />
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
 
-                          PDF
+                          <span className="hidden sm:inline">PDF</span>
+                          <span className="sm:hidden">📄</span>
 
                         </Button>
 
@@ -2429,11 +2563,14 @@ export default function Relatorios() {
 
                           disabled={relatorio.loading || !dadosEstoque || !user}
 
+                          className="text-xs sm:text-sm"
+
                         >
 
-                          <Download className="h-4 w-4 mr-2" />
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
 
-                          PDF
+                          <span className="hidden sm:inline">PDF</span>
+                          <span className="sm:hidden">📄</span>
 
                         </Button>
 
@@ -2441,9 +2578,9 @@ export default function Relatorios() {
 
                         <Select onValueChange={(formato) => baixarRelatorio(relatorio.tipo, formato)}>
 
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-20 sm:w-32 text-xs sm:text-sm">
 
-                            <SelectValue placeholder="Baixar" />
+                            <SelectValue placeholder="📄" />
 
                           </SelectTrigger>
 
@@ -2479,7 +2616,7 @@ export default function Relatorios() {
 
         {/* Relatórios Recentes */}
 
-        <div>
+        <div className="order-1 lg:order-2">
 
           <Card className="bg-gradient-card shadow-card">
 
@@ -2578,9 +2715,9 @@ export default function Relatorios() {
 
       {/* Gráficos com Dados Reais */}
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 w-full">
 
-        <Card className="bg-gradient-card shadow-card">
+        <Card className="bg-gradient-card shadow-card w-full min-w-0">
 
           <CardHeader>
 
@@ -2667,7 +2804,7 @@ export default function Relatorios() {
 
 
 
-        <Card className="bg-gradient-card shadow-card">
+        <Card className="bg-gradient-card shadow-card w-full min-w-0">
 
           <CardHeader>
 
