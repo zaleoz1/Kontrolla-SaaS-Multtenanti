@@ -371,9 +371,9 @@ export default function Signup() {
         {/* Animated Grid */}
         <div className="absolute inset-0 bg-grid-slate-400/[0.02] bg-[size:50px_50px]" />
         
-        {/* Floating Elements */}
+        {/* Floating Elements - Hidden on mobile for performance */}
         <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl"
+          className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl hidden sm:block"
           animate={{
             x: [0, 100, 0],
             y: [0, -50, 0],
@@ -381,7 +381,7 @@ export default function Signup() {
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+          className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl hidden sm:block"
           animate={{
             x: [0, -100, 0],
             y: [0, 50, 0],
@@ -389,44 +389,44 @@ export default function Signup() {
           transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
         />
         
-        {/* Geometric shapes */}
+        {/* Geometric shapes - Hidden on mobile for performance */}
         <motion.div
-          className="absolute top-1/4 right-1/3 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-blue-400/10 rounded-lg rotate-45 blur-xl"
+          className="absolute top-1/4 right-1/3 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-blue-400/10 rounded-lg rotate-45 blur-xl hidden sm:block"
           animate={{ rotate: [45, 405, 45] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
         />
         <motion.div
-          className="absolute bottom-1/4 left-1/3 w-24 h-24 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-xl"
+          className="absolute bottom-1/4 left-1/3 w-24 h-24 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-xl hidden sm:block"
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Header */}
         <motion.div 
-          className="text-center mb-12"
+          className="text-center mb-6 sm:mb-12"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           <motion.div 
-            className="flex items-center justify-center mb-8"
+            className="flex items-center justify-center mb-4 sm:mb-8"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <img 
               src="/logo.png" 
               alt="KontrollaPro Logo" 
-              className="h-16 w-16 rounded-xl mr-4"
+              className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl mr-3 sm:mr-4"
             />
-            <span className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
               KontrollaPro
             </span>
           </motion.div>
           
           <motion.h1 
-            className="text-4xl md:text-5xl font-bold text-white mb-4"
+            className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2 sm:mb-4"
             variants={fadeInUp}
             initial="initial"
             animate="animate"
@@ -435,7 +435,7 @@ export default function Signup() {
           </motion.h1>
           
           <motion.p 
-            className="text-slate-300 text-xl max-w-2xl mx-auto"
+            className="text-slate-300 text-base sm:text-xl max-w-2xl mx-auto px-4 sm:px-0"
             variants={fadeInUp}
             initial="initial"
             animate="animate"
@@ -444,7 +444,7 @@ export default function Signup() {
           </motion.p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-12 items-start">
           {/* Left Side - Form */}
           <motion.div
             variants={scaleIn}
@@ -452,28 +452,28 @@ export default function Signup() {
             animate="animate"
           >
             <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
-              <CardHeader className="space-y-1 pb-6">
-                <CardTitle className="text-2xl font-bold text-center text-white">
+              <CardHeader className="space-y-1 pb-4 sm:pb-6">
+                <CardTitle className="text-xl sm:text-2xl font-bold text-center text-white">
                   Crie sua conta
                 </CardTitle>
-                <p className="text-center text-slate-300">
+                <p className="text-center text-slate-300 text-sm sm:text-base">
                   Preencha os dados abaixo para começar
                 </p>
                 
                 {/* Progress Steps */}
-                <div className="flex justify-center mt-6">
-                  <div className="flex items-center space-x-2 max-w-full overflow-hidden">
+                <div className="flex justify-center mt-4 sm:mt-6">
+                  <div className="flex items-center space-x-1 sm:space-x-2 max-w-full overflow-hidden">
                     {steps.map((step, index) => (
                       <div key={step.number} className="flex items-center flex-shrink-0">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                        <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
                           currentStep >= step.number 
                             ? 'bg-emerald-500 text-white' 
                             : 'bg-slate-600 text-slate-300'
                         }`}>
-                          {currentStep > step.number ? <Check className="h-3 w-3" /> : step.number}
+                          {currentStep > step.number ? <Check className="h-2 w-2 sm:h-3 sm:w-3" /> : step.number}
                         </div>
                         {index < steps.length - 1 && (
-                          <div className={`w-8 h-0.5 mx-1 ${
+                          <div className={`w-4 sm:w-8 h-0.5 mx-1 ${
                             currentStep > step.number ? 'bg-emerald-500' : 'bg-slate-600'
                           }`} />
                         )}
@@ -495,15 +495,15 @@ export default function Signup() {
                   {currentStep === 1 && (
                     <motion.div
                       variants={fadeInUp}
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="firstName" className="text-sm font-medium text-slate-200">
+                          <Label htmlFor="firstName" className="text-xs sm:text-sm font-medium text-slate-200">
                             Nome
                           </Label>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                             <Input
                               id="firstName"
                               name="firstName"
@@ -511,18 +511,18 @@ export default function Signup() {
                               placeholder="Seu nome"
                               value={formData.firstName}
                               onChange={handleInputChange}
-                              className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               required
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="lastName" className="text-sm font-medium text-slate-200">
+                          <Label htmlFor="lastName" className="text-xs sm:text-sm font-medium text-slate-200">
                             Sobrenome
                           </Label>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                             <Input
                               id="lastName"
                               name="lastName"
@@ -530,7 +530,7 @@ export default function Signup() {
                               placeholder="Seu sobrenome"
                               value={formData.lastName}
                               onChange={handleInputChange}
-                              className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               required
                             />
                           </div>
@@ -538,11 +538,11 @@ export default function Signup() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-slate-200">
                           Email
                         </Label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="email"
                             name="email"
@@ -550,18 +550,18 @@ export default function Signup() {
                             placeholder="seu@email.com"
                             value={formData.email}
                             onChange={handleInputChange}
-                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="phone" className="text-xs sm:text-sm font-medium text-slate-200">
                           Telefone
                         </Label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="phone"
                             name="phone"
@@ -569,7 +569,7 @@ export default function Signup() {
                             placeholder="(11) 99999-9999"
                             value={formData.phone}
                             onChange={handleInputChange}
-                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                         </div>
@@ -581,14 +581,14 @@ export default function Signup() {
                   {currentStep === 2 && (
                     <motion.div
                       variants={fadeInUp}
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
                       {/* Tipo de Pessoa */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-200">
+                        <Label className="text-xs sm:text-sm font-medium text-slate-200">
                           Tipo de Pessoa
                         </Label>
-                        <div className="flex space-x-4">
+                        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
                               type="radio"
@@ -598,7 +598,7 @@ export default function Signup() {
                               onChange={handleInputChange}
                               className="text-emerald-500 focus:ring-emerald-500"
                             />
-                            <span className="text-slate-300">Pessoa Física</span>
+                            <span className="text-slate-300 text-sm sm:text-base">Pessoa Física</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
@@ -609,18 +609,18 @@ export default function Signup() {
                               onChange={handleInputChange}
                               className="text-emerald-500 focus:ring-emerald-500"
                             />
-                            <span className="text-slate-300">Pessoa Jurídica</span>
+                            <span className="text-slate-300 text-sm sm:text-base">Pessoa Jurídica</span>
                           </label>
                         </div>
                       </div>
 
                       {/* CPF/CNPJ */}
                       <div className="space-y-2">
-                        <Label htmlFor="cpfCnpj" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="cpfCnpj" className="text-xs sm:text-sm font-medium text-slate-200">
                           {formData.tipoPessoa === 'fisica' ? 'CPF' : 'CNPJ'}
                         </Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="cpfCnpj"
                             name="cpfCnpj"
@@ -628,7 +628,7 @@ export default function Signup() {
                             placeholder={formData.tipoPessoa === 'fisica' ? '000.000.000-00' : '00.000.000/0000-00'}
                             value={formData.cpfCnpj}
                             onChange={handleInputChange}
-                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                         </div>
@@ -636,11 +636,11 @@ export default function Signup() {
 
                       {/* Nome da Empresa */}
                       <div className="space-y-2">
-                        <Label htmlFor="company" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="company" className="text-xs sm:text-sm font-medium text-slate-200">
                           {formData.tipoPessoa === 'fisica' ? 'Nome Completo' : 'Nome da Empresa'}
                         </Label>
                         <div className="relative">
-                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="company"
                             name="company"
@@ -648,7 +648,7 @@ export default function Signup() {
                             placeholder={formData.tipoPessoa === 'fisica' ? 'Seu nome completo' : 'Nome da sua empresa'}
                             value={formData.company}
                             onChange={handleInputChange}
-                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                         </div>
@@ -658,11 +658,11 @@ export default function Signup() {
                       {formData.tipoPessoa === 'juridica' && (
                         <>
                           <div className="space-y-2">
-                            <Label htmlFor="razaoSocial" className="text-sm font-medium text-slate-200">
+                            <Label htmlFor="razaoSocial" className="text-xs sm:text-sm font-medium text-slate-200">
                               Razão Social
                             </Label>
                             <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                               <Input
                                 id="razaoSocial"
                                 name="razaoSocial"
@@ -670,17 +670,17 @@ export default function Signup() {
                                 placeholder="Razão social da empresa"
                                 value={formData.razaoSocial}
                                 onChange={handleInputChange}
-                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                                className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               />
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="nomeFantasia" className="text-sm font-medium text-slate-200">
+                            <Label htmlFor="nomeFantasia" className="text-xs sm:text-sm font-medium text-slate-200">
                               Nome Fantasia
                             </Label>
                             <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                               <Input
                                 id="nomeFantasia"
                                 name="nomeFantasia"
@@ -688,7 +688,7 @@ export default function Signup() {
                                 placeholder="Nome fantasia da empresa"
                                 value={formData.nomeFantasia}
                                 onChange={handleInputChange}
-                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                                className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               />
                             </div>
                           </div>
@@ -697,13 +697,13 @@ export default function Signup() {
 
                       {/* Inscrições (apenas para PJ) */}
                       {formData.tipoPessoa === 'juridica' && (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="inscricaoEstadual" className="text-sm font-medium text-slate-200">
+                            <Label htmlFor="inscricaoEstadual" className="text-xs sm:text-sm font-medium text-slate-200">
                               Inscrição Estadual
                             </Label>
                             <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                               <Input
                                 id="inscricaoEstadual"
                                 name="inscricaoEstadual"
@@ -711,17 +711,17 @@ export default function Signup() {
                                 placeholder="Inscrição Estadual"
                                 value={formData.inscricaoEstadual}
                                 onChange={handleInputChange}
-                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                                className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               />
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="inscricaoMunicipal" className="text-sm font-medium text-slate-200">
+                            <Label htmlFor="inscricaoMunicipal" className="text-xs sm:text-sm font-medium text-slate-200">
                               Inscrição Municipal
                             </Label>
                             <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                               <Input
                                 id="inscricaoMunicipal"
                                 name="inscricaoMunicipal"
@@ -729,7 +729,7 @@ export default function Signup() {
                                 placeholder="Inscrição Municipal"
                                 value={formData.inscricaoMunicipal}
                                 onChange={handleInputChange}
-                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                                className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               />
                             </div>
                           </div>
@@ -738,7 +738,7 @@ export default function Signup() {
 
                       {/* Logo Upload */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-200">
+                        <Label className="text-xs sm:text-sm font-medium text-slate-200">
                           Logo da Empresa (Opcional)
                         </Label>
                         <div className="space-y-4">
@@ -747,22 +747,22 @@ export default function Signup() {
                               <img
                                 src={companyLogo}
                                 alt="Company Logo Preview"
-                                className="w-24 h-24 object-cover rounded-lg border border-white/20"
+                                className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-white/20"
                               />
                               <button
                                 type="button"
                                 onClick={removeLogo}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-2 w-2 sm:h-3 sm:w-3" />
                               </button>
                             </div>
                           ) : (
                             <div
                               onClick={() => fileInputRef.current?.click()}
-                              className="w-24 h-24 border-2 border-dashed border-white/30 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-500/10 transition-all duration-200"
+                              className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed border-white/30 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-500/10 transition-all duration-200"
                             >
-                              <Upload className="h-6 w-6 text-slate-400 mb-1" />
+                              <Upload className="h-4 w-4 sm:h-6 sm:w-6 text-slate-400 mb-1" />
                               <span className="text-xs text-slate-400">Upload</span>
                             </div>
                           )}
@@ -782,15 +782,15 @@ export default function Signup() {
                   {currentStep === 3 && (
                     <motion.div
                       variants={fadeInUp}
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
                       {/* CEP */}
                       <div className="space-y-2">
-                        <Label htmlFor="cep" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="cep" className="text-xs sm:text-sm font-medium text-slate-200">
                           CEP
                         </Label>
                         <div className="relative">
-                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="cep"
                             name="cep"
@@ -798,13 +798,13 @@ export default function Signup() {
                             placeholder="00000-000"
                             value={formData.cep}
                             onChange={handleInputChange}
-                            className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 pr-8 sm:pr-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                           {isLoadingCep && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                               <motion.div
-                                className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"
+                                className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                               />
@@ -818,11 +818,11 @@ export default function Signup() {
 
                       {/* Endereço */}
                       <div className="space-y-2">
-                        <Label htmlFor="endereco" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="endereco" className="text-xs sm:text-sm font-medium text-slate-200">
                           Endereço
                         </Label>
                         <div className="relative">
-                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="endereco"
                             name="endereco"
@@ -830,20 +830,20 @@ export default function Signup() {
                             placeholder="Rua, número, bairro"
                             value={formData.endereco}
                             onChange={handleInputChange}
-                            className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                         </div>
                       </div>
 
                       {/* Cidade e Estado */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="cidade" className="text-sm font-medium text-slate-200">
+                          <Label htmlFor="cidade" className="text-xs sm:text-sm font-medium text-slate-200">
                             Cidade
                           </Label>
                           <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                             <Input
                               id="cidade"
                               name="cidade"
@@ -851,18 +851,18 @@ export default function Signup() {
                               placeholder="Cidade"
                               value={formData.cidade}
                               onChange={handleInputChange}
-                              className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               required
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="estado" className="text-sm font-medium text-slate-200">
+                          <Label htmlFor="estado" className="text-xs sm:text-sm font-medium text-slate-200">
                             Estado
                           </Label>
                           <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                             <Input
                               id="estado"
                               name="estado"
@@ -870,7 +870,7 @@ export default function Signup() {
                               placeholder="UF"
                               value={formData.estado}
                               onChange={handleInputChange}
-                              className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                              className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                               required
                             />
                           </div>
@@ -883,14 +883,14 @@ export default function Signup() {
                   {currentStep === 4 && (
                     <motion.div
                       variants={fadeInUp}
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
                       <div className="space-y-2">
-                        <Label htmlFor="password" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="password" className="text-xs sm:text-sm font-medium text-slate-200">
                           Senha
                         </Label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="password"
                             name="password"
@@ -898,7 +898,7 @@ export default function Signup() {
                             placeholder="Mínimo 8 caracteres"
                             value={formData.password}
                             onChange={handleInputChange}
-                            className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 pr-8 sm:pr-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                             minLength={8}
                           />
@@ -907,17 +907,17 @@ export default function Signup() {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                           >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {showPassword ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
                           </button>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-200">
+                        <Label htmlFor="confirmPassword" className="text-xs sm:text-sm font-medium text-slate-200">
                           Confirmar Senha
                         </Label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                           <Input
                             id="confirmPassword"
                             name="confirmPassword"
@@ -925,7 +925,7 @@ export default function Signup() {
                             placeholder="Confirme sua senha"
                             value={formData.confirmPassword}
                             onChange={handleInputChange}
-                            className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            className="pl-8 sm:pl-10 pr-8 sm:pr-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
                             required
                           />
                           <button
@@ -933,13 +933,13 @@ export default function Signup() {
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                           >
-                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {showConfirmPassword ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
                           </button>
                         </div>
                       </div>
 
                       {/* Terms and Marketing */}
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <div className="flex items-start space-x-2">
                           <Checkbox
                             id="acceptTerms"
@@ -949,7 +949,7 @@ export default function Signup() {
                             className="mt-1"
                             required
                           />
-                          <Label htmlFor="acceptTerms" className="text-sm text-slate-300 leading-relaxed">
+                          <Label htmlFor="acceptTerms" className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                             Eu aceito os{" "}
                             <Link to="/terms" className="text-emerald-400 hover:text-emerald-300 font-medium">
                               Termos de Uso
@@ -969,7 +969,7 @@ export default function Signup() {
                             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, acceptMarketing: !!checked }))}
                             className="mt-1"
                           />
-                          <Label htmlFor="acceptMarketing" className="text-sm text-slate-300 leading-relaxed">
+                          <Label htmlFor="acceptMarketing" className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                             Quero receber dicas e novidades por email
                           </Label>
                         </div>
@@ -981,18 +981,18 @@ export default function Signup() {
                   {currentStep === 5 && (
                     <motion.div
                       variants={fadeInUp}
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
-                      <div className="text-center mb-8">
-                        <h3 className="text-2xl font-bold text-white mb-2">
+                      <div className="text-center mb-6 sm:mb-8">
+                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
                           Escolha seu plano
                         </h3>
-                        <p className="text-slate-300">
+                        <p className="text-slate-300 text-sm sm:text-base">
                           Selecione o plano que melhor se adapta ao seu negócio
                         </p>
                       </div>
 
-                      <div className="grid gap-4">
+                      <div className="grid gap-3 sm:gap-4">
                         {plans.map((plan, index) => (
                           <motion.div
                             key={plan.id}
@@ -1011,11 +1011,11 @@ export default function Signup() {
                                 ? 'border-emerald-500/50 shadow-emerald-500/20'
                                 : 'border-white/20 hover:border-emerald-400/50'
                             }`}>
-                              <CardContent className="p-6">
-                                <div className="flex items-start justify-between mb-4">
+                              <CardContent className="p-4 sm:p-6">
+                                <div className="flex items-start justify-between mb-3 sm:mb-4">
                                   <div className="flex-1">
-                                    <div className="flex items-center space-x-3 mb-2">
-                                      <h4 className={`text-xl font-bold ${
+                                    <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
+                                      <h4 className={`text-lg sm:text-xl font-bold ${
                                         formData.selectedPlan === plan.id ? 'text-emerald-400' : 'text-white'
                                       }`}>
                                         {plan.name}
@@ -1026,37 +1026,37 @@ export default function Signup() {
                                         </Badge>
                                       )}
                                     </div>
-                                    <p className="text-slate-300 text-sm mb-3">{plan.description}</p>
+                                    <p className="text-slate-300 text-xs sm:text-sm mb-2 sm:mb-3">{plan.description}</p>
                                     <div className="flex items-baseline">
-                                      <span className={`text-3xl font-bold ${
+                                      <span className={`text-2xl sm:text-3xl font-bold ${
                                         formData.selectedPlan === plan.id ? 'text-emerald-400' : 'text-white'
                                       }`}>
                                         {plan.price}
                                       </span>
-                                      <span className="text-slate-300 ml-1">{plan.period}</span>
+                                      <span className="text-slate-300 ml-1 text-sm sm:text-base">{plan.period}</span>
                                     </div>
                                   </div>
                                   
-                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center ${
                                     formData.selectedPlan === plan.id
                                       ? 'border-emerald-500 bg-emerald-500'
                                       : 'border-white/30'
                                   }`}>
                                     {formData.selectedPlan === plan.id && (
-                                      <Check className="h-4 w-4 text-white" />
+                                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                                     )}
                                   </div>
                                 </div>
 
-                                <ul className="space-y-2">
+                                <ul className="space-y-1 sm:space-y-2">
                                   {plan.features.slice(0, 4).map((feature, featureIndex) => (
-                                    <li key={featureIndex} className="flex items-center text-sm text-slate-300">
-                                      <Check className="h-4 w-4 text-emerald-400 mr-2 flex-shrink-0" />
+                                    <li key={featureIndex} className="flex items-center text-xs sm:text-sm text-slate-300">
+                                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400 mr-2 flex-shrink-0" />
                                       {feature}
                                     </li>
                                   ))}
                                   {plan.features.length > 4 && (
-                                    <li className="text-sm text-slate-400 ml-6">
+                                    <li className="text-xs sm:text-sm text-slate-400 ml-5 sm:ml-6">
                                       +{plan.features.length - 4} recursos adicionais
                                     </li>
                                   )}
@@ -1080,15 +1080,15 @@ export default function Signup() {
                   )}
 
                   {/* Navigation Buttons */}
-                  <div className="flex justify-between pt-6">
+                  <div className="flex flex-col sm:flex-row justify-between pt-4 sm:pt-6 space-y-3 sm:space-y-0">
                     {currentStep > 1 ? (
                       <Button
                         type="button"
                         variant="outline"
                         onClick={prevStep}
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20 h-10 sm:h-12 text-sm sm:text-base w-full sm:w-auto"
                       >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                         Voltar
                       </Button>
                     ) : (
@@ -1099,16 +1099,16 @@ export default function Signup() {
                       <Button
                         type="button"
                         onClick={nextStep}
-                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
+                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white h-10 sm:h-12 text-sm sm:text-base w-full sm:w-auto"
                         disabled={currentStep === 4 && !formData.acceptTerms}
                       >
                         Próximo
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     ) : (
                       <Button
                         type="submit"
-                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-emerald-500/25 transition-all duration-300"
+                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 h-10 sm:h-12 text-sm sm:text-base w-full sm:w-auto"
                         disabled={isLoading || !formData.acceptTerms || !formData.selectedPlan}
                       >
                         {isLoading ? (
@@ -1117,12 +1117,13 @@ export default function Signup() {
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                           >
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full" />
                           </motion.div>
                         ) : (
                           <>
-                            Criar Conta Grátis
-                            <ArrowRight className="ml-2 h-5 w-5" />
+                            <span className="hidden sm:inline">Criar Conta Grátis</span>
+                            <span className="sm:hidden">Criar Conta</span>
+                            <ArrowRight className="ml-2 h-3 w-3 sm:h-5 sm:w-5" />
                           </>
                         )}
                       </Button>
@@ -1132,9 +1133,9 @@ export default function Signup() {
                   {/* Login Link */}
                   <motion.div 
                     variants={fadeInUp}
-                    className="text-center pt-4"
+                    className="text-center pt-3 sm:pt-4"
                   >
-                    <p className="text-slate-300">
+                    <p className="text-slate-300 text-sm sm:text-base">
                       Já tem uma conta?{" "}
                       <Link 
                         to="/login" 
@@ -1151,21 +1152,21 @@ export default function Signup() {
 
           {/* Right Side - Benefits */}
           <motion.div
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8 hidden lg:block"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             {/* Benefits List */}
             <motion.div
-              className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 rounded-2xl p-8 border border-emerald-500/20 backdrop-blur-sm"
+              className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 rounded-2xl p-6 sm:p-8 border border-emerald-500/20 backdrop-blur-sm"
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.3 }}
             >
-              <h3 className="text-2xl font-bold text-white mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
                 O que você ganha:
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {benefits.map((benefit, index) => (
                   <motion.div
                     key={index}
@@ -1174,12 +1175,12 @@ export default function Signup() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 + 0.5 }}
                   >
-                    <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <benefit.icon className="h-4 w-4 text-white" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <benefit.icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">{benefit.text}</p>
-                      <p className="text-slate-300 text-sm">{benefit.desc}</p>
+                      <p className="text-white font-medium text-sm sm:text-base">{benefit.text}</p>
+                      <p className="text-slate-300 text-xs sm:text-sm">{benefit.desc}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -1188,7 +1189,7 @@ export default function Signup() {
 
             {/* Features Preview */}
             <motion.div 
-              className="grid grid-cols-2 gap-4"
+              className="grid grid-cols-2 gap-3 sm:gap-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
@@ -1196,12 +1197,12 @@ export default function Signup() {
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
-                  className="text-center p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-emerald-500/30 transition-all duration-300"
+                  className="text-center p-4 sm:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-emerald-500/30 transition-all duration-300"
                   whileHover={{ scale: 1.05, y: -2 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <feature.icon className="h-8 w-8 text-emerald-400 mx-auto mb-3" />
-                  <p className="text-sm font-semibold text-white mb-1">{feature.text}</p>
+                  <feature.icon className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-400 mx-auto mb-2 sm:mb-3" />
+                  <p className="text-xs sm:text-sm font-semibold text-white mb-1">{feature.text}</p>
                   <p className="text-xs text-slate-400">{feature.desc}</p>
                 </motion.div>
               ))}
@@ -1212,16 +1213,16 @@ export default function Signup() {
 
         {/* Back to Home */}
         <motion.div 
-          className="text-center mt-12"
+          className="text-center mt-8 sm:mt-12"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
           <Link 
             to="/" 
-            className="inline-flex items-center text-slate-400 hover:text-white transition-colors"
+            className="inline-flex items-center text-slate-400 hover:text-white transition-colors text-sm sm:text-base"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             Voltar para o início
           </Link>
         </motion.div>

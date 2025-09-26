@@ -234,7 +234,7 @@ export default function NovaVenda() {
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Button 
             variant="outline" 
-            onClick={() => window.history.back()}
+            onClick={() => navigate("/dashboard")}
             className="border-slate-300 text-slate-600 hover:bg-slate-50 h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
             <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
