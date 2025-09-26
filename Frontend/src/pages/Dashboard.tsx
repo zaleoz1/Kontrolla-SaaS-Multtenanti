@@ -117,24 +117,31 @@ export default function Dashboard() {
   // Loading state
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64 mt-2" />
+      <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
+        <div className="w-full">
+          <div className="mb-4 md:mb-0">
+            <Skeleton className="h-6 w-32 sm:h-8 sm:w-48" />
+            <Skeleton className="h-3 w-48 sm:h-4 sm:w-64 mt-2" />
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2 justify-end">
             <Skeleton className="h-8 w-32" />
           </div>
+          <div className="md:hidden space-y-3 w-full">
+            <Skeleton className="h-8 w-full" />
+            <div className="flex gap-2 w-full">
+              <Skeleton className="h-8 flex-1" />
+              <Skeleton className="h-8 flex-1" />
+            </div>
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-24 sm:h-32" />
           ))}
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="md:col-span-2 h-96" />
-          <Skeleton className="h-96" />
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="md:col-span-2 h-80 sm:h-96" />
+          <Skeleton className="h-80 sm:h-96" />
         </div>
       </div>
     );
@@ -143,26 +150,26 @@ export default function Dashboard() {
   // Error state
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">
+      <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
+        <div className="w-full">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Bem-vindo de volta! Aqui está o resumo da sua loja.
             </p>
           </div>
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
+          <AlertDescription className="text-xs sm:text-sm">
             {error}
             <Button 
               variant="outline" 
               size="sm" 
-              className="ml-4"
+              className="ml-2 sm:ml-4 text-xs sm:text-sm"
               onClick={() => refreshData(periodo)}
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Tentar Novamente
             </Button>
           </AlertDescription>
@@ -172,16 +179,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
+      <div className="w-full">
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Bem-vindo de volta! Aqui está o resumo da sua loja {periodo === 'hoje' ? 'hoje' : `no ${periodo}`}.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        
+        {/* Desktop Controls */}
+        <div className="hidden md:flex items-center space-x-2 justify-end">
           {/* Controles de período */}
           <div className="flex items-center space-x-1 bg-muted rounded-lg p-1">
             {(['hoje', 'semana', 'mes', 'ano'] as const).map((p) => (
@@ -213,48 +222,100 @@ export default function Dashboard() {
             size="sm" 
             onClick={() => refreshData(periodo)}
             disabled={loading}
+            className="text-xs sm:text-sm"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
+            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Atualizar</span>
+            <span className="sm:hidden">Atualizar</span>
           </Button>
-          <Button size="sm" className="bg-gradient-primary" onClick={() => navigate("/dashboard/relatorios")}>
-            <TrendingUp className="h-4 w-4 mr-2" />
-            Ver Relatórios
+          <Button size="sm" className="bg-gradient-primary text-xs sm:text-sm" onClick={() => navigate("/dashboard/relatorios")}>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Ver Relatórios</span>
+            <span className="sm:hidden">Relatórios</span>
           </Button>
+        </div>
+
+        {/* Mobile Controls */}
+        <div className="md:hidden space-y-3 w-full">
+          {/* Controles de período */}
+          <div className="flex items-center space-x-1 bg-muted rounded-lg p-1 w-full">
+            {(['hoje', 'semana', 'mes', 'ano'] as const).map((p) => (
+              <Button
+                key={p}
+                variant={periodo === p ? "default" : "ghost"}
+                size="sm"
+                onClick={() => handlePeriodoChange(p)}
+                disabled={mudandoPeriodo || loading}
+                className="flex-1 text-xs"
+              >
+                {mudandoPeriodo && periodo === p ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    {p === 'hoje' ? 'Hoje' : 
+                     p === 'semana' ? 'Semana' : 
+                     p === 'mes' ? 'Mês' : 'Ano'}
+                  </>
+                ) : (
+                  p === 'hoje' ? 'Hoje' : 
+                  p === 'semana' ? 'Semana' : 
+                  p === 'mes' ? 'Mês' : 'Ano'
+                )}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Botões de ação mobile */}
+          <div className="flex gap-2 w-full">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refreshData(periodo)}
+              disabled={loading}
+              className="flex-1 text-xs"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Button size="sm" className="bg-gradient-primary flex-1 text-xs" onClick={() => navigate("/dashboard/relatorios")}>
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Relatórios
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
         {metricas.map((metrica, index) => (
           <CartaoMetrica key={index} {...metrica} />
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Vendas Recentes */}
         <Card className="md:col-span-2 bg-gradient-card shadow-card">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Vendas Recentes</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/vendas")}>
-                <Eye className="h-4 w-4 mr-2" />
-                Ver Todas
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <CardTitle className="text-sm sm:text-lg font-semibold">Vendas Recentes</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/vendas")} className="w-full sm:w-auto text-xs sm:text-sm">
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Ver Todas</span>
+                <span className="sm:hidden">Ver Todas</span>
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-3 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
               {vendasRecentes.length > 0 ? (
                 vendasRecentes.map((venda) => {
                   const statusInfo = getStatusBadge(venda.status);
                   return (
-                    <div key={venda.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border">
-                      <div className="space-y-1">
-                        <p className="font-medium">
+                    <div key={venda.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg bg-muted/30 border space-y-2 sm:space-y-0">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <p className="font-medium text-sm sm:text-base truncate">
                           {venda.cliente_nome || 'Cliente não informado'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {venda.numero_venda} • {formatDateTime(venda.data_venda)}
                         </p>
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
@@ -292,7 +353,7 @@ export default function Dashboard() {
                                 <img 
                                   src={getPaymentIcon(venda.forma_pagamento)} 
                                   alt="PIX" 
-                                  className="w-4 h-4"
+                                  className="w-3 h-3 sm:w-4 sm:h-4"
                                 />
                               ) : (
                                 <span>{getPaymentIcon(venda.forma_pagamento)}</span>
@@ -302,11 +363,11 @@ export default function Dashboard() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <p className="font-semibold">{formatCurrency(venda.total)}</p>
+                      <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
+                        <p className="font-semibold text-sm sm:text-base break-words">{formatCurrency(venda.total)}</p>
                         <Badge 
                           variant={statusInfo.variant as any}
-                          className={statusInfo.className}
+                          className={`${statusInfo.className} text-xs`}
                         >
                           {venda.status === 'pago' ? 'Pago' : 
                            venda.status === 'pendente' ? 'Pendente' : 
@@ -317,10 +378,10 @@ export default function Dashboard() {
                   );
                 })
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma venda encontrada</p>
-                  <p className="text-sm">As vendas aparecerão aqui quando forem realizadas</p>
+                <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                  <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                  <p className="text-sm sm:text-base">Nenhuma venda encontrada</p>
+                  <p className="text-xs sm:text-sm">As vendas aparecerão aqui quando forem realizadas</p>
                 </div>
               )}
             </div>
@@ -330,32 +391,32 @@ export default function Dashboard() {
         {/* Alerta de Estoque Baixo */}
         <Card className="bg-gradient-card shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center">
-              <AlertTriangle className="h-5 w-5 mr-2 text-warning" />
+            <CardTitle className="text-sm sm:text-lg font-semibold flex items-center">
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-warning" />
               Estoque Baixo
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-3 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
               {produtosEstoqueBaixo.length > 0 ? (
                 <>
                   {produtosEstoqueBaixo.map((produto, index) => (
                     <div key={produto.id} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm">{produto.nome}</p>
+                        <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                         <Badge 
                           variant={produto.estoque === 0 ? "destructive" : "secondary"}
-                          className={produto.estoque === 0 ? "" : "bg-warning/20 text-warning-foreground border-warning/30"}
+                          className={`${produto.estoque === 0 ? "" : "bg-warning/20 text-warning-foreground border-warning/30"} text-xs`}
                         >
                           {produto.estoque} un.
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Mín: {produto.estoque_minimo}</span>
-                        <span>{formatCurrency(produto.preco)}</span>
+                        <span className="break-words">{formatCurrency(produto.preco)}</span>
                       </div>
                       {produto.categoria_nome && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground truncate">
                           {produto.categoria_nome}
                         </div>
                       )}
@@ -364,16 +425,16 @@ export default function Dashboard() {
                       )}
                     </div>
                   ))}
-                  <Button size="sm" variant="outline" className="w-full mt-4" onClick={() => navigate("/dashboard/produtos")}>
+                  <Button size="sm" variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm" onClick={() => navigate("/dashboard/produtos")}>
                     Gerenciar Estoque
                   </Button>
                 </>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Estoque em dia!</p>
-                  <p className="text-sm">Todos os produtos estão com estoque adequado</p>
-                  <Button size="sm" variant="outline" className="w-full mt-4" onClick={() => navigate("/dashboard/produtos")}>
+                <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                  <Package className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                  <p className="text-sm sm:text-base">Estoque em dia!</p>
+                  <p className="text-xs sm:text-sm">Todos os produtos estão com estoque adequado</p>
+                  <Button size="sm" variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm" onClick={() => navigate("/dashboard/produtos")}>
                     Ver Produtos
                   </Button>
                 </div>

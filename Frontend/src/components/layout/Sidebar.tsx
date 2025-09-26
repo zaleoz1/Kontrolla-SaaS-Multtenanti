@@ -71,15 +71,15 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
       {/* Overlay para mobile - só aparece quando sidebar está aberta */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 min-[1378px]:hidden"
           onClick={onClose}
         />
       )}
       
       {/* Container principal da sidebar */}
       <div className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
-        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        "fixed min-[1378px]:static inset-y-0 left-0 z-50 flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
+        isOpen ? "translate-x-0" : "-translate-x-full min-[1378px]:translate-x-0"
       )}>
         
         {/* Logo e nome do sistema */}
@@ -104,7 +104,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="lg:hidden absolute right-2 text-white hover:bg-white/20"
+            className="min-[1378px]:hidden absolute right-2 text-white hover:bg-white/20"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -120,7 +120,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
               end={item.href === "/dashboard"}
               onClick={() => {
                 // Fecha o sidebar em mobile ao clicar em um item
-                if (window.innerWidth < 1024) {
+                if (window.innerWidth < 1378) {
                   onClose();
                 }
               }}
@@ -167,7 +167,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
             to="/dashboard/configuracoes"
             onClick={() => {
               // Fecha o sidebar em mobile ao clicar em um item
-              if (window.innerWidth < 1024) {
+              if (window.innerWidth < 1378) {
                 onClose();
               }
             }}

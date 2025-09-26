@@ -228,75 +228,92 @@ export default function Produtos() {
   const metricas = calcularMetricas();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold">Produtos</h1>
-          <p className="text-muted-foreground">
+      <div className="w-full">
+        {/* Título e Descrição - Sempre no topo */}
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">Produtos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie seu catálogo de produtos
           </p>
         </div>
-        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-produto")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Produto
-        </Button>
+
+        {/* Botão - Desktop */}
+        <div className="hidden md:flex items-center justify-end">
+          <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-produto")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Produto
+          </Button>
+        </div>
+
+        {/* Botão - Mobile */}
+        <div className="md:hidden w-full">
+          <Button 
+            className="w-full bg-gradient-primary text-xs sm:text-sm" 
+            onClick={() => navigate("/dashboard/novo-produto")}
+          >
+            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Novo Produto</span>
+            <span className="sm:hidden">Novo Produto</span>
+          </Button>
+        </div>
       </div>
 
       {/* Card de Métricas */}
       {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
           <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total de Produtos</p>
-                  <p className="text-2xl font-bold text-primary">{metricas.total}</p>
+            <CardContent className="p-2 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Total de Produtos</p>
+                  <p className="text-sm sm:text-2xl font-bold text-primary break-words">{metricas.total}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Package className="h-6 w-6 text-primary" />
+                <div className="p-1 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 self-start sm:self-auto">
+                  <Package className="h-3 w-3 sm:h-6 sm:w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Disponíveis</p>
-                  <p className="text-2xl font-bold text-success">{metricas.disponiveis}</p>
+            <CardContent className="p-2 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Disponíveis</p>
+                  <p className="text-sm sm:text-2xl font-bold text-success break-words">{metricas.disponiveis}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-success/10">
-                  <CheckCircle className="h-6 w-6 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Estoque Baixo</p>
-                  <p className="text-2xl font-bold text-warning">{metricas.estoqueBaixo}</p>
-                </div>
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <AlertTriangle className="h-6 w-6 text-warning" />
+                <div className="p-1 sm:p-2 rounded-lg bg-success/10 flex-shrink-0 self-start sm:self-auto">
+                  <CheckCircle className="h-3 w-3 sm:h-6 sm:w-6 text-success" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Sem Estoque</p>
-                  <p className="text-2xl font-bold text-destructive">{metricas.semEstoque}</p>
+            <CardContent className="p-2 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Estoque Baixo</p>
+                  <p className="text-sm sm:text-2xl font-bold text-warning break-words">{metricas.estoqueBaixo}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-destructive/10">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                <div className="p-1 sm:p-2 rounded-lg bg-warning/10 flex-shrink-0 self-start sm:self-auto">
+                  <AlertTriangle className="h-3 w-3 sm:h-6 sm:w-6 text-warning" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-2 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Sem Estoque</p>
+                  <p className="text-sm sm:text-2xl font-bold text-destructive break-words">{metricas.semEstoque}</p>
+                </div>
+                <div className="p-1 sm:p-2 rounded-lg bg-destructive/10 flex-shrink-0 self-start sm:self-auto">
+                  <AlertTriangle className="h-3 w-3 sm:h-6 sm:w-6 text-destructive" />
                 </div>
               </div>
             </CardContent>
@@ -306,8 +323,9 @@ export default function Produtos() {
 
       {/* Filtros */}
       <Card className="bg-gradient-card shadow-card">
-        <CardContent className="p-6">
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+        <CardContent className="p-3 sm:p-6">
+          {/* Filtros - Desktop */}
+          <div className="hidden md:flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -365,38 +383,102 @@ export default function Produtos() {
               </Button>
             </div>
           </div>
+
+          {/* Filtros - Mobile */}
+          <div className="md:hidden space-y-3 w-full">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={termoBusca}
+                onChange={(e) => setTermoBusca(e.target.value)}
+                className="pl-8 sm:pl-10 text-xs sm:text-sm"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+              <select
+                value={filtroStatus}
+                onChange={(e) => setFiltroStatus(e.target.value)}
+                className="px-2 py-2 border border-input bg-background rounded-md text-xs sm:text-sm"
+              >
+                <option value="">Status</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="rascunho">Rascunho</option>
+              </select>
+              <select
+                value={filtroCategoria}
+                onChange={(e) => setFiltroCategoria(e.target.value)}
+                className="px-2 py-2 border border-input bg-background rounded-md text-xs sm:text-sm"
+                disabled={categoriasApi.loading}
+              >
+                <option value="">Categoria</option>
+                {categorias.map((categoria) => (
+                  <option key={categoria.id} value={categoria.id}>
+                    {categoria.nome}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filtroEstoque}
+                onChange={(e) => setFiltroEstoque(e.target.value)}
+                className="px-2 py-2 border border-input bg-background rounded-md text-xs sm:text-sm"
+              >
+                <option value="">Estoque</option>
+                <option value="disponivel">Disponíveis</option>
+                <option value="estoque_baixo">Baixo</option>
+                <option value="sem_estoque">Sem Estoque</option>
+              </select>
+            </div>
+
+            <Button 
+              variant="outline" 
+              onClick={carregarProdutos}
+              disabled={produtosApi.loading}
+              className="w-full text-xs sm:text-sm"
+            >
+              {produtosApi.loading ? (
+                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              )}
+              <span className="hidden sm:inline">Atualizar</span>
+              <span className="sm:hidden">Atualizar</span>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Loading State */}
       {(produtosApi.loading || categoriasApi.loading) && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
             <Card key={index} className="bg-gradient-card shadow-card">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-6 sm:h-10 sm:w-10 rounded-lg" />
+                  <Skeleton className="h-4 w-16 sm:h-6 sm:w-20" />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-3/4 mb-2 sm:h-6" />
+                  <Skeleton className="h-3 w-1/2 sm:h-4" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-10 sm:h-4 sm:w-12" />
+                    <Skeleton className="h-3 w-12 sm:h-4 sm:w-16" />
                   </div>
                   <div className="flex justify-between">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-10 sm:h-4 sm:w-12" />
+                    <Skeleton className="h-3 w-12 sm:h-4 sm:w-16" />
                   </div>
                 </div>
                 <div className="flex space-x-2 pt-2">
-                  <Skeleton className="h-8 flex-1" />
-                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-6 flex-1 sm:h-8" />
+                  <Skeleton className="h-6 w-6 sm:h-8 sm:w-8" />
                 </div>
               </CardContent>
             </Card>
@@ -416,22 +498,22 @@ export default function Produtos() {
 
       {/* Grid de Produtos */}
       {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {produtos.map((produto) => (
             <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Package className="h-6 w-6 text-primary" />
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                    <Package className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
                   </div>
                   {obterBadgeStatus(produto)}
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div>
-                  <h3 className="font-semibold text-lg line-clamp-2">{produto.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{produto.categoria_nome || 'Sem categoria'}</p>
+                  <h3 className="font-semibold text-base sm:text-lg line-clamp-2">{produto.nome}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{produto.categoria_nome || 'Sem categoria'}</p>
                   {produto.marca && (
                     <p className="text-xs text-muted-foreground">{produto.marca}</p>
                   )}
@@ -439,9 +521,9 @@ export default function Produtos() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Preço:</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">Preço:</span>
                     <div className="text-right">
-                      <span className="font-semibold text-primary">
+                      <span className="font-semibold text-primary text-sm sm:text-base">
                         {formatarPreco(produto.preco_promocional || produto.preco)}
                       </span>
                       {produto.preco_promocional && produto.preco_promocional < produto.preco && (
@@ -453,27 +535,27 @@ export default function Produtos() {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Estoque:</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">
+                    <span className="text-xs sm:text-sm text-muted-foreground">Estoque:</span>
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <span className="font-medium text-xs sm:text-sm">
                         {produto.estoque} {obterUnidadeEstoque(produto.tipo_preco)}
                       </span>
                       {produto.estoque <= produto.estoque_minimo && produto.estoque > 0 && (
-                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
                       )}
                       {produto.estoque > produto.estoque_minimo && (
-                        <CheckCircle className="h-4 w-4 text-success" />
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
                       )}
                     </div>
                   </div>
 
                   {produto.codigo_barras && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground truncate">
                       Código: {produto.codigo_barras}
                     </div>
                   )}
                   {produto.sku && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground truncate">
                       SKU: {produto.sku}
                     </div>
                   )}
@@ -483,22 +565,24 @@ export default function Produtos() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="flex-1"
+                    className="flex-1 text-xs sm:text-sm"
                     onClick={() => navigate(`/dashboard/novo-produto/${produto.id}`)}
                   >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Editar</span>
+                    <span className="sm:hidden">Ed.</span>
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="text-xs sm:text-sm"
                     onClick={() => handleExcluirProduto(produto.id, produto.nome)}
                     disabled={deleteApi.loading}
                   >
                     {deleteApi.loading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     )}
                   </Button>
                 </div>
@@ -511,21 +595,22 @@ export default function Produtos() {
       {/* Empty State */}
       {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && produtos.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum produto encontrado</h3>
-            <p className="text-muted-foreground mb-4">
+          <CardContent className="p-6 sm:p-12 text-center">
+            <Package className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Nenhum produto encontrado</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               {termoBusca || filtroStatus || filtroCategoria || filtroEstoque
                 ? "Tente ajustar sua busca ou filtros" 
                 : "Adicione seu primeiro produto"
               }
             </p>
             <Button 
-              className="bg-gradient-primary"
+              className="bg-gradient-primary text-xs sm:text-sm"
               onClick={() => navigate("/dashboard/novo-produto")}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Produto
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Adicionar Produto</span>
+              <span className="sm:hidden">Adicionar</span>
             </Button>
           </CardContent>
         </Card>

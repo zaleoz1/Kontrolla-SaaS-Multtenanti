@@ -188,38 +188,41 @@ export default function NovoFornecedor() {
           }
         }}
         onLogout={handleLogout}
+        isOpen={false}
+        onClose={() => {}}
       />
 
       {/* Conteúdo principal */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6">
+        <div className="w-full max-w-full overflow-x-hidden p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+      <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-2xl sm:text-3xl font-bold">
             {isEditando ? 'Editar Fornecedor' : 'Novo Fornecedor'}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             {isEditando 
               ? 'Edite as informações do fornecedor' 
               : 'Cadastre um novo fornecedor no sistema'
             }
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => navigate("/dashboard/configuracoes")}>
-            <X className="h-4 w-4 mr-2" />
-            Cancelar
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => navigate("/dashboard/configuracoes")} className="text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none">
+            <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Cancelar</span>
+            <span className="sm:hidden">Cancelar</span>
           </Button>
           <Button 
-            className="bg-gradient-primary" 
+            className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none" 
             onClick={salvarFornecedor}
             disabled={!formularioValido || salvando || carregandoFornecedor}
           >
             {salvando ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
             ) : (
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             )}
             {salvando 
               ? (isEditando ? 'Atualizando...' : 'Salvando...') 
@@ -231,113 +234,116 @@ export default function NovoFornecedor() {
 
       {/* Conteúdo Principal */}
       {carregandoFornecedor ? (
-        <div className="flex items-center justify-center p-12">
+        <div className="flex items-center justify-center p-6 sm:p-12">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Carregando dados do fornecedor...</p>
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-3 sm:mb-4" />
+            <p className="text-xs sm:text-sm text-muted-foreground">Carregando dados do fornecedor...</p>
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
           {/* Coluna Esquerda - Formulário */}
-          <div className="lg:col-span-2">
-            <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basico" className="flex items-center space-x-2">
-                  <Building2 className="h-4 w-4" />
-                  <span>Básico</span>
+          <div className="lg:col-span-2 order-2 lg:order-1">
+            <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-3 sm:space-y-4">
+              <TabsList className="grid w-full grid-cols-3 h-auto">
+                <TabsTrigger value="basico" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                  <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Básico</span>
+                  <span className="sm:hidden">Básico</span>
                 </TabsTrigger>
-                <TabsTrigger value="endereco" className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4" />
-                  <span>Endereço</span>
+                <TabsTrigger value="endereco" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Endereço</span>
+                  <span className="sm:hidden">Endereço</span>
                 </TabsTrigger>
-                <TabsTrigger value="avancado" className="flex items-center space-x-2">
-                  <Building className="h-4 w-4" />
-                  <span>Avançado</span>
+                <TabsTrigger value="avancado" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                  <Building className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Avançado</span>
+                  <span className="sm:hidden">Avançado</span>
                 </TabsTrigger>
               </TabsList>
 
               {/* Aba Básico */}
-              <TabsContent value="basico" className="space-y-4">
+              <TabsContent value="basico" className="space-y-3 sm:space-y-4">
                 <Card className="bg-gradient-card shadow-card">
-                  <CardHeader>
-                    <CardTitle>Informações Básicas</CardTitle>
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="text-lg sm:text-xl">Informações Básicas</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">Nome do Fornecedor *</label>
+                        <label className="text-xs sm:text-sm font-medium">Nome do Fornecedor *</label>
                         <Input
                           placeholder="Nome do fornecedor"
                           value={fornecedor.nome}
                           onChange={(e) => atualizarFornecedor("nome", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Razão Social</label>
+                        <label className="text-xs sm:text-sm font-medium">Razão Social</label>
                         <Input
                           placeholder="Razão social"
                           value={fornecedor.razao_social || ""}
                           onChange={(e) => atualizarFornecedor("razao_social", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">CNPJ</label>
+                        <label className="text-xs sm:text-sm font-medium">CNPJ</label>
                         <Input
                           placeholder="00.000.000/0000-00"
                           value={fornecedor.cnpj || ""}
                           onChange={(e) => atualizarFornecedor("cnpj", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Contato</label>
+                        <label className="text-xs sm:text-sm font-medium">Contato</label>
                         <Input
                           placeholder="Nome do contato"
                           value={fornecedor.contato || ""}
                           onChange={(e) => atualizarFornecedor("contato", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">Email</label>
+                        <label className="text-xs sm:text-sm font-medium">Email</label>
                         <Input
                           type="email"
                           placeholder="fornecedor@email.com"
                           value={fornecedor.email || ""}
                           onChange={(e) => atualizarFornecedor("email", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Telefone *</label>
+                        <label className="text-xs sm:text-sm font-medium">Telefone *</label>
                         <Input
                           placeholder="(00) 00000-0000"
                           value={fornecedor.telefone || ""}
                           onChange={(e) => atualizarFornecedor("telefone", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Observações</label>
+                      <label className="text-xs sm:text-sm font-medium">Observações</label>
                       <textarea
                         placeholder="Observações sobre o fornecedor..."
                         value={fornecedor.observacoes || ""}
                         onChange={(e) => atualizarFornecedor("observacoes", e.target.value)}
-                        className="w-full mt-1 p-2 border rounded-md bg-background min-h-[80px] resize-none"
+                        className="w-full mt-1 p-2 border rounded-md bg-background min-h-[60px] sm:min-h-[80px] resize-none text-xs sm:text-sm"
                       />
                     </div>
                   </CardContent>
@@ -345,15 +351,15 @@ export default function NovoFornecedor() {
               </TabsContent>
 
               {/* Aba Endereço */}
-              <TabsContent value="endereco" className="space-y-4">
+              <TabsContent value="endereco" className="space-y-3 sm:space-y-4">
                 <Card className="bg-gradient-card shadow-card">
-                  <CardHeader>
-                    <CardTitle>Endereço</CardTitle>
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="text-lg sm:text-xl">Endereço</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">CEP</label>
+                        <label className="text-xs sm:text-sm font-medium">CEP</label>
                         <Input
                           placeholder="00000-000"
                           value={fornecedor.cep || ""}
@@ -363,38 +369,38 @@ export default function NovoFornecedor() {
                               handleBuscarCep(e.target.value);
                             }
                           }}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Endereço</label>
+                        <label className="text-xs sm:text-sm font-medium">Endereço</label>
                         <Input
                           placeholder="Rua, Avenida, número, bairro"
                           value={fornecedor.endereco || ""}
                           onChange={(e) => atualizarEndereco("endereco", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">Cidade</label>
+                        <label className="text-xs sm:text-sm font-medium">Cidade</label>
                         <Input
                           placeholder="Nome da cidade"
                           value={fornecedor.cidade || ""}
                           onChange={(e) => atualizarEndereco("cidade", e.target.value)}
-                          className="mt-1"
+                          className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Estado</label>
+                        <label className="text-xs sm:text-sm font-medium">Estado</label>
                         <select
                           value={fornecedor.estado || ""}
                           onChange={(e) => atualizarEndereco("estado", e.target.value)}
-                          className="w-full mt-1 p-2 border rounded-md bg-background"
+                          className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
                         >
                           <option value="">Selecione o estado</option>
                           <option value="AC">Acre</option>
@@ -432,19 +438,19 @@ export default function NovoFornecedor() {
               </TabsContent>
 
               {/* Aba Avançado */}
-              <TabsContent value="avancado" className="space-y-4">
+              <TabsContent value="avancado" className="space-y-3 sm:space-y-4">
                 <Card className="bg-gradient-card shadow-card">
-                  <CardHeader>
-                    <CardTitle>Configurações Avançadas</CardTitle>
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="text-lg sm:text-xl">Configurações Avançadas</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">Status</label>
+                        <label className="text-xs sm:text-sm font-medium">Status</label>
                         <select
                           value={fornecedor.status}
                           onChange={(e) => atualizarFornecedor("status", e.target.value)}
-                          className="w-full mt-1 p-2 border rounded-md bg-background"
+                          className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
                         >
                           <option value="ativo">Ativo</option>
                           <option value="inativo">Inativo</option>
@@ -458,61 +464,61 @@ export default function NovoFornecedor() {
           </div>
 
           {/* Coluna Direita - Preview */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4 order-1 lg:order-2">
             {/* Preview do Fornecedor */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle>Preview do Fornecedor</CardTitle>
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-lg sm:text-xl">Preview do Fornecedor</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {fornecedor.nome ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                        <span className="text-lg font-bold text-white">
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-full bg-gradient-primary flex items-center justify-center">
+                        <span className="text-sm sm:text-lg font-bold text-white">
                           {fornecedor.nome.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{fornecedor.nome}</h3>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base truncate">{fornecedor.nome}</h3>
                         <Badge variant={fornecedor.status === "ativo" ? "default" : "secondary"} 
-                               className={fornecedor.status === "ativo" ? "bg-success" : ""}>
+                               className={`text-xs ${fornecedor.status === "ativo" ? "bg-success" : ""}`}>
                           {fornecedor.status === "ativo" ? "Ativo" : "Inativo"}
                         </Badge>
                       </div>
                     </div>
 
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                       {fornecedor.email && (
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          <span className="truncate">{fornecedor.email}</span>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2 text-muted-foreground">
+                          <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="truncate text-xs">{fornecedor.email}</span>
                         </div>
                       )}
                       {fornecedor.telefone && (
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <Phone className="h-4 w-4" />
-                          <span>{fornecedor.telefone}</span>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2 text-muted-foreground">
+                          <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="text-xs">{fornecedor.telefone}</span>
                         </div>
                       )}
                       {fornecedor.cnpj && (
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <Building2 className="h-4 w-4" />
-                          <span>{fornecedor.cnpj}</span>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2 text-muted-foreground">
+                          <Building2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="text-xs">{fornecedor.cnpj}</span>
                         </div>
                       )}
                       {fornecedor.cidade && fornecedor.estado && (
-                        <div className="flex items-center space-x-2 text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          <span>{fornecedor.cidade}, {fornecedor.estado}</span>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2 text-muted-foreground">
+                          <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="text-xs truncate">{fornecedor.cidade}, {fornecedor.estado}</span>
                         </div>
                       )}
                     </div>
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground">
-                    <Building2 className="h-12 w-12 mx-auto mb-2" />
-                    <p>Preencha as informações básicas para ver o preview</p>
+                    <Building2 className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2" />
+                    <p className="text-xs sm:text-sm">Preencha as informações básicas para ver o preview</p>
                   </div>
                 )}
               </CardContent>
@@ -520,42 +526,42 @@ export default function NovoFornecedor() {
 
             {/* Validação do Formulário */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle>Status do Formulário</CardTitle>
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-lg sm:text-xl">Status do Formulário</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center space-x-2">
+              <CardContent className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
                   {fornecedor.nome ? (
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   )}
-                  <span className="text-sm">Nome do fornecedor</span>
+                  <span className="text-xs sm:text-sm">Nome do fornecedor</span>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
                   {fornecedor.telefone ? (
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   )}
-                  <span className="text-sm">Telefone</span>
+                  <span className="text-xs sm:text-sm">Telefone</span>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
                   {fornecedor.email ? (
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   )}
-                  <span className="text-sm">Email (opcional)</span>
+                  <span className="text-xs sm:text-sm">Email (opcional)</span>
                 </div>
 
                 {formularioValido && (
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center space-x-2 text-success">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Formulário válido</span>
+                  <div className="pt-1.5 sm:pt-2 border-t">
+                    <div className="flex items-center space-x-1.5 sm:space-x-2 text-success">
+                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="text-xs sm:text-sm font-medium">Formulário válido</span>
                     </div>
                   </div>
                 )}
@@ -564,10 +570,10 @@ export default function NovoFornecedor() {
 
             {/* Dicas */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle>Dicas</CardTitle>
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-lg sm:text-xl">Dicas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <CardContent className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
                 <p>• Preencha todos os campos obrigatórios marcados com *</p>
                 <p>• Use o CEP para preenchimento automático do endereço</p>
                 <p>• O CNPJ é opcional mas recomendado para fornecedores</p>

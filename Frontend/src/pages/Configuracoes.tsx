@@ -938,112 +938,125 @@ export default function Configuracoes() {
       />
 
       {/* Conteúdo principal */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden">
         {/* Header mobile com botão de menu */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b bg-background">
+        <div className="lg:hidden flex items-center justify-between p-3 sm:p-4 border-b bg-background">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <h1 className="text-lg font-semibold">Configurações</h1>
+          <h1 className="text-base sm:text-lg font-semibold">Configurações</h1>
           <div className="w-9" /> {/* Espaçador para centralizar o título */}
         </div>
         
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
 
       {/* Conteúdo das configurações baseado na aba ativa */}
 
         {/* Dados da Conta */}
         {abaAtiva === "conta" && (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Header da Página */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Configurações da Conta</h1>
-                <p className="text-muted-foreground mt-2">
+            <div className="w-full">
+              <div className="mb-4 md:mb-0">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Configurações da Conta</h1>
+                <p className="text-sm sm:text-base text-muted-foreground mt-2">
                   Gerencie suas informações pessoais e da empresa
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="hidden md:flex items-center space-x-2 justify-end">
                 <Button 
                   onClick={async () => {
                     await handleSalvarDadosConta();
                     await handleSalvarDadosTenant();
                   }} 
-                  className="px-6 py-2" 
+                  className="px-6 py-2 text-xs sm:text-sm" 
                   disabled={salvando}
                 >
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  {salvando ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+              <div className="md:hidden w-full">
+                <Button 
+                  onClick={async () => {
+                    await handleSalvarDadosConta();
+                    await handleSalvarDadosTenant();
+                  }} 
+                  className="w-full text-xs sm:text-sm" 
+                  disabled={salvando}
+                >
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   {salvando ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </div>
             </div>
 
             {/* Cards de Resumo - Design Moderno */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:gap-6 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Plano Atual</p>
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400">Plano Atual</p>
                       <div className="flex items-center space-x-2">
                         {obterBadgePlano(dadosTenant.plano)}
                       </div>
                     </div>
-                    <div className="p-3 rounded-full bg-blue-500/20">
-                      <Crown className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-blue-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <Crown className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-green-600 dark:text-green-400">Status da Conta</p>
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">Status da Conta</p>
                       <div className="flex items-center space-x-2">
                         {obterBadgeStatus(dadosTenant.status)}
                       </div>
                     </div>
-                    <div className="p-3 rounded-full bg-green-500/20">
-                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-green-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Membro Desde</p>
-                      <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-purple-600 dark:text-purple-400">Membro Desde</p>
+                      <p className="text-sm sm:text-lg font-bold text-purple-700 dark:text-purple-300 break-words">
                         {new Date(dadosTenant.data_criacao).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
-                    <div className="p-3 rounded-full bg-purple-500/20">
-                      <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-purple-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <Calendar className="h-4 w-4 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Tema Atual</p>
-                      <p className="text-lg font-bold text-orange-700 dark:text-orange-300 capitalize">
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-orange-600 dark:text-orange-400">Tema Atual</p>
+                      <p className="text-sm sm:text-lg font-bold text-orange-700 dark:text-orange-300 capitalize break-words">
                         {configuracoes.tema}
                       </p>
                     </div>
-                    <div className="p-3 rounded-full bg-orange-500/20">
-                      <Palette className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-orange-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <Palette className="h-4 w-4 sm:h-6 sm:w-6 text-orange-600 dark:text-orange-400" />
                     </div>
                   </div>
                 </CardContent>
@@ -1051,50 +1064,50 @@ export default function Configuracoes() {
             </div>
 
             {/* Seção Principal - Layout em 2 Colunas */}
-            <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid gap-4 sm:gap-8 grid-cols-1 lg:grid-cols-2">
               {/* Coluna Esquerda - Informações Pessoais */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card className="border-0 shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center text-xl">
-                      <div className="p-2 rounded-lg bg-blue-500/10 mr-3">
-                        <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 mr-2 sm:mr-3">
+                        <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                       </div>
                       Informações Pessoais
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Atualize seus dados pessoais e de contato
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
+                  <CardContent className="space-y-4 sm:space-y-6">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="nome" className="text-sm font-medium">Nome</Label>
+                        <Label htmlFor="nome" className="text-xs sm:text-sm font-medium">Nome</Label>
                         <Input
                           id="nome"
                           value={dadosContaEditando?.nome ?? ''}
                           onChange={(e) => {
                             setDadosContaEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
                           }}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="Seu nome"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="sobrenome" className="text-sm font-medium">Sobrenome</Label>
+                        <Label htmlFor="sobrenome" className="text-xs sm:text-sm font-medium">Sobrenome</Label>
                         <Input
                           id="sobrenome"
                           value={dadosContaEditando?.sobrenome ?? ''}
                           onChange={(e) => {
                             setDadosContaEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null);
                           }}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="Seu sobrenome"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                      <Label htmlFor="email" className="text-xs sm:text-sm font-medium">Email</Label>
                       <Input
                         id="email"
                         type="email"
@@ -1102,19 +1115,19 @@ export default function Configuracoes() {
                         onChange={(e) => {
                           setDadosContaEditando(prev => prev ? { ...prev, email: e.target.value } : null);
                         }}
-                        className="h-11"
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
                         placeholder="seu@email.com"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
+                      <Label htmlFor="telefone" className="text-xs sm:text-sm font-medium">Telefone</Label>
                       <Input
                         id="telefone"
                           value={dadosContaEditando?.telefone ?? ''}
                         onChange={(e) => {
                           setDadosContaEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
                         }}
-                        className="h-11"
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
                         placeholder="(11) 99999-9999"
                       />
                     </div>
@@ -1123,20 +1136,20 @@ export default function Configuracoes() {
 
                 {/* Endereço da Empresa */}
                 <Card className="border-0 shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center text-xl">
-                      <div className="p-2 rounded-lg bg-green-500/10 mr-3">
-                        <MapPinIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 mr-2 sm:mr-3">
+                        <MapPinIcon className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
                       </div>
                       Endereço da Empresa
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Informações de localização da sua empresa
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-4 sm:space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="endereco_empresa" className="text-sm font-medium">Endereço Completo</Label>
+                      <Label htmlFor="endereco_empresa" className="text-xs sm:text-sm font-medium">Endereço Completo</Label>
                       <Textarea
                         id="endereco_empresa"
                         value={dadosTenantEditando?.endereco ?? ''}
@@ -1145,12 +1158,12 @@ export default function Configuracoes() {
                         }}
                         placeholder="Rua, número, bairro, complemento"
                         rows={3}
-                        className="resize-none"
+                        className="resize-none text-xs sm:text-sm"
                       />
                     </div>
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                       <div className="space-y-2">
-                        <Label htmlFor="cep_empresa" className="text-sm font-medium">CEP</Label>
+                        <Label htmlFor="cep_empresa" className="text-xs sm:text-sm font-medium">CEP</Label>
                         <Input
                           id="cep_empresa"
                           value={dadosTenantEditando?.cep ?? ''}
@@ -1161,11 +1174,11 @@ export default function Configuracoes() {
                           }}
                           placeholder="00000-000"
                           maxLength={9}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="cidade_empresa" className="text-sm font-medium">Cidade</Label>
+                        <Label htmlFor="cidade_empresa" className="text-xs sm:text-sm font-medium">Cidade</Label>
                         <Input
                           id="cidade_empresa"
                           value={dadosTenantEditando?.cidade ?? ''}
@@ -1173,16 +1186,16 @@ export default function Configuracoes() {
                             setDadosTenantEditando(prev => prev ? { ...prev, cidade: e.target.value } : null);
                           }}
                           placeholder="Nome da cidade"
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="estado_empresa" className="text-sm font-medium">Estado</Label>
+                        <Label htmlFor="estado_empresa" className="text-xs sm:text-sm font-medium">Estado</Label>
                         <Select 
                           value={dadosTenantEditando?.estado ?? ''} 
                           onValueChange={(value) => setDadosTenantEditando(prev => prev ? { ...prev, estado: value } : null)}
                         >
-                          <SelectTrigger className="h-11">
+                          <SelectTrigger className="h-9 sm:h-11 text-xs sm:text-sm">
                             <SelectValue placeholder="Selecione o estado" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1222,59 +1235,59 @@ export default function Configuracoes() {
               </div>
 
               {/* Coluna Direita - Dados da Empresa */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card className="border-0 shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center text-xl">
-                      <div className="p-2 rounded-lg bg-purple-500/10 mr-3">
-                        <Building className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/10 mr-2 sm:mr-3">
+                        <Building className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
                       </div>
                       Dados da Empresa
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Informações fiscais e comerciais da empresa
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-4 sm:space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="nome_empresa" className="text-sm font-medium">Nome da Empresa</Label>
+                      <Label htmlFor="nome_empresa" className="text-xs sm:text-sm font-medium">Nome da Empresa</Label>
                       <Input
                         id="nome_empresa"
                         value={dadosTenantEditando?.nome ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, nome: e.target.value } : null);
                         }}
-                        className="h-11"
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
                         placeholder="Nome fantasia da empresa"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="razao_social" className="text-sm font-medium">Razão Social</Label>
+                      <Label htmlFor="razao_social" className="text-xs sm:text-sm font-medium">Razão Social</Label>
                       <Input
                         id="razao_social"
                         value={dadosTenantEditando?.razao_social ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, razao_social: e.target.value } : null);
                         }}
-                        className="h-11"
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
                         placeholder="Razão social completa"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="cnpj" className="text-sm font-medium">CNPJ/CPF</Label>
+                      <Label htmlFor="cnpj" className="text-xs sm:text-sm font-medium">CNPJ/CPF</Label>
                       <Input
                         id="cnpj"
                         value={dadosTenantEditando?.cnpj ?? dadosTenantEditando?.cpf ?? ''}
                         onChange={(e) => {
                           setDadosTenantEditando(prev => prev ? { ...prev, cnpj: e.target.value } : null);
                         }}
-                        className="h-11"
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
                         placeholder="00.000.000/0000-00"
                       />
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="email_empresa" className="text-sm font-medium">Email da Empresa</Label>
+                        <Label htmlFor="email_empresa" className="text-xs sm:text-sm font-medium">Email da Empresa</Label>
                         <Input
                           id="email_empresa"
                           type="email"
@@ -1282,45 +1295,45 @@ export default function Configuracoes() {
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, email: e.target.value } : null);
                           }}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="contato@empresa.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="telefone_empresa" className="text-sm font-medium">Telefone da Empresa</Label>
+                        <Label htmlFor="telefone_empresa" className="text-xs sm:text-sm font-medium">Telefone da Empresa</Label>
                         <Input
                           id="telefone_empresa"
                           value={dadosTenantEditando?.telefone ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
                           }}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="(11) 3333-4444"
                         />
                       </div>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="inscricao_estadual" className="text-sm font-medium">Inscrição Estadual</Label>
+                        <Label htmlFor="inscricao_estadual" className="text-xs sm:text-sm font-medium">Inscrição Estadual</Label>
                         <Input
                           id="inscricao_estadual"
                           value={dadosTenantEditando?.inscricao_estadual ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, inscricao_estadual: e.target.value } : null);
                           }}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="123.456.789.012"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="inscricao_municipal" className="text-sm font-medium">Inscrição Municipal</Label>
+                        <Label htmlFor="inscricao_municipal" className="text-xs sm:text-sm font-medium">Inscrição Municipal</Label>
                         <Input
                           id="inscricao_municipal"
                           value={dadosTenantEditando?.inscricao_municipal ?? ''}
                           onChange={(e) => {
                             setDadosTenantEditando(prev => prev ? { ...prev, inscricao_municipal: e.target.value } : null);
                           }}
-                          className="h-11"
+                          className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="12345678"
                         />
                       </div>
@@ -1330,40 +1343,40 @@ export default function Configuracoes() {
 
                 {/* Upload da Logo */}
                 <Card className="border-0 shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center text-xl">
-                      <div className="p-2 rounded-lg bg-orange-500/10 mr-3">
-                        <Upload className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10 mr-2 sm:mr-3">
+                        <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
                       </div>
                       Logo da Empresa
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Faça upload da logo da sua empresa (PNG, JPG até 2MB)
                     </p>
                   </CardHeader>
                   <CardContent>
-                    <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                    <div className="border-2 border-dashed border-border rounded-xl p-4 sm:p-8 text-center hover:border-primary/50 transition-colors">
                       {dadosTenantEditando?.logo ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           <div className="relative inline-block">
                             <img 
                               src={dadosTenantEditando?.logo} 
                               alt="Logo da empresa" 
-                              className="h-20 w-20 mx-auto object-contain rounded-lg shadow-md"
+                              className="h-16 w-16 sm:h-20 sm:w-20 mx-auto object-contain rounded-lg shadow-md"
                             />
-                            <div className="absolute -top-2 -right-2 p-1 bg-green-500 rounded-full">
-                              <CheckCircle className="h-4 w-4 text-white" />
+                            <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 p-0.5 sm:p-1 bg-green-500 rounded-full">
+                              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                             </div>
                           </div>
-                          <p className="text-sm font-medium text-green-600 dark:text-green-400">Logo carregada com sucesso</p>
+                          <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">Logo carregada com sucesso</p>
                         </div>
                       ) : (
-                        <div className="space-y-4">
-                          <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                            <Upload className="h-8 w-8 text-muted-foreground" />
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center">
+                            <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium">Clique para fazer upload</p>
+                            <p className="text-xs sm:text-sm font-medium">Clique para fazer upload</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               ou arraste e solte o arquivo aqui
                             </p>
@@ -1381,7 +1394,7 @@ export default function Configuracoes() {
                         variant="outline" 
                         size="sm" 
                         asChild
-                        className="mt-4"
+                        className="mt-3 sm:mt-4 text-xs sm:text-sm"
                       >
                         <label htmlFor="logo-upload" className="cursor-pointer">
                           {dadosTenantEditando?.logo ? 'Alterar Logo' : 'Selecionar Arquivo'}
@@ -1395,60 +1408,60 @@ export default function Configuracoes() {
 
             {/* Seção de Segurança - Alteração de Senha */}
             <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center text-xl">
-                  <div className="p-2 rounded-lg bg-red-500/10 mr-3">
-                    <Lock className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 mr-2 sm:mr-3">
+                    <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
                   </div>
                   Segurança da Conta
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Mantenha sua conta segura alterando sua senha regularmente
                 </p>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
+              <CardContent className="space-y-4 sm:space-y-6">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="senhaAtual" className="text-sm font-medium">Senha Atual</Label>
+                    <Label htmlFor="senhaAtual" className="text-xs sm:text-sm font-medium">Senha Atual</Label>
                     <div className="relative">
                       <Input
                         id="senhaAtual"
                         type={mostrarSenhas ? "text" : "password"}
                         value={senhaAtual}
                         onChange={(e) => setSenhaAtual(e.target.value)}
-                        className="h-11 pr-10"
+                        className="h-9 sm:h-11 pr-8 sm:pr-10 text-xs sm:text-sm"
                         placeholder="Digite sua senha atual"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-2 sm:px-3 hover:bg-transparent"
                         onClick={() => setMostrarSenhas(!mostrarSenhas)}
                       >
-                        {mostrarSenhas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {mostrarSenhas ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="novaSenha" className="text-sm font-medium">Nova Senha</Label>
+                    <Label htmlFor="novaSenha" className="text-xs sm:text-sm font-medium">Nova Senha</Label>
                     <Input
                       id="novaSenha"
                       type={mostrarSenhas ? "text" : "password"}
                       value={novaSenha}
                       onChange={(e) => setNovaSenha(e.target.value)}
-                      className="h-11"
+                      className="h-9 sm:h-11 text-xs sm:text-sm"
                       placeholder="Digite a nova senha"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmarSenha" className="text-sm font-medium">Confirmar Senha</Label>
+                    <Label htmlFor="confirmarSenha" className="text-xs sm:text-sm font-medium">Confirmar Senha</Label>
                     <Input
                       id="confirmarSenha"
                       type={mostrarSenhas ? "text" : "password"}
                       value={confirmarSenha}
                       onChange={(e) => setConfirmarSenha(e.target.value)}
-                      className="h-11"
+                      className="h-9 sm:h-11 text-xs sm:text-sm"
                       placeholder="Confirme a nova senha"
                     />
                   </div>
@@ -1456,11 +1469,11 @@ export default function Configuracoes() {
                 <div className="flex justify-end">
                   <Button 
                     onClick={handleAlterarSenha} 
-                    className="px-6 py-2" 
+                    className="px-4 sm:px-6 py-2 text-xs sm:text-sm" 
                     disabled={salvando}
                     variant="destructive"
                   >
-                    <Key className="h-4 w-4 mr-2" />
+                    <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     {salvando ? 'Alterando...' : 'Alterar Senha'}
                   </Button>
                 </div>
@@ -1472,76 +1485,82 @@ export default function Configuracoes() {
 
         {/* Administração */}
         {abaAtiva === "administracao" && (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Header da Página */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Administração do Sistema</h1>
-                <p className="text-muted-foreground mt-2">
+            <div className="w-full">
+              <div className="mb-4 md:mb-0">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Administração do Sistema</h1>
+                <p className="text-sm sm:text-base text-muted-foreground mt-2">
                   Gerencie usuários, roles e permissões do sistema
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button onClick={handleNovoUsuario} className="px-6 py-2">
-                  <Plus className="h-4 w-4 mr-2" />
+              <div className="hidden md:flex items-center space-x-2 justify-end">
+                <Button onClick={handleNovoUsuario} className="px-6 py-2 text-xs sm:text-sm">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Novo Usuário
+                </Button>
+              </div>
+              <div className="md:hidden w-full">
+                <Button onClick={handleNovoUsuario} className="w-full text-xs sm:text-sm">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Novo Usuário
                 </Button>
               </div>
             </div>
 
             {/* Cards de Resumo - Design Moderno */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:gap-6 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total de Usuários</p>
-                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{usuarios.length}</p>
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400">Total de Usuários</p>
+                      <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300 break-words">{usuarios.length}</p>
                     </div>
-                    <div className="p-3 rounded-full bg-blue-500/20">
-                      <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-blue-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <Users className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-red-600 dark:text-red-400">Administradores</p>
-                      <p className="text-2xl font-bold text-red-700 dark:text-red-300">{usuarios.filter(u => u.role === "administrador").length}</p>
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400">Administradores</p>
+                      <p className="text-lg sm:text-2xl font-bold text-red-700 dark:text-red-300 break-words">{usuarios.filter(u => u.role === "administrador").length}</p>
                     </div>
-                    <div className="p-3 rounded-full bg-red-500/20">
-                      <Crown className="h-6 w-6 text-red-600 dark:text-red-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-red-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <Crown className="h-4 w-4 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Gerentes</p>
-                      <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{usuarios.filter(u => u.role === "gerente").length}</p>
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-purple-600 dark:text-purple-400">Gerentes</p>
+                      <p className="text-lg sm:text-2xl font-bold text-purple-700 dark:text-purple-300 break-words">{usuarios.filter(u => u.role === "gerente").length}</p>
                     </div>
-                    <div className="p-3 rounded-full bg-purple-500/20">
-                      <Star className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-purple-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <Star className="h-4 w-4 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-green-600 dark:text-green-400">Vendedores</p>
-                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">{usuarios.filter(u => u.role === "vendedor").length}</p>
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">Vendedores</p>
+                      <p className="text-lg sm:text-2xl font-bold text-green-700 dark:text-green-300 break-words">{usuarios.filter(u => u.role === "vendedor").length}</p>
                     </div>
-                    <div className="p-3 rounded-full bg-green-500/20">
-                      <UserCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="p-2 sm:p-3 rounded-full bg-green-500/20 flex-shrink-0 self-start sm:self-auto">
+                      <UserCheck className="h-4 w-4 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
                 </CardContent>
@@ -1550,34 +1569,36 @@ export default function Configuracoes() {
 
             {/* Filtros e Busca */}
             <Card className="border-0 shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
                   <div className="flex-1">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3 w-3 sm:h-4 sm:w-4" />
                       <Input
                         placeholder="Buscar usuários..."
                         value={buscaUsuario}
                         onChange={(e) => setBuscaUsuario(e.target.value)}
-                        className="pl-10"
+                        className="pl-8 sm:pl-10 text-xs sm:text-sm h-9 sm:h-10"
                       />
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <Select value={filtroRoleUsuario} onValueChange={setFiltroRoleUsuario}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos os Roles</SelectItem>
-                        <SelectItem value="administrador">Administrador</SelectItem>
-                        <SelectItem value="gerente">Gerente</SelectItem>
-                        <SelectItem value="vendedor">Vendedor</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <div className="flex items-center space-x-2">
+                      <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                      <Select value={filtroRoleUsuario} onValueChange={setFiltroRoleUsuario}>
+                        <SelectTrigger className="w-full sm:w-40 text-xs sm:text-sm h-9 sm:h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos os Roles</SelectItem>
+                          <SelectItem value="administrador">Administrador</SelectItem>
+                          <SelectItem value="gerente">Gerente</SelectItem>
+                          <SelectItem value="vendedor">Vendedor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Select value={filtroStatusUsuario} onValueChange={setFiltroStatusUsuario}>
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger className="w-full sm:w-40 text-xs sm:text-sm h-9 sm:h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1592,114 +1613,143 @@ export default function Configuracoes() {
             </Card>
 
             {/* Lista de Usuários */}
-            <Card className="border-0 shadow-lg">
-              <CardContent className="p-0">
-                {carregandoUsuarios ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                      <p className="text-sm text-muted-foreground">Carregando usuários...</p>
-                    </div>
-                  </div>
-                ) : usuariosFiltrados.length === 0 ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="text-center">
-                      <UserCog className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">Nenhum usuário encontrado</p>
-                      <Button 
-                        variant="outline" 
-                        className="mt-2"
-                        onClick={handleNovoUsuario}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Primeiro Usuário
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {usuariosFiltrados.map((usuario) => (
-                      <div key={usuario.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <div className="p-2 rounded-lg bg-primary/10">
-                                <UserCog className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-lg">{usuario.nome} {usuario.sobrenome}</h3>
-                                <p className="text-sm text-muted-foreground">Código: {usuario.codigo}</p>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                {obterBadgeRole(usuario.role)}
-                                <Badge variant={usuario.status === "ativo" ? "default" : "secondary"}>
-                                  {usuario.status === "ativo" ? "Ativo" : "Inativo"}
-                                </Badge>
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Shield className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Role:</span>
-                                <span className="capitalize">{usuario.role}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Último acesso:</span>
-                                <span>{new Date(usuario.ultimo_acesso).toLocaleDateString("pt-BR")}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Criado em:</span>
-                                <span>{new Date(usuario.data_criacao).toLocaleDateString("pt-BR")}</span>
-                              </div>
-                            </div>
-
-                            {/* Permissões */}
-                            <div className="mt-3">
-                              <p className="text-sm font-medium text-muted-foreground mb-2">Permissões:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {usuario.permissoes.map((permissao) => {
-                                  const permissaoInfo = permissoesDisponiveis.find(p => p.id === permissao);
-                                  return permissaoInfo ? (
-                                    <Badge key={permissao} variant="outline" className="text-xs">
-                                      {permissaoInfo.nome}
-                                    </Badge>
-                                  ) : (
-                                    <Badge key={permissao} variant="outline" className="text-xs">
-                                      {permissao}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2 ml-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditarUsuario(usuario)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExcluirUsuario(usuario.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+            {carregandoUsuarios ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Carregando usuários...</p>
+                </div>
+              </div>
+            ) : usuariosFiltrados.length === 0 ? (
+              <Card className="bg-gradient-card shadow-card">
+                <CardContent className="p-6 sm:p-12 text-center">
+                  <UserCog className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">Nenhum usuário encontrado</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-4">
+                    {buscaUsuario || filtroRoleUsuario !== 'todos' || filtroStatusUsuario !== 'todos' 
+                      ? "Tente ajustar sua busca ou filtros" 
+                      : "Adicione seu primeiro usuário"
+                    }
+                  </p>
+                  <Button 
+                    className="bg-gradient-primary text-xs sm:text-sm"
+                    onClick={handleNovoUsuario}
+                  >
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Adicionar Usuário</span>
+                    <span className="sm:hidden">Adicionar</span>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {usuariosFiltrados.map((usuario) => (
+                  <Card key={usuario.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                          <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                            <span className="text-xs sm:text-sm font-bold text-white">
+                              {usuario.nome.charAt(0).toUpperCase()}
+                            </span>
                           </div>
                         </div>
+                        <div className="scale-90 sm:scale-100">
+                          {obterBadgeRole(usuario.role)}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-3 sm:space-y-4">
+                      <div>
+                        <h3 className="font-semibold text-base sm:text-lg line-clamp-2 flex items-center space-x-2">
+                          <span>{usuario.nome} {usuario.sobrenome}</span>
+                        </h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          Código: {usuario.codigo}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                          <Shield className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="truncate capitalize">{usuario.role}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="truncate text-xs">
+                            Último acesso: {new Date(usuario.ultimo_acesso).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="truncate text-xs">
+                            Criado: {new Date(usuario.data_criacao).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs sm:text-sm text-muted-foreground">Status:</span>
+                          <Badge variant={usuario.status === "ativo" ? "default" : "secondary"} className="text-xs">
+                            {usuario.status === "ativo" ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs sm:text-sm text-muted-foreground">Permissões:</span>
+                          <span className="font-semibold text-primary text-xs sm:text-sm">
+                            {usuario.permissoes.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Permissões - Layout compacto */}
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Permissões:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {usuario.permissoes.slice(0, 3).map((permissao) => {
+                            const permissaoInfo = permissoesDisponiveis.find(p => p.id === permissao);
+                            return (
+                              <Badge key={permissao} variant="outline" className="text-xs">
+                                {permissaoInfo ? permissaoInfo.nome : permissao}
+                              </Badge>
+                            );
+                          })}
+                          {usuario.permissoes.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{usuario.permissoes.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-1.5 sm:space-x-2 pt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 text-xs sm:text-sm"
+                          onClick={() => handleEditarUsuario(usuario)}
+                        >
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Editar</span>
+                          <span className="sm:hidden">Ed.</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="px-2 sm:px-3"
+                          onClick={() => handleExcluirUsuario(usuario.id)}
+                          disabled={carregandoUsuarios}
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1815,33 +1865,33 @@ export default function Configuracoes() {
 
         {/* Métodos de Pagamento */}
         {abaAtiva === "metodos-pagamento" && (
-          <div className="space-y-4">
-          <div className="grid gap-6">
+          <div className="space-y-4 sm:space-y-6">
+          <div className="grid gap-4 sm:gap-6">
             {/* Configuração de Métodos de Pagamento */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2" />
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                   Métodos de Pagamento Disponíveis
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Configure quais métodos de pagamento estarão disponíveis para suas vendas
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {Object.entries(metodosPagamentoLocal).map(([key, metodo]) => (
-                  <div key={key} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        {key === 'cartao_credito' && <CreditCard className="h-5 w-5 text-primary" />}
-                        {key === 'cartao_debito' && <CreditCard className="h-5 w-5 text-blue-500" />}
-                        {key === 'pix' && <QrCode className="h-5 w-5 text-green-500" />}
-                        {key === 'transferencia' && <Banknote className="h-5 w-5 text-purple-500" />}
-                        {key === 'dinheiro' && <Banknote className="h-5 w-5 text-yellow-500" />}
+                  <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg space-y-3 sm:space-y-0">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                        {key === 'cartao_credito' && <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
+                        {key === 'cartao_debito' && <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />}
+                        {key === 'pix' && <QrCode className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />}
+                        {key === 'transferencia' && <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />}
+                        {key === 'dinheiro' && <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />}
                       </div>
-                      <div>
-                        <p className="font-medium">{metodo.nome}</p>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm sm:text-base">{metodo.nome}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {key === 'cartao_credito' ? (
                             'parcelas' in metodo && metodo.parcelas && metodo.parcelas.length > 0 ? (
                               <span className="text-blue-600">
@@ -1856,10 +1906,10 @@ export default function Configuracoes() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                       {key !== 'cartao_credito' && (
                         <div className="flex items-center space-x-2">
-                          <Label htmlFor={`taxa-${key}`} className="text-sm">Taxa (%)</Label>
+                          <Label htmlFor={`taxa-${key}`} className="text-xs sm:text-sm">Taxa (%)</Label>
                           <Input
                             id={`taxa-${key}`}
                             type="number"
@@ -1873,7 +1923,7 @@ export default function Configuracoes() {
                                 [key]: { ...prev[key as keyof typeof prev], taxa: parseFloat(e.target.value) || 0 }
                               }));
                             }}
-                            className="w-20"
+                            className="w-16 sm:w-20 h-8 sm:h-9 text-xs sm:text-sm"
                             disabled={key === 'pix' || key === 'dinheiro'}
                           />
                         </div>
@@ -1883,9 +1933,9 @@ export default function Configuracoes() {
                           variant="outline"
                           size="sm"
                           onClick={handleAbrirModalParcelas}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs sm:text-sm h-8 sm:h-9"
                         >
-                          <Percent className="h-4 w-4 mr-1" />
+                          <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                           Parcelas
                         </Button>
                       )}
@@ -1898,18 +1948,19 @@ export default function Configuracoes() {
                             [key]: { ...prev[key as keyof typeof prev], ativo: !prev[key as keyof typeof prev].ativo }
                           }));
                         }}
+                        className="h-8 sm:h-9 w-full sm:w-auto"
                       >
                         {metodo.ativo ? (
-                          <ToggleRight className="h-5 w-5 text-primary" />
+                          <ToggleRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                         ) : (
-                          <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+                          <ToggleLeft className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                         )}
                       </Button>
                     </div>
                   </div>
                 ))}
-                <Button onClick={handleSalvarMetodosPagamento} className="w-full" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
+                <Button onClick={handleSalvarMetodosPagamento} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   {salvando ? 'Salvando...' : 'Salvar Métodos de Pagamento'}
                 </Button>
               </CardContent>
@@ -1917,60 +1968,63 @@ export default function Configuracoes() {
 
             {/* Configuração PIX */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <QrCode className="h-5 w-5 mr-2" />
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <QrCode className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                   Configuração PIX
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Configure suas chaves PIX e QR Code para recebimentos
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="chave_pix">Chave PIX</Label>
+                    <Label htmlFor="chave_pix" className="text-xs sm:text-sm">Chave PIX</Label>
                     <Input
                       id="chave_pix"
                       placeholder="Digite sua chave PIX"
                       value={dadosPixEditando.chave_pix}
                       onChange={(e) => setDadosPixEditando(prev => ({ ...prev, chave_pix: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="nome_titular_pix">Nome do Titular</Label>
+                    <Label htmlFor="nome_titular_pix" className="text-xs sm:text-sm">Nome do Titular</Label>
                     <Input
                       id="nome_titular_pix"
                       placeholder="Nome do titular da conta"
                       value={dadosPixEditando.nome_titular}
                       onChange={(e) => setDadosPixEditando(prev => ({ ...prev, nome_titular: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cpf_cnpj_pix">CPF/CNPJ</Label>
+                    <Label htmlFor="cpf_cnpj_pix" className="text-xs sm:text-sm">CPF/CNPJ</Label>
                     <Input
                       id="cpf_cnpj_pix"
                       placeholder="CPF ou CNPJ do titular"
                       value={dadosPixEditando.cpf_cnpj}
                       onChange={(e) => setDadosPixEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>QR Code PIX</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                    <Label className="text-xs sm:text-sm">QR Code PIX</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-3 sm:p-6 text-center">
                       {dadosPixEditando.qr_code ? (
                         <div className="space-y-2">
                           <img 
                             src={dadosPixEditando.qr_code} 
                             alt="QR Code PIX" 
-                            className="h-24 w-24 mx-auto object-contain"
+                            className="h-16 w-16 sm:h-24 sm:w-24 mx-auto object-contain"
                           />
-                          <p className="text-sm text-muted-foreground">QR Code atual</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">QR Code atual</p>
                         </div>
                       ) : (
                         <>
-                          <QrCode className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">
+                          <QrCode className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
                             Faça upload do QR Code PIX
                           </p>
                         </>
@@ -1982,7 +2036,7 @@ export default function Configuracoes() {
                         className="hidden"
                         id="qr-code-upload"
                       />
-                      <Button variant="outline" size="sm" asChild>
+                      <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm h-8 sm:h-9">
                         <label htmlFor="qr-code-upload">
                           {dadosPixEditando.qr_code ? 'Alterar QR Code' : 'Selecionar Arquivo'}
                         </label>
@@ -1990,8 +2044,8 @@ export default function Configuracoes() {
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleSalvarDadosPix} className="w-full" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
+                <Button onClick={handleSalvarDadosPix} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   {salvando ? 'Salvando...' : 'Salvar Configuração PIX'}
                 </Button>
               </CardContent>
@@ -1999,61 +2053,65 @@ export default function Configuracoes() {
 
             {/* Dados Bancários para Transferência */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Banknote className="h-5 w-5 mr-2" />
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <Banknote className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                   Dados Bancários para Transferência
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Configure os dados bancários para recebimento via transferência
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="banco">Banco</Label>
+                    <Label htmlFor="banco" className="text-xs sm:text-sm">Banco</Label>
                     <Input
                       id="banco"
                       placeholder="Nome do banco"
                       value={dadosBancariosEditando.banco}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, banco: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="agencia">Agência</Label>
+                    <Label htmlFor="agencia" className="text-xs sm:text-sm">Agência</Label>
                     <Input
                       id="agencia"
                       placeholder="Número da agência"
                       value={dadosBancariosEditando.agencia}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, agencia: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="conta">Conta</Label>
+                    <Label htmlFor="conta" className="text-xs sm:text-sm">Conta</Label>
                     <Input
                       id="conta"
                       placeholder="Número da conta"
                       value={dadosBancariosEditando.conta}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, conta: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="digito">Dígito</Label>
+                    <Label htmlFor="digito" className="text-xs sm:text-sm">Dígito</Label>
                     <Input
                       id="digito"
                       placeholder="Dígito da conta"
                       value={dadosBancariosEditando.digito}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, digito: e.target.value }))}
                       maxLength={1}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tipo_conta">Tipo de Conta</Label>
+                    <Label htmlFor="tipo_conta" className="text-xs sm:text-sm">Tipo de Conta</Label>
                     <Select 
                       value={dadosBancariosEditando.tipo_conta} 
                       onValueChange={(value: "corrente" | "poupanca") => setDadosBancariosEditando(prev => ({ ...prev, tipo_conta: value }))}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -2063,26 +2121,28 @@ export default function Configuracoes() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="nome_titular_banco">Nome do Titular</Label>
+                    <Label htmlFor="nome_titular_banco" className="text-xs sm:text-sm">Nome do Titular</Label>
                     <Input
                       id="nome_titular_banco"
                       placeholder="Nome do titular da conta"
                       value={dadosBancariosEditando.nome_titular}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, nome_titular: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cpf_cnpj_banco">CPF/CNPJ</Label>
+                    <Label htmlFor="cpf_cnpj_banco" className="text-xs sm:text-sm">CPF/CNPJ</Label>
                     <Input
                       id="cpf_cnpj_banco"
                       placeholder="CPF ou CNPJ do titular"
                       value={dadosBancariosEditando.cpf_cnpj}
                       onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                      className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                 </div>
-                <Button onClick={handleSalvarDadosBancarios} className="w-full" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
+                <Button onClick={handleSalvarDadosBancarios} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   {salvando ? 'Salvando...' : 'Salvar Dados Bancários'}
                 </Button>
               </CardContent>
@@ -2090,27 +2150,27 @@ export default function Configuracoes() {
 
             {/* Resumo dos Métodos Ativos */}
             <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Activity className="h-5 w-5 mr-2" />
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                   Resumo dos Métodos Ativos
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {Object.entries(metodosPagamentoLocal)
                     .filter(([_, metodo]) => metodo.ativo)
                     .map(([key, metodo]) => (
-                    <div key={key} className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        {key === 'cartao_credito' && <CreditCard className="h-4 w-4 text-primary" />}
-                        {key === 'cartao_debito' && <CreditCard className="h-4 w-4 text-blue-500" />}
-                        {key === 'pix' && <QrCode className="h-4 w-4 text-green-500" />}
-                        {key === 'transferencia' && <Banknote className="h-4 w-4 text-purple-500" />}
-                        {key === 'dinheiro' && <Banknote className="h-4 w-4 text-yellow-500" />}
+                    <div key={key} className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                        {key === 'cartao_credito' && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />}
+                        {key === 'cartao_debito' && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />}
+                        {key === 'pix' && <QrCode className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />}
+                        {key === 'transferencia' && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />}
+                        {key === 'dinheiro' && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />}
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">{metodo.nome}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs sm:text-sm truncate">{metodo.nome}</p>
                         <p className="text-xs text-muted-foreground">
                           Taxa: {metodo.taxa}%
                         </p>
@@ -2544,18 +2604,18 @@ export default function Configuracoes() {
 
         {/* Modal de Parcelas */}
         {mostrarModalParcelas && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="w-full max-w-5xl h-[90vh] overflow-hidden">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="w-full max-w-5xl h-[95vh] sm:h-[90vh] overflow-hidden">
               <Card className="bg-background border-0 shadow-2xl h-full flex flex-col">
-                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b flex-shrink-0">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b flex-shrink-0 p-3 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Percent className="h-5 w-5 text-primary" />
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                        <Percent className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold">Configuração de Parcelas</CardTitle>
-                        <p className="text-sm text-muted-foreground">
+                        <CardTitle className="text-lg sm:text-xl font-bold">Configuração de Parcelas</CardTitle>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Configure as parcelas disponíveis para cartão de crédito
                         </p>
                       </div>
@@ -2564,49 +2624,49 @@ export default function Configuracoes() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setMostrarModalParcelas(false)}
-                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-hidden p-0">
                   <div className="h-full flex flex-col">
-                    <div className="flex-1 p-4 space-y-4 overflow-hidden">
+                    <div className="flex-1 p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-hidden">
                       {/* Seção Principal - Layout Responsivo */}
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {/* Header com Botão de Adicionar */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 pb-2 sm:pb-3 border-b">
                           <div className="flex items-center space-x-2">
-                            <div className="p-1.5 rounded bg-primary/10">
-                              <Percent className="h-4 w-4 text-primary" />
+                            <div className="p-1 sm:p-1.5 rounded bg-primary/10">
+                              <Percent className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                             </div>
-                            <h3 className="text-lg font-semibold">Parcelas Configuradas</h3>
+                            <h3 className="text-base sm:text-lg font-semibold">Parcelas Configuradas</h3>
                           </div>
                           <Button
                             onClick={handleAdicionarParcela}
                             size="sm"
-                            className="w-full sm:w-auto h-9"
+                            className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
                           >
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                             Adicionar Parcela
                           </Button>
                         </div>
                         
                         {/* Lista de Parcelas - Scrollable */}
-                        <div className="flex-1 overflow-y-auto space-y-3 max-h-96">
+                        <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3 max-h-80 sm:max-h-96">
                           {parcelasEditando.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <Percent className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                              <p className="font-medium mb-1">Nenhuma parcela configurada</p>
-                              <p className="text-sm">Clique em "Adicionar Parcela" para começar</p>
+                            <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                              <Percent className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-3 opacity-50" />
+                              <p className="font-medium mb-1 text-sm sm:text-base">Nenhuma parcela configurada</p>
+                              <p className="text-xs sm:text-sm">Clique em "Adicionar Parcela" para começar</p>
                             </div>
                           ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-3">
                               {parcelasEditando.map((parcela, index) => (
-                                <div key={index} className="p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                  <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div key={index} className="p-2 sm:p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                                  <div className="flex flex-col lg:flex-row lg:items-center gap-2 sm:gap-3">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                                       <div className="space-y-1">
                                         <Label htmlFor={`quantidade-${index}`} className="text-xs font-medium text-muted-foreground">
                                           Quantidade de Parcelas
@@ -2618,7 +2678,7 @@ export default function Configuracoes() {
                                           max="24"
                                           value={parcela.quantidade}
                                           onChange={(e) => handleAtualizarParcela(index, 'quantidade', parseInt(e.target.value) || 1)}
-                                          className="h-9 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                                          className="h-8 sm:h-9 text-xs sm:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                                           placeholder="Ex: 3"
                                         />
                                       </div>
@@ -2634,7 +2694,7 @@ export default function Configuracoes() {
                                           max="100"
                                           value={parcela.taxa}
                                           onChange={(e) => handleAtualizarParcela(index, 'taxa', parseFloat(e.target.value) || 0)}
-                                          className="h-9 text-sm"
+                                          className="h-8 sm:h-9 text-xs sm:text-sm"
                                           placeholder="Ex: 2.5"
                                         />
                                       </div>
@@ -2644,7 +2704,7 @@ export default function Configuracoes() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleRemoverParcela(index)}
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto h-9 px-3"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto h-8 sm:h-9 px-2 sm:px-3 text-xs"
                                       >
                                         <Trash2 className="h-3 w-3 mr-1" />
                                         <span className="text-xs">Remover</span>
@@ -2661,21 +2721,21 @@ export default function Configuracoes() {
                     </div>
                   </div>
                 </CardContent>
-                <div className="bg-muted/30 px-6 py-4 border-t flex-shrink-0">
-                  <div className="flex flex-col sm:flex-row justify-end gap-3">
+                <div className="bg-muted/30 px-3 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <Button
                       variant="outline"
                       onClick={() => setMostrarModalParcelas(false)}
-                      className="w-full sm:w-auto px-6"
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
                     >
-                      <X className="h-4 w-4 mr-2" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Cancelar
                     </Button>
                     <Button 
                       onClick={handleSalvarParcelas}
-                      className="w-full sm:w-auto px-6"
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
                     >
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Salvar Parcelas
                     </Button>
                   </div>
@@ -2687,20 +2747,20 @@ export default function Configuracoes() {
 
         {/* Modal de Usuário */}
         {mostrarFormUsuario && usuarioEditando && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="w-full max-w-5xl h-[90vh] overflow-hidden">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="w-full max-w-5xl h-[95vh] sm:h-[90vh] overflow-hidden">
               <Card className="bg-background border-0 shadow-2xl h-full flex flex-col">
-                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b flex-shrink-0">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b flex-shrink-0 p-3 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <UserCog className="h-5 w-5 text-primary" />
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                        <UserCog className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold">
+                        <CardTitle className="text-lg sm:text-xl font-bold">
                           {usuarioEditando.id ? "Editar Usuário" : "Novo Usuário"}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {usuarioEditando.id ? "Atualize as informações do usuário" : "Preencha os dados para criar um novo usuário"}
                         </p>
                       </div>
@@ -2712,54 +2772,54 @@ export default function Configuracoes() {
                         setMostrarFormUsuario(false);
                         setUsuarioEditando(null);
                       }}
-                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-hidden p-0">
                   <div className="h-full flex flex-col">
-                    <div className="flex-1 p-6 space-y-6 overflow-hidden">
+                    <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-hidden">
                       {/* Informações Básicas e Role/Status */}
-                      <div className="grid gap-6 lg:grid-cols-2">
+                      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
                         {/* Informações Básicas */}
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           <div className="flex items-center space-x-2 pb-2 border-b">
-                            <div className="p-1.5 rounded bg-blue-500/10">
-                              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <div className="p-1 sm:p-1.5 rounded bg-blue-500/10">
+                              <User className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <h3 className="text-lg font-semibold">Informações Básicas</h3>
+                            <h3 className="text-base sm:text-lg font-semibold">Informações Básicas</h3>
                           </div>
-                          <div className="space-y-4">
-                            <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-3 sm:space-y-4">
+                            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                               <div className="space-y-2">
-                                <Label htmlFor="nome_usuario" className="text-sm font-medium">Nome *</Label>
+                                <Label htmlFor="nome_usuario" className="text-xs sm:text-sm font-medium">Nome *</Label>
                                 <Input
                                   id="nome_usuario"
                                   value={usuarioEditando.nome}
                                   onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, nome: e.target.value } : null)}
                                   placeholder="Nome do usuário"
-                                  className="h-10"
+                                  className="h-8 sm:h-10 text-xs sm:text-sm"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor="sobrenome_usuario" className="text-sm font-medium">Sobrenome *</Label>
+                                <Label htmlFor="sobrenome_usuario" className="text-xs sm:text-sm font-medium">Sobrenome *</Label>
                                 <Input
                                   id="sobrenome_usuario"
                                   value={usuarioEditando.sobrenome}
                                   onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, sobrenome: e.target.value } : null)}
                                   placeholder="Sobrenome do usuário"
-                                  className="h-10"
+                                  className="h-8 sm:h-10 text-xs sm:text-sm"
                                 />
                               </div>
                             </div>
                             {/* Campo de email removido - administradores não precisam de email */}
                             <div className="space-y-2">
-                              <Label htmlFor="codigo_usuario" className="text-sm font-medium">
+                              <Label htmlFor="codigo_usuario" className="text-xs sm:text-sm font-medium">
                                 Código de Acesso
                               </Label>
-                              <div className="flex space-x-2">
+                              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                 <div className="relative flex-1">
                                   <Input
                                     id="codigo_usuario"
@@ -2767,17 +2827,17 @@ export default function Configuracoes() {
                                     value={usuarioEditando.codigo ?? ""}
                                     onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, codigo: e.target.value } : null)}
                                     placeholder="Código será gerado automaticamente"
-                                    className="h-10 pr-10"
+                                    className="h-8 sm:h-10 pr-8 sm:pr-10 text-xs sm:text-sm"
                                     readOnly={!!usuarioEditando.id}
                                   />
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    className="absolute right-0 top-0 h-full px-2 sm:px-3 hover:bg-transparent"
                                     onClick={() => setMostrarCodigo(!mostrarCodigo)}
                                   >
-                                    {mostrarCodigo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {mostrarCodigo ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
                                   </Button>
                                 </div>
                                 {usuarioEditando.id && (
@@ -2790,9 +2850,9 @@ export default function Configuracoes() {
                                       const novoCodigo = Math.random().toString(36).substring(2, 10).toUpperCase();
                                       setUsuarioEditando(prev => prev ? { ...prev, codigo: novoCodigo, gerarNovoCodigo: true } : null);
                                     }}
-                                    className="h-10 px-3"
+                                    className="h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm"
                                   >
-                                    <Key className="h-4 w-4 mr-1" />
+                                    <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                     Novo
                                   </Button>
                                 )}
@@ -2927,25 +2987,25 @@ export default function Configuracoes() {
                     </div>
                   </div>
                 </CardContent>
-                <div className="bg-muted/30 px-6 py-4 border-t flex-shrink-0">
-                  <div className="flex justify-end space-x-3">
+                <div className="bg-muted/30 px-3 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setMostrarFormUsuario(false);
                         setUsuarioEditando(null);
                       }}
-                      className="px-6"
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
                     >
-                      <X className="h-4 w-4 mr-2" />
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Cancelar
                     </Button>
                     <Button 
                       onClick={handleSalvarUsuario} 
                       disabled={salvando}
-                      className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
                     >
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       {salvando ? 'Salvando...' : 'Salvar Usuário'}
                     </Button>
                   </div>

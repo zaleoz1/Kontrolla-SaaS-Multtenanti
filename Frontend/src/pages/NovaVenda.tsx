@@ -222,85 +222,85 @@ export default function NovaVenda() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+      <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">Nova Venda</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Nova Venda</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Sistema de caixa - Processe vendas rapidamente
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Button 
             variant="outline" 
             onClick={() => window.history.back()}
-            className="border-slate-300 text-slate-600 hover:bg-slate-50"
+            className="border-slate-300 text-slate-600 hover:bg-slate-50 h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Voltar
           </Button>
         </div>
       </div>
 
       {/* Layout Principal - Estilo Caixa de Supermercado */}
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-150px)]">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
         {/* Painel Esquerdo - Terminal de Produtos */}
-        <Card className="flex-1 flex flex-col min-h-0">
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center space-x-2">
-              <Package className="h-5 w-5" />
+        <Card className="flex-1 flex flex-col min-h-0 order-2 lg:order-1 lg:h-[calc(100vh-150px)]">
+          <CardHeader className="flex-shrink-0 pb-3 sm:pb-6">
+            <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Produtos</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0 min-h-0">
             {/* Barra de Busca e Scanner */}
-            <div className="bg-muted/30 border-b p-4 flex-shrink-0">
-              <div className="flex space-x-3">
+            <div className="bg-muted/30 border-b p-3 sm:p-4 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                 <div className="flex-1 relative">
-                  <ScanLine className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <ScanLine className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Digite o código de barras ou nome do produto..."
                     value={codigoBarras}
                     onChange={(e) => setCodigoBarras(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && buscarPorCodigoBarras()}
-                    className="pl-10 h-12 text-lg"
+                    className="pl-10 h-10 sm:h-12 text-sm sm:text-lg"
                   />
                 </div>
                 <Button 
                   onClick={buscarPorCodigoBarras} 
                   disabled={!codigoBarras.trim() || carregandoCodigoBarras}
-                  className="h-12 px-6 bg-green-600 hover:bg-green-700"
+                  className="h-10 sm:h-12 px-4 sm:px-6 bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                 >
-                  <Search className="h-5 w-5" />
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </div>
               
               {/* Busca por Nome */}
               <div className="mt-3 relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar produtos por nome..."
                   value={termoBusca}
                   onChange={(e) => setTermoBusca(e.target.value)}
-                  className="pl-10 h-10"
+                  className="pl-9 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm"
                 />
               </div>
             </div>
 
             {/* Grid de Produtos com Scroll Interno */}
-            <div className="flex-1 overflow-y-auto p-4 min-h-0">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
                 {produtosFiltrados.length === 0 ? (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p>Nenhum produto encontrado</p>
+                  <div className="col-span-full text-center py-8 sm:py-12 text-muted-foreground">
+                    <Package className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-muted-foreground/50" />
+                    <p className="text-xs sm:text-sm">Nenhum produto encontrado</p>
                   </div>
                 ) : (
                   produtosFiltrados.map((produto) => (
                     <div 
                       key={produto.id} 
-                      className={`bg-card rounded-lg border-2 p-3 cursor-pointer transition-all hover:shadow-lg h-32 flex flex-col justify-between ${
+                      className={`bg-card rounded-lg border-2 p-2 sm:p-3 cursor-pointer transition-all hover:shadow-lg h-24 sm:h-32 flex flex-col justify-between ${
                         produto.estoque === 0 
                           ? 'opacity-60' 
                           : 'border-border hover:border-green-300'
@@ -308,7 +308,7 @@ export default function NovaVenda() {
                       onClick={() => produto.estoque > 0 && adicionarAoCarrinho(produto, 1)}
                     >
                       <div className="flex-1">
-                        <h3 className="font-medium text-sm line-clamp-2 mb-1">
+                        <h3 className="font-medium text-xs sm:text-sm line-clamp-2 mb-1">
                           {produto.nome}
                         </h3>
                         <p className="text-xs text-muted-foreground">
@@ -316,7 +316,7 @@ export default function NovaVenda() {
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className={`text-sm font-bold ${
+                        <span className={`text-xs sm:text-sm font-bold ${
                           produto.estoque === 0 ? 'text-gray-500' : 'text-green-600'
                         }`}>
                           {produto.preco.toLocaleString("pt-BR", {
@@ -344,80 +344,81 @@ export default function NovaVenda() {
         </Card>
 
         {/* Painel Direito - Display do Caixa */}
-        <Card className="w-full lg:w-96 flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[calc(100vh-150px)] min-h-0">
-          <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0">
+        <Card className="w-full lg:w-96 flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[28rem] sm:h-[32rem] lg:h-[calc(100vh-150px)] min-h-0 order-1 lg:order-2">
+          <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0 pb-3 sm:pb-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-2 text-slate-800">
-                <ShoppingCart className="h-5 w-5" />
+              <CardTitle className="flex items-center space-x-2 text-slate-800 text-sm sm:text-base">
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>Carrinho de Compras</span>
               </CardTitle>
-              <Badge variant="secondary" className="bg-green-600 text-white">
+              <Badge variant="secondary" className="bg-green-600 text-white text-xs">
                 {carrinho.length} itens
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0 bg-slate-50 min-h-0">
             {/* Área de Cliente */}
-            <div className="p-4 border-b flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-muted-foreground">Cliente</h3>
+            <div className="p-3 sm:p-4 border-b flex-shrink-0">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Cliente</h3>
                 <Dialog open={modalClienteAberto} onOpenChange={setModalClienteAberto}>
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
                       variant="outline"
+                      className="h-7 sm:h-8 text-xs"
                     >
-                      <User className="h-4 w-4 mr-1" />
+                      <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       {clienteSelecionado ? 'Alterar' : 'Selecionar'}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh]">
+                  <DialogContent className="max-w-2xl max-h-[80vh] w-[95vw] sm:w-full">
                     <DialogHeader>
-                      <DialogTitle>Selecionar Cliente</DialogTitle>
+                      <DialogTitle className="text-base sm:text-lg">Selecionar Cliente</DialogTitle>
                     </DialogHeader>
                     
                     {/* Busca de Clientes */}
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           placeholder="Buscar cliente por nome ou CPF/CNPJ..."
                           value={termoBuscaCliente}
                           onChange={(e) => setTermoBuscaCliente(e.target.value)}
-                          className="pl-10"
+                          className="pl-9 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
                       
                       {/* Botão Novo Cliente */}
                       <div
-                        className="p-3 rounded-lg border border-dashed border-green-400 cursor-pointer hover:bg-green-50 transition-colors"
+                        className="p-2 sm:p-3 rounded-lg border border-dashed border-green-400 cursor-pointer hover:bg-green-50 transition-colors"
                         onClick={() => {
                           setModalClienteAberto(false);
                           irParaNovoCliente();
                         }}
                       >
                         <div className="flex items-center space-x-2">
-                          <Plus className="h-5 w-5 text-green-600" />
-                          <p className="text-green-600 font-medium">Novo Cliente</p>
+                          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                          <p className="text-green-600 font-medium text-xs sm:text-sm">Novo Cliente</p>
                         </div>
                       </div>
                       
                       {/* Lista de Clientes */}
-                      <div className="max-h-96 overflow-y-auto space-y-2">
+                      <div className="max-h-80 sm:max-h-96 overflow-y-auto space-y-2">
                         {carregandoClientes ? (
-                          <div className="text-center py-8">
-                            <p className="text-muted-foreground">Carregando clientes...</p>
+                          <div className="text-center py-6 sm:py-8">
+                            <p className="text-muted-foreground text-xs sm:text-sm">Carregando clientes...</p>
                           </div>
                         ) : clientesFiltrados.length === 0 ? (
-                          <div className="text-center py-8">
-                            <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                            <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+                          <div className="text-center py-6 sm:py-8">
+                            <User className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-muted-foreground/50" />
+                            <p className="text-muted-foreground text-xs sm:text-sm">Nenhum cliente encontrado</p>
                           </div>
                         ) : (
                           clientesFiltrados.map((cliente) => (
                             <div
                               key={cliente.id}
-                              className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                              className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors border ${
                                 clienteSelecionado?.id === cliente.id
                                   ? "bg-green-600 text-white border-green-600"
                                   : "bg-muted hover:bg-muted/80 border-border"
@@ -427,8 +428,8 @@ export default function NovaVenda() {
                                 setModalClienteAberto(false);
                               }}
                             >
-                              <p className="font-medium">{cliente.nome}</p>
-                              <p className={`text-sm ${
+                              <p className="font-medium text-xs sm:text-sm">{cliente.nome}</p>
+                              <p className={`text-xs ${
                                 clienteSelecionado?.id === cliente.id
                                   ? "text-green-100"
                                   : "text-muted-foreground"
@@ -445,41 +446,41 @@ export default function NovaVenda() {
               </div>
               
               {clienteSelecionado ? (
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="font-medium text-sm">{clienteSelecionado.nome}</p>
+                <div className="bg-muted rounded-lg p-2 sm:p-3">
+                  <p className="font-medium text-xs sm:text-sm">{clienteSelecionado.nome}</p>
                   <p className="text-muted-foreground text-xs">{clienteSelecionado.cpf_cnpj}</p>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => setClienteSelecionado(null)}
-                    className="mt-2 text-red-500 hover:text-red-600 p-0 h-auto"
+                    className="mt-1 sm:mt-2 text-red-500 hover:text-red-600 p-0 h-auto text-xs"
                   >
                     <X className="h-3 w-3 mr-1" />
                     Remover
                   </Button>
                 </div>
               ) : (
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-muted-foreground text-sm">Cliente não selecionado</p>
+                <div className="bg-muted rounded-lg p-2 sm:p-3 text-center">
+                  <p className="text-muted-foreground text-xs sm:text-sm">Cliente não selecionado</p>
                 </div>
               )}
             </div>
 
             {/* Lista de Itens do Carrinho */}
-            <div className="flex-1 overflow-y-auto p-4 min-h-0">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
               {carrinho.length === 0 ? (
-                <div className="text-center py-8">
-                  <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Carrinho vazio</p>
-                  <p className="text-muted-foreground/60 text-sm">Adicione produtos para começar</p>
+                <div className="text-center py-6 sm:py-8">
+                  <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                  <p className="text-muted-foreground text-xs sm:text-sm">Carrinho vazio</p>
+                  <p className="text-muted-foreground/60 text-xs">Adicione produtos para começar</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1 sm:space-y-2">
                   {carrinho.map((item) => (
-                    <div key={item.produto.id} className="bg-muted rounded-lg p-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm line-clamp-2">
+                    <div key={item.produto.id} className="bg-muted rounded-lg p-1.5 sm:p-2">
+                      <div className="flex items-start justify-between mb-1 sm:mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-xs line-clamp-1 sm:line-clamp-2">
                             {item.produto.nome}
                           </h4>
                           <p className="text-muted-foreground text-xs">
@@ -493,38 +494,38 @@ export default function NovaVenda() {
                           size="sm"
                           variant="ghost"
                           onClick={() => removerDoCarrinho(item.produto.id)}
-                          className="text-red-500 hover:text-red-600 p-1 h-auto"
+                          className="text-red-500 hover:text-red-600 p-0.5 h-auto flex-shrink-0"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         </Button>
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => atualizarQuantidade(item.produto.id, item.quantidade - 1)}
-                            className="w-6 h-6 p-0"
+                            className="w-4 h-4 sm:w-5 sm:h-5 p-0"
                           >
-                            <Minus className="h-3 w-3" />
+                            <Minus className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
                           </Button>
                           <Input
                             type="text"
                             value={item.quantidade}
                             onChange={(e) => atualizarQuantidade(item.produto.id, parseInt(e.target.value) || 1)}
-                            className="w-12 h-6 text-center text-sm"
+                            className="w-8 sm:w-10 h-4 sm:h-5 text-center text-xs"
                           />
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => atualizarQuantidade(item.produto.id, item.quantidade + 1)}
-                            className="w-6 h-6 p-0"
+                            className="w-4 h-4 sm:w-5 sm:h-5 p-0"
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
                           </Button>
                         </div>
-                        <span className="text-green-600 font-bold text-sm">
+                        <span className="text-green-600 font-bold text-xs">
                           {item.precoTotal.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
@@ -538,8 +539,8 @@ export default function NovaVenda() {
             </div>
 
             {/* Resumo Financeiro */}
-            <div className="p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
-              <div className="space-y-2 text-sm">
+            <div className="p-3 sm:p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
+              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal:</span>
                   <span>{subtotal.toLocaleString("pt-BR", {
@@ -558,8 +559,8 @@ export default function NovaVenda() {
                   </div>
                 )}
 
-                <div className="border-t pt-2">
-                  <div className="flex justify-between text-lg font-bold">
+                <div className="border-t pt-1 sm:pt-2">
+                  <div className="flex justify-between text-base sm:text-lg font-bold">
                     <span>TOTAL:</span>
                     <span className="text-green-600">
                       {total.toLocaleString("pt-BR", {
@@ -573,7 +574,7 @@ export default function NovaVenda() {
 
               {/* Botão de Pagamento */}
               <Button 
-                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white h-12 text-lg font-bold"
+                className="w-full mt-3 sm:mt-4 bg-green-600 hover:bg-green-700 text-white h-10 sm:h-12 text-sm sm:text-lg font-bold"
                 onClick={() => navigate("/dashboard/pagamentos", { 
                   state: { 
                     carrinho, 
@@ -585,7 +586,7 @@ export default function NovaVenda() {
                 })}
                 disabled={carrinho.length === 0}
               >
-                <CreditCard className="h-5 w-5 mr-2" />
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                 Ir para Pagamento
               </Button>
             </div>
