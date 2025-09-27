@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   ArrowRight, 
   Eye, 
@@ -33,6 +34,7 @@ import {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -211,25 +213,13 @@ export default function Signup() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dadosTruncados),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Salvar token e dados do usuário no localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
+      const result = await signup(dadosTruncados);
+      
+      if (result.success) {
         // Redirecionar para o dashboard
         navigate("/dashboard");
       } else {
-        alert(data.error || 'Erro ao criar conta. Tente novamente.');
+        alert(result.error || 'Erro ao criar conta. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro no cadastro:', error);

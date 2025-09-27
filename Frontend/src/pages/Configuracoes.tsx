@@ -789,7 +789,7 @@ export default function Configuracoes() {
     setUsuarioEditando({
       nome: "",
       sobrenome: "",
-      codigo: "",
+      codigo: "", // Campo vazio para ser preenchido manualmente
       role: rolePadrao,
       status: "ativo",
       permissoes: obterPermissoesPorRole(rolePadrao)
@@ -804,6 +804,18 @@ export default function Configuracoes() {
 
   const handleSalvarUsuario = async () => {
     if (!usuarioEditando) return;
+
+    // Validação para código obrigatório
+    if (!usuarioEditando.codigo || usuarioEditando.codigo.trim() === "") {
+      toast({
+        title: "Erro",
+        description: "O código de acesso é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log('Dados do usuário que serão enviados:', usuarioEditando);
 
     setSalvando(true);
     try {
@@ -1709,15 +1721,38 @@ export default function Configuracoes() {
                         <h3 className="font-semibold text-base sm:text-lg line-clamp-2 flex items-center space-x-2">
                           <span>{usuario.nome} {usuario.sobrenome}</span>
                         </h3>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          Código: {usuario.codigo}
-                        </p>
                       </div>
 
                       <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <Shield className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                           <span className="truncate capitalize">{usuario.role}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 text-muted-foreground">
+                            <Key className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span className="truncate text-xs">
+                              Código: {usuario.mostrarCodigo ? usuario.codigo : '••••••••'}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setUsuarios(prev => prev.map(u => 
+                                u.id === usuario.id 
+                                  ? { ...u, mostrarCodigo: !u.mostrarCodigo }
+                                  : u
+                              ));
+                            }}
+                            className="h-6 w-6 p-0 hover:bg-muted"
+                          >
+                            {usuario.mostrarCodigo ? (
+                              <EyeOff className="h-3 w-3" />
+                            ) : (
+                              <Eye className="h-3 w-3" />
+                            )}
+                          </Button>
                         </div>
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
@@ -2910,51 +2945,30 @@ export default function Configuracoes() {
                             {/* Campo de email removido - administradores não precisam de email */}
                             <div className="space-y-2">
                               <Label htmlFor="codigo_usuario" className="text-xs sm:text-sm font-medium">
-                                Código de Acesso
+                                Código de Acesso *
                               </Label>
-                              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                <div className="relative flex-1">
-                                  <Input
-                                    id="codigo_usuario"
-                                    type={mostrarCodigo ? "text" : "password"}
-                                    value={usuarioEditando.codigo ?? ""}
-                                    onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, codigo: e.target.value } : null)}
-                                    placeholder="Código será gerado automaticamente"
-                                    className="h-8 sm:h-10 pr-8 sm:pr-10 text-xs sm:text-sm"
-                                    readOnly={!!usuarioEditando.id}
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute right-0 top-0 h-full px-2 sm:px-3 hover:bg-transparent"
-                                    onClick={() => setMostrarCodigo(!mostrarCodigo)}
-                                  >
-                                    {mostrarCodigo ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
-                                  </Button>
-                                </div>
-                                {usuarioEditando.id && (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      // Gerar novo código
-                                      const novoCodigo = Math.random().toString(36).substring(2, 10).toUpperCase();
-                                      setUsuarioEditando(prev => prev ? { ...prev, codigo: novoCodigo, gerarNovoCodigo: true } : null);
-                                    }}
-                                    className="h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm"
-                                  >
-                                    <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                    Novo
-                                  </Button>
-                                )}
+                              <div className="relative">
+                                <Input
+                                  id="codigo_usuario"
+                                  type={mostrarCodigo ? "text" : "password"}
+                                  value={usuarioEditando.codigo ?? ""}
+                                  onChange={(e) => setUsuarioEditando(prev => prev ? { ...prev, codigo: e.target.value } : null)}
+                                  placeholder="Digite o código de acesso"
+                                  className="h-8 sm:h-10 pr-8 sm:pr-10 text-xs sm:text-sm"
+                                  required
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-0 top-0 h-full px-2 sm:px-3 hover:bg-transparent"
+                                  onClick={() => setMostrarCodigo(!mostrarCodigo)}
+                                >
+                                  {mostrarCodigo ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
+                                </Button>
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {usuarioEditando.id 
-                                  ? "Clique em 'Novo' para gerar um novo código" 
-                                  : "Um código será gerado automaticamente ao salvar"
-                                }
+                                Digite o código de acesso para o usuário
                               </p>
                             </div>
                           </div>

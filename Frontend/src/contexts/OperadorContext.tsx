@@ -23,6 +23,16 @@ export function OperadorProvider({ children }: OperadorProviderProps) {
   // Carregar operador do localStorage na inicialização
   useEffect(() => {
     const operadorSalvo = localStorage.getItem(OPERADOR_STORAGE_KEY);
+    const userData = localStorage.getItem('user');
+    
+    // Se não há usuário logado, limpar operador
+    if (!userData) {
+      setOperadorSelecionado(null);
+      setOperadorAtual(null);
+      localStorage.removeItem(OPERADOR_STORAGE_KEY);
+      return;
+    }
+    
     if (operadorSalvo) {
       try {
         const operadorId = parseInt(operadorSalvo, 10);
@@ -34,6 +44,23 @@ export function OperadorProvider({ children }: OperadorProviderProps) {
         localStorage.removeItem(OPERADOR_STORAGE_KEY);
       }
     }
+  }, []);
+
+  // Listener para detectar mudanças no localStorage do usuário
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user') {
+        // Se o usuário foi removido, limpar operador
+        if (!e.newValue) {
+          setOperadorSelecionado(null);
+          setOperadorAtual(null);
+          localStorage.removeItem(OPERADOR_STORAGE_KEY);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Função para atualizar o operador e salvar no localStorage

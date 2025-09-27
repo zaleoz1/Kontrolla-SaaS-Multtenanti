@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   ArrowRight, 
   Eye, 
@@ -25,6 +26,7 @@ import {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -46,29 +48,13 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          senha: formData.password,
-          rememberMe: formData.rememberMe
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Salvar token e dados do usuário no localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
         // Redirecionar para o dashboard
         navigate("/dashboard");
       } else {
-        alert(data.error || 'Erro ao fazer login. Tente novamente.');
+        alert(result.error || 'Erro ao fazer login. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro no login:', error);
