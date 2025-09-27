@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Plus, Menu, User, ChevronDown, Crown, Shield, ShoppingBag } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Bell, Plus, Menu, User, ChevronDown, Crown, Shield, ShoppingBag, CheckCircle, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useOperador } from "@/contexts/OperadorContext";
@@ -14,6 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PropsCabecalho {
   onMenuClick: () => void;
@@ -29,6 +37,12 @@ export function Header({ onMenuClick }: PropsCabecalho) {
   const { administradores, loading } = useAdministradores();
   const { operadorSelecionado, setOperadorSelecionado } = useOperador();
   const { hasPermission } = usePermissions();
+  
+  // Estados para o modal de código de acesso
+  const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
+  const [selectedOperador, setSelectedOperador] = useState<any>(null);
+  const [accessCode, setAccessCode] = useState("");
+  const [accessCodeError, setAccessCodeError] = useState("");
 
   // Validar se o operador selecionado ainda existe e está ativo
   useEffect(() => {
@@ -47,6 +61,46 @@ export function Header({ onMenuClick }: PropsCabecalho) {
   // Função auxiliar para obter o operador atual
   const getOperadorAtual = () => {
     return administradores.find(adm => adm.id === operadorSelecionado);
+  };
+
+  // Função para abrir modal de código de acesso
+  const handleOperadorClick = (operador: any) => {
+    setSelectedOperador(operador);
+    setAccessCode("");
+    setAccessCodeError("");
+    setShowAccessCodeModal(true);
+  };
+
+  // Função para validar e trocar operador
+  const handleAccessCodeSubmit = () => {
+    if (!accessCode.trim()) {
+      setAccessCodeError("Código de acesso é obrigatório");
+      return;
+    }
+
+    if (!selectedOperador) {
+      setAccessCodeError("Operador não selecionado");
+      return;
+    }
+
+    // Validar o código de acesso contra o código do operador selecionado
+    if (accessCode === selectedOperador.codigo) {
+      setOperadorSelecionado(selectedOperador.id);
+      setShowAccessCodeModal(false);
+      setSelectedOperador(null);
+      setAccessCode("");
+      setAccessCodeError("");
+    } else {
+      setAccessCodeError("Código de acesso inválido");
+    }
+  };
+
+  // Função para cancelar modal
+  const handleCancelModal = () => {
+    setShowAccessCodeModal(false);
+    setSelectedOperador(null);
+    setAccessCode("");
+    setAccessCodeError("");
   };
 
 
@@ -137,9 +191,9 @@ export function Header({ onMenuClick }: PropsCabecalho) {
                     <>
                       <DropdownMenuItem
                         onClick={() => setOperadorSelecionado(null)}
-                        className="text-muted-foreground"
+                        className="text-muted-foreground bg-red-500 hover:bg-red-600 text-white hover:text-white"
                       >
-                        Limpar Seleção
+                        Fechar Caixa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
@@ -149,7 +203,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
                     .map((administrador) => (
                       <DropdownMenuItem
                         key={administrador.id}
-                        onClick={() => setOperadorSelecionado(administrador.id)}
+                        onClick={() => handleOperadorClick(administrador)}
                         className="flex flex-col items-start"
                       >
                         <div className="font-medium">
@@ -181,6 +235,77 @@ export function Header({ onMenuClick }: PropsCabecalho) {
           )}
         </div>
       </div>
+
+      {/* Modal de Código de Acesso */}
+      <Dialog open={showAccessCodeModal} onOpenChange={setShowAccessCodeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Código de Acesso
+            </DialogTitle>
+            <DialogDescription>
+              Digite o código de acesso para o operador{" "}
+              <span className="font-semibold">
+                {selectedOperador?.nome} {selectedOperador?.sobrenome}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Código de acesso
+              </label>
+              <Input
+                type="text"
+                placeholder="Digite o código de acesso"
+                value={accessCode}
+                onChange={(e) => {
+                  setAccessCode(e.target.value);
+                  setAccessCodeError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAccessCodeSubmit();
+                  }
+                }}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                data-form-type="other"
+                data-lpignore="true"
+                className="text-center"
+              />
+              {accessCodeError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  {accessCodeError}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelModal}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleAccessCodeSubmit}
+                disabled={!accessCode.trim()}
+                className="flex-1"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

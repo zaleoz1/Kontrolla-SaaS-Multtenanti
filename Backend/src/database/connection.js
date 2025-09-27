@@ -14,7 +14,7 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
-  multipleStatements: false
+  multipleStatements: true
 };
 
 // Pool de conexões

@@ -140,21 +140,14 @@ router.post('/signup', validateSignup, async (req, res) => {
     console.log('👑 Criando administrador automaticamente...');
     const permissoesAdministrador = ["todos"]; // Administrador tem todas as permissões
     
-    // Gerar código único para o administrador
-    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let codigo = '';
-    for (let i = 0; i < 8; i++) {
-      codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-    }
-    
     const administradorResult = await queryWithResult(
       `INSERT INTO administradores (tenant_id, nome, sobrenome, codigo, role, status, permissoes, criado_por) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tenantId, firstName, lastName, codigo, 'administrador', 'ativo', JSON.stringify(permissoesAdministrador), null]
+      [tenantId, firstName, lastName, null, 'administrador', 'ativo', JSON.stringify(permissoesAdministrador), null]
     );
 
     const administradorId = administradorResult.insertId;
-    console.log('✅ Administrador criado automaticamente com ID:', administradorId, 'Código:', codigo);
+    console.log('✅ Administrador criado automaticamente com ID:', administradorId, 'Código: null');
 
     // Criar sessão
     console.log('🔑 Criando sessão...');
