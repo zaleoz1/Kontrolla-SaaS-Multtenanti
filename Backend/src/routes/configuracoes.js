@@ -1251,6 +1251,74 @@ router.put('/administradores/:id/ultimo-acesso', async (req, res) => {
   }
 });
 
+// Rota para criar código personalizado para administrador
+router.post('/administradores/:id/criar-codigo', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { codigo } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    if (!codigo || codigo.trim() === '') {
+      return res.status(400).json({ error: 'Código é obrigatório' });
+    }
+
+    // Validar tamanho do código (mínimo 4, máximo 20 caracteres)
+    if (codigo.length < 4 || codigo.length > 20) {
+      return res.status(400).json({ error: 'Código deve ter entre 4 e 20 caracteres' });
+    }
+
+    // Buscar administrador
+    const administradores = await query(
+      'SELECT * FROM administradores WHERE id = ? AND tenant_id = ? AND status = "ativo"',
+      [id, tenantId]
+    );
+
+    if (administradores.length === 0) {
+      return res.status(404).json({ error: 'Administrador não encontrado ou inativo' });
+    }
+
+    const administrador = administradores[0];
+
+    // Verificar se o código já existe no tenant
+    const codigoExistente = await query(
+      'SELECT id FROM administradores WHERE codigo = ? AND tenant_id = ? AND id != ?',
+      [codigo, tenantId, id]
+    );
+
+    if (codigoExistente.length > 0) {
+      return res.status(400).json({ error: 'Este código já está em uso por outro administrador' });
+    }
+
+    // Atualizar código no banco
+    await query(
+      'UPDATE administradores SET codigo = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
+      [codigo, id]
+    );
+
+    // Atualizar último acesso
+    await query(
+      'UPDATE administradores SET ultimo_acesso = CURRENT_TIMESTAMP WHERE id = ?',
+      [id]
+    );
+
+    res.json({ 
+      success: true,
+      message: 'Código criado com sucesso',
+      codigo: codigo,
+      administrador: {
+        id: administrador.id,
+        nome: administrador.nome,
+        sobrenome: administrador.sobrenome,
+        role: administrador.role,
+        status: administrador.status
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao criar código:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Rota para validar código do operador
 router.post('/administradores/:id/validar-codigo', async (req, res) => {
   try {

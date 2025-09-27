@@ -38,10 +38,29 @@ export function useAdministradores() {
     buscarAdministradores();
   }, []);
 
+  const criarCodigo = async (administradorId: number, codigo: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.post(`/configuracoes/administradores/${administradorId}/criar-codigo`, {
+        codigo: codigo
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('Erro ao criar código:', err);
+      setError(err.response?.data?.error || 'Erro ao criar código');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     administradores,
     loading,
     error,
-    refetch: buscarAdministradores
+    refetch: buscarAdministradores,
+    criarCodigo
   };
 }

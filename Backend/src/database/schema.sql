@@ -452,7 +452,7 @@ CREATE TABLE IF NOT EXISTS administradores (
     tenant_id INT NOT NULL,
     nome VARCHAR(255) NOT NULL,
     sobrenome VARCHAR(255) NOT NULL,
-    codigo VARCHAR(255) NOT NULL,
+    codigo VARCHAR(255),
     role ENUM('administrador', 'gerente', 'vendedor') NOT NULL DEFAULT 'vendedor',
     status ENUM('ativo', 'inativo', 'suspenso') NOT NULL DEFAULT 'ativo',
     permissoes JSON,
