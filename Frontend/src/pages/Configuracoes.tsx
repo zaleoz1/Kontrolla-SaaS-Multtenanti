@@ -158,6 +158,7 @@ export default function Configuracoes() {
   const [mostrarSenhas, setMostrarSenhas] = useState(false);
   const [mostrarCodigo, setMostrarCodigo] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [mostrarModalSenha, setMostrarModalSenha] = useState(false);
 
   // Estados para métodos de pagamento (agora usando dados do hook)
   const [metodosPagamentoLocal, setMetodosPagamentoLocal] = useState({
@@ -248,6 +249,16 @@ export default function Configuracoes() {
       } else {
         return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
       }
+    }
+  };
+
+  // Função para formatar telefone
+  const formatarTelefone = (valor: string) => {
+    const numeros = valor.replace(/\D/g, '');
+    if (numeros.length <= 10) {
+      return numeros.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    } else {
+      return numeros.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
     }
   };
 
@@ -402,7 +413,6 @@ export default function Configuracoes() {
       await atualizarDadosConta({
         nome: dadosContaEditando.nome,
         sobrenome: dadosContaEditando.sobrenome,
-        email: dadosContaEditando.email,
         telefone: dadosContaEditando.telefone
       });
       
@@ -512,9 +522,11 @@ export default function Configuracoes() {
         variant: "default"
       });
       
+      // Limpar campos e fechar modal
       setSenhaAtual("");
       setNovaSenha("");
       setConfirmarSenha("");
+      setMostrarModalSenha(false);
     } catch (error) {
       toast({
         title: "Erro",
@@ -524,6 +536,14 @@ export default function Configuracoes() {
     } finally {
       setSalvando(false);
     }
+  };
+
+  const handleFecharModalSenha = () => {
+    setMostrarModalSenha(false);
+    setSenhaAtual("");
+    setNovaSenha("");
+    setConfirmarSenha("");
+    setMostrarSenhas(false);
   };
 
   const handleUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -577,10 +597,10 @@ export default function Configuracoes() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "Erro",
-        description: "O arquivo deve ter no máximo 5MB",
+        description: "O arquivo deve ter no máximo 2MB",
         variant: "destructive"
       });
       return;
@@ -601,6 +621,7 @@ export default function Configuracoes() {
       });
     }
   };
+
 
   const handleSalvarMetodosPagamento = async () => {
     setSalvando(true);
@@ -1228,24 +1249,29 @@ export default function Configuracoes() {
                       <Input
                         id="email"
                         type="email"
-                          value={dadosContaEditando?.email ?? ''}
-                        onChange={(e) => {
-                          setDadosContaEditando(prev => prev ? { ...prev, email: e.target.value } : null);
-                        }}
-                        className="h-9 sm:h-11 text-xs sm:text-sm"
+                        value={dadosContaEditando?.email ?? ''}
+                        className="h-9 sm:h-11 text-xs sm:text-sm bg-muted/50"
                         placeholder="seu@email.com"
+                        readOnly
                       />
+                      <p className="text-xs text-muted-foreground">
+                        O email não pode ser alterado. Entre em contato com o suporte se necessário.
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="telefone" className="text-xs sm:text-sm font-medium">Telefone</Label>
                       <Input
                         id="telefone"
-                          value={dadosContaEditando?.telefone ?? ''}
+                        value={dadosContaEditando?.telefone ? formatarTelefone(dadosContaEditando.telefone) : ''}
                         onChange={(e) => {
-                          setDadosContaEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
+                          const valorFormatado = formatarTelefone(e.target.value);
+                          // Remove formatação para salvar apenas números
+                          const valorNumerico = valorFormatado.replace(/\D/g, '');
+                          setDadosContaEditando(prev => prev ? { ...prev, telefone: valorNumerico } : null);
                         }}
                         className="h-9 sm:h-11 text-xs sm:text-sm"
                         placeholder="(11) 99999-9999"
+                        maxLength={15}
                       />
                     </div>
                   </CardContent>
@@ -1420,12 +1446,16 @@ export default function Configuracoes() {
                         <Label htmlFor="telefone_empresa" className="text-xs sm:text-sm font-medium">Telefone da Empresa</Label>
                         <Input
                           id="telefone_empresa"
-                          value={dadosTenantEditando?.telefone ?? ''}
+                          value={dadosTenantEditando?.telefone ? formatarTelefone(dadosTenantEditando.telefone) : ''}
                           onChange={(e) => {
-                            setDadosTenantEditando(prev => prev ? { ...prev, telefone: e.target.value } : null);
+                            const valorFormatado = formatarTelefone(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            setDadosTenantEditando(prev => prev ? { ...prev, telefone: valorNumerico } : null);
                           }}
                           className="h-9 sm:h-11 text-xs sm:text-sm"
                           placeholder="(11) 3333-4444"
+                          maxLength={15}
                         />
                       </div>
                     </div>
@@ -1477,7 +1507,7 @@ export default function Configuracoes() {
                         <div className="space-y-3 sm:space-y-4">
                           <div className="relative inline-block">
                             <img 
-                              src={dadosTenantEditando?.logo} 
+                              src={dadosTenantEditando.logo} 
                               alt="Logo da empresa" 
                               className="h-16 w-16 sm:h-20 sm:w-20 mx-auto object-contain rounded-lg shadow-md"
                             />
@@ -1485,7 +1515,9 @@ export default function Configuracoes() {
                               <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                             </div>
                           </div>
-                          <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">Logo carregada com sucesso</p>
+                          <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">
+                            Logo carregada com sucesso
+                          </p>
                         </div>
                       ) : (
                         <div className="space-y-3 sm:space-y-4">
@@ -1507,16 +1539,18 @@ export default function Configuracoes() {
                         className="hidden"
                         id="logo-upload"
                       />
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        asChild
-                        className="mt-3 sm:mt-4 text-xs sm:text-sm"
-                      >
-                        <label htmlFor="logo-upload" className="cursor-pointer">
-                          {dadosTenantEditando?.logo ? 'Alterar Logo' : 'Selecionar Arquivo'}
-                        </label>
-                      </Button>
+                      <div className="flex gap-2 justify-center mt-3 sm:mt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          asChild
+                          className="text-xs sm:text-sm"
+                        >
+                          <label htmlFor="logo-upload" className="cursor-pointer">
+                            {dadosTenantEditando?.logo ? 'Alterar Logo' : 'Selecionar Arquivo'}
+                          </label>
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1537,61 +1571,20 @@ export default function Configuracoes() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="senhaAtual" className="text-xs sm:text-sm font-medium">Senha Atual</Label>
-                    <div className="relative">
-                      <Input
-                        id="senhaAtual"
-                        type={mostrarSenhas ? "text" : "password"}
-                        value={senhaAtual}
-                        onChange={(e) => setSenhaAtual(e.target.value)}
-                        className="h-9 sm:h-11 pr-8 sm:pr-10 text-xs sm:text-sm"
-                        placeholder="Digite sua senha atual"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-2 sm:px-3 hover:bg-transparent"
-                        onClick={() => setMostrarSenhas(!mostrarSenhas)}
-                      >
-                        {mostrarSenhas ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
-                      </Button>
-                    </div>
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm sm:text-base">Alterar Senha</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Clique no botão para alterar sua senha de acesso
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="novaSenha" className="text-xs sm:text-sm font-medium">Nova Senha</Label>
-                    <Input
-                      id="novaSenha"
-                      type={mostrarSenhas ? "text" : "password"}
-                      value={novaSenha}
-                      onChange={(e) => setNovaSenha(e.target.value)}
-                      className="h-9 sm:h-11 text-xs sm:text-sm"
-                      placeholder="Digite a nova senha"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmarSenha" className="text-xs sm:text-sm font-medium">Confirmar Senha</Label>
-                    <Input
-                      id="confirmarSenha"
-                      type={mostrarSenhas ? "text" : "password"}
-                      value={confirmarSenha}
-                      onChange={(e) => setConfirmarSenha(e.target.value)}
-                      className="h-9 sm:h-11 text-xs sm:text-sm"
-                      placeholder="Confirme a nova senha"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end">
                   <Button 
-                    onClick={handleAlterarSenha} 
-                    className="px-4 sm:px-6 py-2 text-xs sm:text-sm" 
-                    disabled={salvando}
-                    variant="destructive"
+                    onClick={() => setMostrarModalSenha(true)} 
+                    variant="outline"
+                    className="text-xs sm:text-sm h-8 sm:h-10"
                   >
                     <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    {salvando ? 'Alterando...' : 'Alterar Senha'}
+                    Alterar Senha
                   </Button>
                 </div>
               </CardContent>
@@ -2792,6 +2785,110 @@ export default function Configuracoes() {
           </div>
         )}
 
+
+        {/* Modal de Alteração de Senha */}
+        {mostrarModalSenha && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="w-full max-w-md">
+              <Card className="bg-background border-0 shadow-2xl">
+                <CardHeader className="bg-gradient-to-r from-red-500/5 to-red-500/10 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10">
+                        <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg sm:text-xl font-bold">Alterar Senha</CardTitle>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          Digite sua senha atual e a nova senha
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleFecharModalSenha}
+                      className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="senhaAtualModal" className="text-xs sm:text-sm font-medium">Senha Atual</Label>
+                      <div className="relative">
+                        <Input
+                          id="senhaAtualModal"
+                          type={mostrarSenhas ? "text" : "password"}
+                          value={senhaAtual}
+                          onChange={(e) => setSenhaAtual(e.target.value)}
+                          className="h-9 sm:h-11 pr-8 sm:pr-10 text-xs sm:text-sm"
+                          placeholder="Digite sua senha atual"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-2 sm:px-3 hover:bg-transparent"
+                          onClick={() => setMostrarSenhas(!mostrarSenhas)}
+                        >
+                          {mostrarSenhas ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="novaSenhaModal" className="text-xs sm:text-sm font-medium">Nova Senha</Label>
+                      <Input
+                        id="novaSenhaModal"
+                        type={mostrarSenhas ? "text" : "password"}
+                        value={novaSenha}
+                        onChange={(e) => setNovaSenha(e.target.value)}
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
+                        placeholder="Digite a nova senha"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        A senha deve ter pelo menos 6 caracteres
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmarSenhaModal" className="text-xs sm:text-sm font-medium">Confirmar Nova Senha</Label>
+                      <Input
+                        id="confirmarSenhaModal"
+                        type={mostrarSenhas ? "text" : "password"}
+                        value={confirmarSenha}
+                        onChange={(e) => setConfirmarSenha(e.target.value)}
+                        className="h-9 sm:h-11 text-xs sm:text-sm"
+                        placeholder="Confirme a nova senha"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="bg-muted/30 px-4 sm:px-6 py-3 sm:py-4 border-t">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={handleFecharModalSenha}
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10"
+                    >
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleAlterarSenha} 
+                      disabled={salvando}
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                    >
+                      <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      {salvando ? 'Alterando...' : 'Alterar Senha'}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* Modal de Parcelas */}
         {mostrarModalParcelas && (

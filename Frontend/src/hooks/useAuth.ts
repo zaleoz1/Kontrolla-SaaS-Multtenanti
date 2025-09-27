@@ -64,6 +64,20 @@ export function useAuth() {
     }
   }, []);
 
+  // Escutar eventos de atualização do usuário
+  useEffect(() => {
+    const handleUserUpdate = (event: CustomEvent) => {
+      const updatedUser = event.detail;
+      setAuthState(prev => ({
+        ...prev,
+        user: updatedUser,
+      }));
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate as EventListener);
+    return () => window.removeEventListener('userUpdated', handleUserUpdate as EventListener);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     try {
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.LOGIN, {

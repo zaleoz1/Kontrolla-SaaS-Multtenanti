@@ -292,6 +292,19 @@ export const useConfiguracoes = () => {
       const response = await makeRequest('/configuracoes/tenant', { method: 'PUT', body: dados });
       if (response.tenant) {
         setDadosTenant(response.tenant);
+        
+        // Atualizar dados do usuário no localStorage se o nome do tenant foi alterado
+        if (dados.nome) {
+          const userData = localStorage.getItem('user');
+          if (userData) {
+            const user = JSON.parse(userData);
+            const updatedUser = { ...user, tenant_nome: dados.nome };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            
+            // Disparar evento personalizado para notificar outros componentes
+            window.dispatchEvent(new CustomEvent('userUpdated', { detail: updatedUser }));
+          }
+        }
       }
       return response;
     } catch (err) {
@@ -349,25 +362,36 @@ export const useConfiguracoes = () => {
     }
   };
 
-  // Upload de logo da empresa
+  // Upload de logo da empresa (Base64)
   const uploadLogo = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('logo', file);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
       
-      const response = await makeRequest('/configuracoes/logo', { 
-        method: 'POST', 
-        body: formData,
-        headers: {} // Remove Content-Type para permitir que o browser defina o boundary
-      });
-      if (response.tenant) {
-        setDadosTenant(response.tenant);
-      }
-      return response;
-    } catch (err) {
-      console.error('Erro ao fazer upload da logo:', err);
-      throw err;
-    }
+      reader.onload = async (e) => {
+        try {
+          const base64String = e.target?.result as string;
+          
+          const response = await makeRequest('/configuracoes/logo', {
+            method: 'POST',
+            body: { logo: base64String }
+          });
+          
+          if (response.tenant) {
+            setDadosTenant(response.tenant);
+          }
+          
+          resolve(response);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Erro ao ler o arquivo'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
   };
 
   // Atualizar métodos de pagamento em lote

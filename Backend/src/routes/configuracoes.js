@@ -355,8 +355,23 @@ router.put('/conta', async (req, res) => {
       telefone
     } = req.body;
 
-    // Verificar se já existe usuário com mesmo email
-    if (email) {
+    // Buscar dados atuais do usuário para usar email atual se não fornecido
+    const usuarioAtual = await query(
+      'SELECT email FROM usuarios WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (usuarioAtual.length === 0) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    const emailAtual = usuarioAtual[0].email;
+    const emailParaUsar = email || emailAtual;
+
+    // Verificar se já existe usuário com mesmo email (apenas se email foi fornecido e é diferente do atual)
+    if (email && email !== emailAtual) {
       const existingUsers = await query(
         'SELECT id FROM usuarios WHERE email = ? AND id != ?',
         [email, req.user.id]
@@ -369,11 +384,41 @@ router.put('/conta', async (req, res) => {
       }
     }
 
+    // Atualizar apenas os campos fornecidos
+    const camposParaAtualizar = [];
+    const valoresParaAtualizar = [];
+
+    if (nome !== undefined) {
+      camposParaAtualizar.push('nome = ?');
+      valoresParaAtualizar.push(nome);
+    }
+
+    if (sobrenome !== undefined) {
+      camposParaAtualizar.push('sobrenome = ?');
+      valoresParaAtualizar.push(sobrenome);
+    }
+
+    if (email !== undefined) {
+      camposParaAtualizar.push('email = ?');
+      valoresParaAtualizar.push(emailParaUsar);
+    }
+
+    if (telefone !== undefined) {
+      camposParaAtualizar.push('telefone = ?');
+      valoresParaAtualizar.push(telefone);
+    }
+
+    if (camposParaAtualizar.length === 0) {
+      return res.status(400).json({
+        error: 'Nenhum campo para atualizar foi fornecido'
+      });
+    }
+
+    valoresParaAtualizar.push(req.user.id);
+
     await query(
-      `UPDATE usuarios SET 
-        nome = ?, sobrenome = ?, email = ?, telefone = ?
-      WHERE id = ?`,
-      [nome, sobrenome, email, telefone, req.user.id]
+      `UPDATE usuarios SET ${camposParaAtualizar.join(', ')} WHERE id = ?`,
+      valoresParaAtualizar
     );
 
     // Buscar usuário atualizado
@@ -428,20 +473,27 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
   }
 });
 
-// Upload de logo da empresa
-router.post('/logo', requireAdmin, upload.single('logo'), async (req, res) => {
+// Upload de logo da empresa (Base64)
+router.post('/logo', requireAdmin, async (req, res) => {
   try {
-    if (!req.file) {
+    const { logo } = req.body;
+    
+    if (!logo) {
       return res.status(400).json({
-        error: 'Nenhum arquivo enviado'
+        error: 'Logo em Base64 é obrigatória'
       });
     }
 
-    const logoPath = `/uploads/${req.file.filename}`;
+    // Validar se é uma string Base64 válida
+    if (!logo.startsWith('data:image/')) {
+      return res.status(400).json({
+        error: 'Formato de logo inválido. Deve ser uma string Base64 de imagem.'
+      });
+    }
 
     await query(
       'UPDATE tenants SET logo = ? WHERE id = ?',
-      [logoPath, req.user.tenant_id]
+      [logo, req.user.tenant_id]
     );
 
     // Buscar tenant atualizado
@@ -455,7 +507,7 @@ router.post('/logo', requireAdmin, upload.single('logo'), async (req, res) => {
       tenant
     });
   } catch (error) {
-    console.error('Erro ao fazer upload da logo:', error);
+    console.error('Erro ao salvar logo:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
