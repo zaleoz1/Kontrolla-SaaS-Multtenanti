@@ -190,6 +190,67 @@ export default function Configuracoes() {
     cpf_cnpj: ""
   });
 
+  // Funções de formatação para dados bancários
+  const formatarAgencia = (agencia: string) => {
+    // Remove tudo que não é dígito
+    const numeros = agencia.replace(/\D/g, '');
+    
+    // Limita a 5 dígitos (padrão brasileiro)
+    const agenciaLimitada = numeros.slice(0, 5);
+    
+    return agenciaLimitada;
+  };
+
+  const formatarConta = (conta: string) => {
+    // Remove tudo que não é dígito
+    const numeros = conta.replace(/\D/g, '');
+    
+    // Limita a 8 dígitos (padrão brasileiro)
+    const contaLimitada = numeros.slice(0, 8);
+    
+    return contaLimitada;
+  };
+
+  const formatarDigito = (digito: string) => {
+    // Remove tudo que não é dígito
+    const numeros = digito.replace(/\D/g, '');
+    
+    // Limita a 2 dígitos (padrão brasileiro)
+    return numeros.slice(0, 2);
+  };
+
+  const formatarCPFCNPJ = (cpfCnpj: string) => {
+    // Remove tudo que não é dígito
+    const numeros = cpfCnpj.replace(/\D/g, '');
+    
+    // Aplica a máscara baseada no tamanho
+    if (numeros.length <= 11) {
+      // CPF: 000.000.000-00
+      if (numeros.length <= 3) {
+        return numeros;
+      } else if (numeros.length <= 6) {
+        return numeros.replace(/(\d{3})(\d+)/, '$1.$2');
+      } else if (numeros.length <= 9) {
+        return numeros.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+      } else {
+        return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, '$1.$2.$3-$4');
+      }
+    } else {
+      // CNPJ: 00.000.000/0000-00
+      if (numeros.length <= 2) {
+        return numeros;
+      } else if (numeros.length <= 5) {
+        return numeros.replace(/(\d{2})(\d+)/, '$1.$2');
+      } else if (numeros.length <= 8) {
+        return numeros.replace(/(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+      } else if (numeros.length <= 12) {
+        return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d+)/, '$1.$2.$3/$4');
+      } else {
+        return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
+      }
+    }
+  };
+
 
   const [abaAtiva, setAbaAtiva] = useState("conta");
 
@@ -1986,7 +2047,7 @@ export default function Configuracoes() {
                       </div>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                      {key !== 'cartao_credito' && (
+                      {key !== 'cartao_credito' && key !== 'pix' && key !== 'dinheiro' && (
                         <div className="flex items-center space-x-2">
                           <Label htmlFor={`taxa-${key}`} className="text-xs sm:text-sm">Taxa (%)</Label>
                           <Input
@@ -2004,7 +2065,6 @@ export default function Configuracoes() {
                             }}
                             className="w-16 sm:w-20 h-8 sm:h-9 text-xs sm:text-sm"
                             readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
-                            disabled={key === 'pix' || key === 'dinheiro'}
                           />
                         </div>
                       )}
@@ -2019,24 +2079,21 @@ export default function Configuracoes() {
                           Parcelas
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setMetodosPagamentoLocal(prev => ({
-                            ...prev,
-                            [key]: { ...prev[key as keyof typeof prev], ativo: !prev[key as keyof typeof prev].ativo }
-                          }));
-                        }}
-                        className="h-8 sm:h-9 w-full sm:w-auto"
-                        disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
-                      >
-                        {metodo.ativo ? (
-                          <ToggleRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                        )}
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={metodo.ativo}
+                          onCheckedChange={(checked) => {
+                            setMetodosPagamentoLocal(prev => ({
+                              ...prev,
+                              [key]: { ...prev[key as keyof typeof prev], ativo: checked }
+                            }));
+                          }}
+                          disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
+                        />
+                        <Label className="text-xs sm:text-sm text-muted-foreground">
+                          {metodo.ativo ? 'Ativo' : 'Inativo'}
+                        </Label>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2090,8 +2147,14 @@ export default function Configuracoes() {
                     <Input
                       id="cpf_cnpj_pix"
                       placeholder="CPF ou CNPJ do titular"
-                      value={dadosPixEditando.cpf_cnpj}
-                      onChange={(e) => setDadosPixEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                      value={dadosPixEditando.cpf_cnpj ? formatarCPFCNPJ(dadosPixEditando.cpf_cnpj) : ""}
+                      onChange={(e) => {
+                        const valorFormatado = formatarCPFCNPJ(e.target.value);
+                        // Remove formatação para salvar apenas números
+                        const valorNumerico = valorFormatado.replace(/\D/g, '');
+                        setDadosPixEditando(prev => ({ ...prev, cpf_cnpj: valorNumerico }));
+                      }}
+                      maxLength={18}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
                       readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
@@ -2176,8 +2239,14 @@ export default function Configuracoes() {
                     <Input
                       id="agencia"
                       placeholder="Número da agência"
-                      value={dadosBancariosEditando.agencia}
-                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, agencia: e.target.value }))}
+                      value={dadosBancariosEditando.agencia ? formatarAgencia(dadosBancariosEditando.agencia) : ""}
+                      onChange={(e) => {
+                        const valorFormatado = formatarAgencia(e.target.value);
+                        // Remove formatação para salvar apenas números
+                        const valorNumerico = valorFormatado.replace(/\D/g, '');
+                        setDadosBancariosEditando(prev => ({ ...prev, agencia: valorNumerico }));
+                      }}
+                      maxLength={5}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
                       readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
@@ -2187,8 +2256,14 @@ export default function Configuracoes() {
                     <Input
                       id="conta"
                       placeholder="Número da conta"
-                      value={dadosBancariosEditando.conta}
-                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, conta: e.target.value }))}
+                      value={dadosBancariosEditando.conta ? formatarConta(dadosBancariosEditando.conta) : ""}
+                      onChange={(e) => {
+                        const valorFormatado = formatarConta(e.target.value);
+                        // Remove formatação para salvar apenas números
+                        const valorNumerico = valorFormatado.replace(/\D/g, '');
+                        setDadosBancariosEditando(prev => ({ ...prev, conta: valorNumerico }));
+                      }}
+                      maxLength={8}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
                       readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
@@ -2198,9 +2273,14 @@ export default function Configuracoes() {
                     <Input
                       id="digito"
                       placeholder="Dígito da conta"
-                      value={dadosBancariosEditando.digito}
-                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, digito: e.target.value }))}
-                      maxLength={1}
+                      value={dadosBancariosEditando.digito ? formatarDigito(dadosBancariosEditando.digito) : ""}
+                      onChange={(e) => {
+                        const valorFormatado = formatarDigito(e.target.value);
+                        // Remove formatação para salvar apenas números
+                        const valorNumerico = valorFormatado.replace(/\D/g, '');
+                        setDadosBancariosEditando(prev => ({ ...prev, digito: valorNumerico }));
+                      }}
+                      maxLength={2}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
                       readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
@@ -2236,8 +2316,14 @@ export default function Configuracoes() {
                     <Input
                       id="cpf_cnpj_banco"
                       placeholder="CPF ou CNPJ do titular"
-                      value={dadosBancariosEditando.cpf_cnpj}
-                      onChange={(e) => setDadosBancariosEditando(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+                      value={dadosBancariosEditando.cpf_cnpj ? formatarCPFCNPJ(dadosBancariosEditando.cpf_cnpj) : ""}
+                      onChange={(e) => {
+                        const valorFormatado = formatarCPFCNPJ(e.target.value);
+                        // Remove formatação para salvar apenas números
+                        const valorNumerico = valorFormatado.replace(/\D/g, '');
+                        setDadosBancariosEditando(prev => ({ ...prev, cpf_cnpj: valorNumerico }));
+                      }}
+                      maxLength={18}
                       className="h-8 sm:h-10 text-xs sm:text-sm"
                       readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />

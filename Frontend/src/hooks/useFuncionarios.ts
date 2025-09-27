@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from './use-toast';
 import { useCrudApi } from './useApi';
-import { API_ENDPOINTS } from '@/config/api';
+import { API_ENDPOINTS, API_CONFIG } from '@/config/api';
 
 export interface Funcionario {
   id?: number;
@@ -132,11 +132,18 @@ export function useFuncionarios() {
 
   const buscarCep = useCallback(async (cep: string) => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.FUNCIONARIOS.SEARCH_CEP(cep)}`);
+      // Usar o endpoint real de CEP que integra com ViaCEP
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/cep/${cep}`);
       const data = await response.json();
       
-      if (data.success) {
-        return data.dados;
+      if (response.ok && data.localidade) {
+        // Mapear a resposta da ViaCEP para o formato esperado
+        return {
+          cep: data.cep,
+          endereco: `${data.logradouro}${data.complemento ? ', ' + data.complemento : ''}${data.bairro ? ', ' + data.bairro : ''}`,
+          cidade: data.localidade,
+          estado: data.uf
+        };
       }
       return null;
     } catch (error) {

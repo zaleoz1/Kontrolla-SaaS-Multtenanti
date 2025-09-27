@@ -21,7 +21,8 @@ import {
   FileText,
   User,
   Eye,
-  EyeOff
+  EyeOff,
+  Menu
 } from "lucide-react";
 
 export default function Fornecedores() {
@@ -40,6 +41,7 @@ export default function Fornecedores() {
   const [buscaFornecedor, setBuscaFornecedor] = useState("");
   const [filtroStatusFornecedor, setFiltroStatusFornecedor] = useState("todos");
   const [abaAtiva, setAbaAtiva] = useState("fornecedores");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Carregar fornecedores quando o componente montar
   useEffect(() => {
@@ -99,12 +101,26 @@ export default function Fornecedores() {
         activeTab={abaAtiva}
         onTabChange={handleMudarAba}
         onLogout={handleLogout}
-        isOpen={false}
-        onClose={() => {}}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Conteúdo principal */}
       <div className="flex-1 overflow-y-auto">
+        {/* Header mobile com botão de menu */}
+        <div className="min-[1378px]:hidden flex items-center justify-between p-3 sm:p-4 border-b bg-background">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(true)}
+            className="min-[1378px]:hidden"
+          >
+            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+          <h1 className="text-base sm:text-lg font-semibold">Fornecedores</h1>
+          <div className="w-8 sm:w-9" /> {/* Espaçador para centralizar o título */}
+        </div>
+        
         <div className="w-full max-w-full overflow-x-hidden p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* Header da Página */}
           <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
