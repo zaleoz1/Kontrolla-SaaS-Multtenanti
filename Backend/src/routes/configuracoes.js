@@ -1057,11 +1057,23 @@ router.get('/administradores/:id', async (req, res) => {
 router.post('/administradores', validateCreateAdministrador, async (req, res) => {
   try {
     const tenantId = req.user.tenant_id;
-    const { nome, sobrenome, role, status, permissoes } = req.body;
+    const { nome, sobrenome, codigo, role, status, permissoes } = req.body;
     const criadoPor = null; // Primeiro administrador não tem criado_por
     
-    // Gerar código único
-    const codigo = gerarCodigo();
+    console.log('Dados recebidos no backend:', { nome, sobrenome, codigo, role, status, permissoes });
+    
+    // Verificar se o código já existe no tenant
+    const codigoExistente = await query(
+      'SELECT id FROM administradores WHERE codigo = ? AND tenant_id = ?',
+      [codigo, tenantId]
+    );
+    
+    if (codigoExistente.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Este código já está em uso por outro administrador'
+      });
+    }
     
     const result = await query(
       `INSERT INTO administradores 
@@ -1097,7 +1109,9 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
   try {
     const { id } = req.params;
     const tenantId = req.user.tenant_id;
-    const { nome, sobrenome, role, status, permissoes, gerarNovoCodigo } = req.body;
+    const { nome, sobrenome, codigo, role, status, permissoes } = req.body;
+    
+    console.log('Dados recebidos para atualização:', { nome, sobrenome, codigo, role, status, permissoes });
     
     // Verificar se administrador existe
     const administradorExistente = await query(
@@ -1121,10 +1135,22 @@ router.put('/administradores/:id', validateUpdateAdministrador, async (req, res)
       campos.push('sobrenome = ?');
       valores.push(sobrenome);
     }
-    if (gerarNovoCodigo) {
-      const novoCodigo = gerarCodigo();
+    if (codigo) {
+      // Verificar se o código já existe em outro administrador do mesmo tenant
+      const codigoExistente = await query(
+        'SELECT id FROM administradores WHERE codigo = ? AND tenant_id = ? AND id != ?',
+        [codigo, tenantId, id]
+      );
+      
+      if (codigoExistente.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Este código já está em uso por outro administrador'
+        });
+      }
+      
       campos.push('codigo = ?');
-      valores.push(novoCodigo);
+      valores.push(codigo);
     }
     if (role) {
       campos.push('role = ?');

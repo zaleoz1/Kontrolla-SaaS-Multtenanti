@@ -108,7 +108,8 @@ interface Administrador {
   id?: number;
   nome: string;
   sobrenome: string;
-  email: string;
+  codigo: string;
+  email?: string;
   senha?: string;
   role: 'administrador' | 'gerente' | 'vendedor';
   status: 'ativo' | 'inativo' | 'suspenso';
