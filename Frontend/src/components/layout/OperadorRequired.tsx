@@ -427,10 +427,6 @@ export function OperadorRequired() {
                         <h3 className="text-sm sm:text-base md:text-lg font-bold text-white mb-1 sm:mb-2 group-hover:text-green-400 transition-colors duration-300 truncate">
                           {operador.nome} {operador.sobrenome}
                         </h3>
-                        
-                        <p className="text-slate-300 text-xs sm:text-sm mb-2 sm:mb-3 md:mb-4 capitalize">
-                          {operador.role}
-                        </p>
 
                         {operadorEmCodigo === operador.id ? (
                           <motion.div
@@ -445,7 +441,7 @@ export function OperadorRequired() {
                               <div className="space-y-2 sm:space-y-3">
                                 <div className="text-center">
                                   <p className="text-xs sm:text-sm text-slate-300 mb-1.5 sm:mb-2">
-                                    Este operador não possui código de acesso
+                                    Olá <span className="text-green-400 font-semibold">{operador.nome}</span>, seja bem vindo ao sistema! Crie seu código de acesso para continuar.
                                   </p>
                                   
                                   {codigoCriado ? (
@@ -462,7 +458,7 @@ export function OperadorRequired() {
                                   ) : (
                                     <div className="space-y-2 sm:space-y-3">
                                       <p className="text-xs sm:text-sm text-slate-300 mb-1.5 sm:mb-2">
-                                        Crie seu código de acesso (4-20 caracteres)
+                                        Crie seu código de acesso (mínimo 5 caracteres)
                                       </p>
                                       <div className="relative">
                                         <Input
@@ -485,7 +481,7 @@ export function OperadorRequired() {
                                       </div>
                                       <Button
                                         onClick={() => handleCriarCodigo(operador)}
-                                        disabled={criandoCodigo || !novoCodigo.trim()}
+                                        disabled={criandoCodigo || !novoCodigo.trim() || novoCodigo.trim().length < 5}
                                         className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 sm:h-7 md:h-8"
                                       >
                                         {criandoCodigo ? (

@@ -18,7 +18,6 @@ import {
   MailIcon,
   PhoneIcon,
   FileText,
-  DollarSign,
   Calendar,
   Briefcase,
   UserCheck,
@@ -137,42 +136,6 @@ export default function Funcionarios() {
     }
   };
 
-  const handleGerarContasSalario = async () => {
-    if (!confirm("Deseja gerar contas de salário para todos os funcionários ativos?")) return;
-
-    try {
-      const response = await fetch('http://localhost:3000/api/funcionarios/gerar-contas-salario', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({})
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast({
-          title: "Sucesso",
-          description: `${data.contasCriadas} contas de salário criadas! ${data.contasExistentes} já existiam.`,
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: data.error || "Erro ao gerar contas de salário",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao gerar contas de salário",
-        variant: "destructive"
-      });
-    }
-  };
 
   // Filtros são aplicados na API, então usamos os dados diretamente
   const funcionariosFiltrados = funcionarios;
@@ -224,15 +187,6 @@ export default function Funcionarios() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-              <Button 
-                onClick={handleGerarContasSalario} 
-                variant="outline"
-                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none"
-              >
-                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Gerar Contas de Salário</span>
-                <span className="sm:hidden">Gerar Contas</span>
-              </Button>
               <Button onClick={handleNovoFuncionario} className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none">
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Funcionário</span>

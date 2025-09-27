@@ -172,6 +172,53 @@ export default function NovoFornecedor() {
 
   const formularioValido = fornecedor.nome && fornecedor.telefone;
 
+  // Funções de formatação
+  const formatarCNPJ = (cnpj: string) => {
+    // Remove tudo que não é dígito
+    const numeros = cnpj.replace(/\D/g, '');
+    
+    // Aplica a máscara do CNPJ
+    if (numeros.length <= 2) {
+      return numeros;
+    } else if (numeros.length <= 5) {
+      return numeros.replace(/(\d{2})(\d+)/, '$1.$2');
+    } else if (numeros.length <= 8) {
+      return numeros.replace(/(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+    } else if (numeros.length <= 12) {
+      return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d+)/, '$1.$2.$3/$4');
+    } else {
+      return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
+    }
+  };
+
+  const formatarTelefone = (telefone: string) => {
+    // Remove tudo que não é dígito
+    const numeros = telefone.replace(/\D/g, '');
+    
+    // Aplica a máscara do telefone
+    if (numeros.length <= 2) {
+      return numeros;
+    } else if (numeros.length <= 6) {
+      return numeros.replace(/(\d{2})(\d+)/, '($1) $2');
+    } else if (numeros.length <= 10) {
+      return numeros.replace(/(\d{2})(\d{4})(\d+)/, '($1) $2-$3');
+    } else {
+      return numeros.replace(/(\d{2})(\d{5})(\d+)/, '($1) $2-$3');
+    }
+  };
+
+  const formatarCEP = (cep: string) => {
+    // Remove tudo que não é dígito
+    const numeros = cep.replace(/\D/g, '');
+    
+    // Aplica a máscara do CEP
+    if (numeros.length <= 5) {
+      return numeros;
+    } else {
+      return numeros.replace(/(\d{5})(\d+)/, '$1-$2');
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -297,8 +344,14 @@ export default function NovoFornecedor() {
                         <label className="text-xs sm:text-sm font-medium">CNPJ</label>
                         <Input
                           placeholder="00.000.000/0000-00"
-                          value={fornecedor.cnpj || ""}
-                          onChange={(e) => atualizarFornecedor("cnpj", e.target.value)}
+                          value={fornecedor.cnpj ? formatarCNPJ(fornecedor.cnpj) : ""}
+                          onChange={(e) => {
+                            const valorFormatado = formatarCNPJ(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFornecedor("cnpj", valorNumerico);
+                          }}
+                          maxLength={18}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -330,8 +383,14 @@ export default function NovoFornecedor() {
                         <label className="text-xs sm:text-sm font-medium">Telefone *</label>
                         <Input
                           placeholder="(00) 00000-0000"
-                          value={fornecedor.telefone || ""}
-                          onChange={(e) => atualizarFornecedor("telefone", e.target.value)}
+                          value={fornecedor.telefone ? formatarTelefone(fornecedor.telefone) : ""}
+                          onChange={(e) => {
+                            const valorFormatado = formatarTelefone(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFornecedor("telefone", valorNumerico);
+                          }}
+                          maxLength={15}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -362,13 +421,17 @@ export default function NovoFornecedor() {
                         <label className="text-xs sm:text-sm font-medium">CEP</label>
                         <Input
                           placeholder="00000-000"
-                          value={fornecedor.cep || ""}
+                          value={fornecedor.cep ? formatarCEP(fornecedor.cep) : ""}
                           onChange={(e) => {
-                            atualizarEndereco("cep", e.target.value);
-                            if (e.target.value.length === 8) {
-                              handleBuscarCep(e.target.value);
+                            const valorFormatado = formatarCEP(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarEndereco("cep", valorNumerico);
+                            if (valorNumerico.length === 8) {
+                              handleBuscarCep(valorNumerico);
                             }
                           }}
+                          maxLength={9}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -498,13 +561,13 @@ export default function NovoFornecedor() {
                       {fornecedor.telefone && (
                         <div className="flex items-center space-x-1.5 sm:space-x-2 text-muted-foreground">
                           <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                          <span className="text-xs">{fornecedor.telefone}</span>
+                          <span className="text-xs">{formatarTelefone(fornecedor.telefone)}</span>
                         </div>
                       )}
                       {fornecedor.cnpj && (
                         <div className="flex items-center space-x-1.5 sm:space-x-2 text-muted-foreground">
                           <Building2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                          <span className="text-xs">{fornecedor.cnpj}</span>
+                          <span className="text-xs">{formatarCNPJ(fornecedor.cnpj)}</span>
                         </div>
                       )}
                       {fornecedor.cidade && fornecedor.estado && (

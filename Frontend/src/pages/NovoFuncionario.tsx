@@ -188,6 +188,150 @@ export default function NovoFuncionario() {
 
   const formularioValido = funcionario.nome && funcionario.sobrenome && funcionario.cpf && funcionario.cargo && funcionario.data_admissao;
 
+  // Funções de formatação
+  const formatarCPF = (cpf: string) => {
+    // Remove tudo que não é dígito
+    const numeros = cpf.replace(/\D/g, '');
+    
+    // Aplica a máscara do CPF
+    if (numeros.length <= 3) {
+      return numeros;
+    } else if (numeros.length <= 6) {
+      return numeros.replace(/(\d{3})(\d+)/, '$1.$2');
+    } else if (numeros.length <= 9) {
+      return numeros.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+    } else {
+      return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, '$1.$2.$3-$4');
+    }
+  };
+
+  const formatarTelefone = (telefone: string) => {
+    // Remove tudo que não é dígito
+    const numeros = telefone.replace(/\D/g, '');
+    
+    // Aplica a máscara do telefone
+    if (numeros.length <= 2) {
+      return numeros;
+    } else if (numeros.length <= 6) {
+      return numeros.replace(/(\d{2})(\d+)/, '($1) $2');
+    } else if (numeros.length <= 10) {
+      return numeros.replace(/(\d{2})(\d{4})(\d+)/, '($1) $2-$3');
+    } else {
+      return numeros.replace(/(\d{2})(\d{5})(\d+)/, '($1) $2-$3');
+    }
+  };
+
+  const formatarCEP = (cep: string) => {
+    // Remove tudo que não é dígito
+    const numeros = cep.replace(/\D/g, '');
+    
+    // Aplica a máscara do CEP
+    if (numeros.length <= 5) {
+      return numeros;
+    } else {
+      return numeros.replace(/(\d{5})(\d+)/, '$1-$2');
+    }
+  };
+
+  // Funções de conversão de data
+  const formatarDataParaInput = (data: string | null | undefined) => {
+    if (!data) return '';
+    
+    // Se já está no formato YYYY-MM-DD, retorna como está
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      return data;
+    }
+    
+    // Se está no formato DD/MM/YYYY, converte para YYYY-MM-DD
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(data)) {
+      const [dia, mes, ano] = data.split('/');
+      return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    }
+    
+    // Se é uma data ISO, converte para YYYY-MM-DD
+    try {
+      const dataObj = new Date(data);
+      if (!isNaN(dataObj.getTime())) {
+        return dataObj.toISOString().split('T')[0];
+      }
+    } catch (error) {
+      console.error('Erro ao converter data:', error);
+    }
+    
+    return '';
+  };
+
+  const formatarDataParaExibicao = (data: string | null | undefined) => {
+    if (!data) return '';
+    
+    // Se já está no formato DD/MM/YYYY, retorna como está
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(data)) {
+      return data;
+    }
+    
+    // Se está no formato YYYY-MM-DD, converte para DD/MM/YYYY
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      const [ano, mes, dia] = data.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+    
+    // Se é uma data ISO, converte para DD/MM/YYYY
+    try {
+      const dataObj = new Date(data);
+      if (!isNaN(dataObj.getTime())) {
+        const dia = dataObj.getDate().toString().padStart(2, '0');
+        const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
+        const ano = dataObj.getFullYear();
+        return `${dia}/${mes}/${ano}`;
+      }
+    } catch (error) {
+      console.error('Erro ao converter data:', error);
+    }
+    
+    return '';
+  };
+
+  // Funções de formatação bancária
+  const formatarAgencia = (agencia: string) => {
+    // Remove tudo que não é dígito
+    const numeros = agencia.replace(/\D/g, '');
+    
+    // Limita a 5 dígitos (padrão brasileiro)
+    const agenciaLimitada = numeros.slice(0, 5);
+    
+    // Aplica formatação com hífen se tiver 4 ou 5 dígitos
+    if (agenciaLimitada.length === 4) {
+      return agenciaLimitada;
+    } else if (agenciaLimitada.length === 5) {
+      return agenciaLimitada;
+    }
+    
+    return agenciaLimitada;
+  };
+
+  const formatarConta = (conta: string) => {
+    // Remove tudo que não é dígito
+    const numeros = conta.replace(/\D/g, '');
+    
+    // Limita a 8 dígitos (padrão brasileiro)
+    const contaLimitada = numeros.slice(0, 8);
+    
+    // Aplica formatação com hífen se tiver 6 ou mais dígitos
+    if (contaLimitada.length >= 6) {
+      return contaLimitada;
+    }
+    
+    return contaLimitada;
+  };
+
+  const formatarDigito = (digito: string) => {
+    // Remove tudo que não é dígito
+    const numeros = digito.replace(/\D/g, '');
+    
+    // Limita a 2 dígitos (padrão brasileiro)
+    return numeros.slice(0, 2);
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -326,8 +470,14 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">CPF *</label>
                         <Input
                           placeholder="000.000.000-00"
-                          value={funcionario.cpf}
-                          onChange={(e) => atualizarFuncionario("cpf", e.target.value)}
+                          value={formatarCPF(funcionario.cpf)}
+                          onChange={(e) => {
+                            const valorFormatado = formatarCPF(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFuncionario("cpf", valorNumerico);
+                          }}
+                          maxLength={14}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -359,8 +509,14 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">Telefone</label>
                         <Input
                           placeholder="(00) 00000-0000"
-                          value={funcionario.telefone || ""}
-                          onChange={(e) => atualizarFuncionario("telefone", e.target.value)}
+                          value={funcionario.telefone ? formatarTelefone(funcionario.telefone) : ""}
+                          onChange={(e) => {
+                            const valorFormatado = formatarTelefone(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFuncionario("telefone", valorNumerico);
+                          }}
+                          maxLength={15}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -371,7 +527,7 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">Data de Nascimento</label>
                         <Input
                           type="date"
-                          value={funcionario.data_nascimento || ""}
+                          value={formatarDataParaInput(funcionario.data_nascimento)}
                           onChange={(e) => atualizarFuncionario("data_nascimento", e.target.value)}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
@@ -451,7 +607,7 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">Data de Admissão *</label>
                         <Input
                           type="date"
-                          value={funcionario.data_admissao}
+                          value={formatarDataParaInput(funcionario.data_admissao)}
                           onChange={(e) => atualizarFuncionario("data_admissao", e.target.value)}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
@@ -461,7 +617,7 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">Data de Demissão</label>
                         <Input
                           type="date"
-                          value={funcionario.data_demissao || ""}
+                          value={formatarDataParaInput(funcionario.data_demissao)}
                           onChange={(e) => atualizarFuncionario("data_demissao", e.target.value || null)}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
@@ -564,13 +720,17 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">CEP</label>
                         <Input
                           placeholder="00000-000"
-                          value={funcionario.cep || ""}
+                          value={funcionario.cep ? formatarCEP(funcionario.cep) : ""}
                           onChange={(e) => {
-                            atualizarFuncionario("cep", e.target.value);
-                            if (e.target.value.length === 8) {
-                              handleBuscarCep(e.target.value);
+                            const valorFormatado = formatarCEP(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFuncionario("cep", valorNumerico);
+                            if (valorNumerico.length === 8) {
+                              handleBuscarCep(valorNumerico);
                             }
                           }}
+                          maxLength={9}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -664,8 +824,14 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">Agência</label>
                         <Input
                           placeholder="Número da agência"
-                          value={funcionario.agencia || ""}
-                          onChange={(e) => atualizarFuncionario("agencia", e.target.value)}
+                          value={funcionario.agencia ? formatarAgencia(funcionario.agencia) : ""}
+                          onChange={(e) => {
+                            const valorFormatado = formatarAgencia(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFuncionario("agencia", valorNumerico);
+                          }}
+                          maxLength={5}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -676,8 +842,14 @@ export default function NovoFuncionario() {
                         <label className="text-xs sm:text-sm font-medium">Conta</label>
                         <Input
                           placeholder="Número da conta"
-                          value={funcionario.conta || ""}
-                          onChange={(e) => atualizarFuncionario("conta", e.target.value)}
+                          value={funcionario.conta ? formatarConta(funcionario.conta) : ""}
+                          onChange={(e) => {
+                            const valorFormatado = formatarConta(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFuncionario("conta", valorNumerico);
+                          }}
+                          maxLength={8}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -687,8 +859,13 @@ export default function NovoFuncionario() {
                         <Input
                           placeholder="Dígito da conta"
                           maxLength={2}
-                          value={funcionario.digito || ""}
-                          onChange={(e) => atualizarFuncionario("digito", e.target.value)}
+                          value={funcionario.digito ? formatarDigito(funcionario.digito) : ""}
+                          onChange={(e) => {
+                            const valorFormatado = formatarDigito(e.target.value);
+                            // Remove formatação para salvar apenas números
+                            const valorNumerico = valorFormatado.replace(/\D/g, '');
+                            atualizarFuncionario("digito", valorNumerico);
+                          }}
                           className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                         />
                       </div>
@@ -780,13 +957,13 @@ export default function NovoFuncionario() {
                       {funcionario.telefone && (
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                          <span className="truncate">{funcionario.telefone}</span>
+                          <span className="truncate">{formatarTelefone(funcionario.telefone)}</span>
                         </div>
                       )}
                       {funcionario.cpf && (
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                          <span className="truncate">{funcionario.cpf}</span>
+                          <span className="truncate">{formatarCPF(funcionario.cpf)}</span>
                         </div>
                       )}
                       {funcionario.cidade && funcionario.estado && (
