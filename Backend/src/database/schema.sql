@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     nome_fantasia VARCHAR(255),
     inscricao_estadual VARCHAR(20),
     inscricao_municipal VARCHAR(20),
-    logo VARCHAR(255),
+    logo LONGTEXT,
     status ENUM('ativo', 'inativo', 'suspenso') DEFAULT 'ativo',
     plano VARCHAR(50) DEFAULT 'basico',
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
