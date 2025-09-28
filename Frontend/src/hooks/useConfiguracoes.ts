@@ -341,25 +341,36 @@ export const useConfiguracoes = () => {
     }
   };
 
-  // Upload de avatar
+  // Upload de avatar (Base64) - Cloudinary
   const uploadAvatar = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('avatar', file);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
       
-      const response = await makeRequest('/configuracoes/avatar', { 
-        method: 'POST', 
-        body: formData,
-        headers: {} // Remove Content-Type para permitir que o browser defina o boundary
-      });
-      if (response.user) {
-        setDadosConta(response.user);
-      }
-      return response;
-    } catch (err) {
-      console.error('Erro ao fazer upload do avatar:', err);
-      throw err;
-    }
+      reader.onload = async (e) => {
+        try {
+          const base64String = e.target?.result as string;
+          
+          const response = await makeRequest('/configuracoes/avatar', {
+            method: 'POST',
+            body: { avatar: base64String }
+          });
+          
+          if (response.user) {
+            setDadosConta(response.user);
+          }
+          
+          resolve(response);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Erro ao ler o arquivo'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
   };
 
   // Upload de logo da empresa (Base64)
@@ -522,6 +533,43 @@ export const useConfiguracoes = () => {
       console.error('Erro ao salvar configurações PIX:', err);
       throw err;
     }
+  };
+
+  // Upload de QR Code PIX (Base64) - Cloudinary
+  const uploadQrCodePix = async (file: File) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const base64String = e.target?.result as string;
+          
+          const response = await makeRequest('/configuracoes/pix', {
+            method: 'POST',
+            body: { 
+              chave_pix: '', // Será preenchido pelo usuário
+              qr_code: base64String,
+              nome_titular: '',
+              cpf_cnpj: ''
+            }
+          });
+          
+          if (response.pix) {
+            setPixConfiguracao(response.pix);
+          }
+          
+          resolve(response);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Erro ao ler o arquivo'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
   };
 
   // Salvar dados bancários
@@ -725,6 +773,7 @@ export const useConfiguracoes = () => {
     alterarSenha,
     uploadAvatar,
     uploadLogo,
+    uploadQrCodePix,
     buscarMetodosPagamento,
     atualizarMetodosPagamento,
     salvarMetodoPagamento,

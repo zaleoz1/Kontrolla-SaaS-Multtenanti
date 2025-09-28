@@ -21,10 +21,31 @@ import {
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { useBuscaProdutos } from "@/hooks/useBuscaProdutos";
-import { useBuscaCodigoBarras } from "@/hooks/useProdutos";
 import { Cliente } from "@/hooks/useClientes";
-import { Produto } from "@/hooks/useProdutos";
 import { useToast } from "@/hooks/use-toast";
+
+interface Produto {
+  id?: number;
+  nome: string;
+  descricao?: string;
+  categoria_id?: number;
+  categoria_nome?: string;
+  preco: number;
+  preco_promocional?: number;
+  tipo_preco: 'unidade' | 'kg' | 'litros';
+  codigo_barras?: string;
+  sku?: string;
+  estoque: number;
+  estoque_minimo: number;
+  fornecedor_id?: number;
+  marca?: string;
+  modelo?: string;
+  status: 'ativo' | 'inativo' | 'rascunho';
+  destaque: boolean;
+  imagens: string[];
+  data_criacao?: string;
+  data_atualizacao?: string;
+}
 
 interface ItemCarrinho {
   produto: Produto;
@@ -50,7 +71,6 @@ export default function NovaVenda() {
   // Hooks para integração com API
   const { clientesFiltrados, termoBuscaCliente, setTermoBuscaCliente, carregando: carregandoClientes } = useBuscaClientes();
   const { produtosFiltrados, termoBusca, setTermoBusca, carregando: carregandoProdutos } = useBuscaProdutos();
-  const { buscarPorCodigo, carregando: carregandoCodigoBarras } = useBuscaCodigoBarras();
   
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData?.clienteSelecionado || null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>(vendaData?.carrinho || []);
@@ -75,7 +95,10 @@ export default function NovaVenda() {
     if (!codigoBarras.trim()) return;
     
     try {
-      const produto = await buscarPorCodigo(codigoBarras.trim());
+      // Buscar produto pelo código de barras nos produtos filtrados
+      const produto = produtosFiltrados.find(p => 
+        p.codigo_barras?.toLowerCase() === codigoBarras.trim().toLowerCase()
+      );
       if (produto) {
         // Verificar se o produto está esgotado antes de adicionar
         if (produto.estoque === 0) {
@@ -269,7 +292,7 @@ export default function NovaVenda() {
                 </div>
                 <Button 
                   onClick={buscarPorCodigoBarras} 
-                  disabled={!codigoBarras.trim() || carregandoCodigoBarras}
+                  disabled={!codigoBarras.trim() || carregandoProdutos}
                   className="h-10 sm:h-12 px-4 sm:px-6 bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                 >
                   <Search className="h-4 w-4 sm:h-5 sm:w-5" />
