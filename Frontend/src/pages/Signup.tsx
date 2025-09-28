@@ -7,7 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmailVerification } from "@/hooks/useEmailVerification";
+import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { EmailVerification } from "@/components/auth/EmailVerification";
 import { 
   ArrowRight, 
   Eye, 
@@ -35,6 +39,7 @@ import {
 export default function Signup() {
   const navigate = useNavigate();
   const { signup } = useAuth();
+  const { sendVerificationCode, verifyCode } = useEmailVerification();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -56,7 +61,8 @@ export default function Signup() {
     confirmPassword: "",
     acceptTerms: false,
     acceptMarketing: false,
-    selectedPlan: ""
+    selectedPlan: "",
+    emailVerified: false
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -64,6 +70,8 @@ export default function Signup() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [pendingSignupData, setPendingSignupData] = useState<any>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -210,6 +218,14 @@ export default function Signup() {
       acceptMarketing: formData.acceptMarketing
     };
     
+    // Verificar se o email foi verificado no primeiro passo
+    if (!formData.emailVerified) {
+      alert('Por favor, verifique seu email no primeiro passo antes de finalizar o cadastro.');
+      setCurrentStep(1);
+      return;
+    }
+
+    // Fazer o cadastro final
     setIsLoading(true);
     
     try {
@@ -223,14 +239,105 @@ export default function Signup() {
       }
     } catch (error) {
       console.error('Erro no cadastro:', error);
-      alert('Erro de conexão. Tente novamente.');
+      alert('Erro interno. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const nextStep = () => {
-    if (currentStep < 5) {
+  // Função para lidar com sucesso da verificação de email
+  const handleEmailVerificationSuccess = async (data?: any) => {
+    if (!pendingSignupData) {
+      console.error('❌ Dados do cadastro não encontrados');
+      return;
+    }
+
+    // Se o email foi verificado, continuar para o próximo passo
+    if (pendingSignupData.emailVerified) {
+      // Atualizar os dados do formulário com os dados verificados
+      setFormData(pendingSignupData);
+      
+      // Voltar para o formulário e ir para o próximo passo
+      setShowEmailVerification(false);
+      setPendingSignupData(null);
+      setCurrentStep(2); // Ir para o próximo passo
+      
+      // Email verificado com sucesso - continuar para o próximo passo
+    } else {
+      // Fluxo antigo - fazer cadastro completo (caso seja usado em outro lugar)
+      setIsLoading(true);
+      
+      try {
+        const result = await signup(pendingSignupData);
+        
+        if (result.success) {
+          navigate("/dashboard");
+        } else {
+          alert(result.error || 'Erro ao criar conta. Tente novamente.');
+          setShowEmailVerification(false);
+          setPendingSignupData(null);
+        }
+      } catch (error) {
+        console.error('Erro no cadastro:', error);
+        alert('Erro interno. Tente novamente.');
+        setShowEmailVerification(false);
+        setPendingSignupData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Função para voltar do componente de verificação
+  const handleBackFromVerification = () => {
+    setShowEmailVerification(false);
+    setPendingSignupData(null);
+  };
+
+  const nextStep = async () => {
+    // Se estiver no primeiro passo (dados pessoais), verificar email antes de prosseguir
+    if (currentStep === 1) {
+      // Validar se o email foi preenchido
+      if (!formData.email || !formData.email.includes('@')) {
+        alert('Por favor, digite um email válido antes de continuar.');
+        return;
+      }
+
+      // Validar se nome e sobrenome foram preenchidos
+      if (!formData.firstName.trim() || !formData.lastName.trim()) {
+        alert('Por favor, preencha seu nome e sobrenome antes de continuar.');
+        return;
+      }
+
+      // Enviar código de verificação
+      setIsLoading(true);
+      
+      try {
+        const verificationResult = await sendVerificationCode({
+          email: formData.email,
+          tipo: 'cadastro',
+          tenant_id: null,
+          usuario_id: null
+        });
+
+        if (verificationResult.success) {
+          // Salvar dados parciais para continuar após verificação
+          setPendingSignupData({
+            ...formData,
+            // Marcar que o email foi verificado
+            emailVerified: true
+          });
+          setShowEmailVerification(true);
+          setIsLoading(false);
+        } else {
+          throw new Error(verificationResult.error || 'Erro ao enviar código de verificação');
+        }
+      } catch (error: any) {
+        console.error('Erro ao enviar código de verificação:', error);
+        alert(error.message || 'Erro ao enviar código de verificação. Tente novamente.');
+        setIsLoading(false);
+      }
+    } else if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -350,6 +457,21 @@ export default function Signup() {
     { number: 4, title: "", desc: "Senha" },
     { number: 5, title: "", desc: "Escolha" }
   ];
+
+  // Se estiver mostrando verificação de email, renderizar apenas o componente
+  if (showEmailVerification) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <EmailVerification
+          email={formData.email}
+          tipo="cadastro"
+          onSuccess={handleEmailVerificationSuccess}
+          onBack={handleBackFromVerification}
+          className="w-full max-w-md"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
@@ -530,6 +652,12 @@ export default function Signup() {
                       <div className="space-y-2">
                         <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-slate-200">
                           Email
+                          {formData.emailVerified && (
+                            <span className="ml-2 inline-flex items-center text-xs text-emerald-400">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Verificado
+                            </span>
+                          )}
                         </Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
@@ -540,10 +668,22 @@ export default function Signup() {
                             placeholder="seu@email.com"
                             value={formData.email}
                             onChange={handleInputChange}
-                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
+                            className={`pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base ${
+                              formData.emailVerified ? 'border-emerald-500/50 bg-emerald-500/5' : ''
+                            }`}
                             required
+                            disabled={formData.emailVerified}
                           />
+                          {formData.emailVerified && (
+                            <CheckCircle2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-400" />
+                          )}
                         </div>
+                        {formData.emailVerified && (
+                          <p className="text-xs text-emerald-400 flex items-center">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Email verificado com sucesso! Você pode continuar.
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1092,8 +1232,26 @@ export default function Signup() {
                         className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white h-10 sm:h-12 text-sm sm:text-base w-full sm:w-auto"
                         disabled={currentStep === 4 && !formData.acceptTerms}
                       >
-                        Próximo
-                        <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        {isLoading ? (
+                          <motion.div
+                            className="flex items-center"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          >
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2" />
+                            Enviando código...
+                          </motion.div>
+                        ) : currentStep === 1 ? (
+                          <>
+                            Verificar Email
+                            <Mail className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                          </>
+                        ) : (
+                          <>
+                            Próximo
+                            <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                          </>
+                        )}
                       </Button>
                     ) : (
                       <Button
@@ -1119,6 +1277,36 @@ export default function Signup() {
                       </Button>
                     )}
                   </div>
+
+                  {/* Divider */}
+                  <motion.div 
+                    variants={fadeInUp}
+                    className="relative my-4 sm:my-6"
+                  >
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-white/20" />
+                    </div>
+                    <div className="relative flex justify-center text-xs sm:text-sm">
+                      <span className="px-4 sm:px-6 text-center text-slate-400">ou continue com</span>
+                    </div>
+                  </motion.div>
+
+                  {/* Google Login Button */}
+                  <motion.div 
+                    variants={fadeInUp}
+                    className="w-full"
+                  >
+                    <GoogleLoginButton
+                      tenantSlug={formData.company?.toLowerCase().replace(/\s+/g, '-')}
+                      onSuccess={() => {
+                        console.log('✅ Login Google realizado com sucesso');
+                      }}
+                      onError={(error) => {
+                        console.error('❌ Erro no login Google:', error);
+                      }}
+                      className="w-full"
+                    />
+                  </motion.div>
 
                   {/* Login Link */}
                   <motion.div 

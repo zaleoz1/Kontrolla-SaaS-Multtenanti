@@ -68,6 +68,24 @@ CREATE TABLE IF NOT EXISTS cadastros_pendentes (
     UNIQUE KEY unique_token (token_verificacao)
 );
 
+-- Tabela de códigos de verificação de email
+CREATE TABLE IF NOT EXISTS codigos_verificacao_email (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL,
+    codigo VARCHAR(6) NOT NULL,
+    tipo ENUM('cadastro', 'login', 'recuperacao_senha') DEFAULT 'cadastro',
+    tenant_id INT,
+    usuario_id INT,
+    usado BOOLEAN DEFAULT FALSE,
+    data_expiracao TIMESTAMP NOT NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_email (email),
+    INDEX idx_codigo (codigo),
+    INDEX idx_data_expiracao (data_expiracao)
+);
+
 -- Tabela de sessões de usuário
 CREATE TABLE IF NOT EXISTS sessoes_usuario (
     id INT PRIMARY KEY AUTO_INCREMENT,

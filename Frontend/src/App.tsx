@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AppLayout } from "./components/layout/AppLayout";
 import { NotificationContainer } from "./components/ui/notification";
 import { useNotifications } from "./hooks/useNotifications";
@@ -97,15 +98,17 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={clienteQuery}>
-    <TooltipProvider>
-      <OperadorProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </OperadorProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "505635879481-974u3cn4qac3eeti5i9gjsreo3o315dp.apps.googleusercontent.com"}>
+    <QueryClientProvider client={clienteQuery}>
+      <TooltipProvider>
+        <OperadorProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+        </OperadorProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </GoogleOAuthProvider>
 );
 
 export default App;

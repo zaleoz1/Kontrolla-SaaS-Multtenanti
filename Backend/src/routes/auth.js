@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { query, queryWithResult } from '../database/connection.js';
 import { 
   authenticateToken, 
@@ -11,6 +12,11 @@ import {
   generateJWT 
 } from '../middleware/auth.js';
 import { validateLogin, validateSignup } from '../middleware/validation.js';
+import { 
+  enviarEmailVerificacao, 
+  gerarCodigoVerificacao,
+  testarConfiguracaoEmail 
+} from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -436,6 +442,427 @@ router.get('/cep/:cep', async (req, res) => {
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
+  }
+});
+
+// Configuração do Google OAuth
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+// Rota para iniciar o fluxo de autenticação Google
+router.get('/google', (req, res) => {
+  try {
+    const authUrl = googleClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ],
+      state: req.query.tenant_slug || 'default' // Passar tenant_slug se disponível
+    });
+    
+    console.log('🔗 Redirecionando para Google OAuth:', authUrl);
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('❌ Erro ao gerar URL do Google:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota de callback do Google OAuth
+router.get('/google/callback', async (req, res) => {
+  try {
+    console.log('🔄 Processando callback do Google OAuth...');
+    console.log('📋 Query params:', req.query);
+    
+    const { code, state } = req.query;
+    
+    if (!code) {
+      console.log('❌ Código de autorização não fornecido');
+      return res.status(400).json({ error: 'Código de autorização não fornecido' });
+    }
+
+    // Trocar código por token
+    const { tokens } = await googleClient.getToken(code);
+    console.log('🎫 Tokens recebidos do Google');
+    
+    googleClient.setCredentials(tokens);
+
+    // Obter informações do usuário
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    console.log('👤 Dados do usuário Google:', {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture
+    });
+
+    const { email, name, picture } = payload;
+    
+    if (!email) {
+      console.log('❌ Email não fornecido pelo Google');
+      return res.status(400).json({ error: 'Email não fornecido pelo Google' });
+    }
+
+    // Verificar se o usuário já existe
+    const existingUser = await query(
+      'SELECT u.*, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.email = ?',
+      [email]
+    );
+
+    if (existingUser.length > 0) {
+      console.log('✅ Usuário existente encontrado, fazendo login...');
+      const user = existingUser[0];
+      
+      // Criar sessão
+      const sessionToken = await createUserSession(
+        user.id, 
+        user.tenant_id, 
+        req.ip, 
+        req.get('User-Agent')
+      );
+      
+      const token = generateJWT(user.id, sessionToken);
+      
+      // Redirecionar para o frontend com token
+      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/dashboard?token=${token}&google_auth=true`;
+      
+      console.log('🔗 Redirecionando para:', redirectUrl);
+      res.redirect(redirectUrl);
+      return;
+    }
+
+    // Se não existe usuário, verificar se há tenant_slug no state
+    if (!state || state === 'default') {
+      console.log('❌ Tenant não especificado para novo usuário');
+      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/login?error=tenant_required&message=Para criar uma conta com Google, acesse primeiro a página de cadastro e selecione sua empresa.`;
+      res.redirect(redirectUrl);
+      return;
+    }
+
+    // Buscar tenant pelo slug
+    const tenants = await query('SELECT * FROM tenants WHERE slug = ?', [state]);
+    
+    if (tenants.length === 0) {
+      console.log('❌ Tenant não encontrado:', state);
+      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/login?error=tenant_not_found&message=Empresa não encontrada.`;
+      res.redirect(redirectUrl);
+      return;
+    }
+
+    const tenant = tenants[0];
+    console.log('🏢 Tenant encontrado:', tenant.nome);
+
+    // Criar novo usuário
+    const [firstName, ...lastNameParts] = name.split(' ');
+    const lastName = lastNameParts.join(' ') || '';
+    
+    // Gerar senha aleatória (não será usada para login Google)
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+    const result = await queryWithResult(
+      `INSERT INTO usuarios (tenant_id, nome, sobrenome, email, senha, avatar, role, status, email_verificado) 
+       VALUES (?, ?, ?, ?, ?, ?, 'vendedor', 'ativo', 1)`,
+      [tenant.id, firstName, lastName, email, hashedPassword, picture]
+    );
+
+    const userId = result.insertId;
+    console.log('✅ Novo usuário criado com ID:', userId);
+
+    // Criar sessão
+    const sessionToken = await createUserSession(
+      userId, 
+      tenant.id, 
+      req.ip, 
+      req.get('User-Agent')
+    );
+    
+    const token = generateJWT(userId, sessionToken);
+    
+    // Redirecionar para o frontend com token
+    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+    const redirectUrl = `${frontendUrl}/dashboard?token=${token}&google_auth=true&new_user=true`;
+    
+    console.log('🔗 Redirecionando para:', redirectUrl);
+    res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('❌ Erro no callback do Google:', error);
+    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+    const redirectUrl = `${frontendUrl}/login?error=google_auth_failed&message=Erro na autenticação com Google.`;
+    res.redirect(redirectUrl);
+  }
+});
+
+// Rota para verificar token do Google (usado pelo frontend)
+router.post('/google/verify', async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ error: 'Token não fornecido' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+    
+    // Verificar se o usuário existe
+    const existingUser = await query(
+      'SELECT u.*, t.nome as tenant_nome, t.slug as tenant_slug FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.email = ?',
+      [email]
+    );
+
+    if (existingUser.length === 0) {
+      return res.status(404).json({ 
+        error: 'Usuário não encontrado',
+        message: 'Usuário não cadastrado no sistema. Acesse a página de cadastro primeiro.'
+      });
+    }
+
+    const user = existingUser[0];
+    
+    // Criar sessão
+    const sessionToken = await createUserSession(
+      user.id, 
+      user.tenant_id, 
+      req.ip, 
+      req.get('User-Agent')
+    );
+    
+    const jwtToken = generateJWT(user.id, sessionToken);
+    
+    res.json({
+      success: true,
+      token: jwtToken,
+      user: {
+        id: user.id,
+        nome: user.nome,
+        sobrenome: user.sobrenome,
+        email: user.email,
+        role: user.role,
+        tenant_id: user.tenant_id,
+        tenant_nome: user.tenant_nome,
+        tenant_slug: user.tenant_slug
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar token do Google:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para enviar código de verificação
+router.post('/send-verification-code', async (req, res) => {
+  try {
+    const { email, tipo = 'cadastro', tenant_id, usuario_id } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    // Verificar se email já tem código válido não usado
+    const codigoExistente = await query(
+      'SELECT * FROM codigos_verificacao_email WHERE email = ? AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+      [email]
+    );
+
+    let codigo;
+    if (codigoExistente.length > 0) {
+      // Reutilizar código existente
+      codigo = codigoExistente[0].codigo;
+      console.log('🔄 Reutilizando código existente para:', email);
+    } else {
+      // Gerar novo código
+      codigo = gerarCodigoVerificacao();
+      
+      // Inserir novo código no banco
+      await queryWithResult(
+        'INSERT INTO codigos_verificacao_email (email, codigo, tipo, tenant_id, usuario_id, data_expiracao) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))',
+        [email, codigo, tipo, tenant_id || null, usuario_id || null]
+      );
+    }
+
+    // Buscar nome do usuário se disponível
+    let nome = 'Usuário';
+    if (usuario_id) {
+      const usuario = await query('SELECT nome FROM usuarios WHERE id = ?', [usuario_id]);
+      if (usuario.length > 0) {
+        nome = usuario[0].nome;
+      }
+    }
+
+    // Enviar email
+    const resultado = await enviarEmailVerificacao(email, codigo, nome, tipo);
+    
+    if (resultado.success) {
+      console.log('✅ Código de verificação enviado para:', email);
+      res.json({ 
+        success: true, 
+        message: 'Código de verificação enviado com sucesso',
+        expires_in: 1 // minuto
+      });
+    } else {
+      console.error('❌ Erro ao enviar email:', resultado.error);
+      res.status(500).json({ 
+        error: 'Erro ao enviar email de verificação',
+        details: resultado.error
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erro ao enviar código de verificação:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para verificar código
+router.post('/verify-code', async (req, res) => {
+  try {
+    const { email, codigo, tipo = 'cadastro' } = req.body;
+    
+    if (!email || !codigo) {
+      return res.status(400).json({ error: 'Email e código são obrigatórios' });
+    }
+
+    // Buscar código válido
+    const codigoValido = await query(
+      'SELECT * FROM codigos_verificacao_email WHERE email = ? AND codigo = ? AND tipo = ? AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+      [email, codigo, tipo]
+    );
+
+    if (codigoValido.length === 0) {
+      return res.status(400).json({ 
+        error: 'Código inválido ou expirado',
+        message: 'Verifique se o código está correto e não expirou'
+      });
+    }
+
+    // Marcar código como usado
+    await query(
+      'UPDATE codigos_verificacao_email SET usado = TRUE WHERE id = ?',
+      [codigoValido[0].id]
+    );
+
+    console.log('✅ Código verificado com sucesso para:', email);
+
+    // Se for cadastro, buscar dados do cadastro pendente
+    if (tipo === 'cadastro') {
+      const cadastroPendente = await query(
+        'SELECT * FROM cadastros_pendentes WHERE email = ? AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+        [email]
+      );
+
+      if (cadastroPendente.length > 0) {
+        return res.json({
+          success: true,
+          message: 'Código verificado com sucesso',
+          cadastro_pendente: cadastroPendente[0]
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Código verificado com sucesso'
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar código:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para reenviar código
+router.post('/resend-verification-code', async (req, res) => {
+  try {
+    const { email, tipo = 'cadastro' } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    // Invalidar códigos anteriores
+    await query(
+      'UPDATE codigos_verificacao_email SET usado = TRUE WHERE email = ? AND tipo = ? AND usado = FALSE',
+      [email, tipo]
+    );
+
+    // Gerar novo código
+    const codigo = gerarCodigoVerificacao();
+    
+    // Inserir novo código
+    await queryWithResult(
+      'INSERT INTO codigos_verificacao_email (email, codigo, tipo, data_expiracao) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))',
+      [email, codigo, tipo]
+    );
+
+    // Buscar nome do usuário
+    let nome = 'Usuário';
+    const usuario = await query('SELECT nome FROM usuarios WHERE email = ?', [email]);
+    if (usuario.length > 0) {
+      nome = usuario[0].nome;
+    }
+
+    // Enviar email
+    const resultado = await enviarEmailVerificacao(email, codigo, nome, tipo);
+    
+    if (resultado.success) {
+      console.log('✅ Código reenviado para:', email);
+      res.json({ 
+        success: true, 
+        message: 'Código de verificação reenviado com sucesso',
+        expires_in: 1
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Erro ao reenviar email de verificação',
+        details: resultado.error
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erro ao reenviar código:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para testar configuração de email
+router.get('/test-email-config', async (req, res) => {
+  try {
+    const resultado = await testarConfiguracaoEmail();
+    
+    if (resultado.success) {
+      res.json({ 
+        success: true, 
+        message: 'Configuração de email válida' 
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Configuração de email inválida',
+        details: resultado.error
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erro ao testar configuração de email:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 

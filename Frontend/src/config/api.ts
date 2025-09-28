@@ -15,6 +15,13 @@ export const API_ENDPOINTS = {
     ME: '/auth/me',
     VERIFY: '/auth/verify',
     CHANGE_PASSWORD: '/auth/change-password',
+    GOOGLE: '/auth/google',
+    GOOGLE_CALLBACK: '/auth/google/callback',
+    GOOGLE_VERIFY: '/auth/google/verify',
+    SEND_VERIFICATION_CODE: '/auth/send-verification-code',
+    VERIFY_CODE: '/auth/verify-code',
+    RESEND_VERIFICATION_CODE: '/auth/resend-verification-code',
+    TEST_EMAIL_CONFIG: '/auth/test-email-config',
   },
   
   // Produtos
