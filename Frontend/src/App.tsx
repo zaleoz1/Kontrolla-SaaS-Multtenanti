@@ -30,6 +30,7 @@ import NovoFuncionario from "./pages/NovoFuncionario";
 import PaginaNaoEncontrada from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import CatalogoPublico from "./pages/CatalogoPublico";
 import ForgotPassword from "./pages/ForgotPassword";
 
 const clienteQuery = new QueryClient();
@@ -48,6 +49,9 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/esqueci-senha" element={<ForgotPassword />} />
+          
+          {/* Catálogo Público */}
+          <Route path="/catalogo" element={<CatalogoPublico />} />
           
           {/* Rota de demonstração */}
           <Route path="/demo" element={<div>Demonstração</div>} />
