@@ -78,6 +78,45 @@ export function useAuth() {
     return () => window.removeEventListener('userUpdated', handleUserUpdate as EventListener);
   }, []);
 
+  // Lidar com callback do Google OAuth
+  useEffect(() => {
+    const handleGoogleCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const googleAuth = urlParams.get('google_auth');
+      const newUser = urlParams.get('new_user');
+
+      if (token && googleAuth === 'true') {
+        console.log('🔄 Processando callback do Google OAuth...');
+        
+        // Salvar token no localStorage
+        localStorage.setItem('token', token);
+        
+        // Verificar se o token é válido
+        const isValid = await verifyToken();
+        if (isValid) {
+          console.log('✅ Token Google válido, usuário autenticado');
+          
+          // Limpar parâmetros da URL
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+          
+          // Mostrar mensagem de sucesso
+          if (newUser === 'true') {
+            console.log('🎉 Novo usuário criado com Google');
+          }
+        } else {
+          console.error('❌ Token Google inválido');
+          // Redirecionar para login em caso de erro
+          navigate('/login?error=google_auth_failed');
+        }
+      }
+    };
+
+    // Verificar se há parâmetros do Google OAuth na URL
+    handleGoogleCallback();
+  }, [navigate]);
+
   const login = useCallback(async (email: string, password: string) => {
     try {
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.LOGIN, {
@@ -232,6 +271,45 @@ export function useAuth() {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (googleToken: string, tenantSlug?: string) => {
+    try {
+      console.log('🔐 Iniciando login com Google...');
+      
+      const response = await api.makeRequest(API_ENDPOINTS.AUTH.GOOGLE_VERIFY, {
+        method: 'POST',
+        body: {
+          token: googleToken,
+          tenant_slug: tenantSlug
+        },
+      });
+
+      if (response && response.token) {
+        // Salvar token e dados do usuário
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        setAuthState({
+          user: response.user,
+          isAuthenticated: true,
+          loading: false,
+        });
+
+        // Limpar operador selecionado no login
+        limparOperador();
+
+        return { success: true, data: response };
+      }
+
+      throw new Error('Resposta inválida do servidor');
+    } catch (error: any) {
+      console.error('❌ Erro no login Google:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Erro ao fazer login com Google' 
+      };
+    }
+  }, [api, limparOperador]);
+
   return {
     ...authState,
     login,
@@ -240,5 +318,6 @@ export function useAuth() {
     verifyToken,
     changePassword,
     updateUser,
+    loginWithGoogle,
   };
 }
