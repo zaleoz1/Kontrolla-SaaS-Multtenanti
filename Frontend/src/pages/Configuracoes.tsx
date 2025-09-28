@@ -291,6 +291,7 @@ export default function Configuracoes() {
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoPendente, setLogoPendente] = useState<File | null>(null);
 
   // Carregar dados quando o componente montar
   useEffect(() => {
@@ -437,6 +438,12 @@ export default function Configuracoes() {
     
     setSalvando(true);
     try {
+      // Fazer upload da logo se houver arquivo pendente
+      if (logoPendente) {
+        await uploadLogo(logoPendente);
+        setLogoPendente(null); // Limpar arquivo pendente após upload
+      }
+
       await atualizarDadosTenant({
         nome: dadosTenantEditando.nome,
         cnpj: dadosTenantEditando.cnpj,
@@ -584,7 +591,7 @@ export default function Configuracoes() {
     }
   };
 
-  const handleUploadLogo = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadLogo = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -606,20 +613,24 @@ export default function Configuracoes() {
       return;
     }
 
-    try {
-      await uploadLogo(file);
-      toast({
-        title: "Sucesso",
-        description: "Logo da empresa atualizada com sucesso!",
-        variant: "default"
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao fazer upload da logo",
-        variant: "destructive"
-      });
-    }
+    // Armazenar arquivo temporariamente
+    setLogoPendente(file);
+    
+    // Criar preview da imagem
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setDadosTenantEditando(prev => prev ? {
+        ...prev,
+        logo: e.target?.result as string
+      } : null);
+    };
+    reader.readAsDataURL(file);
+
+    toast({
+      title: "Arquivo selecionado",
+      description: "Logo será salva ao clicar em 'Salvar Alterações'",
+      variant: "default"
+    });
   };
 
 
@@ -1515,9 +1526,16 @@ export default function Configuracoes() {
                               <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                             </div>
                           </div>
-                          <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">
-                            Logo carregada com sucesso
-                          </p>
+                          {logoPendente && (
+                            <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">
+                              Logo pendente de upload
+                            </p>
+                          )}
+                          {logoPendente && (
+                            <p className="text-xs text-muted-foreground">
+                              Clique em "Salvar Alterações" para confirmar
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-3 sm:space-y-4">
