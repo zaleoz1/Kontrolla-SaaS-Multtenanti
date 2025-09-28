@@ -2,6 +2,7 @@ import express from 'express';
 import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateProduto, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
+import { uploadImagensProduto, deleteImagensProduto } from '../services/uploadService.js';
 
 const router = express.Router();
 
@@ -187,6 +188,7 @@ router.post('/', validateProduto, async (req, res) => {
       }
     }
 
+    // Primeiro, criar o produto sem imagens
     const result = await queryWithResult(
       `INSERT INTO produtos (
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
@@ -196,9 +198,33 @@ router.post('/', validateProduto, async (req, res) => {
       [
         req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
         preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
-        estoque, estoque_minimo, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagens)
+        estoque, estoque_minimo, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([])
       ]
     );
+
+    const produtoId = result.insertId;
+    let imagensCloudinary = [];
+
+    // Se há imagens, fazer upload para Cloudinary
+    if (imagens && imagens.length > 0) {
+      console.log('📸 Fazendo upload de imagens para Cloudinary...');
+      const uploadResult = await uploadImagensProduto(imagens, produtoId, req.user.tenant_id);
+      
+      if (uploadResult.success) {
+        imagensCloudinary = uploadResult.imagens.map(img => img.url);
+        
+        // Atualizar produto com URLs das imagens do Cloudinary
+        await query(
+          'UPDATE produtos SET imagens = ? WHERE id = ?',
+          [JSON.stringify(imagensCloudinary), produtoId]
+        );
+        
+        console.log('✅ Imagens enviadas para Cloudinary:', imagensCloudinary.length);
+      } else {
+        console.error('❌ Erro no upload das imagens:', uploadResult.error);
+        // Continuar mesmo com erro no upload das imagens
+      }
+    }
 
     // Buscar produto criado
     const [produto] = await query(
@@ -206,12 +232,15 @@ router.post('/', validateProduto, async (req, res) => {
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.id = ?`,
-      [result.insertId]
+      [produtoId]
     );
 
     res.status(201).json({
       message: 'Produto criado com sucesso',
-      produto
+      produto: {
+        ...produto,
+        imagens: imagensCloudinary.length > 0 ? imagensCloudinary : JSON.parse(produto.imagens || '[]')
+      }
     });
   } catch (error) {
     console.error('Erro ao criar produto:', error);
@@ -312,6 +341,38 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       }
     }
 
+    // Buscar imagens atuais do produto
+    const [produtoAtual] = await query(
+      'SELECT imagens FROM produtos WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+
+    let imagensAtuais = [];
+    if (produtoAtual && produtoAtual.imagens) {
+      try {
+        imagensAtuais = JSON.parse(produtoAtual.imagens);
+      } catch (e) {
+        console.warn('Erro ao parsear imagens atuais:', e);
+        imagensAtuais = [];
+      }
+    }
+
+    let imagensCloudinary = imagensAtuais;
+
+    // Se há novas imagens, fazer upload para Cloudinary
+    if (imagens && imagens.length > 0) {
+      console.log('📸 Fazendo upload de novas imagens para Cloudinary...');
+      const uploadResult = await uploadImagensProduto(imagens, id, req.user.tenant_id);
+      
+      if (uploadResult.success) {
+        imagensCloudinary = uploadResult.imagens.map(img => img.url);
+        console.log('✅ Novas imagens enviadas para Cloudinary:', imagensCloudinary.length);
+      } else {
+        console.error('❌ Erro no upload das imagens:', uploadResult.error);
+        // Manter imagens atuais em caso de erro
+      }
+    }
+
     await query(
       `UPDATE produtos SET 
         categoria_id = ?, nome = ?, descricao = ?, codigo_barras = ?, sku = ?,
@@ -322,7 +383,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       [
         categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
         tipo_preco, preco_por_kg, preco_por_litros, estoque, estoque_minimo, 
-        fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagens), id, req.user.tenant_id
+        fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary), id, req.user.tenant_id
       ]
     );
 
@@ -337,7 +398,10 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
 
     res.json({
       message: 'Produto atualizado com sucesso',
-      produto
+      produto: {
+        ...produto,
+        imagens: imagensCloudinary
+      }
     });
   } catch (error) {
     console.error('Erro ao atualizar produto:', error);
@@ -374,6 +438,41 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
       return res.status(400).json({
         error: 'Não é possível deletar produto com vendas associadas'
       });
+    }
+
+    // Buscar imagens do produto para deletar do Cloudinary
+    const [produto] = await query(
+      'SELECT imagens FROM produtos WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+
+    if (produto && produto.imagens) {
+      try {
+        const imagens = JSON.parse(produto.imagens);
+        if (imagens.length > 0) {
+          console.log('🗑️ Deletando imagens do Cloudinary...');
+          
+          // Extrair public_ids das URLs do Cloudinary
+          const publicIds = imagens
+            .filter(url => url.includes('cloudinary.com'))
+            .map(url => {
+              const parts = url.split('/');
+              const filename = parts[parts.length - 1];
+              return filename.split('.')[0];
+            });
+
+          if (publicIds.length > 0) {
+            const deleteResult = await deleteImagensProduto(publicIds);
+            if (deleteResult.success) {
+              console.log('✅ Imagens deletadas do Cloudinary:', publicIds.length);
+            } else {
+              console.error('❌ Erro ao deletar imagens do Cloudinary:', deleteResult.error);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao processar imagens para exclusão:', e);
+      }
     }
 
     await query(

@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { uploadLogo, uploadAvatar, uploadQrCodePix, deleteImage } from '../services/uploadService.js';
 
 // Função para gerar código único
 function gerarCodigo() {
@@ -439,20 +440,48 @@ router.put('/conta', async (req, res) => {
   }
 });
 
-// Upload de avatar
-router.post('/avatar', upload.single('avatar'), async (req, res) => {
+// Upload de avatar (Base64) - Cloudinary
+router.post('/avatar', async (req, res) => {
   try {
-    if (!req.file) {
+    const { avatar } = req.body;
+    
+    if (!avatar) {
       return res.status(400).json({
-        error: 'Nenhum arquivo enviado'
+        error: 'Avatar em Base64 é obrigatório'
       });
     }
 
-    const avatarPath = `/uploads/${req.file.filename}`;
+    // Validar se é uma string Base64 válida
+    if (!avatar.startsWith('data:image/')) {
+      return res.status(400).json({
+        error: 'Formato de avatar inválido. Deve ser uma string Base64 de imagem.'
+      });
+    }
 
+    // Buscar avatar atual para deletar do Cloudinary se existir
+    const [usuarioAtual] = await query(
+      'SELECT avatar FROM usuarios WHERE id = ?',
+      [req.user.id]
+    );
+
+    // Fazer upload do novo avatar para o Cloudinary
+    const uploadResult = await uploadAvatar(avatar, req.user.id);
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({
+        error: 'Erro ao fazer upload do avatar: ' + uploadResult.error
+      });
+    }
+
+    // Deletar avatar anterior do Cloudinary se existir
+    if (usuarioAtual.avatar && usuarioAtual.avatar.includes('cloudinary.com')) {
+      await deleteImage(`user_${req.user.id}_avatar`);
+    }
+
+    // Atualizar banco de dados com a nova URL do Cloudinary
     await query(
       'UPDATE usuarios SET avatar = ? WHERE id = ?',
-      [avatarPath, req.user.id]
+      [uploadResult.url, req.user.id]
     );
 
     // Buscar usuário atualizado
@@ -463,7 +492,15 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
 
     res.json({
       message: 'Avatar atualizado com sucesso',
-      user: usuarios[0]
+      user: usuarios[0],
+      uploadInfo: {
+        url: uploadResult.url,
+        public_id: uploadResult.public_id,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        format: uploadResult.format,
+        bytes: uploadResult.bytes
+      }
     });
   } catch (error) {
     console.error('Erro ao fazer upload do avatar:', error);
@@ -473,7 +510,7 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
   }
 });
 
-// Upload de logo da empresa (Base64)
+// Upload de logo da empresa (Base64) - Cloudinary
 router.post('/logo', requireAdmin, async (req, res) => {
   try {
     const { logo } = req.body;
@@ -491,9 +528,33 @@ router.post('/logo', requireAdmin, async (req, res) => {
       });
     }
 
+    // Buscar logo atual para deletar do Cloudinary se existir
+    const [tenantAtual] = await query(
+      'SELECT logo FROM tenants WHERE id = ?',
+      [req.user.tenant_id]
+    );
+
+    // Fazer upload da nova logo para o Cloudinary
+    const uploadResult = await uploadLogo(logo, req.user.tenant_id);
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({
+        error: 'Erro ao fazer upload da logo: ' + uploadResult.error
+      });
+    }
+
+    // Deletar logo anterior do Cloudinary se existir
+    if (tenantAtual.logo && tenantAtual.logo.includes('cloudinary.com')) {
+      // Extrair public_id da URL do Cloudinary
+      const urlParts = tenantAtual.logo.split('/');
+      const publicId = urlParts[urlParts.length - 1].split('.')[0];
+      await deleteImage(`tenant_${req.user.tenant_id}_logo`);
+    }
+
+    // Atualizar banco de dados com a nova URL do Cloudinary
     await query(
       'UPDATE tenants SET logo = ? WHERE id = ?',
-      [logo, req.user.tenant_id]
+      [uploadResult.url, req.user.tenant_id]
     );
 
     // Buscar tenant atualizado
@@ -504,7 +565,19 @@ router.post('/logo', requireAdmin, async (req, res) => {
 
     res.json({
       message: 'Logo da empresa atualizada com sucesso',
-      tenant
+      tenant: {
+        id: tenant.id,
+        nome: tenant.nome,
+        logo: tenant.logo
+      },
+      uploadInfo: {
+        url: uploadResult.url,
+        public_id: uploadResult.public_id,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        format: uploadResult.format,
+        bytes: uploadResult.bytes
+      }
     });
   } catch (error) {
     console.error('Erro ao salvar logo:', error);
@@ -880,6 +953,33 @@ router.post('/pix', async (req, res) => {
       return res.status(400).json({ error: 'Chave PIX, nome do titular e CPF/CNPJ são obrigatórios' });
     }
     
+    let qrCodeUrl = qr_code;
+    
+    // Se qr_code é uma string Base64, fazer upload para Cloudinary
+    if (qr_code && qr_code.startsWith('data:image/')) {
+      // Buscar QR Code atual para deletar do Cloudinary se existir
+      const [pixAtual] = await query(
+        'SELECT qr_code FROM pix_configuracoes WHERE tenant_id = ?',
+        [tenantId]
+      );
+
+      // Fazer upload do QR Code para o Cloudinary
+      const uploadResult = await uploadQrCodePix(qr_code, tenantId);
+      
+      if (!uploadResult.success) {
+        return res.status(500).json({
+          error: 'Erro ao fazer upload do QR Code: ' + uploadResult.error
+        });
+      }
+
+      // Deletar QR Code anterior do Cloudinary se existir
+      if (pixAtual && pixAtual.qr_code && pixAtual.qr_code.includes('cloudinary.com')) {
+        await deleteImage(`tenant_${tenantId}_qrcode_pix`);
+      }
+
+      qrCodeUrl = uploadResult.url;
+    }
+    
     // Verificar se já existe configuração PIX para este tenant
     const existingPix = await query(
       'SELECT id FROM pix_configuracoes WHERE tenant_id = ?',
@@ -894,14 +994,14 @@ router.post('/pix', async (req, res) => {
          SET chave_pix = ?, qr_code = ?, nome_titular = ?, cpf_cnpj = ?, 
              data_atualizacao = CURRENT_TIMESTAMP
          WHERE tenant_id = ?`,
-        [chave_pix, qr_code, nome_titular, cpf_cnpj, tenantId]
+        [chave_pix, qrCodeUrl, nome_titular, cpf_cnpj, tenantId]
       );
     } else {
       // Criar nova configuração
       result = await queryWithResult(
         `INSERT INTO pix_configuracoes (tenant_id, chave_pix, qr_code, nome_titular, cpf_cnpj)
          VALUES (?, ?, ?, ?, ?)`,
-        [tenantId, chave_pix, qr_code, nome_titular, cpf_cnpj]
+        [tenantId, chave_pix, qrCodeUrl, nome_titular, cpf_cnpj]
       );
     }
     

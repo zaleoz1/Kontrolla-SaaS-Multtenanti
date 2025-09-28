@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApi } from "@/hooks/useApi";
+import { useProdutos } from "@/hooks/useProdutos";
 import { API_ENDPOINTS } from "@/config/api";
 import { toast } from "sonner";
 import { 
@@ -62,14 +63,19 @@ export default function NovoProduto() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const [abaAtiva, setAbaAtiva] = useState("basico");
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [novaCategoria, setNovaCategoria] = useState("");
   const [mostrarInputNovaCategoria, setMostrarInputNovaCategoria] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const [carregandoProduto, setCarregandoProduto] = useState(false);
   const { makeRequest, loading, error } = useApi();
+  const { 
+    categorias, 
+    fornecedores, 
+    buscarCategorias, 
+    buscarFornecedores, 
+    processarImagens 
+  } = useProdutos();
   
   // Determinar se é modo de edição
   const isEditMode = Boolean(id);
@@ -100,32 +106,12 @@ export default function NovoProduto() {
 
   // Carregar categorias, fornecedores e produto (se editando) ao montar o componente
   useEffect(() => {
-    carregarCategorias();
-    carregarFornecedores();
+    buscarCategorias();
+    buscarFornecedores();
     if (isEditMode && id) {
       carregarProduto(parseInt(id));
     }
   }, [isEditMode, id]);
-
-  const carregarCategorias = async () => {
-    try {
-      const response = await makeRequest(API_ENDPOINTS.CATALOG.CATEGORIES);
-      setCategorias(response.categorias || []);
-    } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
-      toast.error('Erro ao carregar categorias');
-    }
-  };
-
-  const carregarFornecedores = async () => {
-    try {
-      const response = await makeRequest(API_ENDPOINTS.FORNECEDORES.LIST);
-      setFornecedores(response.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar fornecedores:', error);
-      toast.error('Erro ao carregar fornecedores');
-    }
-  };
 
   const carregarProduto = async (produtoId: number) => {
     try {
@@ -190,14 +176,12 @@ export default function NovoProduto() {
         }
       });
 
-      // Adicionar a nova categoria à lista
+      // A nova categoria será adicionada automaticamente pelo hook useProdutos
       const novaCategoriaObj = {
         id: response.categoria.id,
         nome: response.categoria.nome,
         descricao: response.categoria.descricao
       };
-      
-      setCategorias(prev => [...prev, novaCategoriaObj]);
       
       // Selecionar a nova categoria automaticamente
       atualizarProduto("categoria_id", novaCategoriaObj.id);
@@ -317,43 +301,6 @@ export default function NovoProduto() {
     return Object.keys(erros).length === 0;
   };
 
-  const redimensionarImagem = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.8): Promise<string> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // Calcular novas dimensões mantendo proporção
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        // Configurar canvas
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Desenhar imagem redimensionada
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        // Converter para base64
-        const dataURL = canvas.toDataURL('image/jpeg', quality);
-        resolve(dataURL);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -368,21 +315,7 @@ export default function NovoProduto() {
     }
 
     try {
-      const promises = filesToProcess.map(file => {
-        // Validar tipo de arquivo
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`Arquivo ${file.name} não é uma imagem válida`);
-        }
-        
-        // Validar tamanho (máximo 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error(`Arquivo ${file.name} é muito grande. Máximo 5MB`);
-        }
-        
-        return redimensionarImagem(file);
-      });
-
-      const resizedImages = await Promise.all(promises);
+      const resizedImages = await processarImagens(filesToProcess);
       
       setProduto(prev => ({
         ...prev,
@@ -428,7 +361,7 @@ export default function NovoProduto() {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
@@ -445,31 +378,14 @@ export default function NovoProduto() {
     }
 
     try {
-      const promises = filesToProcess.map(file => {
-        // Validar tipo de arquivo
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`Arquivo ${file.name} não é uma imagem válida`);
-        }
-        
-        // Validar tamanho (máximo 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error(`Arquivo ${file.name} é muito grande. Máximo 5MB`);
-        }
-        
-        return redimensionarImagem(file);
-      });
+      const resizedImages = await processarImagens(filesToProcess);
+      
+      setProduto(prev => ({
+        ...prev,
+        imagens: [...prev.imagens, ...resizedImages]
+      }));
 
-      Promise.all(promises).then(resizedImages => {
-        setProduto(prev => ({
-          ...prev,
-          imagens: [...prev.imagens, ...resizedImages]
-        }));
-
-        toast.success(`${resizedImages.length} imagem(ns) adicionada(s) com sucesso!`);
-      }).catch(error => {
-        console.error('Erro ao processar imagens:', error);
-        toast.error(error instanceof Error ? error.message : 'Erro ao processar imagens');
-      });
+      toast.success(`${resizedImages.length} imagem(ns) adicionada(s) com sucesso!`);
     } catch (error) {
       console.error('Erro ao processar imagens:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao processar imagens');
