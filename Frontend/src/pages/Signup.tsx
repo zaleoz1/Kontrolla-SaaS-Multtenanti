@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
-import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { EmailVerification } from "@/components/auth/EmailVerification";
 import { 
   ArrowRight, 
@@ -40,6 +40,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const { signup } = useAuth();
   const { sendVerificationCode, verifyCode } = useEmailVerification();
+  const { uploadLogo } = useConfiguracoes();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -69,9 +70,13 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyLogoFile, setCompanyLogoFile] = useState<File | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [pendingSignupData, setPendingSignupData] = useState<any>(null);
+  const [senhasCoincidem, setSenhasCoincidem] = useState(true);
+  const [cnpjValido, setCnpjValido] = useState<boolean | null>(null);
+  const [validandoCnpj, setValidandoCnpj] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -90,15 +95,28 @@ export default function Signup() {
       [name]: type === 'checkbox' ? checked : processedValue
     }));
 
+    // Verificar se as senhas coincidem em tempo real
+    if (name === 'password' || name === 'confirmPassword') {
+      const novaSenha = name === 'password' ? processedValue : formData.password;
+      const confirmarSenha = name === 'confirmPassword' ? processedValue : formData.confirmPassword;
+      setSenhasCoincidem(novaSenha === confirmarSenha);
+    }
+
     // Buscar CEP automaticamente quando completar 8 dígitos
     if (name === 'cep' && value.replace(/\D/g, '').length === 8) {
       buscarCep(value);
+    }
+
+    // Consultar CNPJ automaticamente quando completar 14 dígitos
+    if (name === 'cpfCnpj' && formData.tipoPessoa === 'juridica' && value.replace(/\D/g, '').length === 14) {
+      consultarCnpj(value);
     }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setCompanyLogoFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         setCompanyLogo(event.target?.result as string);
@@ -109,6 +127,7 @@ export default function Signup() {
 
   const removeLogo = () => {
     setCompanyLogo(null);
+    setCompanyLogoFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -160,10 +179,15 @@ export default function Signup() {
 
   const formatarCpfCnpj = (value: string, tipoPessoa: string) => {
     const numeros = value.replace(/\D/g, '');
+    
     if (tipoPessoa === 'fisica') {
-      return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      // Limitar a 11 dígitos para CPF
+      const numerosLimitados = numeros.slice(0, 11);
+      return numerosLimitados.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     } else {
-      return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+      // Limitar a 14 dígitos para CNPJ
+      const numerosLimitados = numeros.slice(0, 14);
+      return numerosLimitados.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
   };
 
@@ -172,8 +196,120 @@ export default function Signup() {
     return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
   };
 
+  // Função para consultar CNPJ na API BrasilAPI
+  const consultarCnpj = async (cnpj: string) => {
+    const cnpjLimpo = cnpj.replace(/\D/g, '');
+    
+    // Verifica se tem 14 dígitos
+    if (cnpjLimpo.length !== 14) {
+      setCnpjValido(false);
+      return;
+    }
+
+    setValidandoCnpj(true);
+    setCnpjValido(null);
+
+    try {
+      console.log('🔍 Consultando CNPJ na BrasilAPI:', cnpjLimpo);
+      
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+      const data = await response.json();
+
+      if (response.ok && data.cnpj) {
+        console.log('✅ CNPJ válido encontrado:', data);
+        setCnpjValido(true);
+        
+        // Preencher automaticamente os dados da empresa se disponíveis
+        if (data.razao_social && !formData.razaoSocial) {
+          setFormData(prev => ({
+            ...prev,
+            razaoSocial: data.razao_social
+          }));
+        }
+        
+        if (data.nome_fantasia && !formData.nomeFantasia) {
+          setFormData(prev => ({
+            ...prev,
+            nomeFantasia: data.nome_fantasia
+          }));
+        }
+
+        if (data.email && !formData.email) {
+          setFormData(prev => ({
+            ...prev,
+            email: data.email
+          }));
+        }
+
+        if (data.telefone && !formData.phone) {
+          setFormData(prev => ({
+            ...prev,
+            phone: data.telefone
+          }));
+        }
+
+        if (data.cep && !formData.cep) {
+          setFormData(prev => ({
+            ...prev,
+            cep: data.cep
+          }));
+        }
+
+        if (data.logradouro && !formData.endereco) {
+          setFormData(prev => ({
+            ...prev,
+            endereco: data.logradouro
+          }));
+        }
+
+        if (data.municipio && !formData.cidade) {
+          setFormData(prev => ({
+            ...prev,
+            cidade: data.municipio
+          }));
+        }
+
+        if (data.uf && !formData.estado) {
+          setFormData(prev => ({
+            ...prev,
+            estado: data.uf
+          }));
+        }
+
+        if (data.inscricao_estadual && !formData.inscricaoEstadual) {
+          setFormData(prev => ({
+            ...prev,
+            inscricaoEstadual: data.inscricao_estadual
+          }));
+        }
+
+        if (data.inscricao_municipal && !formData.inscricaoMunicipal) {
+          setFormData(prev => ({
+            ...prev,
+            inscricaoMunicipal: data.inscricao_municipal
+          }));
+        }
+
+      } else {
+        console.log('❌ CNPJ não encontrado ou inválido:', data);
+        setCnpjValido(false);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao consultar CNPJ:', error);
+      setCnpjValido(false);
+    } finally {
+      setValidandoCnpj(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação de senhas iguais
+    if (formData.password !== formData.confirmPassword) {
+      alert("As senhas não coincidem. Por favor, verifique e tente novamente.");
+      return;
+    }
     
     // Validação adicional
     if (!formData.selectedPlan) {
@@ -191,6 +327,12 @@ export default function Signup() {
       if (!field) return field;
       return field.length > maxLength ? field.substring(0, maxLength) : field;
     };
+
+    // Função para remover máscara do CPF/CNPJ
+    const removeMask = (value: string) => {
+      if (!value) return value;
+      return value.replace(/\D/g, ''); // Remove todos os caracteres não numéricos
+    };
     
     // Preparar dados com truncamento
     const dadosTruncados = {
@@ -200,9 +342,7 @@ export default function Signup() {
       phone: truncateField(formData.phone, 20),
       company: truncateField(formData.company, 255),
       tipoPessoa: formData.tipoPessoa,
-      cpfCnpj: formData.tipoPessoa === 'juridica' 
-        ? truncateField(formData.cpfCnpj, 18) 
-        : truncateField(formData.cpfCnpj, 14),
+      cpfCnpj: removeMask(formData.cpfCnpj),
       cep: truncateField(formData.cep, 10),
       endereco: truncateField(formData.endereco, 65535),
       cidade: truncateField(formData.cidade, 100),
@@ -229,6 +369,17 @@ export default function Signup() {
     setIsLoading(true);
     
     try {
+      // Fazer upload da logo se houver arquivo
+      if (companyLogoFile) {
+        try {
+          await uploadLogo(companyLogoFile);
+          console.log('✅ Logo enviada com sucesso para o Cloudinary');
+        } catch (logoError) {
+          console.error('❌ Erro ao fazer upload da logo:', logoError);
+          // Continuar com o cadastro mesmo se o upload da logo falhar
+        }
+      }
+
       const result = await signup(dadosTruncados);
       
       if (result.success) {
@@ -337,6 +488,24 @@ export default function Signup() {
         alert(error.message || 'Erro ao enviar código de verificação. Tente novamente.');
         setIsLoading(false);
       }
+    } else if (currentStep === 4) {
+      // Validação no passo 4 (senhas)
+      if (!formData.password || !formData.confirmPassword) {
+        alert('Por favor, preencha ambos os campos de senha antes de continuar.');
+        return;
+      }
+      
+      if (formData.password !== formData.confirmPassword) {
+        alert('As senhas não coincidem. Por favor, verifique e tente novamente.');
+        return;
+      }
+      
+      if (formData.password.length < 8) {
+        alert('A senha deve ter pelo menos 8 caracteres.');
+        return;
+      }
+      
+      setCurrentStep(currentStep + 1);
     } else if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
@@ -522,21 +691,6 @@ export default function Signup() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
-          <motion.div 
-            className="flex items-center justify-center mb-4 sm:mb-8"
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <img 
-              src="/logo.png" 
-              alt="KontrollaPro Logo" 
-              className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl mr-3 sm:mr-4"
-            />
-            <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
-              KontrollaPro
-            </span>
-          </motion.div>
-          
           <motion.h1 
             className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2 sm:mb-4"
             variants={fadeInUp}
@@ -748,6 +902,12 @@ export default function Signup() {
                       <div className="space-y-2">
                         <Label htmlFor="cpfCnpj" className="text-xs sm:text-sm font-medium text-slate-200">
                           {formData.tipoPessoa === 'fisica' ? 'CPF' : 'CNPJ'}
+                          {formData.tipoPessoa === 'juridica' && cnpjValido === true && (
+                            <span className="ml-2 inline-flex items-center text-xs text-emerald-400">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Válido
+                            </span>
+                          )}
                         </Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
@@ -758,16 +918,56 @@ export default function Signup() {
                             placeholder={formData.tipoPessoa === 'fisica' ? '000.000.000-00' : '00.000.000/0000-00'}
                             value={formData.cpfCnpj}
                             onChange={handleInputChange}
-                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
+                            className={`pl-8 sm:pl-10 pr-8 sm:pr-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base ${
+                              formData.tipoPessoa === 'juridica' && cnpjValido === true ? 'border-emerald-500/50 bg-emerald-500/5' : 
+                              formData.tipoPessoa === 'juridica' && cnpjValido === false ? 'border-red-500/50 bg-red-500/5' : ''
+                            }`}
                             required
                           />
+                          {formData.tipoPessoa === 'juridica' && validandoCnpj && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <motion.div
+                                className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              />
+                            </div>
+                          )}
+                          {formData.tipoPessoa === 'juridica' && cnpjValido === true && !validandoCnpj && (
+                            <CheckCircle2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-400" />
+                          )}
+                          {formData.tipoPessoa === 'juridica' && cnpjValido === false && !validandoCnpj && (
+                            <X className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-400" />
+                          )}
                         </div>
+                        {formData.tipoPessoa === 'juridica' && validandoCnpj && (
+                          <p className="text-xs text-emerald-400 flex items-center">
+                            <motion.div
+                              className="w-3 h-3 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full mr-2"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
+                            Verificando CNPJ...
+                          </p>
+                        )}
+                        {formData.tipoPessoa === 'juridica' && cnpjValido === true && !validandoCnpj && (
+                          <p className="text-xs text-emerald-400 flex items-center">
+                            <Shield className="w-3 h-3 mr-1" />
+                            CNPJ válido! Dados da empresa preenchidos automaticamente.
+                          </p>
+                        )}
+                        {formData.tipoPessoa === 'juridica' && cnpjValido === false && !validandoCnpj && formData.cpfCnpj.replace(/\D/g, '').length === 14 && (
+                          <p className="text-xs text-red-400 flex items-center">
+                            <Shield className="w-3 h-3 mr-1" />
+                            CNPJ não encontrado ou inválido.
+                          </p>
+                        )}
                       </div>
 
                       {/* Nome da Empresa */}
                       <div className="space-y-2">
                         <Label htmlFor="company" className="text-xs sm:text-sm font-medium text-slate-200">
-                          {formData.tipoPessoa === 'fisica' ? 'Nome Completo' : 'Nome da Empresa'}
+                          Nome da Empresa
                         </Label>
                         <div className="relative">
                           <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
@@ -775,7 +975,7 @@ export default function Signup() {
                             id="company"
                             name="company"
                             type="text"
-                            placeholder={formData.tipoPessoa === 'fisica' ? 'Seu nome completo' : 'Nome da sua empresa'}
+                            placeholder="Nome da sua empresa"
                             value={formData.company}
                             onChange={handleInputChange}
                             className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
@@ -784,46 +984,42 @@ export default function Signup() {
                         </div>
                       </div>
 
-                      {/* Razão Social e Nome Fantasia (apenas para PJ) */}
-                      {formData.tipoPessoa === 'juridica' && (
-                        <>
-                          <div className="space-y-2">
-                            <Label htmlFor="razaoSocial" className="text-xs sm:text-sm font-medium text-slate-200">
-                              Razão Social
-                            </Label>
-                            <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
-                              <Input
-                                id="razaoSocial"
-                                name="razaoSocial"
-                                type="text"
-                                placeholder="Razão social da empresa"
-                                value={formData.razaoSocial}
-                                onChange={handleInputChange}
-                                className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
-                              />
-                            </div>
-                          </div>
+                      {/* Razão Social e Nome Fantasia */}
+                      <div className="space-y-2">
+                        <Label htmlFor="razaoSocial" className="text-xs sm:text-sm font-medium text-slate-200">
+                          Razão Social
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
+                          <Input
+                            id="razaoSocial"
+                            name="razaoSocial"
+                            type="text"
+                            placeholder="Razão social da empresa"
+                            value={formData.razaoSocial}
+                            onChange={handleInputChange}
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
+                          />
+                        </div>
+                      </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="nomeFantasia" className="text-xs sm:text-sm font-medium text-slate-200">
-                              Nome Fantasia
-                            </Label>
-                            <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
-                              <Input
-                                id="nomeFantasia"
-                                name="nomeFantasia"
-                                type="text"
-                                placeholder="Nome fantasia da empresa"
-                                value={formData.nomeFantasia}
-                                onChange={handleInputChange}
-                                className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="nomeFantasia" className="text-xs sm:text-sm font-medium text-slate-200">
+                          Nome Fantasia
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
+                          <Input
+                            id="nomeFantasia"
+                            name="nomeFantasia"
+                            type="text"
+                            placeholder="Nome fantasia da empresa"
+                            value={formData.nomeFantasia}
+                            onChange={handleInputChange}
+                            className="pl-8 sm:pl-10 h-10 sm:h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500/20 text-sm sm:text-base"
+                          />
+                        </div>
+                      </div>
 
                       {/* Inscrições (apenas para PJ) */}
                       {formData.tipoPessoa === 'juridica' && (
@@ -1066,6 +1262,18 @@ export default function Signup() {
                             {showConfirmPassword ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
                           </button>
                         </div>
+                        {formData.confirmPassword && !senhasCoincidem && (
+                          <p className="text-xs text-red-400 flex items-center">
+                            <Shield className="w-3 h-3 mr-1" />
+                            As senhas não coincidem
+                          </p>
+                        )}
+                        {formData.confirmPassword && senhasCoincidem && formData.password && (
+                          <p className="text-xs text-emerald-400 flex items-center">
+                            <Shield className="w-3 h-3 mr-1" />
+                            As senhas coincidem
+                          </p>
+                        )}
                       </div>
 
                       {/* Terms and Marketing */}
@@ -1230,17 +1438,20 @@ export default function Signup() {
                         type="button"
                         onClick={nextStep}
                         className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white h-10 sm:h-12 text-sm sm:text-base w-full sm:w-auto"
-                        disabled={currentStep === 4 && !formData.acceptTerms}
+                        disabled={
+                          (currentStep === 4 && !formData.acceptTerms) ||
+                          (currentStep === 4 && (!formData.password || !formData.confirmPassword || !senhasCoincidem))
+                        }
                       >
                         {isLoading ? (
-                          <motion.div
-                            className="flex items-center"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          >
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2" />
+                          <div className="flex items-center">
+                            <motion.div
+                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
                             Enviando código...
-                          </motion.div>
+                          </div>
                         ) : currentStep === 1 ? (
                           <>
                             Verificar Email
@@ -1278,35 +1489,6 @@ export default function Signup() {
                     )}
                   </div>
 
-                  {/* Divider */}
-                  <motion.div 
-                    variants={fadeInUp}
-                    className="relative my-4 sm:my-6"
-                  >
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-white/20" />
-                    </div>
-                    <div className="relative flex justify-center text-xs sm:text-sm">
-                      <span className="px-4 sm:px-6 text-center text-slate-400">ou continue com</span>
-                    </div>
-                  </motion.div>
-
-                  {/* Google Login Button */}
-                  <motion.div 
-                    variants={fadeInUp}
-                    className="w-full"
-                  >
-                    <GoogleLoginButton
-                      tenantSlug={formData.company?.toLowerCase().replace(/\s+/g, '-')}
-                      onSuccess={() => {
-                        console.log('✅ Login Google realizado com sucesso');
-                      }}
-                      onError={(error) => {
-                        console.error('❌ Erro no login Google:', error);
-                      }}
-                      className="w-full"
-                    />
-                  </motion.div>
 
                   {/* Login Link */}
                   <motion.div 

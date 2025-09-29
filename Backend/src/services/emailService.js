@@ -290,14 +290,14 @@ const getTemplateCadastro = (nome, codigo) => {
     <body>
       <div class="email-wrapper">
         <div class="email-container">
-          <div class="header">
+        <div class="header">
             <div class="header-content">
               <h1>Bem-vindo ao KontrollaPro!</h1>
               <p>Seu sistema de gestão empresarial completo</p>
             </div>
-          </div>
+        </div>
           
-          <div class="content">
+        <div class="content">
             <h2 class="greeting">Olá, ${nome}!</h2>
             
             <p class="message">
@@ -308,7 +308,7 @@ const getTemplateCadastro = (nome, codigo) => {
             
             <div class="code-container">
               <span class="code-label">Código de Verificação</span>
-              <div class="code">${codigo}</div>
+          <div class="code">${codigo}</div>
             </div>
             
             <p style="text-align: center; color: black; font-size: 14px; font-weight: 600; margin: 20px 0 0 0;">
@@ -335,11 +335,11 @@ const getTemplateCadastro = (nome, codigo) => {
               <p>Equipe KontrollaPro</p>
               <p>Transformando a gestão empresarial, um cliente por vez.</p>
             </div>
-          </div>
+        </div>
           
-          <div class="footer">
-            <p>Este é um email automático, não responda a esta mensagem.</p>
-            <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
+        <div class="footer">
+          <p>Este é um email automático, não responda a esta mensagem.</p>
+          <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
           </div>
         </div>
       </div>
@@ -574,14 +574,14 @@ const getTemplateLogin = (nome, codigo) => {
     <body>
       <div class="email-wrapper">
         <div class="email-container">
-          <div class="header">
+        <div class="header">
             <div class="header-content">
               <h1>Código de Verificação</h1>
-              <p>KontrollaPro - Sistema de Gestão</p>
-            </div>
+          <p>KontrollaPro - Sistema de Gestão</p>
+        </div>
           </div>
           
-          <div class="content">
+        <div class="content">
             <h2 class="greeting">Olá, ${nome}!</h2>
             
             <p class="message">
@@ -591,7 +591,7 @@ const getTemplateLogin = (nome, codigo) => {
             
             <div class="code-container">
               <span class="code-label">Código de Verificação</span>
-              <div class="code">${codigo}</div>
+          <div class="code">${codigo}</div>
             </div>
             
             <p style="text-align: center; color: #e53e3e; font-size: 14px; font-weight: 600; margin: 20px 0 0 0;">
@@ -606,11 +606,11 @@ const getTemplateLogin = (nome, codigo) => {
               <p>Equipe KontrollaPro</p>
               <p>Protegendo seu acesso com tecnologia avançada.</p>
             </div>
-          </div>
+        </div>
           
-          <div class="footer">
-            <p>Este é um email automático, não responda a esta mensagem.</p>
-            <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
+        <div class="footer">
+          <p>Este é um email automático, não responda a esta mensagem.</p>
+          <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
           </div>
         </div>
       </div>
@@ -845,14 +845,14 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
     <body>
       <div class="email-wrapper">
         <div class="email-container">
-          <div class="header">
+        <div class="header">
             <div class="header-content">
               <h1>Recuperação de Senha</h1>
-              <p>KontrollaPro - Sistema de Gestão</p>
-            </div>
+          <p>KontrollaPro - Sistema de Gestão</p>
+        </div>
           </div>
           
-          <div class="content">
+        <div class="content">
             <h2 class="greeting">Olá, ${nome}!</h2>
             
             <p class="message">
@@ -862,7 +862,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
             
             <div class="code-container">
               <span class="code-label">Código de Recuperação</span>
-              <div class="code">${codigo}</div>
+          <div class="code">${codigo}</div>
             </div>
             
             <p style="text-align: center; color: #e53e3e; font-size: 14px; font-weight: 600; margin: 20px 0 0 0;">
@@ -877,11 +877,11 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
               <p>Equipe KontrollaPro</p>
               <p>Protegendo sua conta com máxima segurança.</p>
             </div>
-          </div>
+        </div>
           
-          <div class="footer">
-            <p>Este é um email automático, não responda a esta mensagem.</p>
-            <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
+        <div class="footer">
+          <p>Este é um email automático, não responda a esta mensagem.</p>
+          <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
           </div>
         </div>
       </div>
@@ -1116,14 +1116,14 @@ const getTemplatePadrao = (nome, codigo) => {
     <body>
       <div class="email-wrapper">
         <div class="email-container">
-          <div class="header">
+        <div class="header">
             <div class="header-content">
               <h1>Código de Verificação</h1>
-              <p>KontrollaPro - Sistema de Gestão</p>
-            </div>
+          <p>KontrollaPro - Sistema de Gestão</p>
+        </div>
           </div>
           
-          <div class="content">
+        <div class="content">
             <h2 class="greeting">Olá, ${nome}!</h2>
             
             <p class="message">
@@ -1132,7 +1132,7 @@ const getTemplatePadrao = (nome, codigo) => {
             
             <div class="code-container">
               <span class="code-label">Código de Verificação</span>
-              <div class="code">${codigo}</div>
+          <div class="code">${codigo}</div>
             </div>
             
             <p style="text-align: center; color: #e53e3e; font-size: 14px; font-weight: 600; margin: 20px 0 0 0;">
@@ -1147,11 +1147,11 @@ const getTemplatePadrao = (nome, codigo) => {
               <p>Equipe KontrollaPro</p>
               <p>Garantindo a segurança da sua conta.</p>
             </div>
-          </div>
+        </div>
           
-          <div class="footer">
-            <p>Este é um email automático, não responda a esta mensagem.</p>
-            <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
+        <div class="footer">
+          <p>Este é um email automático, não responda a esta mensagem.</p>
+          <p>© 2024 KontrollaPro. Todos os direitos reservados.</p>
           </div>
         </div>
       </div>
