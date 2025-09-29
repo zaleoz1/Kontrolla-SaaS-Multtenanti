@@ -145,13 +145,17 @@ export default function NovoCliente() {
   // Função para formatar CPF
   const formatarCPF = (valor: string) => {
     const numeros = valor.replace(/\D/g, '');
-    return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    // Limitar a 11 dígitos para CPF
+    const numerosLimitados = numeros.slice(0, 11);
+    return numerosLimitados.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
 
   // Função para formatar CNPJ
   const formatarCNPJ = (valor: string) => {
     const numeros = valor.replace(/\D/g, '');
-    return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    // Limitar a 14 dígitos para CNPJ
+    const numerosLimitados = numeros.slice(0, 14);
+    return numerosLimitados.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
   };
 
   // Função para formatar telefone

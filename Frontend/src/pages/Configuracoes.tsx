@@ -446,8 +446,8 @@ export default function Configuracoes() {
 
       await atualizarDadosTenant({
         nome: dadosTenantEditando.nome,
-        cnpj: dadosTenantEditando.cnpj,
-        cpf: dadosTenantEditando.cpf,
+        cnpj: dadosTenantEditando.cnpj?.replace(/\D/g, '') || '',
+        cpf: dadosTenantEditando.cpf?.replace(/\D/g, '') || '',
         tipo_pessoa: dadosTenantEditando.tipo_pessoa,
         email: dadosTenantEditando.email,
         telefone: dadosTenantEditando.telefone,

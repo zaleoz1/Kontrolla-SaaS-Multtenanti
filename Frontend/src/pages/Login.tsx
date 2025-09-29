@@ -136,21 +136,6 @@ export default function Login() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
-          <motion.div 
-            className="flex items-center justify-center mb-4 sm:mb-8"
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <img 
-              src="/logo.png" 
-              alt="KontrollaPro Logo" 
-              className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl mr-3 sm:mr-4"
-            />
-            <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
-              KontrollaPro
-            </span>
-          </motion.div>
-          
           <motion.h1 
             className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2 sm:mb-4"
             variants={fadeInUp}
