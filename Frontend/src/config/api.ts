@@ -15,6 +15,9 @@ export const API_ENDPOINTS = {
     ME: '/auth/me',
     VERIFY: '/auth/verify',
     CHANGE_PASSWORD: '/auth/change-password',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    VERIFY_RESET_CODE: '/auth/verify-reset-code',
+    RESET_PASSWORD: '/auth/reset-password',
     GOOGLE: '/auth/google',
     GOOGLE_CALLBACK: '/auth/google/callback',
     GOOGLE_VERIFY: '/auth/google/verify',
@@ -138,7 +141,7 @@ export const HTTP_STATUS = {
 export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Erro de conexão. Verifique sua internet.',
   TIMEOUT: 'Tempo limite excedido. Tente novamente.',
-  UNAUTHORIZED: 'Sessão expirada. Faça login novamente.',
+  UNAUTHORIZED: 'Email ou senha incorretos. Verifique suas credenciais e tente novamente.',
   FORBIDDEN: 'Você não tem permissão para esta ação.',
   NOT_FOUND: 'Recurso não encontrado.',
   SERVER_ERROR: 'Erro interno do servidor. Tente novamente mais tarde.',

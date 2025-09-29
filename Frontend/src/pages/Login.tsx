@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
 import { 
   ArrowRight, 
@@ -29,6 +30,7 @@ import {
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,14 +55,27 @@ export default function Login() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo de volta! Digite seu código de acesso.",
+          variant: "default",
+        });
         // Redirecionar para o dashboard
         navigate("/dashboard");
       } else {
-        alert(result.error || 'Erro ao fazer login. Tente novamente.');
+        toast({
+          title: "Acesso negado",
+          description: result.error || 'Erro ao fazer login. Tente novamente.',
+          variant: "default",
+        });
       }
     } catch (error) {
       console.error('Erro no login:', error);
-      alert('Erro de conexão. Tente novamente.');
+      toast({
+        title: "Erro de conexão",
+        description: "Erro de conexão. Tente novamente.",
+        variant: "default",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -245,7 +260,7 @@ export default function Login() {
                     </Label>
                   </div>
                   <Link 
-                    to="/forgot-password" 
+                    to="/esqueci-senha" 
                     className="text-xs sm:text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
                   >
                     Esqueceu a senha?

@@ -40,7 +40,7 @@ export function GoogleLoginButton({
         onSuccess?.();
         navigate('/dashboard');
       } else {
-        throw new Error(result.error || 'Erro no login');
+        throw new Error(result.error || 'Acesso negado');
       }
     } catch (error: any) {
       console.error('❌ Erro no login Google:', error);

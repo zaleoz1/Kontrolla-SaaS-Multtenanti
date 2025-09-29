@@ -641,7 +641,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
           color: #1a202c; 
           margin: 0; 
           padding: 0; 
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
           min-height: 100vh;
         }
         
@@ -666,7 +666,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
         }
         
         .header { 
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white; 
           padding: 60px 40px; 
           text-align: center; 
@@ -741,7 +741,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
           margin: 40px 0;
           position: relative;
           overflow: hidden;
-          border: 1px solid rgba(220, 38, 38, 0.2);
+          border: 1px solid rgba(102, 126, 234, 0.2);
         }
         
         .code-container::before {
@@ -751,7 +751,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
           left: -100%;
           width: 100%;
           height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.1), transparent);
+          background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
           animation: shimmer 3s infinite;
         }
         
@@ -771,7 +771,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
         }
         
         .code { 
-          color: #dc2626; 
+          color: #667eea; 
           font-size: 42px; 
           font-weight: 900; 
           letter-spacing: 12px; 
@@ -779,7 +779,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
           font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
           position: relative;
           z-index: 1;
-          text-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+          text-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
         }
         
         
@@ -826,7 +826,7 @@ const getTemplateRecuperacaoSenha = (nome, codigo) => {
         .divider {
           width: 60px;
           height: 4px;
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           border-radius: 2px;
           margin: 20px auto;
         }

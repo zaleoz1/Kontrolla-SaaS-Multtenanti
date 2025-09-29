@@ -275,7 +275,7 @@ router.post('/login', validateLogin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('Acesso negado:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
@@ -839,6 +839,232 @@ router.post('/resend-verification-code', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erro ao reenviar código:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para recuperação de senha
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    console.log('🔍 Iniciando processo de recuperação de senha para:', email);
+
+    // Verificar se o email existe no banco de dados
+    const usuarios = await query(
+      'SELECT u.*, t.nome as tenant_nome FROM usuarios u JOIN tenants t ON u.tenant_id = t.id WHERE u.email = ? AND u.status = "ativo"',
+      [email]
+    );
+
+    if (usuarios.length === 0) {
+      console.log('❌ Email não encontrado ou usuário inativo:', email);
+      return res.status(404).json({ 
+        error: 'Email não encontrado',
+        message: 'Este email não está cadastrado em nosso sistema ou a conta está inativa'
+      });
+    }
+
+    const usuario = usuarios[0];
+    console.log('✅ Usuário encontrado:', usuario.nome, usuario.tenant_nome);
+
+    // Verificar se já existe um código válido não usado
+    const codigoExistente = await query(
+      'SELECT * FROM codigos_verificacao_email WHERE email = ? AND tipo = "recuperacao_senha" AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+      [email]
+    );
+
+    let codigo;
+    if (codigoExistente.length > 0) {
+      // Reutilizar código existente
+      codigo = codigoExistente[0].codigo;
+      console.log('🔄 Reutilizando código existente para recuperação de senha:', email);
+    } else {
+      // Gerar novo código
+      codigo = gerarCodigoVerificacao();
+      
+      // Inserir novo código no banco
+      await queryWithResult(
+        'INSERT INTO codigos_verificacao_email (email, codigo, tipo, tenant_id, usuario_id, data_expiracao) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))',
+        [email, codigo, 'recuperacao_senha', usuario.tenant_id, usuario.id]
+      );
+      console.log('✅ Novo código de recuperação gerado para:', email);
+    }
+
+    // Enviar email de recuperação
+    const resultado = await enviarEmailVerificacao(email, codigo, usuario.nome, 'recuperacao_senha');
+    
+    if (resultado.success) {
+      console.log('✅ Email de recuperação enviado com sucesso para:', email);
+      res.json({ 
+        success: true, 
+        message: 'Código de recuperação enviado com sucesso',
+        expires_in: 1 // minuto
+      });
+    } else {
+      console.error('❌ Erro ao enviar email de recuperação:', resultado.error);
+      res.status(500).json({ 
+        error: 'Erro ao enviar email de recuperação',
+        details: resultado.error
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erro no processo de recuperação de senha:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para verificar código de recuperação de senha
+router.post('/verify-reset-code', async (req, res) => {
+  try {
+    const { email, codigo } = req.body;
+    
+    if (!email || !codigo) {
+      return res.status(400).json({ error: 'Email e código são obrigatórios' });
+    }
+
+    console.log('🔍 Verificando código de recuperação para:', email);
+
+    // Buscar código válido
+    const codigoValido = await query(
+      'SELECT * FROM codigos_verificacao_email WHERE email = ? AND codigo = ? AND tipo = "recuperacao_senha" AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+      [email, codigo]
+    );
+
+    if (codigoValido.length === 0) {
+      console.log('❌ Código inválido ou expirado para:', email);
+      return res.status(400).json({ 
+        error: 'Código inválido ou expirado',
+        message: 'Verifique se o código está correto e não expirou'
+      });
+    }
+
+    // NÃO marcar código como usado ainda - será marcado apenas na redefinição da senha
+    console.log('✅ Código de recuperação verificado com sucesso para:', email);
+
+    res.json({
+      success: true,
+      message: 'Código verificado com sucesso',
+      can_reset_password: true
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar código de recuperação:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para redefinir senha
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, codigo, novaSenha } = req.body;
+    
+    console.log('🔍 Dados recebidos para redefinição:', { 
+      email: email ? 'presente' : 'ausente', 
+      codigo: codigo ? 'presente' : 'ausente', 
+      novaSenha: novaSenha ? 'presente' : 'ausente' 
+    });
+    
+    if (!email || !codigo || !novaSenha) {
+      console.log('❌ Dados obrigatórios ausentes:', { email: !!email, codigo: !!codigo, novaSenha: !!novaSenha });
+      return res.status(400).json({ error: 'Email, código e nova senha são obrigatórios' });
+    }
+
+    // Validações da nova senha
+    if (novaSenha.length < 6) {
+      return res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
+    }
+
+    if (novaSenha.length > 128) {
+      return res.status(400).json({ error: 'Nova senha deve ter no máximo 128 caracteres' });
+    }
+
+    // Verificar se a nova senha não é muito simples
+    if (novaSenha === '123456' || novaSenha === 'password' || novaSenha === 'senha123') {
+      return res.status(400).json({ error: 'Nova senha é muito simples. Escolha uma senha mais segura' });
+    }
+
+    console.log('🔍 Iniciando redefinição de senha para:', email);
+
+    // Verificar se o código é válido
+    console.log('🔍 Verificando código para redefinição:', { email, codigo });
+    
+    const codigoValido = await query(
+      'SELECT * FROM codigos_verificacao_email WHERE email = ? AND codigo = ? AND tipo = "recuperacao_senha" AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+      [email, codigo]
+    );
+
+    console.log('🔍 Resultado da verificação do código:', { 
+      encontrados: codigoValido.length, 
+      codigo_id: codigoValido.length > 0 ? codigoValido[0].id : 'N/A' 
+    });
+
+    if (codigoValido.length === 0) {
+      console.log('❌ Código inválido ou expirado para redefinição:', email);
+      return res.status(400).json({ 
+        error: 'Código inválido ou expirado',
+        message: 'Verifique se o código está correto e não expirou'
+      });
+    }
+
+    // Buscar usuário
+    const usuarios = await query(
+      'SELECT id, senha FROM usuarios WHERE email = ? AND status = "ativo"',
+      [email]
+    );
+
+    if (usuarios.length === 0) {
+      console.log('❌ Usuário não encontrado para redefinição:', email);
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    const usuario = usuarios[0];
+
+    // Verificar se a nova senha é diferente da senha atual
+    const senhaAtualValida = await bcrypt.compare(novaSenha, usuario.senha);
+    if (senhaAtualValida) {
+      return res.status(400).json({ 
+        error: 'Nova senha deve ser diferente da senha atual',
+        message: 'Escolha uma senha diferente da que você está usando atualmente'
+      });
+    }
+
+    // Criptografar nova senha
+    const novaSenhaHash = await bcrypt.hash(novaSenha, 12);
+
+    // Atualizar senha e data de atualização
+    await query(
+      'UPDATE usuarios SET senha = ?, data_atualizacao = NOW() WHERE id = ?',
+      [novaSenhaHash, usuario.id]
+    );
+
+    // Marcar código como usado
+    await query(
+      'UPDATE codigos_verificacao_email SET usado = TRUE WHERE id = ?',
+      [codigoValido[0].id]
+    );
+
+    // Invalidar todas as sessões ativas do usuário
+    await query(
+      'UPDATE sessoes_usuario SET ativa = FALSE WHERE usuario_id = ?',
+      [usuario.id]
+    );
+
+    console.log('✅ Senha redefinida com sucesso para:', email);
+    console.log('📊 Usuário ID:', usuario.id, '| Email:', email, '| Data:', new Date().toISOString());
+
+    res.json({
+      success: true,
+      message: 'Senha redefinida com sucesso',
+      user_id: usuario.id
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao redefinir senha:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
