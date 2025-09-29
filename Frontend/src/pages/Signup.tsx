@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { useToast } from "@/hooks/use-toast";
 import { EmailVerification } from "@/components/auth/EmailVerification";
 import { 
   ArrowRight, 
@@ -41,6 +42,7 @@ export default function Signup() {
   const { signup } = useAuth();
   const { sendVerificationCode, verifyCode } = useEmailVerification();
   const { uploadLogo } = useConfiguracoes();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -307,18 +309,30 @@ export default function Signup() {
     
     // Validação de senhas iguais
     if (formData.password !== formData.confirmPassword) {
-      alert("As senhas não coincidem. Por favor, verifique e tente novamente.");
+      toast({
+        title: "Erro de validação",
+        description: "As senhas não coincidem. Por favor, verifique e tente novamente.",
+        variant: "default",
+      });
       return;
     }
     
     // Validação adicional
     if (!formData.selectedPlan) {
-      alert("Por favor, selecione um plano para continuar.");
+      toast({
+        title: "Plano não selecionado",
+        description: "Por favor, selecione um plano para continuar.",
+        variant: "default",
+      });
       return;
     }
     
     if (!formData.acceptTerms) {
-      alert("Por favor, aceite os termos de uso para continuar.");
+      toast({
+        title: "Termos não aceitos",
+        description: "Por favor, aceite os termos de uso para continuar.",
+        variant: "default",
+      });
       return;
     }
     
@@ -360,7 +374,11 @@ export default function Signup() {
     
     // Verificar se o email foi verificado no primeiro passo
     if (!formData.emailVerified) {
-      alert('Por favor, verifique seu email no primeiro passo antes de finalizar o cadastro.');
+      toast({
+        title: "Email não verificado",
+        description: "Por favor, verifique seu email no primeiro passo antes de finalizar o cadastro.",
+        variant: "default",
+      });
       setCurrentStep(1);
       return;
     }
@@ -383,14 +401,27 @@ export default function Signup() {
       const result = await signup(dadosTruncados);
       
       if (result.success) {
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao Kontrolla. Redirecionando para o dashboard...",
+          variant: "default",
+        });
         // Redirecionar para o dashboard
         navigate("/dashboard");
       } else {
-        alert(result.error || 'Erro ao criar conta. Tente novamente.');
+        toast({
+          title: "Erro ao criar conta",
+          description: result.error || 'Erro ao criar conta. Tente novamente.',
+          variant: "default",
+        });
       }
     } catch (error) {
       console.error('Erro no cadastro:', error);
-      alert('Erro interno. Tente novamente.');
+      toast({
+        title: "Erro interno",
+        description: "Erro interno. Tente novamente.",
+        variant: "default",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -422,15 +453,28 @@ export default function Signup() {
         const result = await signup(pendingSignupData);
         
         if (result.success) {
+          toast({
+            title: "Conta criada com sucesso!",
+            description: "Bem-vindo ao Kontrolla. Redirecionando para o dashboard...",
+            variant: "default",
+          });
           navigate("/dashboard");
         } else {
-          alert(result.error || 'Erro ao criar conta. Tente novamente.');
+          toast({
+            title: "Erro ao criar conta",
+            description: result.error || 'Erro ao criar conta. Tente novamente.',
+            variant: "default",
+          });
           setShowEmailVerification(false);
           setPendingSignupData(null);
         }
       } catch (error) {
         console.error('Erro no cadastro:', error);
-        alert('Erro interno. Tente novamente.');
+        toast({
+          title: "Erro interno",
+          description: "Erro interno. Tente novamente.",
+          variant: "default",
+        });
         setShowEmailVerification(false);
         setPendingSignupData(null);
       } finally {
@@ -450,13 +494,21 @@ export default function Signup() {
     if (currentStep === 1) {
       // Validar se o email foi preenchido
       if (!formData.email || !formData.email.includes('@')) {
-        alert('Por favor, digite um email válido antes de continuar.');
+        toast({
+          title: "Email inválido",
+          description: "Por favor, digite um email válido antes de continuar.",
+          variant: "default",
+        });
         return;
       }
 
       // Validar se nome e sobrenome foram preenchidos
       if (!formData.firstName.trim() || !formData.lastName.trim()) {
-        alert('Por favor, preencha seu nome e sobrenome antes de continuar.');
+        toast({
+          title: "Dados incompletos",
+          description: "Por favor, preencha seu nome e sobrenome antes de continuar.",
+          variant: "default",
+        });
         return;
       }
 
@@ -485,23 +537,39 @@ export default function Signup() {
         }
       } catch (error: any) {
         console.error('Erro ao enviar código de verificação:', error);
-        alert(error.message || 'Erro ao enviar código de verificação. Tente novamente.');
+        toast({
+          title: "Erro ao enviar código",
+          description: error.message || 'Erro ao enviar código de verificação. Tente novamente.',
+          variant: "default",
+        });
         setIsLoading(false);
       }
     } else if (currentStep === 4) {
       // Validação no passo 4 (senhas)
       if (!formData.password || !formData.confirmPassword) {
-        alert('Por favor, preencha ambos os campos de senha antes de continuar.');
+        toast({
+          title: "Campos obrigatórios",
+          description: "Por favor, preencha ambos os campos de senha antes de continuar.",
+          variant: "default",
+        });
         return;
       }
       
       if (formData.password !== formData.confirmPassword) {
-        alert('As senhas não coincidem. Por favor, verifique e tente novamente.');
+        toast({
+          title: "Senhas não coincidem",
+          description: "As senhas não coincidem. Por favor, verifique e tente novamente.",
+          variant: "default",
+        });
         return;
       }
       
       if (formData.password.length < 8) {
-        alert('A senha deve ter pelo menos 8 caracteres.');
+        toast({
+          title: "Senha muito curta",
+          description: "A senha deve ter pelo menos 8 caracteres.",
+          variant: "default",
+        });
         return;
       }
       
