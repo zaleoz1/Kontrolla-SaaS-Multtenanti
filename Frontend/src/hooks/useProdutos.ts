@@ -93,9 +93,16 @@ export const useProdutos = () => {
   // Criar produto
   const criarProduto = async (dados: Omit<Produto, 'id'>) => {
     try {
+      // Garantir que estoque e estoque_minimo sejam sempre inteiros
+      const dadosProcessados = {
+        ...dados,
+        estoque: Math.round(dados.estoque || 0),
+        estoque_minimo: Math.round(dados.estoque_minimo || 0)
+      };
+
       const response = await makeRequest('/produtos', {
         method: 'POST',
-        body: dados
+        body: dadosProcessados
       });
       
       if (response.produto) {
@@ -112,9 +119,16 @@ export const useProdutos = () => {
   // Atualizar produto
   const atualizarProduto = async (id: number, dados: Partial<Produto>) => {
     try {
+      // Garantir que estoque e estoque_minimo sejam sempre inteiros
+      const dadosProcessados = {
+        ...dados,
+        estoque: dados.estoque !== undefined ? Math.round(dados.estoque) : undefined,
+        estoque_minimo: dados.estoque_minimo !== undefined ? Math.round(dados.estoque_minimo) : undefined
+      };
+
       const response = await makeRequest(`/produtos/${id}`, {
         method: 'PUT',
-        body: dados
+        body: dadosProcessados
       });
       
       if (response.produto) {

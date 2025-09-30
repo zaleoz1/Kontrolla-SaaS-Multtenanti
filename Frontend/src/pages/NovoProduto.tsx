@@ -1038,12 +1038,15 @@ export default function NovoProduto() {
                       </label>
                       <Input
                         type="number"
-                        step={produto.tipo_preco === "unidade" ? "1" : "0.01"}
+                        step="1"
                         min="0"
-                        placeholder={produto.tipo_preco === "unidade" ? "0" : "0,00"}
+                        placeholder="0"
                         value={produto.estoque || ""}
                         onChange={(e) => {
-                          atualizarProduto("estoque", e.target.value ? parseFloat(e.target.value) : null);
+                          const value = e.target.value;
+                          // Garantir que seja sempre um número inteiro
+                          const intValue = value ? Math.round(parseFloat(value)) : null;
+                          atualizarProduto("estoque", intValue);
                           // Limpar erro quando o usuário começar a digitar
                           if (errosValidacao.estoque) {
                             setErrosValidacao(prev => ({ ...prev, estoque: false }));
@@ -1070,12 +1073,15 @@ export default function NovoProduto() {
                       </label>
                       <Input
                         type="number"
-                        step={produto.tipo_preco === "unidade" ? "1" : "0.01"}
+                        step="1"
                         min="0"
-                        placeholder={produto.tipo_preco === "unidade" ? "0" : "0,00"}
+                        placeholder="0"
                         value={produto.estoque_minimo || ""}
                         onChange={(e) => {
-                          atualizarProduto("estoque_minimo", e.target.value ? parseFloat(e.target.value) : null);
+                          const value = e.target.value;
+                          // Garantir que seja sempre um número inteiro
+                          const intValue = value ? Math.round(parseFloat(value)) : null;
+                          atualizarProduto("estoque_minimo", intValue);
                           // Limpar erro quando o usuário começar a digitar
                           if (errosValidacao.estoque_minimo) {
                             setErrosValidacao(prev => ({ ...prev, estoque_minimo: false }));

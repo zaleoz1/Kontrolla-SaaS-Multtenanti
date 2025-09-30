@@ -78,6 +78,24 @@ async function runMigrations() {
       console.log('⚠️ Erro na migração de venda_id em transacoes (pode ser normal se já aplicada):', migrationError.message);
     }
 
+    // Verificar se precisa executar migração de estoque decimal para inteiro
+    try {
+      console.log('🔍 Verificando se precisa executar migração de estoque decimal...');
+      const [columns] = await query("SHOW COLUMNS FROM produtos WHERE Field = 'estoque' AND Type LIKE '%decimal%'");
+      
+      if (columns.length > 0) {
+        console.log('📝 Executando migração de estoque decimal para inteiro...');
+        const migrationPath = path.join(__dirname, 'migrate_estoque_decimal.sql');
+        const migration = fs.readFileSync(migrationPath, 'utf8');
+        await query(migration);
+        console.log('✅ Migração de estoque decimal concluída!');
+      } else {
+        console.log('✅ Migração de estoque decimal já aplicada!');
+      }
+    } catch (migrationError) {
+      console.log('⚠️ Erro na migração de estoque decimal (pode ser normal se já aplicada):', migrationError.message);
+    }
+
     console.log('✅ Migração concluída com sucesso!');
     console.log('📊 Banco de dados criado e configurado');
     

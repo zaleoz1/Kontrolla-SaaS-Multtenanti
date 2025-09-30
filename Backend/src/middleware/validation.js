@@ -318,7 +318,8 @@ export const validateProduto = [
       if (value === null || value === undefined || value === '') {
         return true; // Campo opcional
       }
-      const numValue = parseInt(value);
+      // Converter para número e arredondar para inteiro
+      const numValue = Math.round(parseFloat(value));
       if (isNaN(numValue) || numValue < 0) {
         throw new Error('Estoque deve ser um número inteiro não negativo');
       }
@@ -330,7 +331,8 @@ export const validateProduto = [
       if (value === null || value === undefined || value === '') {
         return true; // Campo opcional
       }
-      const numValue = parseInt(value);
+      // Converter para número e arredondar para inteiro
+      const numValue = Math.round(parseFloat(value));
       if (isNaN(numValue) || numValue < 0) {
         throw new Error('Estoque mínimo deve ser um número inteiro não negativo');
       }
