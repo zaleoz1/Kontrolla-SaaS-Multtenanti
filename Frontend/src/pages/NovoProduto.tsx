@@ -35,6 +35,11 @@ interface Produto {
   sku: string;
   estoque: number | null;
   estoque_minimo: number | null;
+  // Novos campos para estoque decimal
+  estoque_kg?: number | null;
+  estoque_litros?: number | null;
+  estoque_minimo_kg?: number | null;
+  estoque_minimo_litros?: number | null;
   fornecedor_id?: number;
   marca: string;
   modelo: string;
@@ -92,6 +97,10 @@ export default function NovoProduto() {
     sku: "",
     estoque: null,
     estoque_minimo: null,
+    estoque_kg: null,
+    estoque_litros: null,
+    estoque_minimo_kg: null,
+    estoque_minimo_litros: null,
     fornecedor_id: undefined,
     marca: "",
     modelo: "",
@@ -101,7 +110,6 @@ export default function NovoProduto() {
   });
 
   const [errosValidacao, setErrosValidacao] = useState<Record<string, boolean>>({});
-
 
 
   // Carregar categorias, fornecedores e produto (se editando) ao montar o componente
@@ -145,6 +153,11 @@ export default function NovoProduto() {
         sku: produtoData.sku || "",
         estoque: produtoData.estoque || null,
         estoque_minimo: produtoData.estoque_minimo || null,
+        // Campos de estoque decimal por tipo
+        estoque_kg: produtoData.estoque_kg || null,
+        estoque_litros: produtoData.estoque_litros || null,
+        estoque_minimo_kg: produtoData.estoque_minimo_kg || null,
+        estoque_minimo_litros: produtoData.estoque_minimo_litros || null,
         fornecedor_id: produtoData.fornecedor_id || undefined,
         marca: produtoData.marca || "",
         modelo: produtoData.modelo || "",
@@ -287,14 +300,28 @@ export default function NovoProduto() {
       erros.preco = true;
     }
     
-    // Quantidade em Estoque
-    if (produto.estoque === null || produto.estoque < 0) {
-      erros.estoque = true;
-    }
-    
-    // Estoque Mínimo
-    if (produto.estoque_minimo === null || produto.estoque_minimo < 0) {
-      erros.estoque_minimo = true;
+    // Validação de estoque baseada no tipo
+    if (produto.tipo_preco === "unidade") {
+      if (produto.estoque === null || produto.estoque < 0) {
+        erros.estoque = true;
+      }
+      if (produto.estoque_minimo === null || produto.estoque_minimo < 0) {
+        erros.estoque_minimo = true;
+      }
+    } else if (produto.tipo_preco === "kg") {
+      if (produto.estoque_kg === null || produto.estoque_kg < 0) {
+        erros.estoque_kg = true;
+      }
+      if (produto.estoque_minimo_kg === null || produto.estoque_minimo_kg < 0) {
+        erros.estoque_minimo_kg = true;
+      }
+    } else if (produto.tipo_preco === "litros") {
+      if (produto.estoque_litros === null || produto.estoque_litros < 0) {
+        erros.estoque_litros = true;
+      }
+      if (produto.estoque_minimo_litros === null || produto.estoque_minimo_litros < 0) {
+        erros.estoque_minimo_litros = true;
+      }
     }
     
     setErrosValidacao(erros);
@@ -410,8 +437,14 @@ export default function NovoProduto() {
         preco: parseFloat(String(produto.preco)),
         preco_promocional: produto.preco_promocional ? parseFloat(String(produto.preco_promocional)) : null,
         tipo_preco: produto.tipo_preco || 'unidade',
-        estoque: parseInt(String(produto.estoque)) || 0,
-        estoque_minimo: parseInt(String(produto.estoque_minimo)) || 0,
+        // Campos de estoque baseados no tipo
+        estoque: produto.tipo_preco === 'unidade' ? (parseInt(String(produto.estoque)) || 0) : null,
+        estoque_minimo: produto.tipo_preco === 'unidade' ? (parseInt(String(produto.estoque_minimo)) || 0) : null,
+        // Campos de estoque decimal por tipo
+        estoque_kg: produto.tipo_preco === 'kg' ? (produto.estoque_kg ? parseFloat(String(produto.estoque_kg)) : null) : null,
+        estoque_litros: produto.tipo_preco === 'litros' ? (produto.estoque_litros ? parseFloat(String(produto.estoque_litros)) : null) : null,
+        estoque_minimo_kg: produto.tipo_preco === 'kg' ? (produto.estoque_minimo_kg ? parseFloat(String(produto.estoque_minimo_kg)) : null) : null,
+        estoque_minimo_litros: produto.tipo_preco === 'litros' ? (produto.estoque_minimo_litros ? parseFloat(String(produto.estoque_minimo_litros)) : null) : null,
         fornecedor_id: produto.fornecedor_id || null,
         marca: produto.marca?.trim() || null,
         modelo: produto.modelo?.trim() || null,
@@ -468,14 +501,20 @@ export default function NovoProduto() {
     // Preço de Venda
     if (!produto.preco || produto.preco <= 0) return false;
     
-    // Quantidade em Estoque
-    if (produto.estoque === null || produto.estoque < 0) return false;
-    
-    // Estoque Mínimo
-    if (produto.estoque_minimo === null || produto.estoque_minimo < 0) return false;
+    // Validação de estoque baseada no tipo
+    if (produto.tipo_preco === "unidade") {
+      if (produto.estoque === null || produto.estoque < 0) return false;
+      if (produto.estoque_minimo === null || produto.estoque_minimo < 0) return false;
+    } else if (produto.tipo_preco === "kg") {
+      if (produto.estoque_kg === null || produto.estoque_kg < 0) return false;
+      if (produto.estoque_minimo_kg === null || produto.estoque_minimo_kg < 0) return false;
+    } else if (produto.tipo_preco === "litros") {
+      if (produto.estoque_litros === null || produto.estoque_litros < 0) return false;
+      if (produto.estoque_minimo_litros === null || produto.estoque_minimo_litros < 0) return false;
+    }
     
     return true;
-  }, [produto.nome, produto.categoria_id, produto.fornecedor_id, produto.codigo_barras, produto.sku, produto.tipo_preco, produto.preco, produto.estoque, produto.estoque_minimo]);
+  }, [produto.nome, produto.categoria_id, produto.fornecedor_id, produto.codigo_barras, produto.sku, produto.tipo_preco, produto.preco, produto.estoque, produto.estoque_minimo, produto.estoque_kg, produto.estoque_litros, produto.estoque_minimo_kg, produto.estoque_minimo_litros]);
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -1029,98 +1068,221 @@ export default function NovoProduto() {
                     </p>
                   </div>
 
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium">
-                        {produto.tipo_preco === "unidade" && "Quantidade em Estoque"}
-                        {produto.tipo_preco === "kg" && "Peso Total Disponível (KG)"}
-                        {produto.tipo_preco === "litros" && "Volume Total Disponível (L)"}
-                      </label>
-                      <Input
-                        type="number"
-                        step="1"
-                        min="0"
-                        placeholder="0"
-                        value={produto.estoque || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // Garantir que seja sempre um número inteiro
-                          const intValue = value ? Math.round(parseFloat(value)) : null;
-                          atualizarProduto("estoque", intValue);
-                          // Limpar erro quando o usuário começar a digitar
-                          if (errosValidacao.estoque) {
-                            setErrosValidacao(prev => ({ ...prev, estoque: false }));
-                          }
-                        }}
-                        className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque ? 'border-red-500 focus:border-red-500' : ''}`}
-                      />
-                      {errosValidacao.estoque ? (
-                        <p className="text-xs text-red-500 mt-1">Quantidade em estoque é obrigatória</p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {produto.tipo_preco === "unidade" && "Número de unidades disponíveis"}
-                          {produto.tipo_preco === "kg" && "Peso total em quilogramas (ex: 15.5 para 15,5kg)"}
-                          {produto.tipo_preco === "litros" && "Volume total em litros (ex: 2.5 para 2,5L)"}
-                        </p>
-                      )}
-                    </div>
+                  {/* Campos de estoque baseado no tipo */}
+                  {produto.tipo_preco === "unidade" && (
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Quantidade em Estoque</label>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder="0"
+                          value={produto.estoque || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const intValue = value ? Math.round(parseFloat(value)) : null;
+                            atualizarProduto("estoque", intValue);
+                            if (errosValidacao.estoque) {
+                              setErrosValidacao(prev => ({ ...prev, estoque: false }));
+                            }
+                          }}
+                          className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {errosValidacao.estoque ? (
+                          <p className="text-xs text-red-500 mt-1">Quantidade em estoque é obrigatória</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-1">Número de unidades disponíveis</p>
+                        )}
+                      </div>
 
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium">
-                        {produto.tipo_preco === "unidade" && "Estoque Mínimo"}
-                        {produto.tipo_preco === "kg" && "Peso Mínimo (KG)"}
-                        {produto.tipo_preco === "litros" && "Volume Mínimo (L)"}
-                      </label>
-                      <Input
-                        type="number"
-                        step="1"
-                        min="0"
-                        placeholder="0"
-                        value={produto.estoque_minimo || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // Garantir que seja sempre um número inteiro
-                          const intValue = value ? Math.round(parseFloat(value)) : null;
-                          atualizarProduto("estoque_minimo", intValue);
-                          // Limpar erro quando o usuário começar a digitar
-                          if (errosValidacao.estoque_minimo) {
-                            setErrosValidacao(prev => ({ ...prev, estoque_minimo: false }));
-                          }
-                        }}
-                        className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_minimo ? 'border-red-500 focus:border-red-500' : ''}`}
-                      />
-                      {errosValidacao.estoque_minimo ? (
-                        <p className="text-xs text-red-500 mt-1">Estoque mínimo é obrigatório</p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {produto.tipo_preco === "unidade" && "Quantidade mínima antes do alerta"}
-                          {produto.tipo_preco === "kg" && "Peso mínimo antes do alerta (ex: 5.0 para 5kg)"}
-                          {produto.tipo_preco === "litros" && "Volume mínimo antes do alerta (ex: 1.0 para 1L)"}
-                        </p>
-                      )}
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Estoque Mínimo</label>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder="0"
+                          value={produto.estoque_minimo || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const intValue = value ? Math.round(parseFloat(value)) : null;
+                            atualizarProduto("estoque_minimo", intValue);
+                            if (errosValidacao.estoque_minimo) {
+                              setErrosValidacao(prev => ({ ...prev, estoque_minimo: false }));
+                            }
+                          }}
+                          className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_minimo ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {errosValidacao.estoque_minimo ? (
+                          <p className="text-xs text-red-500 mt-1">Estoque mínimo é obrigatório</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-1">Quantidade mínima antes do alerta</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {produto.tipo_preco === "kg" && (
+                    <div className="space-y-4">
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                        <div>
+                          <label className="text-xs sm:text-sm font-medium">Peso Total Disponível (KG)</label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0.000"
+                            value={produto.estoque_kg || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const floatValue = value ? parseFloat(value) : null;
+                              atualizarProduto("estoque_kg", floatValue);
+                              if (errosValidacao.estoque_kg) {
+                                setErrosValidacao(prev => ({ ...prev, estoque_kg: false }));
+                              }
+                            }}
+                            className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_kg ? 'border-red-500 focus:border-red-500' : ''}`}
+                          />
+                          {errosValidacao.estoque_kg ? (
+                            <p className="text-xs text-red-500 mt-1">Peso em estoque é obrigatório</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground mt-1">Peso total disponível em quilogramas (ex: 5.5 para 5kg e 500g)</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-xs sm:text-sm font-medium">Peso Mínimo (KG)</label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0.000"
+                            value={produto.estoque_minimo_kg || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const floatValue = value ? parseFloat(value) : null;
+                              atualizarProduto("estoque_minimo_kg", floatValue);
+                              if (errosValidacao.estoque_minimo_kg) {
+                                setErrosValidacao(prev => ({ ...prev, estoque_minimo_kg: false }));
+                              }
+                            }}
+                            className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_minimo_kg ? 'border-red-500 focus:border-red-500' : ''}`}
+                          />
+                          {errosValidacao.estoque_minimo_kg ? (
+                            <p className="text-xs text-red-500 mt-1">Peso mínimo é obrigatório</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground mt-1">Peso mínimo antes do alerta (ex: 1.0 para 1kg)</p>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+
+                  {produto.tipo_preco === "litros" && (
+                    <div className="space-y-4">
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                        <div>
+                          <label className="text-xs sm:text-sm font-medium">Volume Total Disponível (L)</label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0.000"
+                            value={produto.estoque_litros || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const floatValue = value ? parseFloat(value) : null;
+                              atualizarProduto("estoque_litros", floatValue);
+                              if (errosValidacao.estoque_litros) {
+                                setErrosValidacao(prev => ({ ...prev, estoque_litros: false }));
+                              }
+                            }}
+                            className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_litros ? 'border-red-500 focus:border-red-500' : ''}`}
+                          />
+                          {errosValidacao.estoque_litros ? (
+                            <p className="text-xs text-red-500 mt-1">Volume em estoque é obrigatório</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground mt-1">Volume total disponível em litros (ex: 2.5 para 2 litros e 500ml)</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-xs sm:text-sm font-medium">Volume Mínimo (L)</label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0.000"
+                            value={produto.estoque_minimo_litros || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const floatValue = value ? parseFloat(value) : null;
+                              atualizarProduto("estoque_minimo_litros", floatValue);
+                              if (errosValidacao.estoque_minimo_litros) {
+                                setErrosValidacao(prev => ({ ...prev, estoque_minimo_litros: false }));
+                              }
+                            }}
+                            className={`mt-1 text-xs sm:text-sm ${errosValidacao.estoque_minimo_litros ? 'border-red-500 focus:border-red-500' : ''}`}
+                          />
+                          {errosValidacao.estoque_minimo_litros ? (
+                            <p className="text-xs text-red-500 mt-1">Volume mínimo é obrigatório</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground mt-1">Volume mínimo antes do alerta (ex: 0.5 para 500ml)</p>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
 
                   {/* Alertas de estoque adaptados ao tipo */}
-                  {produto.estoque !== null && produto.estoque_minimo !== null && produto.estoque <= produto.estoque_minimo && produto.estoque_minimo > 0 && (
+                  {produto.tipo_preco === "unidade" && produto.estoque !== null && produto.estoque_minimo !== null && produto.estoque <= produto.estoque_minimo && produto.estoque_minimo > 0 && (
                     <div className="flex items-center space-x-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
                       <AlertCircle className="h-4 w-4 text-warning" />
                       <span className="text-sm text-warning-foreground">
-                        {produto.tipo_preco === "unidade" && `Estoque baixo! Quantidade atual (${produto.estoque}) está no limite mínimo (${produto.estoque_minimo})`}
-                        {produto.tipo_preco === "kg" && `Estoque baixo! Peso atual (${produto.estoque}kg) está no limite mínimo (${produto.estoque_minimo}kg)`}
-                        {produto.tipo_preco === "litros" && `Estoque baixo! Volume atual (${produto.estoque}L) está no limite mínimo (${produto.estoque_minimo}L)`}
+                        Estoque baixo! Quantidade atual ({produto.estoque}) está no limite mínimo ({produto.estoque_minimo})
                       </span>
                     </div>
                   )}
 
-                  {produto.estoque !== null && produto.estoque === 0 && (
+                  {produto.tipo_preco === "kg" && produto.estoque_kg !== null && produto.estoque_minimo_kg !== null && produto.estoque_kg <= produto.estoque_minimo_kg && produto.estoque_minimo_kg > 0 && (
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                      <AlertCircle className="h-4 w-4 text-warning" />
+                      <span className="text-sm text-warning-foreground">
+                        Estoque baixo! Peso atual ({produto.estoque_kg}kg) está no limite mínimo ({produto.estoque_minimo_kg}kg)
+                      </span>
+                    </div>
+                  )}
+
+                  {produto.tipo_preco === "litros" && produto.estoque_litros !== null && produto.estoque_minimo_litros !== null && produto.estoque_litros <= produto.estoque_minimo_litros && produto.estoque_minimo_litros > 0 && (
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                      <AlertCircle className="h-4 w-4 text-warning" />
+                      <span className="text-sm text-warning-foreground">
+                        Estoque baixo! Volume atual ({produto.estoque_litros}L) está no limite mínimo ({produto.estoque_minimo_litros}L)
+                      </span>
+                    </div>
+                  )}
+
+                  {produto.tipo_preco === "unidade" && produto.estoque !== null && produto.estoque === 0 && (
                     <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                       <AlertCircle className="h-4 w-4 text-destructive" />
-                      <span className="text-sm text-destructive-foreground">
-                        {produto.tipo_preco === "unidade" && "Produto sem estoque!"}
-                        {produto.tipo_preco === "kg" && "Produto sem peso disponível!"}
-                        {produto.tipo_preco === "litros" && "Produto sem volume disponível!"}
-                      </span>
+                      <span className="text-sm text-destructive-foreground">Produto sem estoque! Quantidade zerada.</span>
+                    </div>
+                  )}
+
+                  {produto.tipo_preco === "kg" && produto.estoque_kg !== null && produto.estoque_kg === 0 && (
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <span className="text-sm text-destructive-foreground">Produto sem estoque! Peso zerado.</span>
+                    </div>
+                  )}
+
+                  {produto.tipo_preco === "litros" && produto.estoque_litros !== null && produto.estoque_litros === 0 && (
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <span className="text-sm text-destructive-foreground">Produto sem estoque! Volume zerado.</span>
                     </div>
                   )}
 
@@ -1135,9 +1297,9 @@ export default function NovoProduto() {
                             O estoque será controlado pelo peso total em quilogramas. 
                             Exemplo: se você tem 10 sacos de 5kg cada, o estoque total será 50kg.
                           </p>
+                        </div>
+                      </div>
                     </div>
-                    </div>
-                  </div>
                   )}
 
                   {produto.tipo_preco === "litros" && (
@@ -1150,8 +1312,8 @@ export default function NovoProduto() {
                             O estoque será controlado pelo volume total em litros. 
                             Exemplo: se você tem 5 garrafas de 2L cada, o estoque total será 10L.
                           </p>
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -1219,10 +1381,12 @@ export default function NovoProduto() {
 
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm text-muted-foreground space-y-1 sm:space-y-0">
                     <span className="truncate">
-                      Estoque: {produto.estoque || 0} 
-                      {produto.tipo_preco === "unidade" && " un."}
-                      {produto.tipo_preco === "kg" && "kg"}
-                      {produto.tipo_preco === "litros" && "L"}
+                      Estoque: {
+                        produto.tipo_preco === "unidade" ? (produto.estoque || 0) + " un." :
+                        produto.tipo_preco === "kg" ? (produto.estoque_kg || 0) + "kg" :
+                        produto.tipo_preco === "litros" ? (produto.estoque_litros || 0) + "L" :
+                        (produto.estoque || 0) + " un."
+                      }
                     </span>
                     <span className="truncate">SKU: {produto.sku || "N/A"}</span>
                   </div>
@@ -1409,12 +1573,18 @@ export default function NovoProduto() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {produto.estoque !== null && produto.estoque >= 0 ? (
+                {(produto.tipo_preco === "unidade" && produto.estoque !== null && produto.estoque >= 0) ||
+                 (produto.tipo_preco === "kg" && produto.estoque_kg !== null && produto.estoque_kg >= 0) ||
+                 (produto.tipo_preco === "litros" && produto.estoque_litros !== null && produto.estoque_litros >= 0) ? (
                   <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success flex-shrink-0" />
                 ) : (
                   <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="text-xs sm:text-sm">Quantidade em estoque</span>
+                <span className="text-xs sm:text-sm">
+                  {produto.tipo_preco === "unidade" && "Quantidade em estoque"}
+                  {produto.tipo_preco === "kg" && "Peso em estoque (KG)"}
+                  {produto.tipo_preco === "litros" && "Volume em estoque (L)"}
+                </span>
               </div>
 
               {formularioValido && (

@@ -14,6 +14,14 @@ export interface Produto {
   sku?: string;
   estoque: number;
   estoque_minimo: number;
+  // Novos campos para estoque decimal
+  estoque_kg?: number;
+  estoque_litros?: number;
+  estoque_minimo_kg?: number;
+  estoque_minimo_litros?: number;
+  // Campos calculados
+  estoque_atual?: number;
+  estoque_minimo_atual?: number;
   fornecedor_id?: number;
   marca?: string;
   modelo?: string;
@@ -93,11 +101,15 @@ export const useProdutos = () => {
   // Criar produto
   const criarProduto = async (dados: Omit<Produto, 'id'>) => {
     try {
-      // Garantir que estoque e estoque_minimo sejam sempre inteiros
+      // Processar estoque baseado no tipo
       const dadosProcessados = {
         ...dados,
         estoque: Math.round(dados.estoque || 0),
-        estoque_minimo: Math.round(dados.estoque_minimo || 0)
+        estoque_minimo: Math.round(dados.estoque_minimo || 0),
+        estoque_kg: parseFloat(String(dados.estoque_kg || 0)),
+        estoque_litros: parseFloat(String(dados.estoque_litros || 0)),
+        estoque_minimo_kg: parseFloat(String(dados.estoque_minimo_kg || 0)),
+        estoque_minimo_litros: parseFloat(String(dados.estoque_minimo_litros || 0)),
       };
 
       const response = await makeRequest('/produtos', {
@@ -119,11 +131,15 @@ export const useProdutos = () => {
   // Atualizar produto
   const atualizarProduto = async (id: number, dados: Partial<Produto>) => {
     try {
-      // Garantir que estoque e estoque_minimo sejam sempre inteiros
+      // Processar estoque baseado no tipo
       const dadosProcessados = {
         ...dados,
         estoque: dados.estoque !== undefined ? Math.round(dados.estoque) : undefined,
-        estoque_minimo: dados.estoque_minimo !== undefined ? Math.round(dados.estoque_minimo) : undefined
+        estoque_minimo: dados.estoque_minimo !== undefined ? Math.round(dados.estoque_minimo) : undefined,
+        estoque_kg: dados.estoque_kg !== undefined ? parseFloat(String(dados.estoque_kg)) : undefined,
+        estoque_litros: dados.estoque_litros !== undefined ? parseFloat(String(dados.estoque_litros)) : undefined,
+        estoque_minimo_kg: dados.estoque_minimo_kg !== undefined ? parseFloat(String(dados.estoque_minimo_kg)) : undefined,
+        estoque_minimo_litros: dados.estoque_minimo_litros !== undefined ? parseFloat(String(dados.estoque_minimo_litros)) : undefined,
       };
 
       const response = await makeRequest(`/produtos/${id}`, {

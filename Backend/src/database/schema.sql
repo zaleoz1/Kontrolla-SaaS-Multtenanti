@@ -217,6 +217,11 @@ CREATE TABLE IF NOT EXISTS produtos (
     preco_por_litros DECIMAL(10,2),
     estoque INT DEFAULT 0,
     estoque_minimo INT DEFAULT 0,
+    -- Novos campos para estoque decimal por tipo
+    estoque_kg DECIMAL(10,3) DEFAULT 0.000 COMMENT 'Estoque em quilogramas (decimal)',
+    estoque_litros DECIMAL(10,3) DEFAULT 0.000 COMMENT 'Estoque em litros (decimal)',
+    estoque_minimo_kg DECIMAL(10,3) DEFAULT 0.000 COMMENT 'Estoque mínimo em quilogramas (decimal)',
+    estoque_minimo_litros DECIMAL(10,3) DEFAULT 0.000 COMMENT 'Estoque mínimo em litros (decimal)',
     fornecedor_id INT,
     marca VARCHAR(100),
     modelo VARCHAR(100),
@@ -522,6 +527,10 @@ CREATE INDEX idx_funcionarios_cpf ON funcionarios(cpf);
 CREATE INDEX idx_funcionarios_cargo ON funcionarios(cargo);
 CREATE INDEX idx_produtos_nome ON produtos(nome);
 CREATE INDEX idx_produtos_codigo_barras ON produtos(codigo_barras);
+CREATE INDEX idx_produtos_estoque_kg ON produtos(estoque_kg);
+CREATE INDEX idx_produtos_estoque_litros ON produtos(estoque_litros);
+CREATE INDEX idx_produtos_estoque_minimo_kg ON produtos(estoque_minimo_kg);
+CREATE INDEX idx_produtos_estoque_minimo_litros ON produtos(estoque_minimo_litros);
 CREATE INDEX idx_vendas_numero ON vendas(numero_venda);
 CREATE INDEX idx_vendas_data ON vendas(data_venda);
 CREATE INDEX idx_venda_pagamentos_venda ON venda_pagamentos(venda_id);

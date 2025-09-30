@@ -355,98 +355,94 @@ export default function Vendas() {
 
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Vendas</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+          <h1 className="text-3xl font-bold">Vendas</h1>
+          <p className="text-muted-foreground">
             Gerencie suas vendas e transações
           </p>
         </div>
-        <Button 
-          className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10 w-full sm:w-auto" 
-          onClick={() => navigate("/dashboard/nova-venda")}
-        >
-          <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Nova Venda</span>
-          <span className="sm:hidden">Nova Venda</span>
+        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Venda
         </Button>
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-2 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Hoje</p>
-                <p className="text-sm sm:text-2xl font-bold break-words">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Hoje</p>
+                <p className="text-2xl font-bold">
                   {stats ? formatCurrency(stats.receita_total || 0) : formatCurrency(totalVendas || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {stats ? `${stats.total_vendas || 0} vendas hoje` : `${vendas.length || 0} vendas hoje`}
                 </p>
               </div>
-              <div className="p-1 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 self-start sm:self-auto">
-                <DollarSign className="h-3 w-3 sm:h-5 sm:w-5 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <DollarSign className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-2 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total de Vendas</p>
-                <p className="text-sm sm:text-2xl font-bold break-words">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total de Vendas</p>
+                <p className="text-2xl font-bold">
                   {pagination.total || 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {stats ? `${stats.total_vendas || 0} vendas hoje` : 'Carregando...'}
                 </p>
               </div>
-              <div className="p-1 sm:p-2 rounded-lg bg-secondary/10 flex-shrink-0 self-start sm:self-auto">
-                <ShoppingCart className="h-3 w-3 sm:h-5 sm:w-5 text-secondary" />
+              <div className="p-2 rounded-lg bg-secondary/10">
+                <ShoppingCart className="h-5 w-5 text-secondary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-2 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">A Receber</p>
-                <p className="text-sm sm:text-2xl font-bold text-yellow-600 break-words">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
+                <p className="text-2xl font-bold text-yellow-600">
                   {formatCurrency(saldoPendente || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {estatisticasPendentes?.quantidade || 0} {(estatisticasPendentes?.quantidade || 0) === 1 ? 'venda' : 'vendas'} pendente{(estatisticasPendentes?.quantidade || 0) !== 1 ? 's' : ''}
                 </p>
               </div>
-              <div className="p-1 sm:p-2 rounded-lg bg-yellow-100 flex-shrink-0 self-start sm:self-auto">
-                <AlertCircle className="h-3 w-3 sm:h-5 sm:w-5 text-yellow-600" />
+              <div className="p-2 rounded-lg bg-yellow-100">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-2 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Saldo Efetivo</p>
-                <p className="text-sm sm:text-2xl font-bold text-green-600 break-words">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Saldo Efetivo</p>
+                <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(saldoEfetivo || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Valores já recebidos
                 </p>
               </div>
-              <div className="p-1 sm:p-2 rounded-lg bg-green-100 flex-shrink-0 self-start sm:self-auto">
-                <DollarSign className="h-3 w-3 sm:h-5 sm:w-5 text-green-600" />
+              <div className="p-2 rounded-lg bg-green-100">
+                <DollarSign className="h-5 w-5 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -455,14 +451,14 @@ export default function Vendas() {
 
       {/* Filtros */}
       <Card className="bg-gradient-card shadow-card">
-        <CardContent className="p-3 sm:p-6">
-          <div className="space-y-3 sm:space-y-4">
+        <CardContent className="p-6">
+          <div className="space-y-4">
             {/* Busca e Status */}
-            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 {buscandoAuto && (
-                  <Loader2 className="absolute right-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
                 )}
                 <Input
                   placeholder="Buscar por nome do cliente, email ou código da venda..."
@@ -471,81 +467,74 @@ export default function Vendas() {
                     setTermoBusca(e.target.value);
                     handleAutoSearch(e.target.value);
                   }}
-                  className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm"
+                  className="pl-10"
                 />
               </div>
               <Button 
                 variant="outline" 
                 onClick={limparPesquisa}
                 disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
-                className="h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
               >
                 Limpar
               </Button>
-            </div>
-
-            {/* Filtros de Status */}
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant={filtros.status === '' ? "default" : "outline"}
-                onClick={() => handleStatusFilter('')}
-                size="sm"
-                className="h-8 sm:h-9 text-xs sm:text-sm"
-              >
-                Todas
-              </Button>
-              <Button 
-                variant={filtros.status === 'pago' ? "default" : "outline"}
-                onClick={() => handleStatusFilter('pago')}
-                size="sm"
-                className="h-8 sm:h-9 text-xs sm:text-sm"
-              >
-                Pagas
-              </Button>
-              <Button 
-                variant={filtros.status === 'pendente' ? "default" : "outline"}
-                onClick={() => handleStatusFilter('pendente')}
-                size="sm"
-                className="h-8 sm:h-9 text-xs sm:text-sm"
-              >
-                Pendentes
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  variant={filtros.status === '' ? "default" : "outline"}
+                  onClick={() => handleStatusFilter('')}
+                  size="sm"
+                >
+                  Todas
+                </Button>
+                <Button 
+                  variant={filtros.status === 'pago' ? "default" : "outline"}
+                  onClick={() => handleStatusFilter('pago')}
+                  size="sm"
+                >
+                  Pagas
+                </Button>
+                <Button 
+                  variant={filtros.status === 'pendente' ? "default" : "outline"}
+                  onClick={() => handleStatusFilter('pendente')}
+                  size="sm"
+                >
+                  Pendentes
+                </Button>
+              </div>
             </div>
 
             {/* Filtros de Data */}
-            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+              <div className="flex space-x-2">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                  <span className="text-xs sm:text-sm text-muted-foreground">De:</span>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">De:</span>
                 </div>
                 <Input
                   type="date"
                   value={dataInicio}
                   onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-full sm:w-40 h-8 sm:h-10 text-xs sm:text-sm"
+                  className="w-40"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Até:</span>
-                </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">Até:</span>
                 <Input
                   type="date"
                   value={dataFim}
                   onChange={(e) => setDataFim(e.target.value)}
-                  className="w-full sm:w-40 h-8 sm:h-10 text-xs sm:text-sm"
+                  className="w-40"
                 />
               </div>
-              <Button 
-                variant="outline" 
-                onClick={limparFiltrosData}
-                disabled={!dataInicio && !dataFim}
-                size="sm"
-                className="h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
-              >
-                Limpar Datas
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={limparFiltrosData}
+                  disabled={!dataInicio && !dataFim}
+                  size="sm"
+                >
+                  Limpar
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -554,21 +543,18 @@ export default function Vendas() {
       {/* Loading e Error States */}
       {loading && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6 sm:p-12 text-center">
-            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-4" />
-            <p className="text-sm sm:text-base text-muted-foreground">Carregando vendas...</p>
+          <CardContent className="p-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando vendas...</p>
           </CardContent>
         </Card>
       )}
 
       {error && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6 sm:p-12 text-center">
-            <p className="text-sm sm:text-base text-muted-foreground mb-4">Venda não encontrada, atualize ou tente mais tarde!</p>
-            <Button 
-              onClick={() => fetchVendas(filtros)}
-              className="h-8 sm:h-10 text-xs sm:text-sm"
-            >
+          <CardContent className="p-12 text-center">
+            <p className="text-muted-foreground mb-4">Venda não encontrada, atualize ou tente mais tarde!</p>
+            <Button onClick={() => fetchVendas(filtros)}>
               Tentar Novamente
             </Button>
           </CardContent>
@@ -577,74 +563,69 @@ export default function Vendas() {
 
       {/* Lista de Vendas */}
       {!loading && !error && (
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-4">
           {vendasSeparadas.map((venda) => {
             const statusBadge = getStatusBadge(venda.status);
             const paymentMethod = getDisplayPaymentMethod(venda);
             
             return (
               <Card key={venda.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-4 sm:p-6">
-                  {/* Mobile Layout */}
-                  <div className="block sm:hidden">
-                    <div className="space-y-3">
-                      {/* Header com número e status */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <ShoppingCart className="h-4 w-4 text-primary" />
-                          </div>
-                          <h3 className="font-semibold text-sm">#{venda.numero_venda}</h3>
-                        </div>
-                        <Badge className={`${statusBadge.className} text-xs`}>
-                          {statusBadge.text}
-                        </Badge>
+                <CardContent className="p-6">
+                  <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-lg bg-primary/10">
+                        <ShoppingCart className="h-6 w-6 text-primary" />
                       </div>
-
-                      {/* Cliente e data */}
+                      
                       <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground truncate">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-semibold">#{venda.numero_venda}</h3>
+                          <Badge className={statusBadge.className}>
+                            {statusBadge.text}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
                           {venda.cliente_nome || 'Cliente não informado'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDateTime(venda.data_venda)} • {venda.itens?.length || 0} {venda.itens?.length === 1 ? 'item' : 'itens'}
                         </p>
                       </div>
+                    </div>
 
-                      {/* Valor e método de pagamento */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Total:</span>
-                          <p className="text-lg font-bold text-primary">
-                            {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
-                          </p>
-                        </div>
-                        
-                        {/* Métodos de pagamento */}
-                        <div className="text-xs text-muted-foreground">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">
+                          {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
+                        </p>
+                        <div className="text-sm text-muted-foreground text-right">
+                          {/* Exibir múltiplos métodos de pagamento se disponível */}
                           {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
-                            <div className="flex flex-wrap items-center gap-1">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               {venda.metodos_pagamento.map((metodo: any, index: number) => (
-                                <span key={index} className={`${getPaymentColor(metodo.metodo)}`}>
-                                  {getPaymentText(metodo.metodo)}
-                                </span>
+                                <div key={index} className="flex items-center space-x-1">
+                                  <span className={getPaymentColor(metodo.metodo)}>{getPaymentText(metodo.metodo)}</span>
+                                </div>
                               ))}
+                              {/* Exibir pagamento a prazo se houver */}
                               {venda.pagamento_prazo && (
-                                <span className="text-yellow-600">• Prazo</span>
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-yellow-600">Prazo</span>
+                                </div>
                               )}
                             </div>
                           ) : (
-                            <span className={paymentMethod.color}>{paymentMethod.text}</span>
+                            <div className="flex items-center justify-end space-x-1">
+                              <span className={paymentMethod.color}>{paymentMethod.text}</span>
+                            </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Botão de ação */}
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => abrirDetalhesVenda(venda)}
-                        className="h-9 text-sm w-full"
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         Ver Detalhes
@@ -652,69 +633,6 @@ export default function Vendas() {
                     </div>
                   </div>
 
-                  {/* Desktop Layout */}
-                  <div className="hidden sm:block">
-                    <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 rounded-lg bg-primary/10">
-                          <ShoppingCart className="h-6 w-6 text-primary" />
-                        </div>
-                        
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-base">#{venda.numero_venda}</h3>
-                            <Badge className={`${statusBadge.className} text-xs`}>
-                              {statusBadge.text}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {venda.cliente_nome || 'Cliente não informado'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDateTime(venda.data_venda)} • {venda.itens?.length || 0} {venda.itens?.length === 1 ? 'item' : 'itens'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">
-                            {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
-                          </p>
-                          <div className="text-sm text-muted-foreground text-right">
-                            {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
-                              <div className="flex flex-wrap items-center justify-end gap-2">
-                                {venda.metodos_pagamento.map((metodo: any, index: number) => (
-                                  <div key={index} className="flex items-center space-x-1">
-                                    <span className={`text-xs ${getPaymentColor(metodo.metodo)}`}>{getPaymentText(metodo.metodo)}</span>
-                                  </div>
-                                ))}
-                                {venda.pagamento_prazo && (
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-xs text-yellow-600">Prazo</span>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-end space-x-1">
-                                <span className={`text-xs ${paymentMethod.color}`}>{paymentMethod.text}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => abrirDetalhesVenda(venda)}
-                          className="h-9 text-sm"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Detalhes
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             );
@@ -725,19 +643,15 @@ export default function Vendas() {
       {/* Estado vazio */}
       {!loading && !error && vendasSeparadas.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6 sm:p-12 text-center">
-            <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold mb-2">Nenhuma venda encontrada</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-4">
+          <CardContent className="p-12 text-center">
+            <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhuma venda encontrada</h3>
+            <p className="text-muted-foreground mb-4">
               {termoBusca || filtros.status || dataInicio || dataFim ? "Tente ajustar sua busca ou filtros. A busca é automática conforme você digita ou seleciona datas." : "Registre sua primeira venda"}
             </p>
-            <Button 
-              className="bg-gradient-primary h-8 sm:h-10 text-xs sm:text-sm" 
-              onClick={() => navigate("/dashboard/nova-venda")}
-            >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Nova Venda</span>
-              <span className="sm:hidden">Nova Venda</span>
+            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Venda
             </Button>
           </CardContent>
         </Card>
@@ -746,9 +660,9 @@ export default function Vendas() {
       {/* Paginação */}
       {!loading && !error && vendasSeparadas.length > 0 && pagination.totalPages > 1 && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-              <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
                 Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} vendas
               </p>
               <div className="flex space-x-2">
@@ -757,7 +671,6 @@ export default function Vendas() {
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={!pagination.hasPrev}
-                  className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none"
                 >
                   Anterior
                 </Button>
@@ -766,7 +679,6 @@ export default function Vendas() {
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={!pagination.hasNext}
-                  className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none"
                 >
                   Próxima
                 </Button>
@@ -842,9 +754,21 @@ export default function Vendas() {
                                 {item.produto_nome}
                               </h4>
                               <div className="flex items-center space-x-3 text-xs text-slate-600 mt-1">
-                                <span>Qtd: {item.quantidade}</span>
+                                <span>
+                                  Qtd: {item.tipo_preco === 'kg' || item.tipo_preco === 'litros' 
+                                    ? parseFloat(item.quantidade).toFixed(3).replace(/\.?0+$/, '')
+                                    : Math.round(parseFloat(item.quantidade))}
+                                  {item.tipo_preco === 'kg' && ' kg'}
+                                  {item.tipo_preco === 'litros' && ' L'}
+                                  {item.tipo_preco === 'unidade' && ' un'}
+                                </span>
                                 <span>•</span>
-                                <span>Unit: {formatCurrency(item.preco_unitario)}</span>
+                                <span>
+                                  Unit: {formatCurrency(item.preco_unitario)}
+                                  {item.tipo_preco === 'kg' && '/kg'}
+                                  {item.tipo_preco === 'litros' && '/L'}
+                                  {item.tipo_preco === 'unidade' && '/un'}
+                                </span>
                                 {item.desconto > 0 && (
                                   <>
                                     <span>•</span>

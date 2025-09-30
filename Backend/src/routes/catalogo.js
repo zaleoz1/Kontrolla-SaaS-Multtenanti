@@ -48,8 +48,20 @@ router.get('/produtos', validatePagination, validateSearch, handleValidationErro
     const produtos = await query(
       `SELECT 
         p.id, p.nome, p.descricao, p.preco, p.preco_promocional, p.estoque,
+        p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo,
+        p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.imagens, p.destaque, p.codigo_barras, p.sku,
-        c.nome as categoria_nome
+        c.nome as categoria_nome,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+          ELSE p.estoque
+        END as estoque_atual,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+          ELSE p.estoque_minimo
+        END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        ${whereClause} 
@@ -95,9 +107,21 @@ router.get('/produtos/:id', async (req, res) => {
     const produtos = await query(
       `SELECT 
         p.id, p.nome, p.descricao, p.preco, p.preco_promocional, p.estoque,
+        p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo,
+        p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.imagens, p.destaque, p.codigo_barras, p.sku, p.peso, p.largura,
         p.altura, p.comprimento, p.fornecedor, p.marca, p.modelo, p.garantia,
-        c.nome as categoria_nome
+        c.nome as categoria_nome,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+          ELSE p.estoque
+        END as estoque_atual,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+          ELSE p.estoque_minimo
+        END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.id = ? AND p.tenant_id = ? AND p.status = 'ativo'`,
@@ -205,8 +229,20 @@ router.get('/destaques', async (req, res) => {
     const produtos = await query(
       `SELECT 
         p.id, p.nome, p.descricao, p.preco, p.preco_promocional, p.estoque,
+        p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo,
+        p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.imagens, p.destaque, p.codigo_barras, p.sku,
-        c.nome as categoria_nome
+        c.nome as categoria_nome,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+          ELSE p.estoque
+        END as estoque_atual,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+          ELSE p.estoque_minimo
+        END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.tenant_id = ? AND p.status = 'ativo' AND p.destaque = 1
@@ -257,8 +293,20 @@ router.get('/produtos/:id/relacionados', async (req, res) => {
     const produtos = await query(
       `SELECT 
         p.id, p.nome, p.descricao, p.preco, p.preco_promocional, p.estoque,
+        p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo,
+        p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.imagens, p.destaque, p.codigo_barras, p.sku,
-        c.nome as categoria_nome
+        c.nome as categoria_nome,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+          ELSE p.estoque
+        END as estoque_atual,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+          ELSE p.estoque_minimo
+        END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.tenant_id = ? AND p.status = 'ativo' AND p.categoria_id = ? AND p.id != ?
@@ -287,8 +335,20 @@ router.get('/buscar/codigo-barras/:codigo', async (req, res) => {
     const produtos = await query(
       `SELECT 
         p.id, p.nome, p.descricao, p.preco, p.preco_promocional, p.estoque,
+        p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo,
+        p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.imagens, p.destaque, p.codigo_barras, p.sku,
-        c.nome as categoria_nome
+        c.nome as categoria_nome,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+          ELSE p.estoque
+        END as estoque_atual,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+          ELSE p.estoque_minimo
+        END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.codigo_barras = ? AND p.tenant_id = ? AND p.status = 'ativo'`,
