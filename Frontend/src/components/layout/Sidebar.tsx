@@ -65,6 +65,9 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
+  // Debug: verificar dados do tenant
+  console.log('Sidebar - tenant data:', tenant);
+
   // Se não há operador selecionado, não renderizar a sidebar
   if (!operadorSelecionado) {
     return null;
@@ -89,15 +92,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
         {/* Logo e nome do sistema */}
         <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0">
           <div className="flex items-center space-x-2">
-            {tenant?.logo ? (
-              <img 
-                src={tenant.logo} 
-                alt={`Logo ${tenant.nome}`}
-                className="h-8 w-8 rounded object-cover"
-              />
-            ) : (
-              <Store className="h-8 w-8 text-white" />
-            )}
+            <Store className="h-8 w-8 text-white" />
             <span className="text-xl font-bold text-white">
               {tenant?.nome || "KontrollaPro"}
             </span>

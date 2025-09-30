@@ -143,7 +143,7 @@ export const ERROR_MESSAGES = {
   TIMEOUT: 'Tempo limite excedido. Tente novamente.',
   UNAUTHORIZED: 'Email ou senha incorretos. Verifique suas credenciais e tente novamente.',
   FORBIDDEN: 'Você não tem permissão para esta ação.',
-  NOT_FOUND: 'Recurso não encontrado.',
+  NOT_FOUND: 'Esse Usuário não esta cadastrado no sistema.',
   SERVER_ERROR: 'Erro interno do servidor. Tente novamente mais tarde.',
   VALIDATION_ERROR: 'Dados inválidos. Verifique os campos.',
   UNKNOWN_ERROR: 'Erro desconhecido. Tente novamente.',

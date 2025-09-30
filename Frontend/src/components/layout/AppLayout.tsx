@@ -4,13 +4,15 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { OperadorRequired } from "./OperadorRequired";
 import { useAuth } from "@/hooks/useAuth";
-import { useOperador } from "@/contexts/OperadorContext"; 
+import { useOperador } from "@/contexts/OperadorContext";
+import { useTenant } from "@/hooks/useTenant"; 
 
 // Componente principal de layout da aplicação
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
   const { operadorSelecionado } = useOperador();
+  const { tenant } = useTenant();
   const location = useLocation();
   
   // Verificar se estamos em páginas que usam ConfiguracoesSidebar
@@ -41,13 +43,7 @@ export function AppLayout() {
     setIsSidebarOpen(false);
   };
 
-  // Criar objeto tenant a partir dos dados do usuário
-  const tenant = user ? {
-    id: user.tenant_id,
-    nome: user.tenant_nome,
-    slug: user.tenant_slug,
-    logo: undefined // Pode ser adicionado posteriormente se necessário
-  } : null;
+  // O tenant agora é carregado pelo hook useTenant com todos os dados, incluindo a logo
 
   // Se estivermos em páginas de configurações, renderizar layout sem sidebar e header
   if (isConfiguracoesLayout) {
