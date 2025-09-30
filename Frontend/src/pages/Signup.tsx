@@ -90,6 +90,8 @@ export default function Signup() {
       processedValue = formatarCpfCnpj(value, formData.tipoPessoa);
     } else if (name === 'cep') {
       processedValue = formatarCep(value);
+    } else if (name === 'phone') {
+      processedValue = formatarTelefone(value);
     }
     
     setFormData(prev => ({
@@ -196,6 +198,24 @@ export default function Signup() {
   const formatarCep = (value: string) => {
     const numeros = value.replace(/\D/g, '');
     return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+
+  const formatarTelefone = (value: string) => {
+    const numeros = value.replace(/\D/g, '');
+    
+    // Limitar a 11 dígitos (DDD + 9 dígitos)
+    const numerosLimitados = numeros.slice(0, 11);
+    
+    // Formatar baseado no tamanho
+    if (numerosLimitados.length <= 2) {
+      return numerosLimitados;
+    } else if (numerosLimitados.length <= 6) {
+      return numerosLimitados.replace(/(\d{2})(\d{4})/, '($1) $2');
+    } else if (numerosLimitados.length <= 10) {
+      return numerosLimitados.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    } else {
+      return numerosLimitados.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
   };
 
   // Função para consultar CNPJ na API BrasilAPI
