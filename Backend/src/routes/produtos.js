@@ -132,6 +132,10 @@ router.post('/', validateProduto, async (req, res) => {
       imagens = []
     } = req.body;
 
+    // Garantir que estoque e estoque_minimo sejam sempre inteiros
+    const estoqueInt = Math.round(parseFloat(estoque) || 0);
+    const estoqueMinimoInt = Math.round(parseFloat(estoque_minimo) || 0);
+
     // Preparar valores para preco_por_kg e preco_por_litros baseado no tipo_preco
     let preco_por_kg = null;
     let preco_por_litros = null;
@@ -198,7 +202,7 @@ router.post('/', validateProduto, async (req, res) => {
       [
         req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
         preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
-        estoque, estoque_minimo, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([])
+        estoqueInt, estoqueMinimoInt, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([])
       ]
     );
 
@@ -272,6 +276,10 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       destaque,
       imagens
     } = req.body;
+
+    // Garantir que estoque e estoque_minimo sejam sempre inteiros
+    const estoqueInt = Math.round(parseFloat(estoque) || 0);
+    const estoqueMinimoInt = Math.round(parseFloat(estoque_minimo) || 0);
 
     // Preparar valores para preco_por_kg e preco_por_litros baseado no tipo_preco
     let preco_por_kg = null;
@@ -382,7 +390,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       WHERE id = ? AND tenant_id = ?`,
       [
         categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
-        tipo_preco, preco_por_kg, preco_por_litros, estoque, estoque_minimo, 
+        tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt, 
         fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary), id, req.user.tenant_id
       ]
     );

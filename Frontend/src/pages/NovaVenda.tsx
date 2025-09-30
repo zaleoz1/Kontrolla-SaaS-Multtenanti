@@ -17,7 +17,8 @@ import {
   X,
   Minus,
   ArrowLeft,
-  ScanLine
+  ScanLine,
+  Edit
 } from "lucide-react";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { useBuscaProdutos } from "@/hooks/useBuscaProdutos";
@@ -77,6 +78,11 @@ export default function NovaVenda() {
   const [codigoBarras, setCodigoBarras] = useState("");
   const [desconto, setDesconto] = useState(vendaData?.desconto || "");
   const [modalClienteAberto, setModalClienteAberto] = useState(false);
+  const [modalPesoVolumeAberto, setModalPesoVolumeAberto] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [quantidadePesoVolume, setQuantidadePesoVolume] = useState("");
+  const [unidadeEntrada, setUnidadeEntrada] = useState<'pequena' | 'grande'>('pequena'); // 'pequena' = g/mL, 'grande' = kg/L
+  const [editandoItem, setEditandoItem] = useState<ItemCarrinho | null>(null);
 
 
 
@@ -144,6 +150,15 @@ export default function NovaVenda() {
       return;
     }
 
+    // Verificar se o produto é vendido por peso ou volume
+    const unidade = obterUnidadeEstoque(produto.tipo_preco, produto.nome);
+    if (unidade === 'kg' || unidade === 'L') {
+      setProdutoSelecionado(produto);
+      setQuantidadePesoVolume("");
+      setModalPesoVolumeAberto(true);
+      return;
+    }
+
     const itemExistente = carrinho.find(item => item.produto.id === produto.id);
     
     if (itemExistente) {
@@ -160,9 +175,6 @@ export default function NovaVenda() {
         precoTotal: produto.preco * quantidade
       }]);
     }
-    
-    
-
   };
 
   const definirQuantidadeCarrinho = (produto: Produto, quantidade: number) => {
@@ -241,6 +253,161 @@ export default function NovaVenda() {
     // Limpar busca de cliente
     setTermoBuscaCliente("");
     setModalClienteAberto(false);
+  };
+
+  const confirmarPesoVolume = () => {
+    if (!produtoSelecionado || !quantidadePesoVolume) return;
+
+    const quantidade = parseFloat(quantidadePesoVolume);
+    if (isNaN(quantidade) || quantidade <= 0) {
+      toast({
+        title: "Quantidade inválida",
+        description: "Digite uma quantidade válida",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
+    const precoUnitario = produtoSelecionado.preco;
+    
+    // Converter unidades conforme necessário
+    let quantidadeParaCalculo = quantidade;
+    let unidadeParaExibicao = unidade;
+    
+    if (unidade === 'kg') {
+      if (unidadeEntrada === 'pequena') {
+        // Usuário digitou em gramas, converter para kg
+        quantidadeParaCalculo = quantidade / 1000;
+        unidadeParaExibicao = 'g';
+      } else {
+        // Usuário digitou em kg, manter
+        unidadeParaExibicao = 'kg';
+      }
+    } else if (unidade === 'L') {
+      if (unidadeEntrada === 'pequena') {
+        // Usuário digitou em mL, converter para L
+        quantidadeParaCalculo = quantidade / 1000;
+        unidadeParaExibicao = 'mL';
+      } else {
+        // Usuário digitou em L, manter
+        unidadeParaExibicao = 'L';
+      }
+    }
+    
+    const precoTotal = precoUnitario * quantidadeParaCalculo;
+
+    if (editandoItem) {
+      // Editando item existente
+      setCarrinho(carrinho.map(item => 
+        item === editandoItem
+          ? { ...item, quantidade: quantidadeParaCalculo, precoTotal }
+          : item
+      ));
+    } else {
+      // Adicionando novo item
+      const itemExistente = carrinho.find(item => item.produto.id === produtoSelecionado.id);
+      
+      if (itemExistente) {
+        setCarrinho(carrinho.map(item => 
+          item.produto.id === produtoSelecionado.id 
+            ? { ...item, quantidade: item.quantidade + quantidadeParaCalculo, precoTotal: item.precoTotal + precoTotal }
+            : item
+        ));
+      } else {
+        setCarrinho([...carrinho, {
+          produto: produtoSelecionado,
+          quantidade: quantidadeParaCalculo,
+          precoUnitario,
+          precoTotal
+        }]);
+      }
+    }
+
+    toast({
+      title: editandoItem ? "Produto atualizado" : "Produto adicionado",
+      description: `${quantidade} ${unidadeParaExibicao} de ${produtoSelecionado.nome} ${editandoItem ? 'atualizado no' : 'adicionado ao'} carrinho`,
+    });
+
+    setModalPesoVolumeAberto(false);
+    setProdutoSelecionado(null);
+    setQuantidadePesoVolume("");
+    setUnidadeEntrada('pequena'); // Reset para padrão
+    setEditandoItem(null);
+  };
+
+  const cancelarPesoVolume = () => {
+    setModalPesoVolumeAberto(false);
+    setProdutoSelecionado(null);
+    setQuantidadePesoVolume("");
+    setUnidadeEntrada('pequena'); // Reset para padrão
+    setEditandoItem(null);
+  };
+
+  const editarItemPesoVolume = (item: ItemCarrinho) => {
+    setEditandoItem(item);
+    setProdutoSelecionado(item.produto);
+    
+    // Converter a quantidade do carrinho para a unidade de entrada
+    const unidade = obterUnidadeEstoque(item.produto.tipo_preco, item.produto.nome);
+    const unidades = obterUnidadesEntrada(unidade);
+    
+    if (unidade === 'kg' || unidade === 'L') {
+      // Converter kg/L para g/mL para exibição
+      const quantidadeEmUnidadePequena = item.quantidade * unidades.fator;
+      setQuantidadePesoVolume(quantidadeEmUnidadePequena.toString());
+      setUnidadeEntrada('pequena');
+    } else {
+      setQuantidadePesoVolume(item.quantidade.toString());
+      setUnidadeEntrada('grande');
+    }
+    
+    setModalPesoVolumeAberto(true);
+  };
+
+  const obterUnidadeEstoque = (tipo_preco: string, nomeProduto: string) => {
+    // Primeiro verifica o tipo_preco do banco
+    if (tipo_preco === 'kg') return 'kg';
+    if (tipo_preco === 'litros') return 'L';
+    
+    // Se tipo_preco for 'unidade' ou não definido, tenta detectar pelo nome
+    const nome = nomeProduto.toLowerCase();
+    
+    // Detectar por peso (kg, gramas, g, peso)
+    if (nome.includes('kg') || nome.includes('quilo') || nome.includes('grama') || 
+        nome.includes('g ') || nome.includes('peso') || nome.includes('balança')) {
+      return 'kg';
+    }
+    
+    // Detectar por volume (litros, ml, volume)
+    if (nome.includes('litro') || nome.includes('l ') || nome.includes('ml') || 
+        nome.includes('volume') || nome.includes('líquido') || nome.includes('bebida')) {
+      return 'L';
+    }
+    
+    // Padrão para unidade
+    return 'un.';
+  };
+
+  const obterUnidadesEntrada = (unidade: string) => {
+    if (unidade === 'kg') {
+      return {
+        pequena: 'g',
+        grande: 'kg',
+        fator: 1000
+      };
+    } else if (unidade === 'L') {
+      return {
+        pequena: 'mL',
+        grande: 'L',
+        fator: 1000
+      };
+    }
+    return {
+      pequena: unidade,
+      grande: unidade,
+      fator: 1
+    };
   };
 
 
@@ -350,7 +517,7 @@ export default function NovaVenda() {
                         <span className={`text-xs ${
                           produto.estoque === 0 ? 'text-gray-500' : 'text-muted-foreground'
                         }`}>
-                          {produto.estoque} un.
+                          {produto.estoque} {obterUnidadeEstoque(produto.tipo_preco, produto.nome)}
                         </span>
                       </div>
                       {produto.estoque === 0 && (
@@ -510,43 +677,92 @@ export default function NovaVenda() {
                             {item.precoUnitario.toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
-                            })} x {item.quantidade}
+                            })} x {(() => {
+                              const unidade = obterUnidadeEstoque(item.produto.tipo_preco, item.produto.nome);
+                              const unidades = obterUnidadesEntrada(unidade);
+                              if (unidade === 'kg') {
+                                // Se o produto é vendido por kg, mostrar em gramas no carrinho
+                                const gramas = Math.round(item.quantidade * 1000);
+                                return `${gramas}g`;
+                              } else if (unidade === 'L') {
+                                // Se o produto é vendido por L, mostrar em mL no carrinho
+                                const mL = Math.round(item.quantidade * 1000);
+                                return `${mL}mL`;
+                              }
+                              return `${item.quantidade} ${unidade}`;
+                            })()}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removerDoCarrinho(item.produto.id)}
-                          className="text-red-500 hover:text-red-600 p-0.5 h-auto flex-shrink-0"
-                        >
-                          <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        </Button>
+                        <div className="flex items-center space-x-1">
+                          {(() => {
+                            const unidade = obterUnidadeEstoque(item.produto.tipo_preco, item.produto.nome);
+                            // Mostrar botão de editar para produtos por peso/volume
+                            if (unidade === 'kg' || unidade === 'L') {
+                              return (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => editarItemPesoVolume(item)}
+                                  className="text-blue-500 hover:text-blue-600 p-0.5 h-auto flex-shrink-0"
+                                >
+                                  <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                </Button>
+                              );
+                            }
+                            return null;
+                          })()}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removerDoCarrinho(item.produto.id)}
+                            className="text-red-500 hover:text-red-600 p-0.5 h-auto flex-shrink-0"
+                          >
+                            <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          </Button>
+                        </div>
                       </div>
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => atualizarQuantidade(item.produto.id, item.quantidade - 1)}
-                            className="w-4 h-4 sm:w-5 sm:h-5 p-0"
-                          >
-                            <Minus className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
-                          </Button>
-                          <Input
-                            type="text"
-                            value={item.quantidade}
-                            onChange={(e) => atualizarQuantidade(item.produto.id, parseInt(e.target.value) || 1)}
-                            className="w-8 sm:w-10 h-4 sm:h-5 text-center text-xs"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => atualizarQuantidade(item.produto.id, item.quantidade + 1)}
-                            className="w-4 h-4 sm:w-5 sm:h-5 p-0"
-                          >
-                            <Plus className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
-                          </Button>
+                          {(() => {
+                            const unidade = obterUnidadeEstoque(item.produto.tipo_preco, item.produto.nome);
+                            // Só mostrar botões + e - para produtos vendidos por unidade
+                            if (unidade === 'un.') {
+                              return (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => atualizarQuantidade(item.produto.id, item.quantidade - 1)}
+                                    className="w-4 h-4 sm:w-5 sm:h-5 p-0"
+                                  >
+                                    <Minus className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
+                                  </Button>
+                                  <Input
+                                    type="text"
+                                    value={item.quantidade}
+                                    onChange={(e) => atualizarQuantidade(item.produto.id, parseInt(e.target.value) || 1)}
+                                    className="w-8 sm:w-10 h-4 sm:h-5 text-center text-xs"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => atualizarQuantidade(item.produto.id, item.quantidade + 1)}
+                                    className="w-4 h-4 sm:w-5 sm:h-5 p-0"
+                                  >
+                                    <Plus className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
+                                  </Button>
+                                </>
+                              );
+                            } else {
+                              // Para produtos por peso/volume, mostrar apenas a quantidade
+                              return (
+                                <span className="text-xs text-muted-foreground">
+                                  Quantidade: {item.quantidade} {unidade}
+                                </span>
+                              );
+                            }
+                          })()}
                         </div>
                         <span className="text-green-600 font-bold text-xs">
                           {item.precoTotal.toLocaleString("pt-BR", {
@@ -617,6 +833,168 @@ export default function NovaVenda() {
         </Card>
       </div>
 
+      {/* Modal para Peso/Volume */}
+      <Dialog open={modalPesoVolumeAberto} onOpenChange={setModalPesoVolumeAberto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Package className="h-5 w-5" />
+              <span>{editandoItem ? 'Editar Produto' : 'Adicionar Produto'}</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {produtoSelecionado && (
+            <div className="space-y-4">
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="font-medium text-sm">{produtoSelecionado.nome}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {produtoSelecionado.categoria_nome || 'Sem categoria'}
+                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Preço por {obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome)}:
+                  </span>
+                  <span className="text-sm font-bold text-green-600">
+                    {produtoSelecionado.preco.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL"
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Quantidade:</label>
+                  <div className="flex bg-muted rounded-lg p-1">
+                    {(() => {
+                      const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
+                      const unidades = obterUnidadesEntrada(unidade);
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setUnidadeEntrada('pequena')}
+                            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                              unidadeEntrada === 'pequena'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {unidades.pequena}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUnidadeEntrada('grande')}
+                            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                              unidadeEntrada === 'grande'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {unidades.grande}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+                
+                <Input
+                  type="number"
+                  step={unidadeEntrada === 'pequena' ? "1" : "0.01"}
+                  min={unidadeEntrada === 'pequena' ? "1" : "0.01"}
+                  placeholder={`Digite a quantidade em ${(() => {
+                    const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
+                    const unidades = obterUnidadesEntrada(unidade);
+                    return unidadeEntrada === 'pequena' ? unidades.pequena : unidades.grande;
+                  })()}`}
+                  value={quantidadePesoVolume}
+                  onChange={(e) => setQuantidadePesoVolume(e.target.value)}
+                  className="text-sm"
+                />
+                
+                {(() => {
+                  const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
+                  const unidades = obterUnidadesEntrada(unidade);
+                  if (unidade === 'kg') {
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        {unidadeEntrada === 'pequena' 
+                          ? 'Exemplo: 500g = 0,5kg | 1000g = 1kg'
+                          : 'Exemplo: 0,5kg | 1kg | 2,5kg'
+                        }
+                      </p>
+                    );
+                  } else if (unidade === 'L') {
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        {unidadeEntrada === 'pequena' 
+                          ? 'Exemplo: 500mL = 0,5L | 1000mL = 1L'
+                          : 'Exemplo: 0,5L | 1L | 2,5L'
+                        }
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
+              {quantidadePesoVolume && !isNaN(parseFloat(quantidadePesoVolume)) && parseFloat(quantidadePesoVolume) > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-green-800">
+                      Total:
+                    </span>
+                    <span className="text-lg font-bold text-green-600">
+                      {(() => {
+                        const quantidade = parseFloat(quantidadePesoVolume);
+                        const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
+                        const unidades = obterUnidadesEntrada(unidade);
+                        const quantidadeParaCalculo = unidadeEntrada === 'pequena' ? quantidade / unidades.fator : quantidade;
+                        return (quantidadeParaCalculo * produtoSelecionado.preco).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL"
+                        });
+                      })()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    {(() => {
+                      const quantidade = parseFloat(quantidadePesoVolume);
+                      const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
+                      const unidades = obterUnidadesEntrada(unidade);
+                      const unidadeExibicao = unidadeEntrada === 'pequena' ? unidades.pequena : unidades.grande;
+                      const quantidadeParaCalculo = unidadeEntrada === 'pequena' ? quantidade / unidades.fator : quantidade;
+                      return `${quantidade} ${unidadeExibicao} (${quantidadeParaCalculo} ${unidade}) × ${produtoSelecionado.preco.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                      })}`;
+                    })()}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex space-x-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={cancelarPesoVolume}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={confirmarPesoVolume}
+                  disabled={!quantidadePesoVolume || isNaN(parseFloat(quantidadePesoVolume)) || parseFloat(quantidadePesoVolume) <= 0}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {editandoItem ? 'Atualizar no Carrinho' : 'Adicionar ao Carrinho'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
