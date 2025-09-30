@@ -731,8 +731,19 @@ export default function Relatorios() {
 
 
 
-    // Transformar dados para o formato esperado pela função PDF
+    // Transformar produtos para incluir dados de estoque decimal
+    const produtosFormatados = dadosEstoque.produtos?.map(produto => ({
+      ...produto,
+      tipo_preco: produto.tipo_preco || 'unidade',
+      estoque_kg: produto.estoque_kg || 0,
+      estoque_litros: produto.estoque_litros || 0,
+      estoque_minimo_kg: produto.estoque_minimo_kg || 0,
+      estoque_minimo_litros: produto.estoque_minimo_litros || 0,
+      estoque_atual: produto.estoque_atual || produto.estoque || 0,
+      estoque_minimo_atual: produto.estoque_minimo_atual || produto.estoque_minimo || 0
+    })) || [];
 
+    // Transformar dados para o formato esperado pela função PDF
     const dadosFormatados = {
 
       periodo: {
@@ -767,7 +778,7 @@ export default function Relatorios() {
 
       },
 
-      produtos: dadosEstoque.produtos || [],
+      produtos: produtosFormatados,
 
       tipo: 'geral',
 
@@ -1841,10 +1852,23 @@ export default function Relatorios() {
                     </TableHeader>
                     <TableBody>
                       {dadosEstoque.produtos.map((produto, index) => {
-                        const estoqueAtual = Number(produto.estoque) || 0;
-                        const estoqueMinimo = Number(produto.estoque_minimo) || 0;
+                        const estoqueAtual = produto.estoque_atual || produto.estoque || 0;
+                        const estoqueMinimoAtual = produto.estoque_minimo_atual || produto.estoque_minimo || 0;
                         const valorUnitario = Number(produto.preco) || 0;
-                        const valorTotal = estoqueAtual * valorUnitario;
+                        const valorTotal = Number(estoqueAtual) * valorUnitario;
+                        
+                        // Formatação do estoque baseada no tipo
+                        const formatarEstoque = (produto: any, valor: number) => {
+                          if (produto.tipo_preco === 'kg') {
+                            const estoqueFormatado = parseFloat(valor.toString()).toFixed(3).replace(/\.?0+$/, '');
+                            return `${estoqueFormatado} kg`;
+                          } else if (produto.tipo_preco === 'litros') {
+                            const estoqueFormatado = parseFloat(valor.toString()).toFixed(3).replace(/\.?0+$/, '');
+                            return `${estoqueFormatado} L`;
+                          } else {
+                            return `${Math.round(parseFloat(valor.toString()))} Un.`;
+                          }
+                        };
                         
                         let status = produto.status_estoque || 'Normal';
                         let statusColor = 'default';
@@ -1864,10 +1888,10 @@ export default function Relatorios() {
                               {produto.categoria_nome || 'Sem categoria'}
                             </TableCell>
                             <TableCell className="text-right font-semibold">
-                              {estoqueAtual}
+                              {formatarEstoque(produto, estoqueAtual)}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
-                              {estoqueMinimo}
+                              {formatarEstoque(produto, estoqueMinimoAtual)}
                             </TableCell>
                             <TableCell className="text-right">
                               {formatarMoeda(valorUnitario)}
