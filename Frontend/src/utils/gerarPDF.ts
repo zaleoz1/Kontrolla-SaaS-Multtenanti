@@ -1072,6 +1072,13 @@ export interface DadosRelatorioEstoque {
     sku: string;
     estoque: number;
     estoque_minimo: number;
+    tipo_preco: 'unidade' | 'kg' | 'litros';
+    estoque_kg?: number;
+    estoque_litros?: number;
+    estoque_minimo_kg?: number;
+    estoque_minimo_litros?: number;
+    estoque_atual?: number;
+    estoque_minimo_atual?: number;
     preco: number;
     categoria_nome: string;
     valor_estoque: number;
@@ -1226,6 +1233,36 @@ export const gerarRelatorioEstoquePDF = (
   line(y);
   y += 10;
 
+  // Função para formatar estoque baseado no tipo de produto
+  const formatarEstoque = (produto: any) => {
+    const estoqueAtual = produto.estoque_atual || produto.estoque || 0;
+    
+    if (produto.tipo_preco === 'kg') {
+      const estoqueFormatado = parseFloat(estoqueAtual).toFixed(3).replace(/\.?0+$/, '');
+      return `${estoqueFormatado} kg`;
+    } else if (produto.tipo_preco === 'litros') {
+      const estoqueFormatado = parseFloat(estoqueAtual).toFixed(3).replace(/\.?0+$/, '');
+      return `${estoqueFormatado} L`;
+    } else {
+      return `${Math.round(parseFloat(estoqueAtual))} Un.`;
+    }
+  };
+
+  // Função para formatar estoque mínimo baseado no tipo de produto
+  const formatarEstoqueMinimo = (produto: any) => {
+    const estoqueMinimoAtual = produto.estoque_minimo_atual || produto.estoque_minimo || 0;
+    
+    if (produto.tipo_preco === 'kg') {
+      const estoqueFormatado = parseFloat(estoqueMinimoAtual).toFixed(3).replace(/\.?0+$/, '');
+      return `${estoqueFormatado} kg`;
+    } else if (produto.tipo_preco === 'litros') {
+      const estoqueFormatado = parseFloat(estoqueMinimoAtual).toFixed(3).replace(/\.?0+$/, '');
+      return `${estoqueFormatado} L`;
+    } else {
+      return `${Math.round(parseFloat(estoqueMinimoAtual))} Un.`;
+    }
+  };
+
   // Verificar espaço para produtos
   checkNewPage(60);
 
@@ -1241,8 +1278,8 @@ export const gerarRelatorioEstoquePDF = (
         p.nome || 'Sem nome',
         p.sku || p.codigo_barras || 'N/A',
         p.categoria_nome || 'Sem categoria',
-        p.estoque.toString(),
-        p.estoque_minimo.toString(),
+        formatarEstoque(p),
+        formatarEstoqueMinimo(p),
         formatarMoeda(p.valor_estoque),
         p.status_estoque,
       ]),

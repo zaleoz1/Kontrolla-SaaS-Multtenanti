@@ -8,6 +8,13 @@ export interface ProdutoCatalogo {
   preco: number;
   preco_promocional?: number;
   estoque: number;
+  tipo_preco: 'unidade' | 'kg' | 'litros';
+  estoque_kg?: number;
+  estoque_litros?: number;
+  estoque_minimo_kg?: number;
+  estoque_minimo_litros?: number;
+  estoque_atual?: number;
+  estoque_minimo_atual?: number;
   imagens: string[];
   destaque: boolean;
   codigo_barras?: string;

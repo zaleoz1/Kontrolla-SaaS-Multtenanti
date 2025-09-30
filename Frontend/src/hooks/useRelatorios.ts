@@ -125,6 +125,13 @@ export interface RelatorioControleEstoque {
   sku: string;
   estoque: number;
   estoque_minimo: number;
+  tipo_preco: 'unidade' | 'kg' | 'litros';
+  estoque_kg?: number;
+  estoque_litros?: number;
+  estoque_minimo_kg?: number;
+  estoque_minimo_litros?: number;
+  estoque_atual?: number;
+  estoque_minimo_atual?: number;
   preco: number;
   categoria_nome: string;
   valor_estoque: number;

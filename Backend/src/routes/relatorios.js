@@ -520,9 +520,17 @@ router.get('/controle-estoque', async (req, res) => {
     }
 
     if (tipo === 'baixo') {
-      whereClause += ' AND p.estoque <= p.estoque_minimo';
+      whereClause += ` AND (
+        (p.tipo_preco = 'unidade' AND p.estoque <= p.estoque_minimo) OR
+        (p.tipo_preco = 'kg' AND p.estoque_kg <= p.estoque_minimo_kg) OR
+        (p.tipo_preco = 'litros' AND p.estoque_litros <= p.estoque_minimo_litros)
+      )`;
     } else if (tipo === 'zerado') {
-      whereClause += ' AND p.estoque = 0';
+      whereClause += ` AND (
+        (p.tipo_preco = 'unidade' AND p.estoque = 0) OR
+        (p.tipo_preco = 'kg' AND p.estoque_kg = 0) OR
+        (p.tipo_preco = 'litros' AND p.estoque_litros = 0)
+      )`;
     }
 
     // Buscar produtos
@@ -532,17 +540,40 @@ router.get('/controle-estoque', async (req, res) => {
     const produtos = await query(
       `SELECT 
         p.id, p.nome, p.codigo_barras, p.sku, p.estoque, p.estoque_minimo,
+        p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.preco, c.nome as categoria_nome,
-        COALESCE(p.estoque * p.preco, 0) as valor_estoque,
         CASE 
-          WHEN p.estoque = 0 THEN 'Sem estoque'
-          WHEN p.estoque <= p.estoque_minimo THEN 'Estoque baixo'
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+          ELSE p.estoque
+        END as estoque_atual,
+        CASE 
+          WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+          WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+          ELSE p.estoque_minimo
+        END as estoque_minimo_atual,
+        COALESCE(
+          CASE 
+            WHEN p.tipo_preco = 'kg' THEN p.estoque_kg * p.preco
+            WHEN p.tipo_preco = 'litros' THEN p.estoque_litros * p.preco
+            ELSE p.estoque * p.preco
+          END, 0
+        ) as valor_estoque,
+        CASE 
+          WHEN (p.tipo_preco = 'unidade' AND p.estoque = 0) OR
+               (p.tipo_preco = 'kg' AND p.estoque_kg = 0) OR
+               (p.tipo_preco = 'litros' AND p.estoque_litros = 0)
+          THEN 'Sem estoque'
+          WHEN (p.tipo_preco = 'unidade' AND p.estoque <= p.estoque_minimo) OR
+               (p.tipo_preco = 'kg' AND p.estoque_kg <= p.estoque_minimo_kg) OR
+               (p.tipo_preco = 'litros' AND p.estoque_litros <= p.estoque_minimo_litros)
+          THEN 'Estoque baixo'
           ELSE 'Normal'
         END as status_estoque
        FROM produtos p
        LEFT JOIN categorias c ON p.categoria_id = c.id
        ${whereClause}
-       ORDER BY p.estoque ASC, p.nome ASC
+       ORDER BY estoque_atual ASC, p.nome ASC
        LIMIT ${limitNum} OFFSET ${offsetNum}`,
       params
     );
@@ -551,11 +582,35 @@ router.get('/controle-estoque', async (req, res) => {
     const [stats] = await query(
       `SELECT 
         COUNT(*) as total_produtos,
-        COUNT(CASE WHEN estoque = 0 THEN 1 END) as sem_estoque,
-        COUNT(CASE WHEN estoque <= estoque_minimo AND estoque > 0 THEN 1 END) as estoque_baixo,
-        COUNT(CASE WHEN estoque > estoque_minimo THEN 1 END) as estoque_normal,
-        COALESCE(SUM(estoque), 0) as total_unidades,
-        COALESCE(SUM(estoque * preco), 0) as valor_total_estoque
+        COUNT(CASE WHEN 
+          (tipo_preco = 'unidade' AND estoque = 0) OR
+          (tipo_preco = 'kg' AND estoque_kg = 0) OR
+          (tipo_preco = 'litros' AND estoque_litros = 0)
+        THEN 1 END) as sem_estoque,
+        COUNT(CASE WHEN 
+          (tipo_preco = 'unidade' AND estoque <= estoque_minimo AND estoque > 0) OR
+          (tipo_preco = 'kg' AND estoque_kg <= estoque_minimo_kg AND estoque_kg > 0) OR
+          (tipo_preco = 'litros' AND estoque_litros <= estoque_minimo_litros AND estoque_litros > 0)
+        THEN 1 END) as estoque_baixo,
+        COUNT(CASE WHEN 
+          (tipo_preco = 'unidade' AND estoque > estoque_minimo) OR
+          (tipo_preco = 'kg' AND estoque_kg > estoque_minimo_kg) OR
+          (tipo_preco = 'litros' AND estoque_litros > estoque_minimo_litros)
+        THEN 1 END) as estoque_normal,
+        COALESCE(SUM(
+          CASE 
+            WHEN tipo_preco = 'kg' THEN estoque_kg
+            WHEN tipo_preco = 'litros' THEN estoque_litros
+            ELSE estoque
+          END
+        ), 0) as total_unidades,
+        COALESCE(SUM(
+          CASE 
+            WHEN tipo_preco = 'kg' THEN estoque_kg * preco
+            WHEN tipo_preco = 'litros' THEN estoque_litros * preco
+            ELSE estoque * preco
+          END
+        ), 0) as valor_total_estoque
        FROM produtos 
        WHERE tenant_id = ?`,
       [req.user.tenant_id]

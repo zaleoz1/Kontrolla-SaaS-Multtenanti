@@ -97,6 +97,21 @@ export default function Catalogo() {
     return null;
   };
 
+  // Função para formatar estoque baseado no tipo de produto
+  const formatarEstoque = (produto: any) => {
+    const estoqueAtual = produto.estoque_atual || produto.estoque || 0;
+    
+    if (produto.tipo_preco === 'kg') {
+      const estoqueFormatado = parseFloat(estoqueAtual).toFixed(3).replace(/\.?0+$/, '');
+      return `${estoqueFormatado} kg`;
+    } else if (produto.tipo_preco === 'litros') {
+      const estoqueFormatado = parseFloat(estoqueAtual).toFixed(3).replace(/\.?0+$/, '');
+      return `${estoqueFormatado} L`;
+    } else {
+      return `${Math.round(parseFloat(estoqueAtual))} unidades`;
+    }
+  };
+
   // Função para copiar URL do catálogo
   const copiarUrl = async () => {
     try {
@@ -304,7 +319,8 @@ export default function Catalogo() {
             const imagem = obterImagemProduto(produto);
             const precoFinal = produto.preco_promocional || produto.preco;
             const temDesconto = produto.preco_promocional && produto.preco_promocional < produto.preco;
-            const emEstoque = produto.estoque > 0;
+            const estoqueAtual = produto.estoque_atual || produto.estoque || 0;
+            const emEstoque = estoqueAtual > 0;
             
             return (
               <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-all duration-300 group">
@@ -378,9 +394,9 @@ export default function Catalogo() {
                       </Badge>
                     </div>
                     
-                    {produto.estoque > 0 && (
+                    {emEstoque && (
                       <p className="text-xs text-muted-foreground">
-                        Estoque: {produto.estoque} unidades
+                        Estoque: {formatarEstoque(produto)}
                       </p>
                     )}
                   </div>
