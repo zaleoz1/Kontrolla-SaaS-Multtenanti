@@ -43,6 +43,14 @@ interface Produto {
   tipo_preco: 'unidade' | 'kg' | 'litros';
   estoque: number;
   estoque_minimo: number;
+  // Novos campos para estoque decimal
+  estoque_kg?: number;
+  estoque_litros?: number;
+  estoque_minimo_kg?: number;
+  estoque_minimo_litros?: number;
+  // Campos calculados
+  estoque_atual?: number;
+  estoque_minimo_atual?: number;
   codigo_barras?: string;
   sku?: string;
   status: 'ativo' | 'inativo' | 'rascunho';
@@ -167,11 +175,20 @@ export default function Produtos() {
       return <Badge variant="secondary">Inativo</Badge>;
     }
 
-    if (produto.estoque === 0) {
+    const estoqueAtual = obterEstoqueAtual(produto);
+    const estoqueMinimoAtual = obterEstoqueMinimoAtual(produto);
+
+    // Verificar se os valores são válidos
+    if (estoqueAtual === null || estoqueAtual === undefined || isNaN(estoqueAtual)) {
       return <Badge variant="destructive">Sem Estoque</Badge>;
     }
 
-    if (produto.estoque <= produto.estoque_minimo) {
+    if (estoqueAtual === 0) {
+      return <Badge variant="destructive">Sem Estoque</Badge>;
+    }
+
+    // Só considerar estoque baixo se o estoque mínimo for válido e maior que 0
+    if (estoqueMinimoAtual && estoqueMinimoAtual > 0 && estoqueAtual <= estoqueMinimoAtual) {
       return <Badge className="bg-warning/80 text-warning-foreground border-warning/30">Estoque Baixo</Badge>;
     }
 
@@ -197,6 +214,66 @@ export default function Produtos() {
     }
   };
 
+  const obterTipoEstoqueTexto = (tipo_preco: string) => {
+    switch (tipo_preco) {
+      case 'kg':
+        return 'Peso';
+      case 'litros':
+        return 'Volume';
+      case 'unidade':
+      default:
+        return 'Quantidade';
+    }
+  };
+
+  const formatarEstoque = (produto: Produto) => {
+    const estoqueAtual = obterEstoqueAtual(produto);
+    const unidade = obterUnidadeEstoque(produto.tipo_preco);
+    
+    if (produto.tipo_preco === 'unidade') {
+      return `${Math.round(estoqueAtual)} ${unidade}`;
+    } else {
+      // Para kg e litros, manter casas decimais mas limitar a 3 casas
+      return `${Number(estoqueAtual).toFixed(3).replace(/\.?0+$/, '')} ${unidade}`;
+    }
+  };
+
+  const obterEstoqueAtual = (produto: Produto) => {
+    // Priorizar estoque_atual calculado pelo backend
+    if (produto.estoque_atual !== undefined && produto.estoque_atual !== null) {
+      return parseFloat(String(produto.estoque_atual)) || 0;
+    }
+    
+    // Fallback para campos específicos baseado no tipo
+    switch (produto.tipo_preco) {
+      case 'kg':
+        return parseFloat(String(produto.estoque_kg)) || 0;
+      case 'litros':
+        return parseFloat(String(produto.estoque_litros)) || 0;
+      case 'unidade':
+      default:
+        return parseFloat(String(produto.estoque)) || 0;
+    }
+  };
+
+  const obterEstoqueMinimoAtual = (produto: Produto) => {
+    // Priorizar estoque_minimo_atual calculado pelo backend
+    if (produto.estoque_minimo_atual !== undefined && produto.estoque_minimo_atual !== null) {
+      return parseFloat(String(produto.estoque_minimo_atual)) || 0;
+    }
+    
+    // Fallback para campos específicos baseado no tipo
+    switch (produto.tipo_preco) {
+      case 'kg':
+        return parseFloat(String(produto.estoque_minimo_kg)) || 0;
+      case 'litros':
+        return parseFloat(String(produto.estoque_minimo_litros)) || 0;
+      case 'unidade':
+      default:
+        return parseFloat(String(produto.estoque_minimo)) || 0;
+    }
+  };
+
   const todosProdutos = produtosApi.data?.produtos || [];
 
   // Filtrar produtos baseado no filtro de estoque
@@ -205,11 +282,19 @@ export default function Produtos() {
 
     switch (filtroEstoque) {
       case 'disponivel':
-        return produtos.filter(p => p.estoque > p.estoque_minimo);
+        return produtos.filter(p => {
+          const estoqueAtual = obterEstoqueAtual(p);
+          const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
+          return estoqueAtual > 0 && (!estoqueMinimoAtual || estoqueMinimoAtual <= 0 || estoqueAtual > estoqueMinimoAtual);
+        });
       case 'estoque_baixo':
-        return produtos.filter(p => p.estoque > 0 && p.estoque <= p.estoque_minimo);
+        return produtos.filter(p => {
+          const estoqueAtual = obterEstoqueAtual(p);
+          const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
+          return estoqueAtual > 0 && estoqueMinimoAtual > 0 && estoqueAtual <= estoqueMinimoAtual;
+        });
       case 'sem_estoque':
-        return produtos.filter(p => p.estoque === 0);
+        return produtos.filter(p => obterEstoqueAtual(p) === 0);
       default:
         return produtos;
     }
@@ -220,9 +305,17 @@ export default function Produtos() {
   // Calcular métricas dos produtos (usando todos os produtos, não apenas os filtrados)
   const calcularMetricas = () => {
     const total = todosProdutos.length;
-    const semEstoque = todosProdutos.filter(p => p.estoque === 0).length;
-    const estoqueBaixo = todosProdutos.filter(p => p.estoque > 0 && p.estoque <= p.estoque_minimo).length;
-    const disponiveis = todosProdutos.filter(p => p.estoque > p.estoque_minimo).length;
+    const semEstoque = todosProdutos.filter(p => obterEstoqueAtual(p) === 0).length;
+    const estoqueBaixo = todosProdutos.filter(p => {
+      const estoqueAtual = obterEstoqueAtual(p);
+      const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
+      return estoqueAtual > 0 && estoqueMinimoAtual > 0 && estoqueAtual <= estoqueMinimoAtual;
+    }).length;
+    const disponiveis = todosProdutos.filter(p => {
+      const estoqueAtual = obterEstoqueAtual(p);
+      const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
+      return estoqueAtual > 0 && (!estoqueMinimoAtual || estoqueMinimoAtual <= 0 || estoqueAtual > estoqueMinimoAtual);
+    }).length;
     
     return { total, semEstoque, estoqueBaixo, disponiveis };
   };
@@ -523,6 +616,13 @@ export default function Produtos() {
                   {produto.marca && (
                     <p className="text-xs text-muted-foreground">{produto.marca}</p>
                   )}
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Badge variant="outline" className="text-xs">
+                      {produto.tipo_preco === 'unidade' && 'Por unidade'}
+                      {produto.tipo_preco === 'kg' && 'Por KG'}
+                      {produto.tipo_preco === 'litros' && 'Por litro'}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -541,17 +641,24 @@ export default function Produtos() {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">Estoque:</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      {obterTipoEstoqueTexto(produto.tipo_preco)}:
+                    </span>
                     <div className="flex items-center space-x-1 sm:space-x-2">
                       <span className="font-medium text-xs sm:text-sm">
-                        {produto.estoque} {obterUnidadeEstoque(produto.tipo_preco)}
+                        {formatarEstoque(produto)}
                       </span>
-                      {produto.estoque <= produto.estoque_minimo && produto.estoque > 0 && (
-                        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
-                      )}
-                      {produto.estoque > produto.estoque_minimo && (
-                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
-                      )}
+                      {(() => {
+                        const estoqueAtual = obterEstoqueAtual(produto);
+                        const estoqueMinimoAtual = obterEstoqueMinimoAtual(produto);
+                        
+                        if (estoqueAtual > 0 && estoqueMinimoAtual > 0 && estoqueAtual <= estoqueMinimoAtual) {
+                          return <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />;
+                        } else if (estoqueAtual > 0) {
+                          return <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />;
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 

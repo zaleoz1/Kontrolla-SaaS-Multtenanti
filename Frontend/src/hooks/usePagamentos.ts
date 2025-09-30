@@ -211,13 +211,49 @@ export const usePagamentos = () => {
     }
     
     // Preparar itens da venda
-    const itensVenda: ItemVenda[] = carrinho.map(item => ({
-      produto_id: parseInt(item.produto.id.toString()),
-      quantidade: parseInt(item.quantidade.toString()),
-      preco_unitario: parseFloat(item.precoUnitario.toString()),
-      preco_total: parseFloat(item.precoTotal.toString()),
-      desconto: 0
-    }));
+    console.log('Debug - Carrinho antes de processar:', carrinho);
+    const itensVenda: ItemVenda[] = carrinho.map(item => {
+      // Para produtos vendidos por kg/litros, manter quantidade decimal
+      // Para produtos vendidos por unidade, usar quantidade inteira
+      let quantidade;
+      if (item.produto.tipo_preco === 'kg' || item.produto.tipo_preco === 'litros') {
+        // Manter quantidade decimal para kg e litros
+        quantidade = Math.max(0.001, parseFloat(item.quantidade.toString()) || 0.001);
+      } else {
+        // Usar quantidade inteira para unidades
+        quantidade = Math.max(1, Math.round(parseFloat(item.quantidade.toString()) || 1));
+      }
+      
+      const produtoId = parseInt(item.produto.id.toString()) || 0;
+      const precoUnitario = parseFloat(item.precoUnitario.toString()) || 0;
+      const precoTotal = parseFloat(item.precoTotal.toString()) || 0;
+      
+      console.log('Debug - Item processado:', {
+        produto_id: produtoId,
+        quantidade: quantidade,
+        quantidadeOriginal: item.quantidade,
+        tipo_preco: item.produto.tipo_preco,
+        preco_unitario: precoUnitario,
+        preco_total: precoTotal
+      });
+      
+      return {
+        produto_id: produtoId,
+        quantidade: quantidade,
+        preco_unitario: precoUnitario,
+        preco_total: precoTotal,
+        desconto: 0
+      };
+    });
+    console.log('Debug - Itens da venda processados:', itensVenda);
+    
+    // Filtrar itens com quantidade válida (maior que 0)
+    const itensValidos = itensVenda.filter(item => item.quantidade > 0);
+    console.log('Debug - Itens válidos após filtro:', itensValidos);
+    
+    if (itensValidos.length === 0) {
+      throw new Error('Nenhum item válido no carrinho');
+    }
     
     // Preparar dados da venda
     const statusVenda: 'pendente' | 'pago' = usarPagamentoPrazo ? 'pendente' : 'pago';
@@ -226,7 +262,7 @@ export const usePagamentos = () => {
     
     return {
       cliente_id: clienteSelecionado?.id || null,
-      itens: itensVenda,
+      itens: itensValidos,
       metodos_pagamento: metodosFinais,
       pagamento_prazo: usarPagamentoPrazo ? {
         ...pagamentoPrazo,

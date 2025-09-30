@@ -456,8 +456,8 @@ export const validateVenda = [
     .isInt({ min: 1 })
     .withMessage('ID do produto deve ser um número inteiro positivo'),
   body('itens.*.quantidade')
-    .isInt({ min: 1 })
-    .withMessage('Quantidade deve ser um número inteiro positivo'),
+    .isFloat({ min: 0.001 })
+    .withMessage('Quantidade deve ser um número positivo maior que 0.001'),
   body('itens.*.preco_unitario')
     .isFloat({ min: 0 })
     .withMessage('Preço unitário deve ser um número positivo'),

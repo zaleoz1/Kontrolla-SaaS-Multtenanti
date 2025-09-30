@@ -87,7 +87,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     const vendasComItens = await Promise.all(
       vendas.map(async (venda) => {
         const itens = await query(
-          `SELECT vi.*, p.nome as produto_nome, p.codigo_barras, p.sku
+          `SELECT vi.*, p.nome as produto_nome, p.codigo_barras, p.sku, p.tipo_preco
            FROM venda_itens vi
            JOIN produtos p ON vi.produto_id = p.id
            WHERE vi.venda_id = ?
@@ -220,7 +220,7 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
 
     // Buscar itens da venda
     const itens = await query(
-      `SELECT vi.*, p.nome as produto_nome, p.codigo_barras, p.sku
+      `SELECT vi.*, p.nome as produto_nome, p.codigo_barras, p.sku, p.tipo_preco
        FROM venda_itens vi
        JOIN produtos p ON vi.produto_id = p.id
        WHERE vi.venda_id = ?
@@ -335,7 +335,13 @@ router.post('/', validateVenda, async (req, res) => {
     // Verificar produtos e estoque
     for (const item of itens) {
       const produtos = await query(
-        'SELECT id, nome, estoque, preco FROM produtos WHERE id = ? AND tenant_id = ? AND status = "ativo"',
+        `SELECT id, nome, estoque, preco, tipo_preco, estoque_kg, estoque_litros,
+                CASE 
+                  WHEN tipo_preco = 'kg' THEN estoque_kg
+                  WHEN tipo_preco = 'litros' THEN estoque_litros
+                  ELSE estoque
+                END as estoque_atual
+         FROM produtos WHERE id = ? AND tenant_id = ? AND status = "ativo"`,
         [item.produto_id, req.user.tenant_id]
       );
 
@@ -346,9 +352,11 @@ router.post('/', validateVenda, async (req, res) => {
       }
 
       const produto = produtos[0];
-      if (produto.estoque < item.quantidade) {
+      const estoqueDisponivel = produto.estoque_atual || 0;
+      
+      if (estoqueDisponivel < item.quantidade) {
         return res.status(400).json({
-          error: `Estoque insuficiente para o produto ${produto.nome}. Disponível: ${produto.estoque}`
+          error: `Estoque insuficiente para o produto ${produto.nome}. Disponível: ${estoqueDisponivel}`
         });
       }
     }
@@ -410,11 +418,31 @@ router.post('/', validateVenda, async (req, res) => {
         ]
       );
 
-      // Atualizar estoque do produto
-      await query(
-        'UPDATE produtos SET estoque = estoque - ? WHERE id = ?',
-        [item.quantidade, item.produto_id]
+      // Atualizar estoque do produto baseado no tipo
+      const produtoInfo = await query(
+        'SELECT tipo_preco FROM produtos WHERE id = ?',
+        [item.produto_id]
       );
+      
+      if (produtoInfo.length > 0) {
+        const produto = produtoInfo[0];
+        if (produto.tipo_preco === 'kg') {
+          await query(
+            'UPDATE produtos SET estoque_kg = estoque_kg - ? WHERE id = ?',
+            [item.quantidade, item.produto_id]
+          );
+        } else if (produto.tipo_preco === 'litros') {
+          await query(
+            'UPDATE produtos SET estoque_litros = estoque_litros - ? WHERE id = ?',
+            [item.quantidade, item.produto_id]
+          );
+        } else {
+          await query(
+            'UPDATE produtos SET estoque = estoque - ? WHERE id = ?',
+            [item.quantidade, item.produto_id]
+          );
+        }
+      }
     }
 
     // Salvar métodos de pagamento (se houver)
@@ -645,10 +673,31 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
     );
 
     for (const item of itens) {
-      await query(
-        'UPDATE produtos SET estoque = estoque + ? WHERE id = ?',
-        [item.quantidade, item.produto_id]
+      // Verificar tipo do produto para restaurar o estoque correto
+      const produtoInfo = await query(
+        'SELECT tipo_preco FROM produtos WHERE id = ?',
+        [item.produto_id]
       );
+      
+      if (produtoInfo.length > 0) {
+        const produto = produtoInfo[0];
+        if (produto.tipo_preco === 'kg') {
+          await query(
+            'UPDATE produtos SET estoque_kg = estoque_kg + ? WHERE id = ?',
+            [item.quantidade, item.produto_id]
+          );
+        } else if (produto.tipo_preco === 'litros') {
+          await query(
+            'UPDATE produtos SET estoque_litros = estoque_litros + ? WHERE id = ?',
+            [item.quantidade, item.produto_id]
+          );
+        } else {
+          await query(
+            'UPDATE produtos SET estoque = estoque + ? WHERE id = ?',
+            [item.quantidade, item.produto_id]
+          );
+        }
+      }
     }
 
     // Reverter total_compras do cliente (se houver)

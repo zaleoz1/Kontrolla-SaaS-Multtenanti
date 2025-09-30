@@ -38,6 +38,14 @@ interface Produto {
   sku?: string;
   estoque: number;
   estoque_minimo: number;
+  // Novos campos para estoque decimal
+  estoque_kg?: number;
+  estoque_litros?: number;
+  estoque_minimo_kg?: number;
+  estoque_minimo_litros?: number;
+  // Campos calculados
+  estoque_atual?: number;
+  estoque_minimo_atual?: number;
   fornecedor_id?: number;
   marca?: string;
   modelo?: string;
@@ -107,7 +115,8 @@ export default function NovaVenda() {
       );
       if (produto) {
         // Verificar se o produto está esgotado antes de adicionar
-        if (produto.estoque === 0) {
+        const estoqueAtual = obterEstoqueAtual(produto);
+        if (estoqueAtual === 0) {
           toast({
             title: "Produto sem estoque",
             description: `${produto.nome} não está disponível para venda`,
@@ -141,7 +150,8 @@ export default function NovaVenda() {
 
   const adicionarAoCarrinho = (produto: Produto, quantidade: number = 1) => {
     // Verificar se o produto está esgotado
-    if (produto.estoque === 0) {
+    const estoqueAtual = obterEstoqueAtual(produto);
+    if (estoqueAtual === 0) {
       toast({
         title: "Produto sem estoque",
         description: `${produto.nome} não está disponível para venda`,
@@ -179,7 +189,8 @@ export default function NovaVenda() {
 
   const definirQuantidadeCarrinho = (produto: Produto, quantidade: number) => {
     // Verificar se o produto está esgotado
-    if (produto.estoque === 0) {
+    const estoqueAtual = obterEstoqueAtual(produto);
+    if (estoqueAtual === 0) {
       toast({
         title: "Produto sem estoque",
         description: `${produto.nome} não está disponível para venda`,
@@ -365,6 +376,42 @@ export default function NovaVenda() {
     setModalPesoVolumeAberto(true);
   };
 
+  const obterEstoqueAtual = (produto: Produto) => {
+    // Priorizar o campo calculado do backend se estiver disponível e válido
+    if (produto.estoque_atual !== undefined && produto.estoque_atual !== null) {
+      return produto.estoque_atual;
+    }
+    
+    // Fallback para os campos específicos por tipo
+    switch (produto.tipo_preco) {
+      case 'kg':
+        return produto.estoque_kg || 0;
+      case 'litros':
+        return produto.estoque_litros || 0;
+      case 'unidade':
+      default:
+        return produto.estoque || 0;
+    }
+  };
+
+  const obterEstoqueMinimoAtual = (produto: Produto) => {
+    // Priorizar o campo calculado do backend se estiver disponível e válido
+    if (produto.estoque_minimo_atual !== undefined && produto.estoque_minimo_atual !== null) {
+      return produto.estoque_minimo_atual;
+    }
+    
+    // Fallback para os campos específicos por tipo
+    switch (produto.tipo_preco) {
+      case 'kg':
+        return produto.estoque_minimo_kg || 0;
+      case 'litros':
+        return produto.estoque_minimo_litros || 0;
+      case 'unidade':
+      default:
+        return produto.estoque_minimo || 0;
+    }
+  };
+
   const obterUnidadeEstoque = (tipo_preco: string, nomeProduto: string) => {
     // Primeiro verifica o tipo_preco do banco
     if (tipo_preco === 'kg') return 'kg';
@@ -387,6 +434,28 @@ export default function NovaVenda() {
     
     // Padrão para unidade
     return 'un.';
+  };
+
+  const formatarEstoque = (produto: Produto) => {
+    const estoqueAtual = obterEstoqueAtual(produto);
+    
+    if (produto.tipo_preco === 'unidade') {
+      return `${Math.round(estoqueAtual)} un.`;
+    } else if (produto.tipo_preco === 'kg') {
+      // Para kg, manter casas decimais mas limitar a 3 casas
+      return `${Number(estoqueAtual).toFixed(3).replace(/\.?0+$/, '')} kg`;
+    } else if (produto.tipo_preco === 'litros') {
+      // Para litros, manter casas decimais mas limitar a 3 casas
+      return `${Number(estoqueAtual).toFixed(3).replace(/\.?0+$/, '')} L`;
+    } else {
+      // Fallback para detecção por nome (compatibilidade)
+      const unidade = obterUnidadeEstoque(produto.tipo_preco, produto.nome);
+      if (produto.tipo_preco === 'unidade') {
+        return `${Math.round(estoqueAtual)} ${unidade}`;
+      } else {
+        return `${Number(estoqueAtual).toFixed(3).replace(/\.?0+$/, '')} ${unidade}`;
+      }
+    }
   };
 
   const obterUnidadesEntrada = (unidade: string) => {
@@ -491,11 +560,11 @@ export default function NovaVenda() {
                     <div 
                       key={produto.id} 
                       className={`bg-card rounded-lg border-2 p-2 sm:p-3 cursor-pointer transition-all hover:shadow-lg h-24 sm:h-32 flex flex-col justify-between ${
-                        produto.estoque === 0 
+                        obterEstoqueAtual(produto) === 0 
                           ? 'opacity-60' 
                           : 'border-border hover:border-green-300'
                       }`}
-                      onClick={() => produto.estoque > 0 && adicionarAoCarrinho(produto, 1)}
+                      onClick={() => obterEstoqueAtual(produto) > 0 && adicionarAoCarrinho(produto, 1)}
                     >
                       <div className="flex-1">
                         <h3 className="font-medium text-xs sm:text-sm line-clamp-2 mb-1">
@@ -507,7 +576,7 @@ export default function NovaVenda() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className={`text-xs sm:text-sm font-bold ${
-                          produto.estoque === 0 ? 'text-gray-500' : 'text-green-600'
+                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500' : 'text-green-600'
                         }`}>
                           {produto.preco.toLocaleString("pt-BR", {
                             style: "currency",
@@ -515,12 +584,12 @@ export default function NovaVenda() {
                           })}
                         </span>
                         <span className={`text-xs ${
-                          produto.estoque === 0 ? 'text-gray-500' : 'text-muted-foreground'
+                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500' : 'text-muted-foreground'
                         }`}>
-                          {produto.estoque} {obterUnidadeEstoque(produto.tipo_preco, produto.nome)}
+                          {formatarEstoque(produto)}
                         </span>
                       </div>
-                      {produto.estoque === 0 && (
+                      {obterEstoqueAtual(produto) === 0 && (
                         <div className="mt-1 text-xs text-gray-500 font-medium text-center">
                           Sem estoque
                         </div>

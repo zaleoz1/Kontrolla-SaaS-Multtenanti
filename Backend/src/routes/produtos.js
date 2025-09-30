@@ -39,13 +39,23 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
     // Buscar produtos com informações da categoria
     const produtos = await query(
-      `SELECT p.*, c.nome as categoria_nome 
+      `SELECT p.*, c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        ${whereClause} 
        ORDER BY p.nome ASC 
        LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-       params
+      params
     );
 
     // Contar total de registros
@@ -82,7 +92,17 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
     const { id } = req.params;
 
     const produtos = await query(
-      `SELECT p.*, c.nome as categoria_nome 
+      `SELECT p.*, c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.id = ? AND p.tenant_id = ?`,
@@ -124,6 +144,10 @@ router.post('/', validateProduto, async (req, res) => {
       tipo_preco = 'unidade',
       estoque = 0,
       estoque_minimo = 0,
+      estoque_kg = 0,
+      estoque_litros = 0,
+      estoque_minimo_kg = 0,
+      estoque_minimo_litros = 0,
       fornecedor_id,
       marca,
       modelo,
@@ -135,6 +159,12 @@ router.post('/', validateProduto, async (req, res) => {
     // Garantir que estoque e estoque_minimo sejam sempre inteiros
     const estoqueInt = Math.round(parseFloat(estoque) || 0);
     const estoqueMinimoInt = Math.round(parseFloat(estoque_minimo) || 0);
+    
+    // Processar estoque decimal baseado no tipo
+    const estoqueKgDecimal = parseFloat(estoque_kg) || 0;
+    const estoqueLitrosDecimal = parseFloat(estoque_litros) || 0;
+    const estoqueMinimoKgDecimal = parseFloat(estoque_minimo_kg) || 0;
+    const estoqueMinimoLitrosDecimal = parseFloat(estoque_minimo_litros) || 0;
 
     // Preparar valores para preco_por_kg e preco_por_litros baseado no tipo_preco
     let preco_por_kg = null;
@@ -197,12 +227,14 @@ router.post('/', validateProduto, async (req, res) => {
       `INSERT INTO produtos (
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
         preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
-        estoque_minimo, fornecedor_id, marca, modelo, status, destaque, imagens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
+        estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
         preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
-        estoqueInt, estoqueMinimoInt, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([])
+        estoqueInt, estoqueMinimoInt, estoqueKgDecimal, estoqueLitrosDecimal,
+        estoqueMinimoKgDecimal, estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([])
       ]
     );
 
@@ -232,7 +264,17 @@ router.post('/', validateProduto, async (req, res) => {
 
     // Buscar produto criado
     const [produto] = await query(
-      `SELECT p.*, c.nome as categoria_nome 
+      `SELECT p.*, c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.id = ?`,
@@ -269,6 +311,10 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       tipo_preco,
       estoque,
       estoque_minimo,
+      estoque_kg,
+      estoque_litros,
+      estoque_minimo_kg,
+      estoque_minimo_litros,
       fornecedor_id,
       marca,
       modelo,
@@ -280,6 +326,12 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
     // Garantir que estoque e estoque_minimo sejam sempre inteiros
     const estoqueInt = Math.round(parseFloat(estoque) || 0);
     const estoqueMinimoInt = Math.round(parseFloat(estoque_minimo) || 0);
+    
+    // Processar estoque decimal baseado no tipo
+    const estoqueKgDecimal = parseFloat(estoque_kg) || 0;
+    const estoqueLitrosDecimal = parseFloat(estoque_litros) || 0;
+    const estoqueMinimoKgDecimal = parseFloat(estoque_minimo_kg) || 0;
+    const estoqueMinimoLitrosDecimal = parseFloat(estoque_minimo_litros) || 0;
 
     // Preparar valores para preco_por_kg e preco_por_litros baseado no tipo_preco
     let preco_por_kg = null;
@@ -385,19 +437,31 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       `UPDATE produtos SET 
         categoria_id = ?, nome = ?, descricao = ?, codigo_barras = ?, sku = ?,
         preco = ?, preco_promocional = ?, tipo_preco = ?, preco_por_kg = ?, 
-        preco_por_litros = ?, estoque = ?, estoque_minimo = ?, fornecedor_id = ?, 
-        marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?
+        preco_por_litros = ?, estoque = ?, estoque_minimo = ?, estoque_kg = ?,
+        estoque_litros = ?, estoque_minimo_kg = ?, estoque_minimo_litros = ?,
+        fornecedor_id = ?, marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?
       WHERE id = ? AND tenant_id = ?`,
       [
         categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
-        tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt, 
-        fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary), id, req.user.tenant_id
+        tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt,
+        estoqueKgDecimal, estoqueLitrosDecimal, estoqueMinimoKgDecimal, 
+        estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary), id, req.user.tenant_id
       ]
     );
 
     // Buscar produto atualizado
     const [produto] = await query(
-      `SELECT p.*, c.nome as categoria_nome 
+      `SELECT p.*, c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.id = ?`,
@@ -505,7 +569,17 @@ router.get('/buscar/codigo-barras/:codigo', async (req, res) => {
     const { codigo } = req.params;
 
     const produtos = await query(
-      `SELECT p.*, c.nome as categoria_nome 
+      `SELECT p.*, c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.codigo_barras = ? AND p.tenant_id = ? AND p.status = 'ativo'`,
@@ -536,9 +610,23 @@ router.get('/stats/overview', async (req, res) => {
       `SELECT 
         COUNT(*) as total_produtos,
         COUNT(CASE WHEN status = 'ativo' THEN 1 END) as produtos_ativos,
-        COUNT(CASE WHEN estoque <= estoque_minimo THEN 1 END) as estoque_baixo,
-        COUNT(CASE WHEN estoque = 0 THEN 1 END) as sem_estoque,
-        COALESCE(SUM(estoque * preco), 0) as valor_total_estoque
+        COUNT(CASE WHEN 
+          (tipo_preco = 'unidade' AND estoque <= estoque_minimo) OR
+          (tipo_preco = 'kg' AND estoque_kg <= estoque_minimo_kg) OR
+          (tipo_preco = 'litros' AND estoque_litros <= estoque_minimo_litros)
+        THEN 1 END) as estoque_baixo,
+        COUNT(CASE WHEN 
+          (tipo_preco = 'unidade' AND estoque = 0) OR
+          (tipo_preco = 'kg' AND estoque_kg = 0) OR
+          (tipo_preco = 'litros' AND estoque_litros = 0)
+        THEN 1 END) as sem_estoque,
+        COALESCE(SUM(
+          CASE 
+            WHEN tipo_preco = 'kg' THEN estoque_kg * preco_por_kg
+            WHEN tipo_preco = 'litros' THEN estoque_litros * preco_por_litros
+            ELSE estoque * preco
+          END
+        ), 0) as valor_total_estoque
       FROM produtos 
       WHERE tenant_id = ?`,
       [req.user.tenant_id]
@@ -559,11 +647,25 @@ router.get('/stats/overview', async (req, res) => {
 router.get('/estoque/baixo', async (req, res) => {
   try {
     const produtos = await query(
-      `SELECT p.*, c.nome as categoria_nome 
+      `SELECT p.*, c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
-       WHERE p.tenant_id = ? AND p.estoque <= p.estoque_minimo AND p.status = 'ativo'
-       ORDER BY p.estoque ASC`,
+       WHERE p.tenant_id = ? AND (
+         (p.tipo_preco = 'unidade' AND p.estoque <= p.estoque_minimo) OR
+         (p.tipo_preco = 'kg' AND p.estoque_kg <= p.estoque_minimo_kg) OR
+         (p.tipo_preco = 'litros' AND p.estoque_litros <= p.estoque_minimo_litros)
+       ) AND p.status = 'ativo'
+       ORDER BY estoque_atual ASC`,
       [req.user.tenant_id]
     );
 
