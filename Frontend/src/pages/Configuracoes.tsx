@@ -2031,9 +2031,10 @@ export default function Configuracoes() {
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 {Object.entries(metodosPagamentoLocal).map(([key, metodo]) => (
-                  <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg space-y-3 sm:space-y-0">
+                  <div key={key} className="flex flex-col p-3 sm:p-4 border rounded-lg space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+                    {/* Informações do método - Mobile: coluna, Desktop: linha */}
                     <div className="flex items-center space-x-2 sm:space-x-3">
-                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
                         {key === 'cartao_credito' && <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
                         {key === 'cartao_debito' && <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />}
                         {key === 'pix' && <QrCode className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />}
@@ -2057,10 +2058,13 @@ export default function Configuracoes() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    
+                    {/* Controles - Mobile: coluna, Desktop: linha */}
+                    <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-4">
+                      {/* Taxa para métodos específicos */}
                       {key !== 'cartao_credito' && key !== 'pix' && key !== 'dinheiro' && (
-                        <div className="flex items-center space-x-2">
-                          <Label htmlFor={`taxa-${key}`} className="text-xs sm:text-sm">Taxa (%)</Label>
+                        <div className="flex items-center justify-between sm:justify-start space-x-2">
+                          <Label htmlFor={`taxa-${key}`} className="text-xs sm:text-sm whitespace-nowrap">Taxa (%)</Label>
                           <Input
                             id={`taxa-${key}`}
                             type="number"
@@ -2074,23 +2078,29 @@ export default function Configuracoes() {
                                 [key]: { ...prev[key as keyof typeof prev], taxa: parseFloat(e.target.value) || 0 }
                               }));
                             }}
-                            className="w-16 sm:w-20 h-8 sm:h-9 text-xs sm:text-sm"
+                            className="w-20 sm:w-20 h-8 sm:h-9 text-xs sm:text-sm"
                             readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                           />
                         </div>
                       )}
+                      
+                      {/* Botão de parcelas para cartão de crédito */}
                       {key === 'cartao_credito' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAbrirModalParcelas}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs sm:text-sm h-8 sm:h-9"
-                        >
-                          <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                          Parcelas
-                        </Button>
+                        <div className="w-full sm:w-auto">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAbrirModalParcelas}
+                            className="w-full sm:w-auto text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs sm:text-sm h-8 sm:h-9"
+                          >
+                            <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                            Parcelas
+                          </Button>
+                        </div>
                       )}
-                      <div className="flex items-center space-x-2">
+                      
+                      {/* Switch de ativo/inativo */}
+                      <div className="flex items-center justify-between sm:justify-start space-x-2">
                         <Switch
                           checked={metodo.ativo}
                           onCheckedChange={(checked) => {
@@ -2170,7 +2180,7 @@ export default function Configuracoes() {
                       readOnly={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:col-span-1">
                     <Label className="text-xs sm:text-sm">QR Code PIX</Label>
                     <div className="border-2 border-dashed border-border rounded-lg p-3 sm:p-6 text-center">
                       {dadosPixEditando.qr_code ? (
@@ -2201,10 +2211,10 @@ export default function Configuracoes() {
                         variant="outline" 
                         size="sm" 
                         asChild 
-                        className="text-xs sm:text-sm h-8 sm:h-9"
+                        className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9"
                         disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                       >
-                        <label htmlFor="qr-code-upload">
+                        <label htmlFor="qr-code-upload" className="cursor-pointer">
                           {dadosPixEditando.qr_code ? 'Alterar QR Code' : 'Selecionar Arquivo'}
                         </label>
                       </Button>
@@ -2322,7 +2332,7 @@ export default function Configuracoes() {
                       className="h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:col-span-2 sm:col-span-1">
                     <Label htmlFor="cpf_cnpj_banco" className="text-xs sm:text-sm">CPF/CNPJ</Label>
                     <Input
                       id="cpf_cnpj_banco"
@@ -2364,7 +2374,7 @@ export default function Configuracoes() {
                     .filter(([_, metodo]) => metodo.ativo)
                     .map(([key, metodo]) => (
                     <div key={key} className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg">
-                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
                         {key === 'cartao_credito' && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />}
                         {key === 'cartao_debito' && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />}
                         {key === 'pix' && <QrCode className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />}
@@ -2374,7 +2384,17 @@ export default function Configuracoes() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-xs sm:text-sm truncate">{metodo.nome}</p>
                         <p className="text-xs text-muted-foreground">
-                          Taxa: {metodo.taxa}%
+                          {key === 'cartao_credito' ? (
+                            'parcelas' in metodo && metodo.parcelas && metodo.parcelas.length > 0 ? (
+                              <span className="text-blue-600">
+                                {metodo.parcelas.length} parcela(s)
+                              </span>
+                            ) : (
+                              'Configure parcelas'
+                            )
+                          ) : (
+                            `Taxa: ${metodo.taxa}%`
+                          )}
                         </p>
                       </div>
                     </div>
