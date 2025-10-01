@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useTheme } from "@/hooks/useTheme";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { 
   Settings, 
@@ -116,6 +117,7 @@ export default function Configuracoes() {
 
   const { toast } = useToast();
   const { hasPermission, operador } = usePermissions();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   
   // Função para determinar se uma aba deve ser visível
   const isTabVisible = (tabId: string) => {
@@ -1201,7 +1203,7 @@ export default function Configuracoes() {
                     <div className="space-y-1 flex-1 min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-orange-600 dark:text-orange-400">Tema Atual</p>
                       <p className="text-sm sm:text-lg font-bold text-orange-700 dark:text-orange-300 capitalize break-words">
-                        {configuracoes.tema}
+                        {resolvedTheme === 'dark' ? 'Dark' : resolvedTheme === 'dark-light' ? 'Dark Light' : 'Claro'}
                       </p>
                     </div>
                     <div className="p-2 sm:p-3 rounded-full bg-orange-500/20 flex-shrink-0 self-start sm:self-auto">
@@ -2421,28 +2423,40 @@ export default function Configuracoes() {
                 <div className="space-y-2">
                   <Label>Tema</Label>
                   <Select 
-                    value={configuracoesEditando?.tema ?? 'sistema'} 
-                    onValueChange={(value: 'claro' | 'escuro' | 'sistema') => {
-                      setConfiguracoesEditando(prev => prev ? { ...prev, tema: value } : null);
+                    value={theme} 
+                    onValueChange={(value: 'light' | 'dark' | 'dark-light' | 'windows-dark' | 'system') => {
+                      setTheme(value);
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="claro">
+                      <SelectItem value="light">
                         <div className="flex items-center space-x-2">
                           <Sun className="h-4 w-4" />
                           <span>Claro</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="escuro">
+                      <SelectItem value="dark">
                         <div className="flex items-center space-x-2">
                           <Moon className="h-4 w-4" />
                           <span>Escuro</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="sistema">
+                      <SelectItem value="dark-light">
+                        <div className="flex items-center space-x-2">
+                          <Moon className="h-4 w-4" />
+                          <span>Dark Light</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="windows-dark">
+                        <div className="flex items-center space-x-2">
+                          <Laptop className="h-4 w-4" />
+                          <span>Dark Mode</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="system">
                         <div className="flex items-center space-x-2">
                           <Monitor className="h-4 w-4" />
                           <span>Sistema</span>
@@ -2450,6 +2464,14 @@ export default function Configuracoes() {
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Tema atual: {theme === 'system' ? 'Sistema' : theme === 'dark' ? 'Escuro' : theme === 'dark-light' ? 'Dark Light' : theme === 'windows-dark' ? 'Dark Mode' : 'Claro'}
+                    {theme === 'system' && (
+                      <span className="block mt-1">
+                        (Aplicado: {resolvedTheme === 'dark' ? 'Escuro' : resolvedTheme === 'dark-light' ? 'Dark Light' : resolvedTheme === 'windows-dark' ? 'Dark Mode' : 'Claro'})
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Cor Primária</Label>
@@ -2463,10 +2485,11 @@ export default function Configuracoes() {
                     ))}
                   </div>
                 </div>
-                <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Tema'}
-                </Button>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    As mudanças de tema são aplicadas instantaneamente.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
