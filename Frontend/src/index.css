@@ -91,33 +91,153 @@
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222.2 84% 6%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222.2 84% 6%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 142 69% 58%;
+    --primary: 142 69% 65%;
     --primary-foreground: 222.2 84% 4.9%;
 
-    --secondary: 217 91% 60%;
+    --secondary: 217 91% 65%;
     --secondary-foreground: 222.2 84% 4.9%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217.2 32.6% 20%;
+    --muted-foreground: 215 20.2% 75%;
 
-    --accent: 43 96% 56%;
+    --accent: 43 96% 65%;
     --accent-foreground: 222.2 84% 4.9%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 142 69% 58%;
+    --border: 217.2 32.6% 25%;
+    --input: 217.2 32.6% 20%;
+    --ring: 142 69% 65%;
 
-    --gradient-card: linear-gradient(145deg, hsl(217.2 32.6% 17.5%) 0%, hsl(222.2 84% 4.9%) 100%);
-    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.3), 0 2px 6px -1px hsl(0 0% 0% / 0.2);
+    --gradient-card: linear-gradient(145deg, hsl(217.2 32.6% 20%) 0%, hsl(222.2 84% 6%) 100%);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 6px -1px hsl(0 0% 0% / 0.3);
+
+    /* Sidebar específico para dark */
+    --sidebar-background: 222.2 84% 6%;
+    --sidebar-foreground: 210 40% 95%;
+    --sidebar-primary: 142 69% 65%;
+    --sidebar-primary-foreground: 222.2 84% 4.9%;
+    --sidebar-accent: 217.2 32.6% 25%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 217.2 32.6% 25%;
+    --sidebar-ring: 142 69% 65%;
+
+    /* Cores de sucesso e erro mais vibrantes */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222.2 84% 4.9%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
+  }
+
+  .dark-light {
+    --background: 220 15% 12%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 15% 16%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 15% 16%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 142 76% 75%;
+    --primary-foreground: 220 15% 12%;
+
+    --secondary: 217 91% 75%;
+    --secondary-foreground: 220 15% 12%;
+
+    --muted: 220 15% 22%;
+    --muted-foreground: 215 20.2% 85%;
+
+    --accent: 43 96% 75%;
+    --accent-foreground: 220 15% 12%;
+
+    --destructive: 0 62.8% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 28%;
+    --input: 220 15% 22%;
+    --ring: 142 76% 75%;
+
+    --gradient-card: linear-gradient(145deg, hsl(220 15% 22%) 0%, hsl(220 15% 16%) 100%);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.35), 0 2px 6px -1px hsl(0 0% 0% / 0.25);
+
+    /* Sidebar específico para dark-light */
+    --sidebar-background: 220 15% 14%;
+    --sidebar-foreground: 210 40% 95%;
+    --sidebar-primary: 142 76% 75%;
+    --sidebar-primary-foreground: 220 15% 12%;
+    --sidebar-accent: 220 15% 22%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 220 15% 28%;
+    --sidebar-ring: 142 76% 75%;
+
+    /* Cores de sucesso e erro mais vibrantes */
+    --success: 142 76% 70%;
+    --success-foreground: 220 15% 12%;
+    --warning: 43 96% 70%;
+    --warning-foreground: 220 15% 12%;
+    --info: 217 91% 70%;
+    --info-foreground: 220 15% 12%;
+  }
+
+  .windows-dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 5%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 5%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 3.7% 18%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 18%;
+    --muted-foreground: 240 5% 70%;
+
+    --accent: 240 3.7% 18%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 22%;
+    --input: 240 3.7% 18%;
+    --ring: 240 4.9% 83.9%;
+
+    --gradient-card: linear-gradient(145deg, hsl(240 3.7% 18%) 0%, hsl(240 10% 5%) 100%);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 6px -1px hsl(0 0% 0% / 0.3);
+
+    /* Sidebar específico para windows-dark */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 22%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 240 3.7% 22%;
+    --sidebar-ring: 240 4.9% 83.9%;
+
+    /* Cores de sucesso e erro para Windows */
+    --success: 142 76% 40%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 240 5.9% 10%;
+    --info: 217 91% 65%;
+    --info-foreground: 0 0% 98%;
   }
 }
 

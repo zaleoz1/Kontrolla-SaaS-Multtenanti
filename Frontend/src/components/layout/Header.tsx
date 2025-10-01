@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useOperador } from "@/contexts/OperadorContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,7 +120,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
 
   return (
     // Header principal com fundo e borda inferior
-    <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
+    <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 dark:bg-background/98 dark:supports-[backdrop-filter]:bg-background/70 dark-light:bg-background/98 dark-light:supports-[backdrop-filter]:bg-background/75 windows-dark:bg-background/98 windows-dark:supports-[backdrop-filter]:bg-background/80 border-border/60 dark:border-border/70 dark-light:border-border/70 windows-dark:border-border/70">
       <div className="flex h-full items-center justify-between px-6">
         {/* Botão de menu para mobile e telas menores que 1378px */}
         <Button
@@ -136,7 +137,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
         <div className="flex items-center space-x-4 ml-auto">   
           {/* Botão para criar nova venda - só aparece se tiver permissão */}
           {hasPermission('vendas_criar') && (
-            <Button variant="outline" size="sm" className="gap-2 bg-green-400 hover:bg-green-600 text-white hover:text-white" onClick={() => navigate("/dashboard/nova-venda")}>
+            <Button variant="outline" size="sm" className="gap-2 bg-green-500 hover:bg-green-600 text-white hover:text-white border-green-500 hover:border-green-600 shadow-sm" onClick={() => navigate("/dashboard/nova-venda")}>
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Nova Venda</span>
             </Button>
@@ -218,6 +219,9 @@ export function Header({ onMenuClick }: PropsCabecalho) {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Toggle de tema */}
+          <ThemeToggle />
 
           {/* Ícone de notificações com badge - só aparece se tiver permissão de dashboard */}
           {hasPermission('dashboard') && (

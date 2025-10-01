@@ -331,7 +331,7 @@ export function OperadorRequired() {
                     className="group cursor-pointer"
                     onClick={() => setSelectedRole(roleKey)}
                   >
-                    <Card className="bg-white/10 backdrop-blur-sm border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 h-full overflow-hidden group-hover:border-green-400/50">
+                    <Card className="bg-white/10 backdrop-blur-sm border border-white/30 shadow-2xl hover:shadow-3xl transition-all duration-500 h-full overflow-hidden group-hover:border-green-400/60 dark-light:bg-white/20 dark-light:border-white/50 windows-dark:bg-white/15 windows-dark:border-white/40">
                       <CardContent className="p-3 sm:p-4 md:p-6 lg:p-8 text-center h-full flex flex-col">
                         <motion.div 
                           className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-gradient-to-br ${operator.color} rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-6 group-hover:scale-110 transition-all duration-300`}
@@ -410,10 +410,10 @@ export function OperadorRequired() {
                     transition={{ duration: 0.3, ease: "easeOut" }}
                     className="group"
                   >
-                    <Card className={`bg-white/10 backdrop-blur-sm border shadow-xl hover:shadow-2xl transition-all duration-300 h-full ${
+                    <Card className={`bg-white/10 backdrop-blur-sm border shadow-xl hover:shadow-2xl transition-all duration-300 h-full dark-light:bg-white/20 windows-dark:bg-white/15 ${
                       operadorEmCodigo === operador.id 
-                        ? 'border-green-400/50' 
-                        : 'border-white/20 group-hover:border-green-400/50'
+                        ? 'border-green-400/60' 
+                        : 'border-white/30 group-hover:border-green-400/60 dark-light:border-white/50 windows-dark:border-white/40'
                     }`}>
                       <CardContent className="p-3 sm:p-4 md:p-6 text-center h-full flex flex-col">
                         <motion.div 

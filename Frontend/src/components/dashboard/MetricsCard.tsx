@@ -34,30 +34,30 @@ export function CartaoMetrica({
   const IconeTendencia = obterIconeTendencia();
 
   return (
-    <Card className="bg-gradient-card shadow-card border-0 hover:shadow-lg transition-shadow duration-300">
+    <Card className="bg-card shadow-card border border-border/60 hover:shadow-lg transition-all duration-300 hover:border-primary/40 dark:border-border/70 dark-light:border-border/70 windows-dark:border-border/70">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-sm font-medium text-muted-foreground dark:text-muted-foreground/90 dark-light:text-muted-foreground/90 windows-dark:text-muted-foreground/90">
           {titulo}
         </CardTitle>
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Icone className="h-4 w-4 text-primary" />
+        <div className="p-2 rounded-lg bg-primary/15 dark:bg-primary/20 dark-light:bg-primary/15 windows-dark:bg-primary/15 shadow-sm">
+          <Icone className="h-4 w-4 text-primary dark:text-primary/90 dark-light:text-primary/90 windows-dark:text-primary/90" />
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <div className="text-2xl font-bold">{valor}</div>
+          <div className="text-2xl font-bold text-foreground dark:text-foreground/95 dark-light:text-foreground/95 windows-dark:text-foreground/95">{valor}</div>
           
           {mudanca && (
             <div className="flex items-center space-x-1">
               {IconeTendencia && <IconeTendencia className={`h-3 w-3 ${obterCorTendencia()}`} />}
-              <Badge variant="secondary" className={`${obterCorTendencia()} bg-transparent border-0 px-0`}>
+              <Badge variant="secondary" className={`${obterCorTendencia()} bg-transparent border border-current/30 px-2 py-0.5 dark:border-current/40 dark-light:border-current/40 windows-dark:border-current/40`}>
                 {mudanca}
               </Badge>
             </div>
           )}
           
           {descricao && (
-            <p className="text-xs text-muted-foreground">{descricao}</p>
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground/80 dark-light:text-muted-foreground/80 windows-dark:text-muted-foreground/80">{descricao}</p>
           )}
         </div>
       </CardContent>
