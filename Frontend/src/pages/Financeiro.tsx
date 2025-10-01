@@ -81,7 +81,12 @@ interface RecebimentoData {
 export default function Financeiro() {
   const [termoBusca, setTermoBusca] = useState("");
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('mes');
-  const [filtroStatus, setFiltroStatus] = useState<string>('');
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [filtroCliente, setFiltroCliente] = useState('');
+  const [filtroStatusPagar, setFiltroStatusPagar] = useState<string>('todos');
+  const [filtroFornecedor, setFiltroFornecedor] = useState('');
+  const [filtroTipoTransacao, setFiltroTipoTransacao] = useState<'todos' | 'entrada' | 'saida'>('todos');
+  const [filtroDataInicioTrans, setFiltroDataInicioTrans] = useState('');
   const navigate = useNavigate();
 
   // Estados para modais de pagamento e recebimento
@@ -281,6 +286,24 @@ export default function Financeiro() {
     }
   };
 
+  // Função para limpar filtros
+  const limparFiltros = () => {
+    setFiltroStatus('todos');
+    setFiltroCliente('');
+  };
+
+  // Função para limpar filtros de contas a pagar
+  const limparFiltrosPagar = () => {
+    setFiltroStatusPagar('todos');
+    setFiltroFornecedor('');
+  };
+
+  // Função para limpar filtros de transações
+  const limparFiltrosTransacoes = () => {
+    setFiltroTipoTransacao('todos');
+    setFiltroDataInicioTrans('');
+  };
+
   const obterBadgeStatus = (status: string, dias?: number) => {
     switch (status) {
       case "pendente":
@@ -302,6 +325,86 @@ export default function Financeiro() {
   const totalEntradas = Number(stats?.stats?.total_entradas) || 0;
   const totalSaidas = Number(stats?.stats?.total_saidas) || 0;
   const saldoAtual = Number((stats?.stats as any)?.saldo_atual) || 0;
+
+  // Função para filtrar contas a receber
+  const contasReceberFiltradas = contasReceber.filter((conta) => {
+    // Filtro por status
+    if (filtroStatus && filtroStatus !== 'todos' && conta.status !== filtroStatus) {
+      return false;
+    }
+
+    // Filtro por nome do cliente
+    if (filtroCliente) {
+      const clienteNome = (conta.cliente_nome || '').toLowerCase();
+      const termoCliente = filtroCliente.toLowerCase();
+      if (!clienteNome.includes(termoCliente)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Função para filtrar contas a pagar
+  const contasPagarFiltradas = contasPagar.filter((conta) => {
+    // Filtro por status
+    if (filtroStatusPagar && filtroStatusPagar !== 'todos' && conta.status !== filtroStatusPagar) {
+      return false;
+    }
+
+    // Filtro por nome do fornecedor
+    if (filtroFornecedor) {
+      const fornecedorNome = (conta.fornecedor || '').toLowerCase();
+      const termoFornecedor = filtroFornecedor.toLowerCase();
+      if (!fornecedorNome.includes(termoFornecedor)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Utilitários de data para filtros (evitar problemas de timezone com 'yyyy-mm-dd')
+  const parseDateOnly = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split('-').map((v) => parseInt(v, 10));
+    if (!year || !month || !day) return null;
+    // new Date(year, monthIndex, day) cria no timezone local às 00:00
+    return new Date(year, month - 1, day);
+  };
+
+  const atStartOfDay = (d: Date): Date => {
+    const out = new Date(d);
+    out.setHours(0, 0, 0, 0);
+    return out;
+  };
+
+  const atEndOfDay = (d: Date): Date => {
+    const out = new Date(d);
+    out.setHours(23, 59, 59, 999);
+    return out;
+  };
+
+  // Função para filtrar transações
+  const transacoesFiltradas = transacoes.filter((t) => {
+    // Filtro por tipo (entrada = recebimento, saida = pagamento)
+    if (filtroTipoTransacao !== 'todos' && t.tipo !== filtroTipoTransacao) {
+      return false;
+    }
+
+    // Filtro por intervalo de datas (usa data_atualizacao com fallback em data_criacao)
+    if (filtroDataInicioTrans) {
+      const dataBase = new Date(t.data_atualizacao || t.data_criacao);
+      const diParsed = parseDateOnly(filtroDataInicioTrans);
+      if (diParsed) {
+        const di = atStartOfDay(diParsed);
+        const df = atEndOfDay(diParsed);
+        if (dataBase < di || dataBase > df) return false;
+      }
+    }
+
+    return true;
+  });
 
   // Função para calcular dias de vencimento
   const calcularDiasVencimento = (dataVencimento: string) => {
@@ -730,13 +833,72 @@ export default function Financeiro() {
         </TabsList>
 
         <TabsContent value="receber" className="space-y-4">
+          {/* Filtros para Contas a Receber */}
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {/* Busca e Status */}
+                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome do cliente..."
+                      value={filtroCliente}
+                      onChange={(e) => setFiltroCliente(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={limparFiltros}
+                    disabled={!filtroCliente && filtroStatus === 'todos'}
+                  >
+                    Limpar
+                  </Button>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant={filtroStatus === 'todos' ? "default" : "outline"}
+                      onClick={() => setFiltroStatus('todos')}
+                      size="sm"
+                    >
+                      Todos
+                    </Button>
+                    <Button 
+                      variant={filtroStatus === 'pendente' ? "default" : "outline"}
+                      onClick={() => setFiltroStatus('pendente')}
+                      size="sm"
+                    >
+                      Pendentes
+                    </Button>
+                    <Button 
+                      variant={filtroStatus === 'vencido' ? "default" : "outline"}
+                      onClick={() => setFiltroStatus('vencido')}
+                      size="sm"
+                    >
+                      Vencidos
+                    </Button>
+                  </div>
+                </div>
+
+                
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                 <CardTitle className="text-sm sm:text-base">Contas a Receber</CardTitle>
-                <Badge variant="secondary" className="w-fit">
-                  {loadingContasReceber ? '...' : contasReceber.length} pendentes
-                </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className="w-fit">
+                    {loadingContasReceber ? '...' : contasReceberFiltradas.length} {(filtroStatus !== 'todos' || filtroCliente) ? 'filtradas' : 'pendentes'}
+                  </Badge>
+                  {(filtroStatus !== 'todos' || filtroCliente) && (
+                    <Badge variant="outline" className="text-xs">
+                      {contasReceber.length} total
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -765,14 +927,30 @@ export default function Financeiro() {
                     </div>
                   ))}
                 </div>
-              ) : contasReceber.length === 0 ? (
+              ) : contasReceberFiltradas.length === 0 ? (
                 <div className="text-center py-8">
                   <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhuma conta a receber encontrada</p>
+                  <p className="text-muted-foreground">
+                    {(filtroStatus !== 'todos' || filtroCliente) 
+                      ? 'Nenhuma conta encontrada com os filtros aplicados' 
+                      : 'Nenhuma conta a receber encontrada'
+                    }
+                  </p>
+                  {(filtroStatus !== 'todos' || filtroCliente) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={limparFiltros}
+                      className="mt-4"
+                    >
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Limpar Filtros
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  {contasReceber.map((item) => {
+                  {contasReceberFiltradas.map((item) => {
                     const dias = calcularDiasVencimento(item.data_vencimento);
                     return (
                       <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
@@ -831,17 +1009,81 @@ export default function Financeiro() {
         </TabsContent>
 
         <TabsContent value="pagar" className="space-y-4">
+          {/* Filtros para Contas a Pagar */}
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {/* Busca e Status */}
+                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome do fornecedor..."
+                      value={filtroFornecedor}
+                      onChange={(e) => setFiltroFornecedor(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={limparFiltrosPagar}
+                    disabled={!filtroFornecedor && filtroStatusPagar === 'todos'}
+                  >
+                    Limpar
+                  </Button>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant={filtroStatusPagar === 'todos' ? "default" : "outline"}
+                      onClick={() => setFiltroStatusPagar('todos')}
+                      size="sm"
+                    >
+                      Todos
+                    </Button>
+                    <Button 
+                      variant={filtroStatusPagar === 'pago' ? "default" : "outline"}
+                      onClick={() => setFiltroStatusPagar('pago')}
+                      size="sm"
+                    >
+                      Pagos
+                    </Button>
+                    <Button 
+                      variant={filtroStatusPagar === 'pendente' ? "default" : "outline"}
+                      onClick={() => setFiltroStatusPagar('pendente')}
+                      size="sm"
+                    >
+                      Pendentes
+                    </Button>
+                    <Button 
+                      variant={filtroStatusPagar === 'vencido' ? "default" : "outline"}
+                      onClick={() => setFiltroStatusPagar('vencido')}
+                      size="sm"
+                    >
+                      Vencidos
+                    </Button>
+                  </div>
+                </div>
+
+                
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                 <CardTitle className="text-sm sm:text-base">Contas a Pagar</CardTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary" className="w-fit">
-                    {loadingContasPagar ? '...' : contasPagar.length} pendentes
+                    {loadingContasPagar ? '...' : contasPagarFiltradas.length} {(filtroStatusPagar !== 'todos' || filtroFornecedor) ? 'filtradas' : 'pendentes'}
                   </Badge>
-                  {contasPagar.some(conta => conta.tipo_conta === 'funcionario') && (
+                  {(filtroStatusPagar !== 'todos' || filtroFornecedor) && (
+                    <Badge variant="outline" className="text-xs">
+                      {contasPagar.length} total
+                    </Badge>
+                  )}
+                  {contasPagarFiltradas.some(conta => conta.tipo_conta === 'funcionario') && (
                     <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                      {contasPagar.filter(conta => conta.tipo_conta === 'funcionario').length} funcionários
+                      {contasPagarFiltradas.filter(conta => conta.tipo_conta === 'funcionario').length} funcionários
                     </Badge>
                   )}
                 </div>
@@ -873,14 +1115,30 @@ export default function Financeiro() {
                     </div>
                   ))}
                 </div>
-              ) : contasPagar.length === 0 ? (
+              ) : contasPagarFiltradas.length === 0 ? (
                 <div className="text-center py-8">
                   <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhuma conta a pagar encontrada</p>
+                  <p className="text-muted-foreground">
+                    {(filtroStatusPagar !== 'todos' || filtroFornecedor) 
+                      ? 'Nenhuma conta encontrada com os filtros aplicados' 
+                      : 'Nenhuma conta a pagar encontrada'
+                    }
+                  </p>
+                  {(filtroStatusPagar !== 'todos' || filtroFornecedor) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={limparFiltrosPagar}
+                      className="mt-4"
+                    >
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      Limpar Filtros
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  {contasPagar.map((item) => {
+                  {contasPagarFiltradas.map((item) => {
                     const dias = calcularDiasVencimento(item.data_vencimento);
                     return (
                       <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
@@ -918,7 +1176,16 @@ export default function Financeiro() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
-                          <p className="text-sm sm:text-lg font-bold text-destructive break-words">{formatarValor(Number(item.valor) || 0)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm sm:text-lg font-bold break-words ${
+                              item.status === 'pago' ? 'text-success' : 'text-destructive'
+                            }`}>
+                              {formatarValor(Number(item.valor) || 0)}
+                            </p>
+                            {item.status === 'pago' && (
+                              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
+                            )}
+                          </div>
                           {item.status === 'pendente' && (
                             <Button 
                               size="sm" 
@@ -943,10 +1210,54 @@ export default function Financeiro() {
 
         <TabsContent value="transacoes" className="space-y-4">
           <Card className="bg-gradient-card shadow-card">
-            <CardHeader>
-              <CardTitle className="text-sm sm:text-base">Transações Recentes</CardTitle>
-            </CardHeader>
             <CardContent>
+              {/* Filtros de Transações */}
+              <div className="space-y-4 mb-4">
+                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-end md:space-y-0 md:space-x-4">
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant={filtroTipoTransacao === 'todos' ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFiltroTipoTransacao('todos')}
+                    >
+                      Todos
+                    </Button>
+                    <Button 
+                      variant={filtroTipoTransacao === 'entrada' ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFiltroTipoTransacao('entrada')}
+                    >
+                      Recebimentos
+                    </Button>
+                    <Button 
+                      variant={filtroTipoTransacao === 'saida' ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFiltroTipoTransacao('saida')}
+                    >
+                      Pagamentos
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Data:</span>
+                    <Input
+                      type="date"
+                      value={filtroDataInicioTrans}
+                      onChange={(e) => setFiltroDataInicioTrans(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={limparFiltrosTransacoes}
+                    disabled={filtroTipoTransacao === 'todos' && !filtroDataInicioTrans}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </div>
               {errorTransacoes && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" /> 
@@ -974,15 +1285,29 @@ export default function Financeiro() {
                     </div>
                   ))}
                 </div>
-              ) : transacoes.length === 0 ? (
+              ) : transacoesFiltradas.length === 0 ? (
                 <div className="text-center py-8">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhuma transação encontrada</p>
+                  <p className="text-muted-foreground">
+                    {(filtroTipoTransacao !== 'todos' || filtroDataInicioTrans)
+                      ? 'Nenhuma transação encontrada com os filtros aplicados'
+                      : 'Nenhuma transação encontrada'}
+                  </p>
+                  {(filtroTipoTransacao !== 'todos' || filtroDataInicioTrans) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={limparFiltrosTransacoes}
+                      className="mt-4"
+                    >
+                      Limpar Filtros
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  {transacoes.map((transacao) => {
-                    const dataHora = new Date(transacao.data_transacao);
+                  {transacoesFiltradas.map((transacao) => {
+                    const dataHora = new Date(transacao.data_atualizacao || transacao.data_criacao);
                     const data = dataHora.toLocaleDateString("pt-BR");
                     const hora = dataHora.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
                     
@@ -1000,7 +1325,7 @@ export default function Financeiro() {
                             <p className="font-semibold text-sm sm:text-base line-clamp-1">{transacao.descricao}</p>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                               <span>{data} às {hora}</span>
-                              <span>{transacao.metodo_pagamento}</span>
+                              <span className="capitalize">{transacao.metodo_pagamento.replace('_', ' ')}</span>
                               {transacao.cliente_nome && <span className="truncate">Cliente: {transacao.cliente_nome}</span>}
                             </div>
                           </div>
