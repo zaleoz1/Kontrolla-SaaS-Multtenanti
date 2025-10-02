@@ -25,7 +25,7 @@ function createMainWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
-      zoomFactor: 0.85 // Ajustado para zoom de 85% - um pouco maior
+      zoomFactor: 0.75 // Ajustado para zoom de 75% - interface menor
     },
     icon: path.join(__dirname, '../Frontend/dist/logo.png'),
     title: 'KontrollaPro - Sistema de Gestão',
