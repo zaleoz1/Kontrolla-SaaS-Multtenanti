@@ -4,11 +4,14 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 
 // Configurações
-const isDev = process.env.NODE_ENV === 'development';
-const isProd = process.env.NODE_ENV === 'production';
+const isDev = process.env.NODE_ENV === 'development' && !process.env.FORCE_FILE_MODE;
+const isProd = process.env.NODE_ENV === 'production' || app.isPackaged;
+const forceFileMode = process.env.FORCE_FILE_MODE === 'true';
 
 let mainWindow;
 let backendProcess;
+let backendStarted = false;
+let isCheckingBackend = false;
 
 // Função para criar a janela principal
 function createMainWindow() {
@@ -31,20 +34,30 @@ function createMainWindow() {
   });
 
   // Carregar a aplicação
-  if (isDev) {
+  console.log('🔍 Environment:', { isDev, isProd, forceFileMode, NODE_ENV: process.env.NODE_ENV, isPackaged: app.isPackaged });
+  
+  const indexPath = path.join(__dirname, '../Frontend/dist/index.html');
+  
+  if (isDev && !forceFileMode) {
+    console.log('📱 Modo desenvolvimento - carregando http://localhost:5173');
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
+  } else if (fs.existsSync(indexPath)) {
+    console.log('✅ Carregando arquivo local:', indexPath);
+    mainWindow.loadFile(indexPath);
   } else {
-    // Tentar carregar o arquivo de produção
-    const indexPath = path.join(__dirname, '../Frontend/dist/index.html');
-    
-    if (fs.existsSync(indexPath)) {
-      mainWindow.loadFile(indexPath);
-    } else {
-      // Fallback para desenvolvimento
-      mainWindow.loadURL('http://localhost:5173');
-    }
+    console.log('⚠️ Arquivo não encontrado, usando fallback para desenvolvimento');
+    mainWindow.loadURL('http://localhost:5173');
   }
+  
+  // Adicionar listener para erros de carregamento
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('❌ Falha ao carregar:', errorCode, errorDescription);
+  });
+  
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('✅ Página carregada com sucesso');
+  });
 
 
   // Mostrar janela quando estiver pronta
@@ -72,6 +85,14 @@ function createMainWindow() {
 
 // Função para iniciar o backend
 function startBackend() {
+  if (backendStarted) {
+    console.log('⚠️ Backend já foi iniciado, ignorando nova tentativa');
+    return;
+  }
+  
+  console.log('🚀 Iniciando backend...');
+  backendStarted = true;
+  
   const backendPath = isProd 
     ? path.join(__dirname, '../Backend')
     : path.join(__dirname, '../Backend');
@@ -91,24 +112,51 @@ function startBackend() {
   });
 
   backendProcess.on('error', (err) => {
-    dialog.showErrorBox('Erro', 'Falha ao iniciar o servidor backend. Verifique se o Node.js está instalado.');
+    console.error('❌ Erro no backend:', err);
+    backendStarted = false;
+  });
+  
+  backendProcess.on('exit', (code) => {
+    console.log('🔄 Backend finalizado com código:', code);
+    backendStarted = false;
   });
 }
 
 // Função para verificar se o backend está funcionando
 async function checkBackendHealth() {
+  if (isCheckingBackend) {
+    console.log('⚠️ Verificação de backend já em andamento');
+    return;
+  }
+  
+  isCheckingBackend = true;
+  
   try {
+    console.log('🔍 Verificando saúde do backend...');
     const response = await fetch('http://localhost:3000/health');
     if (response.ok) {
-      // Backend funcionando
+      console.log('✅ Backend está funcionando');
+      isCheckingBackend = false;
+      return;
     } else {
       throw new Error('Backend não está respondendo');
     }
   } catch (error) {
-    startBackend();
+    console.log('⚠️ Backend não está disponível, tentando iniciar...');
     
-    // Aguardar um pouco e tentar novamente
-    setTimeout(checkBackendHealth, 3000);
+    if (!backendStarted) {
+      startBackend();
+      
+      // Aguardar 5 segundos para o backend iniciar
+      setTimeout(() => {
+        isCheckingBackend = false;
+        // Verificar apenas uma vez mais após iniciar
+        checkBackendHealth();
+      }, 5000);
+    } else {
+      console.log('✅ Backend já foi iniciado, aguardando...');
+      isCheckingBackend = false;
+    }
   }
 }
 
@@ -226,22 +274,38 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
-// Eventos do Electron
-app.whenReady().then(() => {
-  createMainWindow();
-  createMenu();
-  
-  // Iniciar backend apenas em produção
-  if (isProd) {
-    startBackend();
-  }
+// Proteção contra múltiplas instâncias
+const gotTheLock = app.requestSingleInstanceLock();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+if (!gotTheLock) {
+  console.log('⚠️ Aplicação já está rodando, fechando esta instância');
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Alguém tentou executar uma segunda instância, focar na janela existente
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
     }
   });
-});
+
+  // Eventos do Electron
+  app.whenReady().then(() => {
+    createMainWindow();
+    createMenu();
+    
+    // Iniciar backend apenas em produção
+    if (isProd) {
+      startBackend();
+    }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createMainWindow();
+      }
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
