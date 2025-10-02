@@ -18,6 +18,7 @@ dist-ssr/
 Frontend/dist/
 Backend/dist/
 dist-electron/
+dist-electron/*
 
 # Environment variables
 .env
