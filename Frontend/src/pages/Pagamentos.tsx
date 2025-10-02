@@ -1014,7 +1014,7 @@ export default function Pagamentos() {
                                 {metodo.tipo === "dinheiro" && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-slate-600" />}
                                 {metodo.tipo === "pix" && (
                                   <img 
-                                    src="/logopix.png" 
+                                    src="./logopix.png" 
                                     alt="PIX" 
                                     className="h-3 w-3 sm:h-4 sm:w-4 object-contain"
                                   />
@@ -1176,7 +1176,7 @@ export default function Pagamentos() {
                       <div>
                         <h4 className="font-medium text-green-800 mb-1 flex items-center text-sm sm:text-base">
                           <img 
-                            src="/logopix.png" 
+                            src="./logopix.png" 
                             alt="PIX" 
                             className="h-3 w-3 sm:h-4 sm:w-4 mr-1 object-contain"
                           />
@@ -1196,7 +1196,7 @@ export default function Pagamentos() {
                           <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
                         ) : (
                           <img 
-                            src="/logopix.png" 
+                            src="./logopix.png" 
                             alt="PIX" 
                             className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 object-contain"
                           />
@@ -1556,7 +1556,7 @@ export default function Pagamentos() {
                       <div>
                         <h4 className="font-medium text-green-800 mb-1 flex items-center">
                           <img 
-                            src="/logopix.png" 
+                            src="./logopix.png" 
                             alt="PIX" 
                             className="h-4 w-4 mr-1 object-contain"
                           />
@@ -1576,7 +1576,7 @@ export default function Pagamentos() {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
                           <img 
-                            src="/logopix.png" 
+                            src="./logopix.png" 
                             alt="PIX" 
                             className="h-4 w-4 mr-2 object-contain"
                           />
@@ -2494,7 +2494,7 @@ export default function Pagamentos() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm sm:text-base lg:text-lg flex items-center">
                   <img 
-                    src="/logopix.png" 
+                    src="./logopix.png" 
                     alt="PIX" 
                     className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 mr-1 sm:mr-2 object-contain"
                   />

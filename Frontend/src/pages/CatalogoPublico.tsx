@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCatalogoPublico } from "@/hooks/useCatalogoPublico";
+import { getProductImageUrl, getImageWithFallback } from "@/utils/imageUtils";
 
 export default function CatalogoPublico() {
   const [termoBusca, setTermoBusca] = useState("");
@@ -64,15 +65,8 @@ export default function CatalogoPublico() {
 
   // Função para obter imagem do produto
   const obterImagemProduto = (produto) => {
-    if (produto.imagens && produto.imagens.length > 0) {
-      if (typeof produto.imagens[0] === 'string' && produto.imagens[0].startsWith('http')) {
-        return produto.imagens[0];
-      }
-      if (typeof produto.imagens[0] === 'string' && produto.imagens[0].startsWith('data:')) {
-        return produto.imagens[0];
-      }
-    }
-    return null;
+    const imageUrl = getProductImageUrl(produto);
+    return getImageWithFallback(imageUrl);
   };
 
   const limparFiltros = () => {
