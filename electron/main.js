@@ -21,7 +21,8 @@ function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      zoomFactor: 0.85 // Ajustado para zoom de 85% - um pouco maior
     },
     icon: path.join(__dirname, '../Frontend/dist/logo.png'),
     title: 'KontrollaPro - Sistema de Gestão',
@@ -36,30 +37,18 @@ function createMainWindow() {
   } else {
     // Tentar carregar o arquivo de produção
     const indexPath = path.join(__dirname, '../Frontend/dist/index.html');
-    console.log('Tentando carregar:', indexPath);
     
     if (fs.existsSync(indexPath)) {
       mainWindow.loadFile(indexPath);
     } else {
-      console.error('Arquivo index.html não encontrado em:', indexPath);
       // Fallback para desenvolvimento
       mainWindow.loadURL('http://localhost:5173');
     }
   }
 
-  // Logs para debug
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('✅ Página carregada com sucesso');
-  });
-
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-    console.error('❌ Erro ao carregar página:', errorDescription);
-    console.error('URL:', validatedURL);
-  });
 
   // Mostrar janela quando estiver pronta
   mainWindow.once('ready-to-show', () => {
-    console.log('🖥️ Janela pronta para mostrar');
     mainWindow.show();
     
     // Verificar se o backend está rodando
@@ -90,7 +79,6 @@ function startBackend() {
   const nodePath = process.execPath;
   const serverPath = path.join(backendPath, 'src/server.js');
   
-  console.log('Iniciando backend...');
   
   backendProcess = spawn(nodePath, [serverPath], {
     cwd: backendPath,
@@ -102,20 +90,7 @@ function startBackend() {
     stdio: ['pipe', 'pipe', 'pipe']
   });
 
-  backendProcess.stdout.on('data', (data) => {
-    console.log(`Backend: ${data}`);
-  });
-
-  backendProcess.stderr.on('data', (data) => {
-    console.error(`Backend Error: ${data}`);
-  });
-
-  backendProcess.on('close', (code) => {
-    console.log(`Backend process exited with code ${code}`);
-  });
-
   backendProcess.on('error', (err) => {
-    console.error('Failed to start backend:', err);
     dialog.showErrorBox('Erro', 'Falha ao iniciar o servidor backend. Verifique se o Node.js está instalado.');
   });
 }
@@ -125,12 +100,11 @@ async function checkBackendHealth() {
   try {
     const response = await fetch('http://localhost:3000/health');
     if (response.ok) {
-      console.log('Backend está funcionando corretamente');
+      // Backend funcionando
     } else {
       throw new Error('Backend não está respondendo');
     }
   } catch (error) {
-    console.log('Backend não está rodando, iniciando...');
     startBackend();
     
     // Aguardar um pouco e tentar novamente
