@@ -286,7 +286,7 @@ export default function LandingPage() {
             >
               <div className="relative">
                 <img 
-                  src="/logo.png" 
+                  src="./logo.png" 
                   alt="KontrollaPro Logo" 
                   className="h-12 w-12 rounded-xl shadow-sm"
                 />
@@ -1417,7 +1417,7 @@ export default function LandingPage() {
                 whileHover={{ scale: 1.05 }}
               >
                 <img 
-                  src="/logo.png" 
+                  src="./logo.png" 
                   alt="KontrollaPro Logo" 
                   className="h-10 w-10 rounded-lg"
                 />

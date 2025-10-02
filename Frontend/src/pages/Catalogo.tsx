@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useCatalogo } from "@/hooks/useCatalogo";
 import { useToast } from "@/hooks/use-toast";
+import { getProductImageUrl, getImageWithFallback } from "@/utils/imageUtils";
 
 export default function Catalogo() {
   const [termoBusca, setTermoBusca] = useState("");
@@ -84,17 +85,8 @@ export default function Catalogo() {
 
   // Função para obter imagem do produto
   const obterImagemProduto = (produto: any) => {
-    if (produto.imagens && produto.imagens.length > 0) {
-      // Se as imagens são URLs do Cloudinary
-      if (typeof produto.imagens[0] === 'string' && produto.imagens[0].startsWith('http')) {
-        return produto.imagens[0];
-      }
-      // Se as imagens são base64
-      if (typeof produto.imagens[0] === 'string' && produto.imagens[0].startsWith('data:')) {
-        return produto.imagens[0];
-      }
-    }
-    return null;
+    const imageUrl = getProductImageUrl(produto);
+    return getImageWithFallback(imageUrl);
   };
 
   // Função para formatar estoque baseado no tipo de produto

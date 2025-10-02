@@ -16,6 +16,11 @@ export function AppLayout() {
   const { tenant } = useTenant();
   const location = useLocation();
   
+  console.log('🔍 AppLayout renderizado');
+  console.log('🔍 Location:', location.pathname);
+  console.log('🔍 User:', user);
+  console.log('🔍 Operador:', operadorSelecionado);
+  
   // Verificar se estamos em páginas que usam ConfiguracoesSidebar
   const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
   const isFornecedoresPage = location.pathname === '/dashboard/fornecedores';

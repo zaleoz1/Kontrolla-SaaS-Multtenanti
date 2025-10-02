@@ -1,0 +1,24 @@
+KONTROLLAPRO - SISTEMA DE GESTÃO DE VENDAS E ESTOQUE
+LICENÇA DE SOFTWARE
+
+Copyright (c) 2024 KontrollaPro Team
+
+PERMISSÕES:
+- Uso comercial permitido
+- Modificação permitida
+- Distribuição permitida
+- Uso privado permitido
+
+CONDIÇÕES:
+- Deve incluir o aviso de copyright
+- Deve incluir esta licença
+- Não pode ser vendido sem autorização
+
+LIMITAÇÕES:
+- Não há garantia de funcionamento
+- Não há suporte técnico obrigatório
+- O autor não se responsabiliza por danos
+
+Para mais informações, visite: https://github.com/seu-usuario/kontrolla-saas
+
+Esta licença é válida para a versão 1.0.0 do KontrollaPro Desktop.
