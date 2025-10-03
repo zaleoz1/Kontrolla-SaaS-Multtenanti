@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     });
   },
   
+  // Controle de zoom
+  getZoomFactor: () => ipcRenderer.invoke('get-zoom-factor'),
+  setZoomFactor: (zoomFactor) => ipcRenderer.invoke('set-zoom-factor', zoomFactor),
+  getResponsiveZoom: () => ipcRenderer.invoke('get-responsive-zoom'),
+  resetZoom: () => ipcRenderer.invoke('reset-zoom'),
+  
   // Utilitários
   platform: process.platform,
   isElectron: true

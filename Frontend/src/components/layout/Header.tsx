@@ -8,6 +8,7 @@ import { useAdministradores } from "@/hooks/useAdministradores";
 import { useOperador } from "@/contexts/OperadorContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ZoomControls } from "@/components/ui/ZoomControls";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -219,6 +220,9 @@ export function Header({ onMenuClick }: PropsCabecalho) {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Controles de zoom */}
+          <ZoomControls compact={true} />
 
           {/* Toggle de tema */}
           <ThemeToggle />
