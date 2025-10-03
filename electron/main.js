@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog, screen } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -13,24 +13,67 @@ let backendProcess;
 let backendStarted = false;
 let isCheckingBackend = false;
 
+// Função para calcular zoom responsivo baseado no tamanho da tela
+function calculateResponsiveZoom() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const diagonal = Math.sqrt(width * width + height * height);
+  
+  // Calcular DPI aproximado (assumindo 96 DPI como base)
+  const dpi = diagonal / 15.6; // 15.6" é um tamanho comum de laptop
+  
+  // Definir breakpoints para diferentes tamanhos de tela
+  if (width >= 2560) {
+    // Telas 4K e maiores - zoom menor para aproveitar o espaço
+    return 0.6;
+  } else if (width >= 1920) {
+    // Telas Full HD - zoom moderado
+    return 0.7;
+  } else if (width >= 1366) {
+    // Telas HD - zoom padrão
+    return 0.8;
+  } else if (width >= 1024) {
+    // Telas menores - zoom maior para melhor legibilidade
+    return 0.9;
+  } else {
+    // Telas muito pequenas - zoom máximo
+    return 1.0;
+  }
+}
+
 // Função para criar a janela principal
 function createMainWindow() {
+  // Calcular zoom responsivo baseado no tamanho da tela
+  const responsiveZoom = calculateResponsiveZoom();
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  
+  // Calcular tamanho da janela baseado na tela disponível
+  const windowWidth = Math.min(1400, Math.floor(screenWidth * 0.9));
+  const windowHeight = Math.min(900, Math.floor(screenHeight * 0.9));
+  
+  console.log(`🖥️ Tela detectada: ${screenWidth}x${screenHeight}`);
+  console.log(`🔍 Zoom responsivo aplicado: ${(responsiveZoom * 100).toFixed(0)}%`);
+  console.log(`📏 Tamanho da janela: ${windowWidth}x${windowHeight}`);
+  
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1200,
-    minHeight: 700,
+    width: windowWidth,
+    height: windowHeight,
+    minWidth: 1024,
+    minHeight: 600,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
-      zoomFactor: 0.75 // Ajustado para zoom de 75% - interface menor
+      zoomFactor: responsiveZoom // Zoom responsivo baseado no tamanho da tela
     },
     icon: path.join(__dirname, '../Frontend/dist/logo.png'),
     title: 'KontrollaPro - Sistema de Gestão',
     show: false,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default'
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    center: true, // Centralizar a janela na tela
+    resizable: true,
+    maximizable: true,
+    minimizable: true
   });
 
   // Carregar a aplicação
@@ -68,6 +111,16 @@ function createMainWindow() {
     checkBackendHealth();
   });
 
+  // Detectar mudanças no tamanho da tela e ajustar zoom
+  screen.on('display-metrics-changed', (event, display, changedMetrics) => {
+    if (changedMetrics.includes('workAreaSize') || changedMetrics.includes('scaleFactor')) {
+      console.log('🔄 Tela redimensionada, recalculando zoom...');
+      const newZoom = calculateResponsiveZoom();
+      mainWindow.webContents.setZoomFactor(newZoom);
+      console.log(`🔍 Novo zoom aplicado: ${(newZoom * 100).toFixed(0)}%`);
+    }
+  });
+
   // Abrir links externos no navegador padrão
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -97,8 +150,16 @@ function startBackend() {
     ? path.join(__dirname, '../Backend')
     : path.join(__dirname, '../Backend');
   
-  const nodePath = process.execPath;
+  // Em produção, tentar usar o Node.js do sistema
+  const nodePath = isProd 
+    ? 'node' // Node.js do sistema
+    : process.execPath; // Em desenvolvimento, usar o executável atual
+  
   const serverPath = path.join(backendPath, 'src/server.js');
+  
+  console.log('📁 Backend path:', backendPath);
+  console.log('📁 Server path:', serverPath);
+  console.log('📁 Node path:', nodePath);
   
   
   backendProcess = spawn(nodePath, [serverPath], {
@@ -119,6 +180,15 @@ function startBackend() {
   backendProcess.on('exit', (code) => {
     console.log('🔄 Backend finalizado com código:', code);
     backendStarted = false;
+  });
+  
+  // Logs do stdout e stderr do backend
+  backendProcess.stdout.on('data', (data) => {
+    console.log('[Backend]', data.toString().trim());
+  });
+  
+  backendProcess.stderr.on('data', (data) => {
+    console.error('[Backend Error]', data.toString().trim());
   });
 }
 
@@ -216,9 +286,35 @@ function createMenu() {
         { role: 'forceReload' },
         { role: 'toggleDevTools' },
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        { 
+          label: 'Zoom Padrão',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => {
+            const defaultZoom = calculateResponsiveZoom();
+            mainWindow.webContents.setZoomFactor(defaultZoom);
+            console.log(`🔍 Zoom resetado para: ${(defaultZoom * 100).toFixed(0)}%`);
+          }
+        },
+        { 
+          label: 'Aumentar Zoom',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => {
+            const currentZoom = mainWindow.webContents.getZoomFactor();
+            const newZoom = Math.min(currentZoom + 0.1, 2.0);
+            mainWindow.webContents.setZoomFactor(newZoom);
+            console.log(`🔍 Zoom aumentado para: ${(newZoom * 100).toFixed(0)}%`);
+          }
+        },
+        { 
+          label: 'Diminuir Zoom',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            const currentZoom = mainWindow.webContents.getZoomFactor();
+            const newZoom = Math.max(currentZoom - 0.1, 0.5);
+            mainWindow.webContents.setZoomFactor(newZoom);
+            console.log(`🔍 Zoom diminuído para: ${(newZoom * 100).toFixed(0)}%`);
+          }
+        },
         { type: 'separator' },
         { role: 'togglefullscreen' }
       ]
@@ -291,12 +387,17 @@ if (!gotTheLock) {
 
   // Eventos do Electron
   app.whenReady().then(() => {
+    console.log('🔍 Environment check:', { isDev, isProd, isPackaged: app.isPackaged, NODE_ENV: process.env.NODE_ENV });
+    
     createMainWindow();
     createMenu();
     
     // Iniciar backend apenas em produção
     if (isProd) {
+      console.log('🚀 Iniciando backend em produção...');
       startBackend();
+    } else {
+      console.log('⚠️ Backend não será iniciado - não está em produção');
     }
 
     app.on('activate', () => {
@@ -337,6 +438,29 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
 ipcMain.handle('show-message-box', async (event, options) => {
   const result = await dialog.showMessageBox(mainWindow, options);
   return result;
+});
+
+// Handlers para controle de zoom
+ipcMain.handle('get-zoom-factor', () => {
+  return mainWindow.webContents.getZoomFactor();
+});
+
+ipcMain.handle('set-zoom-factor', (event, zoomFactor) => {
+  const clampedZoom = Math.max(0.5, Math.min(2.0, zoomFactor));
+  mainWindow.webContents.setZoomFactor(clampedZoom);
+  console.log(`🔍 Zoom definido para: ${(clampedZoom * 100).toFixed(0)}%`);
+  return clampedZoom;
+});
+
+ipcMain.handle('get-responsive-zoom', () => {
+  return calculateResponsiveZoom();
+});
+
+ipcMain.handle('reset-zoom', () => {
+  const defaultZoom = calculateResponsiveZoom();
+  mainWindow.webContents.setZoomFactor(defaultZoom);
+  console.log(`🔍 Zoom resetado para: ${(defaultZoom * 100).toFixed(0)}%`);
+  return defaultZoom;
 });
 
 // Prevenir navegação para URLs externas

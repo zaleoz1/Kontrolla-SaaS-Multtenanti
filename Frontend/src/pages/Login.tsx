@@ -291,34 +291,39 @@ export default function Login() {
                   </Button>
                 </motion.div>
 
-                {/* Divider */}
-                <motion.div 
-                  variants={fadeInUp}
-                  className="relative my-4 sm:my-6"
-                >
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/20" />
-                  </div>
-                  <div className="relative flex justify-center text-xs sm:text-sm">
-                    <span className="px-4 sm:px-6 text-center text-slate-400">ou continue com</span>
-                  </div>
-                </motion.div>
+                {/* Divider e Google Login - Ocultos no Electron */}
+                {!window.electronAPI?.isElectron && (
+                  <>
+                    {/* Divider */}
+                    <motion.div 
+                      variants={fadeInUp}
+                      className="relative my-4 sm:my-6"
+                    >
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-white/20" />
+                      </div>
+                      <div className="relative flex justify-center text-xs sm:text-sm">
+                        <span className="px-4 sm:px-6 text-center text-slate-400">ou continue com</span>
+                      </div>
+                    </motion.div>
 
-                {/* Google Login Button */}
-                <motion.div 
-                  variants={fadeInUp}
-                  className="w-full"
-                >
-                  <GoogleLoginButton
-                    onSuccess={() => {
-                      console.log('✅ Login Google realizado com sucesso');
-                    }}
-                    onError={(error) => {
-                      console.error('❌ Erro no login Google:', error);
-                    }}
-                    className="w-full"
-                  />
-                </motion.div>
+                    {/* Google Login Button */}
+                    <motion.div 
+                      variants={fadeInUp}
+                      className="w-full"
+                    >
+                      <GoogleLoginButton
+                        onSuccess={() => {
+                          console.log('✅ Login Google realizado com sucesso');
+                        }}
+                        onError={(error) => {
+                          console.error('❌ Erro no login Google:', error);
+                        }}
+                        className="w-full"
+                      />
+                    </motion.div>
+                  </>
+                )}
 
                 {/* Sign Up Link */}
                 <motion.div 
