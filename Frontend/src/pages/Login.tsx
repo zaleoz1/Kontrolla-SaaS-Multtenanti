@@ -325,6 +325,7 @@ export default function Login() {
                   </>
                 )}
 
+
                 {/* Sign Up Link */}
                 <motion.div 
                   variants={fadeInUp}

@@ -184,6 +184,13 @@ export default function Pagamentos() {
     return parseFloat(valorFormatado) || 0;
   };
 
+  // Função para formatar valor de entrada (transformar vírgula em ponto)
+  const formatarValorEntrada = (valor: string): string => {
+    if (!valor) return '';
+    // Substitui vírgula por ponto para facilitar cálculos
+    return valor.replace(',', '.');
+  };
+
   // Função para calcular o TOTAL FINAL exatamente como mostrado no layout
   const calcularTotalFinal = () => {
     if (usarPagamentoPrazo && clienteSelecionado) {
@@ -218,6 +225,12 @@ export default function Pagamentos() {
           if (metodoDebito && metodoDebito.taxa > 0) {
             valorComTaxas = valorMetodo * (1 + metodoDebito.taxa / 100);
           }
+        } else if (m.metodo === "transferencia") {
+          // Para transferência bancária, incluir taxa do método
+          const metodoTransferencia = metodosDisponiveis.find(metodo => metodo.tipo === "transferencia");
+          if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+            valorComTaxas = valorMetodo * (1 + metodoTransferencia.taxa / 100);
+          }
         } else if (m.taxaParcela && m.taxaParcela > 0) {
           // Para outros métodos com taxa de parcela
           valorComTaxas = valorMetodo * (1 + m.taxaParcela / 100);
@@ -236,6 +249,15 @@ export default function Pagamentos() {
       const metodoDebito = metodosDisponiveis.find(metodo => metodo.tipo === "cartao_debito");
       if (metodoDebito && metodoDebito.taxa > 0) {
         return total * (1 + metodoDebito.taxa / 100);
+      }
+      return total;
+    }
+    
+    if (metodoPagamentoUnico === "transferencia") {
+      // Para transferência bancária única, incluir taxa
+      const metodoTransferencia = metodosDisponiveis.find(metodo => metodo.tipo === "transferencia");
+      if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+        return total * (1 + metodoTransferencia.taxa / 100);
       }
       return total;
     }
@@ -348,6 +370,18 @@ export default function Pagamentos() {
       if (metodoDebito && metodoDebito.taxa > 0) {
         // Aplicar taxa do cartão de débito
         const valorComTaxa = total * (1 + metodoDebito.taxa / 100);
+        setMetodoPagamentoUnico(metodo);
+        setValorDinheiro("");
+        return;
+      }
+    }
+    
+    // Para transferência bancária, aplicar taxa automaticamente
+    if (metodo === "transferencia") {
+      const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+      if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+        // Aplicar taxa da transferência bancária
+        const valorComTaxa = total * (1 + metodoTransferencia.taxa / 100);
         setMetodoPagamentoUnico(metodo);
         setValorDinheiro("");
         return;
@@ -474,6 +508,18 @@ export default function Pagamentos() {
       setUsarPagamentoPrazo(false);
     }
   }, [clienteSelecionado, usarPagamentoPrazo]);
+
+  // Limpar valores dos métodos de pagamento quando desconto for alterado em pagamento múltiplo
+  useEffect(() => {
+    if (metodosPagamento.length > 0) {
+      // Limpar valores dos métodos de pagamento quando desconto mudar
+      const metodosLimpos = metodosPagamento.map(metodo => ({
+        ...metodo,
+        valor: ""
+      }));
+      setMetodosPagamento(metodosLimpos);
+    }
+  }, [desconto]);
 
   // Limpar métodos de pagamento quando pagamento a prazo for ativado e não houver métodos múltiplos
   useEffect(() => {
@@ -907,7 +953,7 @@ export default function Pagamentos() {
       {/* Header */}
       <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center text-foreground">
             <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3" />
             Terminal de Pagamento
           </h1>
@@ -919,7 +965,7 @@ export default function Pagamentos() {
           <Button 
             variant="outline" 
             onClick={voltarParaVenda}
-            className="border-slate-300 text-slate-600 hover:bg-slate-50 h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
+            className="border-border text-muted-foreground hover:bg-muted h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
             <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Voltar
@@ -950,23 +996,23 @@ export default function Pagamentos() {
         <div className="xl:col-span-2 space-y-4 sm:space-y-6 order-2 xl:order-1">
           {/* Método de Pagamento Único */}
           {metodosPagamento.length === 0 && (
-            <Card className="border-green-200">
+            <Card className="border-green-200 dark:border-green-800">
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg flex items-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-600" />
+                <CardTitle className="text-base sm:text-lg flex items-center text-foreground">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-600 dark:text-green-400" />
                   Forma de Pagamento
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium mb-2 sm:mb-3 text-slate-700">
+                  <label className="block text-xs sm:text-sm font-medium mb-2 sm:mb-3 text-foreground">
                     Selecione o método de pagamento
                   </label>
                   
                   {carregandoMetodos ? (
-                    <div className="flex items-center justify-center p-4 sm:p-8 bg-slate-50 rounded-lg border-2 border-slate-200">
-                      <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 text-slate-500 animate-spin mr-2" />
-                      <span className="text-xs sm:text-sm text-slate-600">Carregando métodos...</span>
+                    <div className="flex items-center justify-center p-4 sm:p-8 bg-muted rounded-lg border-2 border-border">
+                      <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground animate-spin mr-2" />
+                      <span className="text-xs sm:text-sm text-muted-foreground">Carregando métodos...</span>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
@@ -1000,8 +1046,8 @@ export default function Pagamentos() {
                             className={`
                               p-1.5 sm:p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md
                               ${isSelected 
-                                ? 'border-green-500 bg-green-50 shadow-md' 
-                                : 'border-slate-200 hover:border-green-300 hover:bg-green-50'
+                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-400 shadow-md' 
+                                : 'border-border hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/10'
                               }
                               ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                             `}
@@ -1009,9 +1055,9 @@ export default function Pagamentos() {
                             <div className="text-center">
                               <div className={`
                                 w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 rounded-full flex items-center justify-center
-                                ${isSelected ? 'bg-green-100' : 'bg-slate-100'}
+                                ${isSelected ? 'bg-green-100 dark:bg-green-800' : 'bg-muted'}
                               `}>
-                                {metodo.tipo === "dinheiro" && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-slate-600" />}
+                                {metodo.tipo === "dinheiro" && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                                 {metodo.tipo === "pix" && (
                                   <img 
                                     src="/logopix.png" 
@@ -1019,20 +1065,20 @@ export default function Pagamentos() {
                                     className="h-3 w-3 sm:h-4 sm:w-4 object-contain"
                                   />
                                 )}
-                                {metodo.tipo === "cartao_credito" && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />}
-                                {metodo.tipo === "cartao_debito" && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />}
-                                {metodo.tipo === "transferencia" && <Building2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />}
+                                {metodo.tipo === "cartao_credito" && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />}
+                                {metodo.tipo === "cartao_debito" && <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />}
+                                {metodo.tipo === "transferencia" && <Building2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />}
                               </div>
-                              <h3 className="text-xs font-medium text-slate-800 mb-1 leading-tight">
+                              <h3 className="text-xs font-medium text-foreground mb-1 leading-tight">
                         {metodo.nome}
                               </h3>
-                              {metodo.tipo !== "cartao_debito" && metodo.taxa > 0 && (
-                                <p className="text-xs text-orange-600">
+                              {metodo.tipo !== "cartao_debito" && metodo.tipo !== "transferencia" && metodo.taxa > 0 && (
+                                <p className="text-xs text-orange-600 dark:text-orange-400">
                                   {metodo.taxa}%
                                 </p>
                               )}
-                              {metodo.tipo !== "cartao_debito" && metodo.taxa === 0 && (
-                                <p className="text-xs text-green-600">
+                              {metodo.tipo !== "cartao_debito" && metodo.tipo !== "transferencia" && metodo.taxa === 0 && (
+                                <p className="text-xs text-green-600 dark:text-green-400">
                                   Sem taxa
                                 </p>
                               )}
@@ -1046,23 +1092,23 @@ export default function Pagamentos() {
 
                 {/* Indicação de Parcelas para Cartão de Crédito */}
                 {metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 sm:p-3 rounded-lg border-2 border-blue-200 shadow-sm">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 sm:p-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-blue-800 mb-1 text-xs sm:text-sm">
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-1 text-xs sm:text-sm">
                             Pagamento Parcelado
                           </h4>
                           <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3 text-xs">
                             <div className="flex items-center space-x-1">
-                              <span className="text-blue-600 font-medium">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">
                                 {parcelaConfirmada.quantidade}x
                               </span>
-                              <span className="text-blue-600">de</span>
-                              <span className="font-bold text-green-600">
+                              <span className="text-blue-600 dark:text-blue-400">de</span>
+                              <span className="font-bold text-green-600 dark:text-green-400">
                                 {parcelaConfirmada.taxa > 0 
                                   ? ((total * (1 + parcelaConfirmada.taxa / 100)) / parcelaConfirmada.quantidade).toLocaleString("pt-BR", {
                                       style: "currency",
@@ -1077,8 +1123,8 @@ export default function Pagamentos() {
                             </div>
                             {parcelaConfirmada.taxa === 0 && (
                               <div className="flex items-center space-x-1">
-                                <span className="text-green-600">•</span>
-                                <span className="text-green-600 font-medium">
+                                <span className="text-green-600 dark:text-green-400">•</span>
+                                <span className="text-green-600 dark:text-green-400 font-medium">
                                   Sem juros
                                 </span>
                               </div>
@@ -1087,7 +1133,7 @@ export default function Pagamentos() {
                         </div>
                       </div>
                       <div className="text-left sm:text-right">
-                        <div className="font-bold text-sm sm:text-base text-slate-800">
+                        <div className="font-bold text-sm sm:text-base text-slate-800 dark:text-slate-200">
                           {parcelaConfirmada.taxa > 0
                             ? (total * (1 + parcelaConfirmada.taxa / 100)).toLocaleString("pt-BR", {
                                 style: "currency",
@@ -1099,7 +1145,7 @@ export default function Pagamentos() {
                               })}
                         </div>
                         {parcelaConfirmada.taxa > 0 && (
-                          <div className="text-xs text-orange-600">
+                          <div className="text-xs text-orange-600 dark:text-orange-400">
                             +{((total * parcelaConfirmada.taxa) / 100).toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
@@ -1134,24 +1180,24 @@ export default function Pagamentos() {
 
                 {/* Campo de Valor em Dinheiro */}
                 {metodoPagamentoUnico === "dinheiro" && (
-                  <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg border-2 border-yellow-200">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 sm:p-4 rounded-lg border-2 border-yellow-200 dark:border-yellow-800">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-yellow-800">
+                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-yellow-800 dark:text-yellow-200">
                           <Banknote className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                           Valor recebido
                         </label>
                         <Input
                           type="text"
                           value={valorDinheiro}
-                          onChange={(e) => setValorDinheiro(e.target.value)}
-                          placeholder="0,00"
+                          onChange={(e) => setValorDinheiro(formatarValorEntrada(e.target.value))}
+                          placeholder="0.00"
                           className="text-sm sm:text-lg font-bold h-8 sm:h-10"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-yellow-800">
+                        <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-yellow-800 dark:text-yellow-200">
                           <Calculator className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                           Troco
                         </label>
@@ -1162,7 +1208,7 @@ export default function Pagamentos() {
                             maximumFractionDigits: 2
                           })}
                           disabled
-                          className="bg-yellow-100 text-yellow-800 text-sm sm:text-lg font-bold h-8 sm:h-10"
+                          className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-sm sm:text-lg font-bold h-8 sm:h-10"
                         />
                       </div>
                     </div>
@@ -1171,10 +1217,10 @@ export default function Pagamentos() {
 
                 {/* Botão Visualizar Chave PIX */}
                 {metodoPagamentoUnico === "pix" && (
-                  <div className="bg-green-50 p-3 sm:p-4 rounded-lg border-2 border-green-200">
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div>
-                        <h4 className="font-medium text-green-800 mb-1 flex items-center text-sm sm:text-base">
+                        <h4 className="font-medium text-green-800 dark:text-green-200 mb-1 flex items-center text-sm sm:text-base">
                           <img 
                             src="/logopix.png" 
                             alt="PIX" 
@@ -1182,7 +1228,7 @@ export default function Pagamentos() {
                           />
                           Pagamento via PIX
                         </h4>
-                        <p className="text-xs sm:text-sm text-green-600">
+                        <p className="text-xs sm:text-sm text-green-600 dark:text-green-400">
                           {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
                         </p>
                       </div>
@@ -1209,14 +1255,14 @@ export default function Pagamentos() {
 
                 {/* Botão Visualizar Dados Bancários */}
                 {metodoPagamentoUnico === "transferencia" && (
-                  <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border-2 border-blue-200">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 sm:p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div>
-                        <h4 className="font-medium text-blue-800 mb-1 text-sm sm:text-base">
+                        <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1 text-sm sm:text-base">
                           <Building2 className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                           Transferência Bancária
                         </h4>
-                        <p className="text-xs sm:text-sm text-blue-600">
+                        <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
                           {dadosBancarios ? 'Clique para visualizar os dados da conta' : 'Configure os dados bancários nas configurações'}
                         </p>
                       </div>
@@ -1239,14 +1285,14 @@ export default function Pagamentos() {
 
                 {/* Informações do Cartão de Débito */}
                 {metodoPagamentoUnico === "cartao_debito" && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <CreditCard className="h-5 w-5 text-blue-600" />
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+                          <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-blue-800 mb-1">
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
                             Cartão de Débito
                           </h4>
                           <div className="flex items-center space-x-4 text-sm">
@@ -1255,8 +1301,8 @@ export default function Pagamentos() {
                               if (metodoDebito && metodoDebito.taxa > 0) {
                                 return (
                                   <div className="flex items-center space-x-1">
-                                    <span className="text-orange-600">•</span>
-                                    <span className="text-orange-600 font-medium">
+                                    <span className="text-orange-600 dark:text-orange-400">•</span>
+                                    <span className="text-orange-600 dark:text-orange-400 font-medium">
                                       Taxa: {metodoDebito.taxa}%
                                     </span>
                                   </div>
@@ -1264,8 +1310,8 @@ export default function Pagamentos() {
                               }
                               return (
                                 <div className="flex items-center space-x-1">
-                                  <span className="text-green-600">•</span>
-                                  <span className="text-green-600 font-medium">
+                                  <span className="text-green-600 dark:text-green-400">•</span>
+                                  <span className="text-green-600 dark:text-green-400 font-medium">
                                     Sem taxa adicional
                                   </span>
                                 </div>
@@ -1275,7 +1321,7 @@ export default function Pagamentos() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg text-slate-800">
+                        <div className="font-bold text-lg text-slate-800 dark:text-slate-200">
                           {(() => {
                             const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
                             if (metodoDebito && metodoDebito.taxa > 0) {
@@ -1295,7 +1341,80 @@ export default function Pagamentos() {
                           if (metodoDebito && metodoDebito.taxa > 0) {
                             const valorTaxa = (total * metodoDebito.taxa) / 100;
                             return (
-                              <div className="text-xs text-orange-600">
+                              <div className="text-xs text-orange-600 dark:text-orange-400">
+                                +{valorTaxa.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                })} taxa
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Informações da Transferência Bancária */}
+                {metodoPagamentoUnico === "transferencia" && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl border-2 border-green-200 dark:border-green-800 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-green-800 dark:text-green-200 mb-1">
+                            Transferência Bancária
+                          </h4>
+                          <div className="flex items-center space-x-4 text-sm">
+                            {(() => {
+                              const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                              if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+                                return (
+                                  <div className="flex items-center space-x-1">
+                                    <span className="text-orange-600">•</span>
+                                    <span className="text-orange-600 font-medium">
+                                      Taxa: {metodoTransferencia.taxa}%
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-green-600 dark:text-green-400">•</span>
+                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                    Sem taxa adicional
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg text-slate-800 dark:text-slate-200">
+                          {(() => {
+                            const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                            if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+                              return (total * (1 + metodoTransferencia.taxa / 100)).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              });
+                            }
+                            return total.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            });
+                          })()}
+                        </div>
+                        {(() => {
+                          const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                          if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+                            const valorTaxa = (total * metodoTransferencia.taxa) / 100;
+                            return (
+                              <div className="text-xs text-orange-600 dark:text-orange-400">
                                 +{valorTaxa.toLocaleString("pt-BR", {
                                   style: "currency",
                                   currency: "BRL"
@@ -1339,11 +1458,11 @@ export default function Pagamentos() {
 
           {/* Múltiplos Métodos de Pagamento */}
           {metodosPagamento.length > 0 && (
-            <Card className="border-blue-200">
+            <Card className="border-blue-200 dark:border-blue-800">
               <CardHeader className="pb-3 sm:pb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                  <CardTitle className="text-base sm:text-lg flex items-center">
-                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
+                  <CardTitle className="text-base sm:text-lg flex items-center text-foreground">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 dark:text-blue-400" />
                     Múltiplos Métodos
                   </CardTitle>
                   <div className="flex space-x-2">
@@ -1383,28 +1502,28 @@ export default function Pagamentos() {
               <CardContent className="space-y-3 sm:space-y-4">
                 {/* Mostrar loading se estiver carregando */}
                 {carregandoMetodos && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                      <p className="text-sm text-blue-700">Carregando métodos de pagamento...</p>
+                      <Loader2 className="h-5 w-5 text-blue-500 dark:text-blue-400 animate-spin" />
+                      <p className="text-sm text-blue-700 dark:text-blue-300">Carregando métodos de pagamento...</p>
                     </div>
                   </div>
                 )}
 
                 {/* Mostrar erro de carregamento se houver */}
                 {erroCarregamentoMetodos && !carregandoMetodos && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <AlertCircle className="h-5 w-5 text-red-500" />
-                        <p className="text-sm text-red-700">{erroCarregamentoMetodos}</p>
+                        <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
+                        <p className="text-sm text-red-700 dark:text-red-300">{erroCarregamentoMetodos}</p>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={recarregarMetodosPagamento}
                         disabled={carregandoMetodosPagamento}
-                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        className="text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         {carregandoMetodosPagamento ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1417,13 +1536,13 @@ export default function Pagamentos() {
                 )}
                 
                 {metodosPagamento.map((metodo, index) => (
-                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 sm:p-4 bg-slate-50 rounded-lg border">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 sm:p-4 bg-muted rounded-lg border">
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-slate-700">
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-foreground">
                         Método
                       </label>
                       {parseFloat(metodo.valor) <= 0 && (
-                        <p className="text-xs text-amber-600 mb-2">
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
                           💡 Adicione um valor primeiro para selecionar cartão de crédito
                         </p>
                       )}
@@ -1485,6 +1604,22 @@ export default function Pagamentos() {
                             }
                           }
                           
+                          // Para transferência bancária, aplicar taxa automaticamente
+                          if (metodoSelecionado === "transferencia") {
+                            const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                            if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+                              const valorAtual = parseValorComVirgula(metodo.valor);
+                              if (valorAtual > 0) {
+                                const valorComTaxa = valorAtual * (1 + metodoTransferencia.taxa / 100);
+                                const novosMetodos = [...metodosPagamento];
+                                novosMetodos[index].metodo = metodoSelecionado;
+                                novosMetodos[index].taxaParcela = metodoTransferencia.taxa;
+                                setMetodosPagamento(novosMetodos);
+                                return;
+                              }
+                            }
+                          }
+                          
                           const novosMetodos = [...metodosPagamento];
                           novosMetodos[index].metodo = metodoSelecionado;
                           novosMetodos[index].valor = "";
@@ -1518,7 +1653,7 @@ export default function Pagamentos() {
                     </div>
                     
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-slate-700">
+                      <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-foreground">
                         Valor
                       </label>
                       <Input
@@ -1526,10 +1661,10 @@ export default function Pagamentos() {
                         value={metodo.valor}
                         onChange={(e) => {
                           const novosMetodos = [...metodosPagamento];
-                          novosMetodos[index].valor = e.target.value;
+                          novosMetodos[index].valor = formatarValorEntrada(e.target.value);
                           setMetodosPagamento(novosMetodos);
                         }}
-                        placeholder="0,00"
+                        placeholder="0.00"
                         className="text-center h-8 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
@@ -1541,7 +1676,7 @@ export default function Pagamentos() {
                         onClick={() => {
                           setMetodosPagamento(metodosPagamento.filter((_, i) => i !== index));
                         }}
-                        className="w-full border-red-300 text-red-600 hover:bg-red-50 h-8 sm:h-10"
+                        className="w-full border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 sm:h-10"
                       >
                         <X className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
@@ -1551,10 +1686,10 @@ export default function Pagamentos() {
 
                 {/* Botão PIX para múltiplos métodos */}
                 {metodosPagamento.some(m => m.metodo === "pix") && (
-                  <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-green-800 mb-1 flex items-center">
+                        <h4 className="font-medium text-green-800 dark:text-green-200 mb-1 flex items-center">
                           <img 
                             src="/logopix.png" 
                             alt="PIX" 
@@ -1562,7 +1697,7 @@ export default function Pagamentos() {
                           />
                           Dados PIX Disponíveis
                         </h4>
-                        <p className="text-sm text-green-600">
+                        <p className="text-sm text-green-600 dark:text-green-400">
                           {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
                         </p>
                       </div>
@@ -1589,14 +1724,14 @@ export default function Pagamentos() {
 
                 {/* Botão Dados Bancários para múltiplos métodos */}
                 {metodosPagamento.some(m => m.metodo === "transferencia") && (
-                  <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-blue-800 mb-1">
+                        <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">
                           <Building2 className="h-4 w-4 inline mr-1" />
                           Dados Bancários Disponíveis
                         </h4>
-                        <p className="text-sm text-blue-600">
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
                           {dadosBancarios ? 'Clique para visualizar os dados da conta' : 'Configure os dados bancários nas configurações'}
                         </p>
                       </div>
@@ -1618,9 +1753,9 @@ export default function Pagamentos() {
                 )}
 
                 {/* Resumo dos Pagamentos */}
-                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                  <h4 className="font-bold mb-4 text-slate-800 flex items-center">
-                    <Calculator className="h-5 w-5 mr-2 text-slate-600" />
+                <div className="bg-muted rounded-xl p-5 border">
+                  <h4 className="font-bold mb-4 text-foreground flex items-center">
+                    <Calculator className="h-5 w-5 mr-2 text-muted-foreground" />
                     Resumo dos Pagamentos
                   </h4>
                   <div className="space-y-3">
@@ -1638,19 +1773,25 @@ export default function Pagamentos() {
                         if (metodoDebito && metodoDebito.taxa > 0) {
                           valorComJuros = valorMetodo * (1 + metodoDebito.taxa / 100);
                         }
+                      } else if (metodo.metodo === "transferencia") {
+                        // Para transferência bancária, aplicar taxa do método
+                        const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                        if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+                          valorComJuros = valorMetodo * (1 + metodoTransferencia.taxa / 100);
+                        }
                       } else if (metodo.taxaParcela && metodo.taxaParcela > 0) {
                         // Para outros métodos com taxa de parcela
                         valorComJuros = valorMetodo * (1 + metodo.taxaParcela / 100);
                       }
                       
                       return (
-                        <div key={index} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200">
+                        <div key={index} className="flex justify-between items-center p-3 bg-card rounded-lg border">
                           <div className="flex items-center space-x-2">
-                            <span className="text-slate-700 font-medium">
+                            <span className="text-foreground font-medium">
                               {metodoDisponivel?.nome || metodo.metodo.replace('_', ' ')}
                             </span>
                             {metodo.parcelas && metodo.parcelas > 1 && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full">
                                 {metodo.parcelas}x de {(() => {
                                   const valorParcela = valorComJuros / metodo.parcelas;
                                   return valorParcela.toLocaleString("pt-BR", {
@@ -1660,21 +1801,31 @@ export default function Pagamentos() {
                                 })()}
                               </span>
                             )}
-                            {(metodo.taxaParcela && metodo.taxaParcela > 0) || (metodo.metodo === "cartao_debito" && (() => {
+                            {((metodo.taxaParcela && metodo.taxaParcela > 0) || 
+                              (metodo.metodo === "cartao_debito" && (() => {
                               const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
                               return metodoDebito && metodoDebito.taxa > 0;
-                            })()) && (
-                              <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                +{metodo.metodo === "cartao_debito" ? 
-                                  (() => {
+                              })()) || 
+                              (metodo.metodo === "transferencia" && (() => {
+                                const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                                return metodoTransferencia && metodoTransferencia.taxa > 0;
+                              })())) && (
+                              <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-medium rounded-full">
+                                +{(() => {
+                                  if (metodo.metodo === "cartao_debito") {
                                     const metodoDebito = metodosDisponiveis.find(m => m.tipo === "cartao_debito");
                                     return metodoDebito ? metodoDebito.taxa : 0;
-                                  })() : 
-                                  metodo.taxaParcela}%
+                                  } else if (metodo.metodo === "transferencia") {
+                                    const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                                    return metodoTransferencia ? metodoTransferencia.taxa : 0;
+                                  } else {
+                                    return metodo.taxaParcela || 0;
+                                  }
+                                })()}%
                               </span>
                             )}
                           </div>
-                          <span className="font-bold text-slate-800">
+                          <span className="font-bold text-foreground">
                             {valorComJuros.toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
@@ -1684,10 +1835,10 @@ export default function Pagamentos() {
                       );
                     })}
                     
-                    <div className="border-t border-slate-300 pt-3">
-                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
-                        <span className="font-bold text-lg text-slate-800">Total Pago:</span>
-                        <span className="font-bold text-xl text-green-600">
+                    <div className="border-t border-border pt-3">
+                      <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <span className="font-bold text-lg text-slate-800 dark:text-slate-200">Total Pago:</span>
+                        <span className="font-bold text-xl text-green-600 dark:text-green-400">
                           {metodosPagamento.reduce((sum, m) => {
                             const valorMetodo = parseValorComVirgula(m.valor);
                             let valorComJuros = valorMetodo;
@@ -1697,6 +1848,12 @@ export default function Pagamentos() {
                               const metodoDebito = metodosDisponiveis.find(metodo => metodo.tipo === "cartao_debito");
                               if (metodoDebito && metodoDebito.taxa > 0) {
                                 valorComJuros = valorMetodo * (1 + metodoDebito.taxa / 100);
+                              }
+                            } else if (m.metodo === "transferencia") {
+                              // Para transferência bancária, aplicar taxa do método
+                              const metodoTransferencia = metodosDisponiveis.find(metodo => metodo.tipo === "transferencia");
+                              if (metodoTransferencia && metodoTransferencia.taxa > 0) {
+                                valorComJuros = valorMetodo * (1 + metodoTransferencia.taxa / 100);
                               }
                             } else if (m.taxaParcela && m.taxaParcela > 0) {
                               // Para outros métodos com taxa de parcela
@@ -1718,11 +1875,11 @@ export default function Pagamentos() {
           )}
 
           {/* Pagamento a Prazo */}
-          <Card className="border-purple-200">
+          <Card className="border-purple-200 dark:border-purple-800">
             <CardHeader className="pb-3 sm:pb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                <CardTitle className="text-base sm:text-lg flex items-center">
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-purple-600" />
+                <CardTitle className="text-base sm:text-lg flex items-center text-foreground">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-purple-600 dark:text-purple-400" />
                   Pagamento a Prazo
                 </CardTitle>
                 <div className="flex items-center space-x-2">
@@ -1732,9 +1889,9 @@ export default function Pagamentos() {
                     checked={usarPagamentoPrazo}
                     onChange={(e) => setUsarPagamentoPrazo(e.target.checked)}
                     disabled={!clienteSelecionado || (metodosPagamento.length > 0 && handleCalcularValorRestantePrazo() <= 0)}
-                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 disabled:opacity-50"
+                    className="h-4 w-4 text-purple-600 dark:text-purple-400 focus:ring-purple-500 disabled:opacity-50"
                   />
-                  <label htmlFor="usarPagamentoPrazo" className="text-xs sm:text-sm font-medium text-slate-700">
+                  <label htmlFor="usarPagamentoPrazo" className="text-xs sm:text-sm font-medium text-foreground">
                     Ativar pagamento a prazo
                   </label>
                 </div>
@@ -1743,8 +1900,8 @@ export default function Pagamentos() {
             
             <CardContent className="space-y-4">
               {!clienteSelecionado && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-yellow-800 text-sm text-center">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-yellow-800 dark:text-yellow-200 text-sm text-center">
                     <AlertCircle className="h-4 w-4 inline mr-1" />
                     Selecione um cliente para ativar o pagamento a prazo
                   </p>
@@ -1752,10 +1909,10 @@ export default function Pagamentos() {
               )}
 
               {usarPagamentoPrazo && clienteSelecionado && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-purple-800">
+                      <label className="block text-sm font-medium mb-2 text-purple-800 dark:text-purple-200">
                         <Calendar className="h-4 w-4 inline mr-1" />
                         Dias para Pagamento
                       </label>
@@ -1764,7 +1921,7 @@ export default function Pagamentos() {
                         placeholder="30"
                         value={pagamentoPrazo.dias}
                               onChange={(e) => {
-                                const dias = e.target.value;
+                                const dias = formatarValorEntrada(e.target.value);
                                 handleCalcularPagamentoPrazo(dias, pagamentoPrazo.juros);
                               }}
                         className="text-center"
@@ -1772,7 +1929,7 @@ export default function Pagamentos() {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-purple-800">
+                      <label className="block text-sm font-medium mb-2 text-purple-800 dark:text-purple-200">
                         <Percent className="h-4 w-4 inline mr-1" />
                         Juros (%)
                       </label>
@@ -1781,7 +1938,7 @@ export default function Pagamentos() {
                         placeholder="0"
                         value={pagamentoPrazo.juros}
                               onChange={(e) => {
-                                const juros = e.target.value;
+                                const juros = formatarValorEntrada(e.target.value);
                                 handleCalcularPagamentoPrazo(pagamentoPrazo.dias, juros);
                               }}
                         className="text-center"
@@ -1790,10 +1947,10 @@ export default function Pagamentos() {
                   </div>
                   
                   {/* Informações do pagamento a prazo */}
-                  <div className="bg-white rounded-lg p-4 border border-purple-300">
+                  <div className="bg-card rounded-lg p-4 border border-purple-300 dark:border-purple-700">
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Valor Original:</span>
+                        <span className="text-muted-foreground">Valor Original:</span>
                         <span className="font-medium">
                                 {(metodosPagamento.length > 0 ? handleCalcularValorRestantePrazo() : total).toLocaleString("pt-BR", {
                             style: "currency",
@@ -1802,7 +1959,7 @@ export default function Pagamentos() {
                         </span>
                       </div>
                       {parseFloat(pagamentoPrazo.juros) > 0 && (
-                        <div className="flex justify-between text-orange-600">
+                        <div className="flex justify-between text-orange-600 dark:text-orange-400">
                           <span>Juros ({pagamentoPrazo.juros}%):</span>
                           <span className="font-medium">
                                     +{((metodosPagamento.length > 0 ? handleCalcularValorRestantePrazo() : total) * parseFloat(pagamentoPrazo.juros) / 100).toLocaleString("pt-BR", {
@@ -1812,14 +1969,14 @@ export default function Pagamentos() {
                           </span>
                         </div>
                       )}
-                      <div className="flex justify-between font-bold text-purple-600 border-t border-purple-200 pt-2 text-lg">
+                      <div className="flex justify-between font-bold text-purple-600 dark:text-purple-400 border-t border-purple-200 dark:border-purple-700 pt-2 text-lg">
                         <span>Total a Pagar:</span>
                         <span>{pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL"
                         })}</span>
                       </div>
-                      <div className="flex justify-between text-slate-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span>Vencimento:</span>
                         <span>{pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}</span>
                       </div>
@@ -1831,37 +1988,37 @@ export default function Pagamentos() {
           </Card>
 
           {/* Campo de Desconto */}
-          <Card className="border-orange-200">
+          <Card className="border-orange-200 dark:border-orange-800">
             <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-base flex items-center">
-                <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-orange-600" />
+              <CardTitle className="text-sm sm:text-base flex items-center text-foreground">
+                <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-orange-600 dark:text-orange-400" />
                 Desconto
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium mb-1 text-slate-600">
+                  <label className="block text-xs font-medium mb-1 text-foreground">
                     Porcentagem
                   </label>
                   <div className="flex items-center space-x-2">
                     <Input
                       type="text"
                       value={desconto}
-                      onChange={(e) => setDesconto(e.target.value)}
+                      onChange={(e) => setDesconto(formatarValorEntrada(e.target.value))}
                       placeholder="0"
                       className="text-center w-16 text-xs sm:text-sm font-semibold h-7 sm:h-8"
                     />
-                    <span className="text-xs sm:text-sm font-medium text-slate-600">%</span>
+                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">%</span>
                   </div>
                 </div>
                 
                 <div className="flex-1">
-                  <label className="block text-xs font-medium mb-1 text-slate-600">
+                  <label className="block text-xs font-medium mb-1 text-foreground">
                     Valor
                   </label>
-                  <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                    <span className="text-xs sm:text-sm font-bold text-green-600">
+                  <div className="bg-muted p-2 rounded border">
+                    <span className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">
                       {valorDesconto.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -1879,10 +2036,10 @@ export default function Pagamentos() {
         {/* Coluna Direita - Resumo da Venda */}
         <div className="xl:col-span-1 order-1 xl:order-2">
           {/* Resumo da Venda */}
-          <Card className="w-full flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[28rem] sm:h-[26rem] md:h-[28rem] lg:h-[calc(100vh-150px)] min-h-0 sticky top-6">
-            <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0 pb-3 sm:pb-6">
+          <Card className="w-full flex flex-col bg-muted border shadow-xl rounded-xl h-[28rem] sm:h-[26rem] md:h-[28rem] lg:h-[calc(100vh-150px)] min-h-0 sticky top-6">
+            <CardHeader className="bg-muted border-b rounded-t-xl flex-shrink-0 pb-3 sm:pb-6">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center space-x-2 text-slate-800 text-sm sm:text-base">
+                <CardTitle className="flex items-center space-x-2 text-foreground text-sm sm:text-base">
                   <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>Resumo da Venda</span>
                 </CardTitle>
@@ -1891,7 +2048,7 @@ export default function Pagamentos() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-0 bg-slate-50 min-h-0">
+            <CardContent className="flex-1 flex flex-col p-0 bg-muted min-h-0">
               {/* Área de Cliente */}
               <div className="p-3 sm:p-4 border-b flex-shrink-0">
                 <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -1954,7 +2111,7 @@ export default function Pagamentos() {
               </div>
 
               {/* Resumo Financeiro */}
-              <div className="p-3 sm:p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
+              <div className="p-3 sm:p-4 border-t bg-muted border rounded-b-xl flex-shrink-0">
                 <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal:</span>
@@ -1965,7 +2122,7 @@ export default function Pagamentos() {
                   </div>
                   
                   {parseFloat(desconto) > 0 && (
-                    <div className="flex justify-between text-green-600">
+                    <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>Desconto ({desconto}%):</span>
                       <span>-{valorDesconto.toLocaleString("pt-BR", {
                         style: "currency",
@@ -1976,7 +2133,7 @@ export default function Pagamentos() {
 
                   {/* Resumo dos métodos de pagamento */}
                   {(metodosPagamento.length > 0 || metodoPagamentoUnico || (metodoPagamentoUnico === "cartao_credito" && parcelaConfirmada)) && (
-                    <div className="pt-2 border-t border-slate-300">
+                    <div className="pt-2 border-t border-border">
                       <div className="text-xs text-muted-foreground mb-2">Formas de Pagamento:</div>
                       <div className="space-y-1">
                         {/* Método único com parcelas */}
@@ -2037,16 +2194,6 @@ export default function Pagamentos() {
                           </div>
                         )}
 
-                        {/* Transferência Bancária */}
-                        {metodoPagamentoUnico === "transferencia" && (
-                          <div className="flex justify-between text-xs">
-                            <span>Transferência:</span>
-                            <span>{total.toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL"
-                            })}</span>
-                          </div>
-                        )}
 
                         {/* Cartão de Crédito (método único sem parcelas) */}
                         {metodoPagamentoUnico === "cartao_credito" && !parcelaConfirmada && (
@@ -2075,6 +2222,23 @@ export default function Pagamentos() {
                             })()}</span>
                           </div>
                         )}
+
+                        {/* Transferência Bancária (método único) */}
+                        {metodoPagamentoUnico === "transferencia" && (
+                          <div className="flex justify-between text-xs">
+                            <span>Transferência Bancária:</span>
+                            <span>{(() => {
+                              const metodoTransferencia = metodosDisponiveis.find(m => m.tipo === "transferencia");
+                              const valorComTaxa = metodoTransferencia && metodoTransferencia.taxa > 0 
+                                ? total * (1 + metodoTransferencia.taxa / 100)
+                                : total;
+                              return valorComTaxa.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              });
+                            })()}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2082,52 +2246,52 @@ export default function Pagamentos() {
                     
                   {/* Pagamento a prazo */}
                   {usarPagamentoPrazo && clienteSelecionado && (
-                        <div className="pt-2 border-t border-slate-300">
+                        <div className="pt-2 border-t border-border">
                       {/* Quando é apenas pagamento a prazo (sem métodos múltiplos), dar mais destaque */}
                       {metodosPagamento.length === 0 && !metodoPagamentoUnico ? (
                         <div className="space-y-2">
-                          <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
+                          <div className="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                              <span className="text-sm font-bold text-purple-800">Total a Prazo:</span>
+                              <span className="text-sm font-bold text-purple-800 dark:text-purple-200">Total a Prazo:</span>
                             </div>
-                            <span className="text-lg font-bold text-purple-600">
+                            <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
                               {pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-200">
+                          <div className="flex justify-between items-center p-2 bg-muted rounded border">
                             <div className="flex items-center space-x-2">
                               <Calendar className="h-3 w-3 text-slate-500" />
-                              <span className="text-xs font-medium text-slate-700">Vencimento:</span>
+                              <span className="text-xs font-medium text-foreground">Vencimento:</span>
                             </div>
-                            <span className="text-sm font-semibold text-slate-800">
+                            <span className="text-sm font-semibold text-foreground">
                               {pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}
                             </span>
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
+                          <div className="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                              <span className="text-sm font-bold text-purple-800">Total a Prazo:</span>
+                              <span className="text-sm font-bold text-purple-800 dark:text-purple-200">Total a Prazo:</span>
                             </div>
-                            <span className="text-lg font-bold text-purple-600">
+                            <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
                               {pagamentoPrazo.valorComJuros.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-200">
+                          <div className="flex justify-between items-center p-2 bg-muted rounded border">
                             <div className="flex items-center space-x-2">
                               <Calendar className="h-3 w-3 text-slate-500" />
-                              <span className="text-xs font-medium text-slate-700">Vencimento:</span>
+                              <span className="text-xs font-medium text-foreground">Vencimento:</span>
                             </div>
-                            <span className="text-sm font-semibold text-slate-800">
+                            <span className="text-sm font-semibold text-foreground">
                               {pagamentoPrazo.dataVencimento.toLocaleDateString("pt-BR")}
                             </span>
                           </div>
@@ -2137,15 +2301,17 @@ export default function Pagamentos() {
                   )}
 
                   <div className="border-t pt-2 space-y-1">
-                    {/* Total a Cobrar - sempre mostra o valor com juros quando há cartão de crédito ou débito */}
+                    {/* Total a Cobrar - sempre mostra o valor com juros quando há cartão de crédito, débito ou transferência bancária */}
                     {(() => {
                       const temCartaoCredito = metodoPagamentoUnico === "cartao_credito" || 
                         metodosPagamento.some(m => m.metodo === "cartao_credito");
                       const temCartaoDebito = metodoPagamentoUnico === "cartao_debito" || 
                         metodosPagamento.some(m => m.metodo === "cartao_debito");
+                      const temTransferencia = metodoPagamentoUnico === "transferencia" || 
+                        metodosPagamento.some(m => m.metodo === "transferencia");
                       
-                      // Sempre mostrar quando há cartão de crédito ou débito, pois sempre há valor a cobrar (com ou sem juros)
-                      if (temCartaoCredito || temCartaoDebito) {
+                      // Sempre mostrar quando há cartão de crédito, débito ou transferência bancária, pois sempre há valor a cobrar (com ou sem juros)
+                      if (temCartaoCredito || temCartaoDebito || temTransferencia) {
                         const totalACobrar = calcularTotalACobrar();
                         
                         // Calcular valor original baseado nos métodos de pagamento à vista (sem pagamento a prazo)
@@ -2156,17 +2322,17 @@ export default function Pagamentos() {
                           }, 0);
                         } else if (metodoPagamentoUnico === "dinheiro") {
                           valorOriginal = parseValorComVirgula(valorDinheiro);
-                        } else if (metodoPagamentoUnico === "cartao_credito" || metodoPagamentoUnico === "cartao_debito") {
+                        } else if (metodoPagamentoUnico === "cartao_credito" || metodoPagamentoUnico === "cartao_debito" || metodoPagamentoUnico === "transferencia") {
                           valorOriginal = total;
                         }
                         
                         return (
-                          <div className="flex justify-between items-center p-2 bg-red-50 rounded border border-red-200">
+                          <div className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
                             <div className="flex items-center space-x-1">
                               <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                              <span className="text-xs font-medium text-red-800">Total a Cobrar:</span>
+                              <span className="text-xs font-medium text-red-800 dark:text-red-200">Total a Cobrar:</span>
                             </div>
-                            <span className="text-sm font-bold text-red-600">
+                            <span className="text-sm font-bold text-red-600 dark:text-red-400">
                               {totalACobrar.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
@@ -2180,12 +2346,12 @@ export default function Pagamentos() {
 
                     {/* Total a Receber - só aparece se não for apenas pagamento a prazo */}
                     {!usarPagamentoPrazo && (
-                      <div className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
+                      <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                         <div className="flex items-center space-x-1">
                           <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                          <span className="text-xs font-medium text-green-800">Total a Receber:</span>
+                              <span className="text-xs font-medium text-green-800 dark:text-green-200">Total a Receber:</span>
                         </div>
-                        <span className="text-sm font-bold text-green-600">
+                        <span className="text-sm font-bold text-green-600 dark:text-green-400">
                           {calcularTotalPago().toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL"
@@ -2213,14 +2379,14 @@ export default function Pagamentos() {
                         }
                         
                         return (
-                          <div className="flex justify-between items-center p-2 bg-orange-50 rounded border border-orange-200">
+                          <div className="flex justify-between items-center p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
                             <div className="flex items-center space-x-1">
                               <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                              <span className="text-xs font-medium text-orange-800">
+                              <span className="text-xs font-medium text-orange-800 dark:text-orange-200">
                                 Falta Receber:
                               </span>
                             </div>
-                            <span className="text-sm font-bold text-orange-600">
+                            <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                               {statusPagamento.faltaPagar.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL"
@@ -2232,12 +2398,12 @@ export default function Pagamentos() {
                       
                       if (statusPagamento.troco > 0) {
                         return (
-                          <div className="flex justify-between items-center p-2 bg-blue-50 rounded border border-blue-200">
+                          <div className="flex justify-between items-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                             <div className="flex items-center space-x-1">
                               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                              <span className="text-xs font-medium text-blue-800">Troco:</span>
+                              <span className="text-xs font-medium text-blue-800 dark:text-blue-200">Troco:</span>
                             </div>
-                            <span className="text-sm font-bold text-blue-600">
+                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                               {statusPagamento.troco.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL"
@@ -2249,12 +2415,12 @@ export default function Pagamentos() {
                       
                       if (statusPagamento.pagoCompleto && !usarPagamentoPrazo) {
                         return (
-                          <div className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
+                          <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                             <div className="flex items-center space-x-1">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              <span className="text-xs font-medium text-green-800">Pagamento Completo:</span>
+                              <span className="text-xs font-medium text-green-800 dark:text-green-200">Pagamento Completo:</span>
                   </div>
-                            <span className="text-sm font-bold text-green-600">✓</span>
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">✓</span>
                           </div>
                         );
                       }
@@ -2333,14 +2499,14 @@ export default function Pagamentos() {
             
             <CardContent className="flex-1 overflow-hidden flex flex-col">
               {/* Header com informações */}
-              <div className="text-center mb-3 sm:mb-4 lg:mb-6 p-2 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-semibold text-slate-800 mb-2 text-xs sm:text-sm lg:text-base">
+              <div className="text-center mb-3 sm:mb-4 lg:mb-6 p-2 sm:p-3 lg:p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold text-foreground mb-2 text-xs sm:text-sm lg:text-base">
                   Escolha o número de parcelas
                 </h4>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center space-y-1 sm:space-y-0 sm:space-x-3 lg:space-x-4 text-xs sm:text-sm">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                    <span className="text-slate-600">Valor para parcelas:</span>
-                    <span className="font-bold text-xs sm:text-sm lg:text-lg text-green-600">
+                    <span className="text-muted-foreground">Valor para parcelas:</span>
+                    <span className="font-bold text-xs sm:text-sm lg:text-lg text-green-600 dark:text-green-400">
                       {valorParcelaModal.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -2348,7 +2514,7 @@ export default function Pagamentos() {
                     </span>
                   </div>
                   {parcelaSelecionada && (
-                    <div className="flex items-center justify-center space-x-1 sm:space-x-2 text-blue-600">
+                    <div className="flex items-center justify-center space-x-1 sm:space-x-2 text-blue-600 dark:text-blue-400">
                       <span>•</span>
                       <span className="font-medium text-xs sm:text-sm">
                         {parcelaSelecionada.quantidade} parcela{parcelaSelecionada.quantidade > 1 ? "s" : ""}
@@ -2362,11 +2528,11 @@ export default function Pagamentos() {
               <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3 pr-1 sm:pr-2">
                 {parcelasDisponiveis.length === 0 ? (
                   <div className="text-center py-6 sm:py-8">
-                    <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
-                    <h3 className="text-base sm:text-lg font-medium text-slate-600 mb-2">
+                    <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
                       Nenhuma parcela disponível
                     </h3>
-                    <p className="text-xs sm:text-sm text-slate-500">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Configure as parcelas nas configurações do sistema
                     </p>
                   </div>
@@ -2382,8 +2548,8 @@ export default function Pagamentos() {
                         key={parcela.id}
                         className={`p-3 sm:p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                           parcelaSelecionada?.id === parcela.id
-                            ? "border-blue-500 bg-blue-50 shadow-md"
-                            : "border-slate-200 hover:border-blue-300 hover:shadow-sm"
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md"
+                            : "border-border hover:border-blue-300 hover:shadow-sm"
                         }`}
                         onClick={() => setParcelaSelecionada(parcela)}
                       >
@@ -2392,7 +2558,7 @@ export default function Pagamentos() {
                             <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center ${
                               parcelaSelecionada?.id === parcela.id
                                 ? "border-blue-500 bg-blue-500"
-                                : "border-slate-300"
+                                : "border-border"
                             }`}>
                               {parcelaSelecionada?.id === parcela.id && (
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white"></div>
@@ -2404,8 +2570,8 @@ export default function Pagamentos() {
                                 <span className="font-semibold text-sm sm:text-lg">
                                   {parcela.quantidade}x
                                 </span>
-                                <span className="text-slate-600 text-xs sm:text-base">de</span>
-                                <span className="font-bold text-green-600 text-xs sm:text-base">
+                                <span className="text-muted-foreground text-xs sm:text-base">de</span>
+                                <span className="font-bold text-green-600 dark:text-green-400 text-xs sm:text-base">
                                   {valorParcela.toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL"
@@ -2413,14 +2579,14 @@ export default function Pagamentos() {
                                 </span>
                               </div>
                               
-                              <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-slate-500">
+                              <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-muted-foreground">
                                 <span>
                                   {parcela.quantidade} parcela{parcela.quantidade > 1 ? "s" : ""}
                                 </span>
                                 {parcela.taxa > 0 && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-orange-600 font-medium">
+                                    <span className="text-orange-600 dark:text-orange-400 font-medium">
                                       Taxa: {parcela.taxa}%
                                     </span>
                                   </>
@@ -2428,7 +2594,7 @@ export default function Pagamentos() {
                                 {parcela.taxa === 0 && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-green-600 font-medium">
+                                    <span className="text-green-600 dark:text-green-400 font-medium">
                                       Sem juros
                                     </span>
                                   </>
@@ -2438,14 +2604,14 @@ export default function Pagamentos() {
                           </div>
                           
                           <div className="text-right flex-shrink-0">
-                            <div className="font-bold text-sm sm:text-lg lg:text-xl text-slate-800">
+                            <div className="font-bold text-sm sm:text-lg lg:text-xl text-foreground">
                               {valorTotalComTaxa.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
                               })}
                             </div>
                             {valorJuros > 0 && (
-                              <div className="text-xs sm:text-sm text-orange-600 font-medium">
+                              <div className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 font-medium">
                                 +{valorJuros.toLocaleString("pt-BR", {
                                   style: "currency",
                                   currency: "BRL"
@@ -2516,8 +2682,8 @@ export default function Pagamentos() {
                 <>
                   {/* QR Code */}
                   <div className="text-center">
-                    <h4 className="font-medium mb-2 sm:mb-3 text-slate-700 text-sm sm:text-base">QR Code PIX</h4>
-                    <div className="bg-white p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200 inline-block">
+                    <h4 className="font-medium mb-2 sm:mb-3 text-foreground text-sm sm:text-base">QR Code PIX</h4>
+                    <div className="bg-card p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border inline-block">
                       {pixConfiguracao.qr_code ? (
                         <img 
                           src={pixConfiguracao.qr_code.startsWith('data:') 
@@ -2533,20 +2699,20 @@ export default function Pagamentos() {
                           }}
                         />
                       ) : (
-                        <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto flex items-center justify-center bg-slate-100 rounded-lg">
+                        <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto flex items-center justify-center bg-muted rounded-lg">
                           <div className="text-center">
-                            <QrCode className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-slate-400 mx-auto mb-1 sm:mb-2" />
-                            <p className="text-xs text-slate-500">
+                            <QrCode className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-muted-foreground mx-auto mb-1 sm:mb-2" />
+                            <p className="text-xs text-muted-foreground">
                               QR Code não configurado
                             </p>
-                            <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-xs text-muted-foreground/60 mt-1">
                               Use a chave PIX abaixo
                             </p>
                           </div>
                         </div>
                       )}
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1 sm:mt-2 px-2">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2 px-2">
                       {pixConfiguracao.qr_code 
                         ? "Escaneie o QR Code com seu aplicativo de pagamento"
                         : "Copie a chave PIX abaixo para fazer o pagamento"
@@ -2556,9 +2722,9 @@ export default function Pagamentos() {
 
                   {/* Chave PIX */}
                   <div>
-                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Chave PIX</h4>
-                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                      <p className="font-mono text-xs sm:text-sm break-all text-center bg-white p-2 sm:p-3 rounded border">
+                    <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">Chave PIX</h4>
+                    <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                      <p className="font-mono text-xs sm:text-sm break-all text-center bg-card p-2 sm:p-3 rounded border">
                         {pixConfiguracao.chave_pix}
                       </p>
                     </div>
@@ -2566,20 +2732,20 @@ export default function Pagamentos() {
 
                   {/* Nome do Titular */}
                   <div className="text-center">
-                    <h4 className="font-medium mb-2 sm:mb-3 text-slate-700 text-sm sm:text-base">Nome do Titular</h4>
-                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{pixConfiguracao.nome_titular}</p>
+                    <h4 className="font-medium mb-2 sm:mb-3 text-foreground text-sm sm:text-base">Nome do Titular</h4>
+                    <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">{pixConfiguracao.nome_titular}</p>
                     </div>
                   </div>
 
                 </>
               ) : (
                 <div className="text-center py-6 sm:py-8">
-                  <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-base sm:text-lg font-medium mb-2 text-slate-600">
+                  <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2 text-foreground">
                     Configuração PIX não encontrada
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4 px-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 px-2">
                     Configure as informações PIX nas configurações do sistema para usar esta funcionalidade.
                   </p>
                   <Button
@@ -2621,30 +2787,30 @@ export default function Pagamentos() {
               {carregandoDadosBancarios ? (
                 <div className="text-center py-6 sm:py-8">
                   <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
-                  <p className="text-slate-600 text-sm sm:text-base">Carregando dados bancários...</p>
+                  <p className="text-foreground text-sm sm:text-base">Carregando dados bancários...</p>
                 </div>
               ) : dadosBancarios ? (
                 <>
                   {/* Banco */}
                   <div>
-                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Banco</h4>
-                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.banco}</p>
+                    <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">Banco</h4>
+                    <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">{dadosBancarios.banco}</p>
                     </div>
                   </div>
 
                   {/* Agência e Conta */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Agência</h4>
-                      <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.agencia}</p>
+                      <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">Agência</h4>
+                      <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">{dadosBancarios.agencia}</p>
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Conta</h4>
-                      <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">
+                      <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">Conta</h4>
+                      <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">
                           {dadosBancarios.conta}-{dadosBancarios.digito}
                         </p>
                       </div>
@@ -2653,9 +2819,9 @@ export default function Pagamentos() {
 
                   {/* Tipo de Conta */}
                   <div>
-                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Tipo de Conta</h4>
-                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 capitalize">
+                    <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">Tipo de Conta</h4>
+                    <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground capitalize">
                         {dadosBancarios.tipo_conta === 'corrente' ? 'Conta Corrente' : 'Conta Poupança'}
                       </p>
                     </div>
@@ -2663,28 +2829,28 @@ export default function Pagamentos() {
 
                   {/* Nome do Titular */}
                   <div>
-                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">Nome do Titular</h4>
-                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.nome_titular}</p>
+                    <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">Nome do Titular</h4>
+                    <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">{dadosBancarios.nome_titular}</p>
                     </div>
                   </div>
 
                   {/* CPF/CNPJ */}
                   <div>
-                    <h4 className="font-medium mb-1 sm:mb-2 text-slate-700 text-sm sm:text-base">CPF/CNPJ</h4>
-                    <div className="bg-slate-50 p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-slate-200">
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800">{dadosBancarios.cpf_cnpj}</p>
+                    <h4 className="font-medium mb-1 sm:mb-2 text-foreground text-sm sm:text-base">CPF/CNPJ</h4>
+                    <div className="bg-muted p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-border">
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">{dadosBancarios.cpf_cnpj}</p>
                     </div>
                   </div>
 
                 </>
               ) : (
                 <div className="text-center py-6 sm:py-8">
-                  <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-base sm:text-lg font-medium mb-2 text-slate-600">
+                  <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2 text-foreground">
                     Dados bancários não encontrados
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4 px-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 px-2">
                     Configure os dados bancários nas configurações do sistema para usar esta funcionalidade.
                   </p>
                   <Button

@@ -13,31 +13,9 @@ let backendProcess;
 let backendStarted = false;
 let isCheckingBackend = false;
 
-// Função para calcular zoom responsivo baseado no tamanho da tela
+// Função para calcular zoom padrão (fixo em 100%)
 function calculateResponsiveZoom() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  const diagonal = Math.sqrt(width * width + height * height);
-  
-  // Calcular DPI aproximado (assumindo 96 DPI como base)
-  const dpi = diagonal / 15.6; // 15.6" é um tamanho comum de laptop
-  
-  // Definir breakpoints para diferentes tamanhos de tela
-  if (width >= 2560) {
-    // Telas 4K e maiores - zoom menor para aproveitar o espaço
-    return 0.6;
-  } else if (width >= 1920) {
-    // Telas Full HD - zoom moderado
-    return 0.7;
-  } else if (width >= 1366) {
-    // Telas HD - zoom padrão
-    return 0.8;
-  } else if (width >= 1024) {
-    // Telas menores - zoom maior para melhor legibilidade
-    return 0.9;
-  } else {
-    // Telas muito pequenas - zoom máximo
-    return 1.0;
-  }
+  return 1.0; // Zoom fixo em 100%
 }
 
 // Função para criar a janela principal
@@ -51,7 +29,7 @@ function createMainWindow() {
   const windowHeight = Math.min(900, Math.floor(screenHeight * 0.9));
   
   console.log(`🖥️ Tela detectada: ${screenWidth}x${screenHeight}`);
-  console.log(`🔍 Zoom responsivo aplicado: ${(responsiveZoom * 100).toFixed(0)}%`);
+  console.log(`🔍 Zoom padrão aplicado: ${(responsiveZoom * 100).toFixed(0)}%`);
   console.log(`📏 Tamanho da janela: ${windowWidth}x${windowHeight}`);
   
   mainWindow = new BrowserWindow({
@@ -111,15 +89,7 @@ function createMainWindow() {
     checkBackendHealth();
   });
 
-  // Detectar mudanças no tamanho da tela e ajustar zoom
-  screen.on('display-metrics-changed', (event, display, changedMetrics) => {
-    if (changedMetrics.includes('workAreaSize') || changedMetrics.includes('scaleFactor')) {
-      console.log('🔄 Tela redimensionada, recalculando zoom...');
-      const newZoom = calculateResponsiveZoom();
-      mainWindow.webContents.setZoomFactor(newZoom);
-      console.log(`🔍 Novo zoom aplicado: ${(newZoom * 100).toFixed(0)}%`);
-    }
-  });
+  // Zoom automático removido - apenas zoom manual pelos botões
 
   // Abrir links externos no navegador padrão
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
