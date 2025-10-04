@@ -16,6 +16,8 @@
     "desktop": "node scripts/start-desktop.js",
     "debug:electron": "node scripts/debug-electron.js",
     "apply:icon": "node scripts/apply-icon.js",
+    "build:installer": "node scripts/build-installer.js",
+    "create:installer": "node scripts/create-nsis-installer.js",
     "pack:simple": "npm run build:frontend && npm run build:backend && node scripts/create-valid-ico.js && npx electron-packager . KontrollaPro --platform=win32 --arch=x64 --out=dist-electron --icon=assets/app.ico --overwrite",
     "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
     "build:frontend": "node scripts/prepare-for-electron.js && cd Frontend && npm run build && node ../scripts/fix-electron-paths.js && node ../scripts/restore-app.js",
@@ -65,7 +67,25 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "requestedExecutionLevel": "requireAdministrator",
+      "sign": false,
+      "verifyUpdateCodeSignature": false,
+      "publisherName": "KontrollaPro Team",
+      "fileAssociations": [
+        {
+          "ext": "kontrolla",
+          "name": "KontrollaPro Document",
+          "description": "Documento do KontrollaPro",
+          "icon": "assets/icon.ico"
+        }
+      ],
+      "protocols": [
+        {
+          "name": "KontrollaPro Protocol",
+          "schemes": ["kontrollapro"]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": "dmg",
@@ -80,16 +100,29 @@
     },
     "nsis": {
       "oneClick": false,
+      "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
       "installerHeaderIcon": "assets/icon.ico",
-      "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
+      "menuCategory": "Produtividade",
+      "shortcutName": "KontrollaPro Desktop",
       "include": "assets/installer.nsh",
-      "license": "assets/license.txt"
+      "license": "assets/license.txt",
+      "guid": "550e8400-e29b-41d4-a716-446655440000",
+      "language": "1046",
+      "installerLanguages": ["pt_BR"],
+      "multiLanguageInstaller": false,
+      "packElevateHelper": true,
+      "perMachine": true,
+      "warningsAsErrors": false,
+      "displayLanguageSelector": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "uninstallDisplayName": "${productName} ${version}",
+      "deleteAppDataOnUninstall": false
     },
     "publish": null,
     "compression": "normal"
