@@ -37,6 +37,7 @@ function createMainWindow() {
     height: windowHeight,
     minWidth: 1024,
     minHeight: 600,
+    autoHideMenuBar: true, // Ocultar barra de menu por padrão
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
