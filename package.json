@@ -11,12 +11,9 @@
     "dev:backend": "cd Backend && npm run dev",
     "dev:frontend": "cd Frontend && npm run dev",
     "dev:electron": "wait-on http://localhost:5173 && electron .",
-    "run:electron": "node scripts/run-electron.js",
     "start:desktop": "node scripts/start-desktop.js",
     "desktop": "node scripts/start-desktop.js",
     "debug:electron": "node scripts/debug-electron.js",
-    "apply:icon": "node scripts/apply-icon.js",
-    "build:installer": "node scripts/build-installer.js",
     "create:installer": "node scripts/create-nsis-installer.js",
     "pack:simple": "npm run build:frontend && npm run build:backend && node scripts/create-valid-ico.js && npx electron-packager . KontrollaPro --platform=win32 --arch=x64 --out=dist-electron --icon=assets/app.ico --overwrite",
     "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
@@ -66,7 +63,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico",
+      "icon": "assets/app.ico",
       "requestedExecutionLevel": "requireAdministrator",
       "sign": false,
       "verifyUpdateCodeSignature": false,
@@ -76,7 +73,7 @@
           "ext": "kontrolla",
           "name": "KontrollaPro Document",
           "description": "Documento do KontrollaPro",
-          "icon": "assets/icon.ico"
+          "icon": "assets/app.ico"
         }
       ],
       "protocols": [
@@ -89,13 +86,13 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.png",
+      "icon": "assets/app.ico",
       "category": "public.app-category.business",
       "sign": false
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets/icon.png",
+      "icon": "assets/app.ico",
       "category": "Office"
     },
     "nsis": {
@@ -104,13 +101,12 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico",
-      "installerHeaderIcon": "assets/icon.ico",
+      "installerIcon": "assets/app.ico",
+      "uninstallerIcon": "assets/app.ico",
+      "installerHeaderIcon": "assets/app.ico",
       "runAfterFinish": true,
       "menuCategory": "Produtividade",
       "shortcutName": "KontrollaPro Desktop",
-      "include": "assets/installer.nsh",
       "license": "assets/license.txt",
       "guid": "550e8400-e29b-41d4-a716-446655440000",
       "language": "1046",
