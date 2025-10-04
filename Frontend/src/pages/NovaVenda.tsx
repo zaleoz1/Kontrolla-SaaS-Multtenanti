@@ -513,7 +513,7 @@ export default function NovaVenda() {
       {/* Header */}
       <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Nova Venda</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Nova Venda</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Sistema de caixa - Processe vendas rapidamente
           </p>
@@ -522,7 +522,7 @@ export default function NovaVenda() {
           <Button 
             variant="outline" 
             onClick={() => navigate("/dashboard")}
-            className="border-slate-300 text-slate-600 hover:bg-slate-50 h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
+            className="border-border text-muted-foreground hover:bg-muted h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
             <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Voltar
@@ -592,12 +592,12 @@ export default function NovaVenda() {
                       className={`bg-card rounded-lg border-2 p-2 sm:p-3 cursor-pointer transition-all hover:shadow-lg h-24 sm:h-32 flex flex-col justify-between ${
                         obterEstoqueAtual(produto) === 0 
                           ? 'opacity-60' 
-                          : 'border-border hover:border-green-300'
+                          : 'border-border hover:border-green-300 dark:hover:border-green-600'
                       }`}
                       onClick={() => obterEstoqueAtual(produto) > 0 && adicionarAoCarrinho(produto, 1)}
                     >
                       <div className="flex-1">
-                        <h3 className="font-medium text-xs sm:text-sm line-clamp-2 mb-1">
+                        <h3 className="font-medium text-xs sm:text-sm line-clamp-2 mb-1 text-foreground">
                           {produto.nome}
                         </h3>
                         <p className="text-xs text-muted-foreground">
@@ -606,7 +606,7 @@ export default function NovaVenda() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className={`text-xs sm:text-sm font-bold ${
-                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500' : 'text-green-600'
+                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'
                         }`}>
                           {produto.preco.toLocaleString("pt-BR", {
                             style: "currency",
@@ -614,13 +614,13 @@ export default function NovaVenda() {
                           })}
                         </span>
                         <span className={`text-xs ${
-                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500' : 'text-muted-foreground'
+                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-muted-foreground'
                         }`}>
                           {formatarEstoque(produto)}
                         </span>
                       </div>
                       {obterEstoqueAtual(produto) === 0 && (
-                        <div className="mt-1 text-xs text-gray-500 font-medium text-center">
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-medium text-center">
                           Sem estoque
                         </div>
                       )}
@@ -633,10 +633,10 @@ export default function NovaVenda() {
         </Card>
 
         {/* Painel Direito - Display do Caixa */}
-        <Card className="w-full lg:w-96 flex flex-col bg-slate-50 border-slate-200 shadow-xl rounded-xl h-[28rem] sm:h-[32rem] lg:h-[calc(100vh-150px)] min-h-0 order-1 lg:order-2">
-          <CardHeader className="bg-slate-100 border-b border-slate-200 rounded-t-xl flex-shrink-0 pb-3 sm:pb-6">
+        <Card className="w-full lg:w-96 flex flex-col bg-muted border shadow-xl rounded-xl h-[28rem] sm:h-[32rem] lg:h-[calc(100vh-150px)] min-h-0 order-1 lg:order-2">
+          <CardHeader className="bg-muted border-b rounded-t-xl flex-shrink-0 pb-3 sm:pb-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-2 text-slate-800 text-sm sm:text-base">
+              <CardTitle className="flex items-center space-x-2 text-foreground text-sm sm:text-base">
                 <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>Carrinho de Compras</span>
               </CardTitle>
@@ -645,7 +645,7 @@ export default function NovaVenda() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col p-0 bg-slate-50 min-h-0">
+          <CardContent className="flex-1 flex flex-col p-0 bg-muted min-h-0">
             {/* Área de Cliente */}
             <div className="p-3 sm:p-4 border-b flex-shrink-0">
               <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -877,7 +877,7 @@ export default function NovaVenda() {
             </div>
 
             {/* Resumo Financeiro */}
-            <div className="p-3 sm:p-4 border-t bg-slate-100 border-slate-200 rounded-b-xl flex-shrink-0">
+            <div className="p-3 sm:p-4 border-t bg-muted border rounded-b-xl flex-shrink-0">
               <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal:</span>
@@ -983,8 +983,8 @@ export default function NovaVenda() {
                             onClick={() => setUnidadeEntrada('pequena')}
                             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                               unidadeEntrada === 'pequena'
-                                ? 'bg-white text-slate-800 shadow-md border border-slate-200 transform scale-105'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                ? 'bg-card text-foreground shadow-md border border-border transform scale-105'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                             }`}
                           >
                             <div className="flex flex-col items-center space-y-0.5">
@@ -999,8 +999,8 @@ export default function NovaVenda() {
                             onClick={() => setUnidadeEntrada('grande')}
                             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                               unidadeEntrada === 'grande'
-                                ? 'bg-white text-slate-800 shadow-md border border-slate-200 transform scale-105'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                ? 'bg-card text-foreground shadow-md border border-border transform scale-105'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                             }`}
                           >
                             <div className="flex flex-col items-center space-y-0.5">
@@ -1017,7 +1017,7 @@ export default function NovaVenda() {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">
+                  <label className="text-sm font-medium text-foreground">
                     Quantidade em {(() => {
                       const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
                       const unidades = obterUnidadesEntrada(unidade);
@@ -1031,7 +1031,7 @@ export default function NovaVenda() {
                     placeholder={`Ex: ${unidadeEntrada === 'pequena' ? '500' : '0.5'}`}
                     value={quantidadePesoVolume}
                     onChange={(e) => setQuantidadePesoVolume(e.target.value)}
-                    className="text-lg font-medium text-center border-2 border-slate-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 rounded-xl h-12"
+                    className="text-lg font-medium text-center border-2 border-border focus:border-green-400 focus:ring-2 focus:ring-green-100 rounded-xl h-12"
                   />
                 </div>
                 
@@ -1062,13 +1062,13 @@ export default function NovaVenda() {
               </div>
 
               {quantidadePesoVolume && !isNaN(parseFloat(quantidadePesoVolume)) && parseFloat(quantidadePesoVolume) > 0 && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-green-800 flex items-center">
+                    <span className="text-sm font-semibold text-green-800 dark:text-green-200 flex items-center">
                       <CreditCard className="h-4 w-4 mr-2" />
                       Total:
                     </span>
-                    <span className="text-2xl font-bold text-green-700">
+                    <span className="text-2xl font-bold text-green-700 dark:text-green-400">
                       {(() => {
                         const quantidade = parseFloat(quantidadePesoVolume);
                         const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
@@ -1081,8 +1081,8 @@ export default function NovaVenda() {
                       })()}
                     </span>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-200">
-                    <p className="text-sm text-green-700 font-medium text-center">
+                  <div className="bg-card rounded-lg p-3 border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-700 dark:text-green-400 font-medium text-center">
                       {(() => {
                         const quantidade = parseFloat(quantidadePesoVolume);
                         const unidade = obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome);
@@ -1103,7 +1103,7 @@ export default function NovaVenda() {
                 <Button
                   variant="outline"
                   onClick={cancelarPesoVolume}
-                  className="flex-1 h-12 text-slate-600 border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 font-medium"
+                  className="flex-1 h-12 text-muted-foreground border-border hover:bg-muted hover:border-muted-foreground transition-all duration-200 font-medium"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
