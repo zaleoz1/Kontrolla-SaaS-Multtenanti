@@ -1271,7 +1271,8 @@ router.get('/stats/overview', async (req, res) => {
       `SELECT 
         COUNT(*) as total_contas,
         COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor ELSE 0 END), 0) as valor_pendente,
-        COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido
+        COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido,
+        COALESCE(SUM(CASE WHEN status = 'pago' THEN valor ELSE 0 END), 0) as valor_pago
       FROM contas_receber 
       WHERE tenant_id = ?`,
       [req.user.tenant_id]
@@ -1282,7 +1283,8 @@ router.get('/stats/overview', async (req, res) => {
       `SELECT 
         COUNT(*) as total_contas,
         COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor ELSE 0 END), 0) as valor_pendente,
-        COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido
+        COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido,
+        COALESCE(SUM(CASE WHEN status = 'pago' THEN valor ELSE 0 END), 0) as valor_pago
       FROM (
         SELECT status, valor FROM contas_pagar WHERE tenant_id = ?
         UNION ALL
