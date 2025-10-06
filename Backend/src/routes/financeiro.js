@@ -240,8 +240,8 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.tenant_id, tipo, categoria, descricao, valor, data_transacao,
-          metodo_pagamento, conta, fornecedor_id, cliente_id, observacoes,
-          JSON.stringify(anexos), status
+          metodo_pagamento, conta, fornecedor_id || null, cliente_id || null, observacoes || null,
+          JSON.stringify(anexos || []), status
         ]
       );
 
@@ -1112,14 +1112,14 @@ router.put('/contas-pagar/:id', validateId, handleValidationErrors, async (req, 
         });
       }
 
+      // Para adiantamentos, apenas atualizar valor e observações
       await query(
         `UPDATE contas_pagar SET 
-          fornecedor = ?, descricao = ?, valor = ?, data_vencimento = ?,
-          data_pagamento = ?, status = ?, categoria = ?, observacoes = ?
+          valor = ?, observacoes = ?
         WHERE id = ? AND tenant_id = ?`,
         [
-          fornecedor, descricao, valor, data_vencimento, data_pagamento,
-          status, categoria, observacoes, id, req.user.tenant_id
+          valor || null, observacoes || null, 
+          id, req.user.tenant_id
         ]
       );
 
@@ -1293,6 +1293,18 @@ router.get('/stats/overview', async (req, res) => {
       [req.user.tenant_id, req.user.tenant_id]
     );
 
+    // Calcular valor pago incluindo adiantamentos (transações de saída concluídas relacionadas a contas a pagar)
+    const adiantamentosPagos = await query(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN t.tipo = 'saida' AND t.status = 'concluida' AND t.categoria = 'Adiantamento' THEN t.valor ELSE 0 END), 0) as valor_adiantamentos
+      FROM transacoes t
+      WHERE t.tenant_id = ?`,
+      [req.user.tenant_id]
+    );
+
+    // Somar valor pago das contas + adiantamentos
+    const valorPagoTotal = Number(contasPagar[0].valor_pago) + Number(adiantamentosPagos[0].valor_adiantamentos);
+
     // Calcular todas as transações de saída (independente do período) para o saldo atual
     const todasSaidas = await query(
       `SELECT 
@@ -1326,7 +1338,10 @@ router.get('/stats/overview', async (req, res) => {
         fluxo_caixa: fluxoCaixa,
         saldo_atual: saldoAtual,
         contas_receber: contasReceber[0],
-        contas_pagar: contasPagar[0]
+        contas_pagar: {
+          ...contasPagar[0],
+          valor_pago: valorPagoTotal
+        }
       },
       periodo
     });

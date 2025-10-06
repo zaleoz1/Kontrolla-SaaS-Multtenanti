@@ -40,7 +40,10 @@ export default function Dashboard() {
     calculateVariation,
     getVariationColor,
     getVariationIcon,
-    formatVariation
+    formatVariation,
+    obterUnidadeEstoque,
+    formatarEstoque,
+    obterTipoEstoqueTexto
   } = useDashboard();
 
   // Atualizar dados quando o período mudar
@@ -416,21 +419,22 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                         <Badge 
-                          variant={produto.estoque === 0 ? "destructive" : "secondary"}
-                          className={`${produto.estoque === 0 ? "" : "bg-warning/20 text-warning-foreground border-warning/30"} text-xs`}
+                          variant={produto.estoque_atual === 0 ? "destructive" : "secondary"}
+                          className={`${produto.estoque_atual === 0 ? "" : "bg-warning/20 text-warning-foreground border-warning/30"} text-xs`}
                         >
-                          {produto.estoque} un.
+                          {formatarEstoque(produto)}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Mín: {produto.estoque_minimo}</span>
+                        <span>Mín: {formatarEstoque({...produto, estoque_atual: produto.estoque_minimo_atual})}</span>
                         <span className="break-words">{formatCurrency(produto.preco)}</span>
                       </div>
-                      {produto.categoria_nome && (
-                        <div className="text-xs text-muted-foreground truncate">
-                          {produto.categoria_nome}
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{obterTipoEstoqueTexto(produto.tipo_preco)}</span>
+                        {produto.categoria_nome && (
+                          <span className="truncate">{produto.categoria_nome}</span>
+                        )}
+                      </div>
                       {index < produtosEstoqueBaixo.length - 1 && (
                         <div className="border-t border-border/50" />
                       )}

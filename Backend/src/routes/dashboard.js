@@ -282,11 +282,27 @@ router.get('/estoque-baixo', async (req, res) => {
     const limitValue = parseInt(limit);
 
     const produtos = await query(
-      `SELECT p.id, p.nome, p.estoque, p.estoque_minimo, p.preco, c.nome as categoria_nome
+      `SELECT p.id, p.nome, p.estoque, p.estoque_minimo, p.preco, p.tipo_preco,
+              p.estoque_kg, p.estoque_litros, p.estoque_minimo_kg, p.estoque_minimo_litros,
+              c.nome as categoria_nome,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                ELSE p.estoque
+              END as estoque_atual,
+              CASE 
+                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
+                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
+                ELSE p.estoque_minimo
+              END as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
-       WHERE p.tenant_id = ? AND p.estoque <= p.estoque_minimo AND p.status = 'ativo'
-       ORDER BY p.estoque ASC 
+       WHERE p.tenant_id = ? AND (
+         (p.tipo_preco = 'unidade' AND p.estoque <= p.estoque_minimo) OR
+         (p.tipo_preco = 'kg' AND p.estoque_kg <= p.estoque_minimo_kg) OR
+         (p.tipo_preco = 'litros' AND p.estoque_litros <= p.estoque_minimo_litros)
+       ) AND p.status = 'ativo'
+       ORDER BY estoque_atual ASC 
        LIMIT ${limitValue}`,
       [req.user.tenant_id]
     );

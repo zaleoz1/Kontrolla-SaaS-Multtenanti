@@ -69,6 +69,13 @@ export interface ProdutoEstoqueBaixo {
   estoque: number;
   estoque_minimo: number;
   preco: number;
+  tipo_preco: 'unidade' | 'kg' | 'litros';
+  estoque_kg?: number;
+  estoque_litros?: number;
+  estoque_minimo_kg?: number;
+  estoque_minimo_litros?: number;
+  estoque_atual: number;
+  estoque_minimo_atual: number;
   categoria_nome?: string;
 }
 
@@ -277,6 +284,42 @@ export function useDashboard() {
     return `${absVariacao.toFixed(1)}%`;
   };
 
+  // Funções para formatação de estoque por tipo
+  const obterUnidadeEstoque = (tipo_preco: string) => {
+    switch (tipo_preco) {
+      case 'kg':
+        return 'kg';
+      case 'litros':
+        return 'L';
+      case 'unidade':
+      default:
+        return 'un.';
+    }
+  };
+
+  const formatarEstoque = (produto: ProdutoEstoqueBaixo) => {
+    const unidade = obterUnidadeEstoque(produto.tipo_preco);
+    
+    if (produto.tipo_preco === 'unidade') {
+      return `${Math.round(produto.estoque_atual)} ${unidade}`;
+    } else {
+      // Para kg e litros, manter casas decimais mas limitar a 3 casas
+      return `${Number(produto.estoque_atual).toFixed(3).replace(/\.?0+$/, '')} ${unidade}`;
+    }
+  };
+
+  const obterTipoEstoqueTexto = (tipo_preco: string) => {
+    switch (tipo_preco) {
+      case 'kg':
+        return 'Peso';
+      case 'litros':
+        return 'Volume';
+      case 'unidade':
+      default:
+        return 'Quantidade';
+    }
+  };
+
   // Função para separar vendas com pagamento múltiplo
   const separarVendasMultiplas = (vendas: VendaRecente[]) => {
     const vendasSeparadas: VendaRecente[] = [];
@@ -347,6 +390,9 @@ export function useDashboard() {
     calculateVariation,
     getVariationColor,
     getVariationIcon,
-    formatVariation
+    formatVariation,
+    obterUnidadeEstoque,
+    formatarEstoque,
+    obterTipoEstoqueTexto
   };
 }
