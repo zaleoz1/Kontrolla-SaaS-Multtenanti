@@ -169,6 +169,15 @@ export default function NovaVenda() {
     }
   };
 
+  const verificarEstoqueSuficiente = (produto: Produto, quantidadeAdicional: number) => {
+    const estoqueAtual = obterEstoqueAtual(produto);
+    const itemExistente = carrinho.find(item => item.produto.id === produto.id);
+    const quantidadeAtual = itemExistente ? itemExistente.quantidade : 0;
+    const quantidadeTotal = quantidadeAtual + quantidadeAdicional;
+    
+    return quantidadeTotal <= estoqueAtual;
+  };
+
   const adicionarAoCarrinho = (produto: Produto, quantidade: number = 1) => {
     // Verificar se o produto está esgotado
     const estoqueAtual = obterEstoqueAtual(produto);
@@ -176,6 +185,20 @@ export default function NovaVenda() {
       toast({
         title: "Produto sem estoque",
         description: `${produto.nome} não está disponível para venda`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar se há estoque suficiente
+    if (!verificarEstoqueSuficiente(produto, quantidade)) {
+      const itemExistente = carrinho.find(item => item.produto.id === produto.id);
+      const quantidadeAtual = itemExistente ? itemExistente.quantidade : 0;
+      const quantidadeDisponivel = estoqueAtual - quantidadeAtual;
+      
+      toast({
+        title: "Estoque insuficiente",
+        description: `Apenas ${quantidadeDisponivel} ${obterUnidadeEstoque(produto.tipo_preco, produto.nome)} disponível em estoque`,
         variant: "destructive",
       });
       return;
@@ -227,6 +250,16 @@ export default function NovaVenda() {
       return;
     }
 
+    // Verificar se a quantidade não excede o estoque
+    if (quantidade > estoqueAtual) {
+      toast({
+        title: "Estoque insuficiente",
+        description: `Apenas ${estoqueAtual} ${obterUnidadeEstoque(produto.tipo_preco, produto.nome)} disponível em estoque`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const itemExistente = carrinho.find(item => item.produto.id === produto.id);
     
     if (quantidade <= 0) {
@@ -259,6 +292,21 @@ export default function NovaVenda() {
   const atualizarQuantidade = (produtoId: number, quantidade: number) => {
     if (quantidade <= 0) {
       removerDoCarrinho(produtoId);
+      return;
+    }
+
+    // Encontrar o item no carrinho para obter o produto
+    const item = carrinho.find(item => item.produto.id === produtoId);
+    if (!item) return;
+
+    // Verificar se a quantidade não excede o estoque
+    const estoqueAtual = obterEstoqueAtual(item.produto);
+    if (quantidade > estoqueAtual) {
+      toast({
+        title: "Estoque insuficiente",
+        description: `Apenas ${estoqueAtual} ${obterUnidadeEstoque(item.produto.tipo_preco, item.produto.nome)} disponível em estoque`,
+        variant: "destructive",
+      });
       return;
     }
     
@@ -331,6 +379,36 @@ export default function NovaVenda() {
       } else {
         // Usuário digitou em L, manter
         unidadeParaExibicao = 'L';
+      }
+    }
+
+    // Verificar estoque disponível
+    const estoqueAtual = obterEstoqueAtual(produtoSelecionado);
+    
+    if (editandoItem) {
+      // Editando item existente - verificar se a nova quantidade não excede o estoque
+      if (quantidadeParaCalculo > estoqueAtual) {
+        toast({
+          title: "Estoque insuficiente",
+          description: `Apenas ${estoqueAtual} ${unidade} disponível em estoque`,
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // Adicionando novo item - verificar se há estoque suficiente considerando itens já no carrinho
+      const itemExistente = carrinho.find(item => item.produto.id === produtoSelecionado.id);
+      const quantidadeAtual = itemExistente ? itemExistente.quantidade : 0;
+      const quantidadeTotal = quantidadeAtual + quantidadeParaCalculo;
+      
+      if (quantidadeTotal > estoqueAtual) {
+        const quantidadeDisponivel = estoqueAtual - quantidadeAtual;
+        toast({
+          title: "Estoque insuficiente",
+          description: `Apenas ${quantidadeDisponivel} ${unidade} disponível em estoque`,
+          variant: "destructive",
+        });
+        return;
       }
     }
     
@@ -586,46 +664,63 @@ export default function NovaVenda() {
                     <p className="text-xs sm:text-sm">Nenhum produto encontrado</p>
                   </div>
                 ) : (
-                  produtosFiltrados.map((produto) => (
-                    <div 
-                      key={produto.id} 
-                      className={`bg-card rounded-lg border-2 p-2 sm:p-3 cursor-pointer transition-all hover:shadow-lg h-24 sm:h-32 flex flex-col justify-between ${
-                        obterEstoqueAtual(produto) === 0 
-                          ? 'opacity-60' 
-                          : 'border-border hover:border-green-300 dark:hover:border-green-600'
-                      }`}
-                      onClick={() => obterEstoqueAtual(produto) > 0 && adicionarAoCarrinho(produto, 1)}
-                    >
-                      <div className="flex-1">
-                        <h3 className="font-medium text-xs sm:text-sm line-clamp-2 mb-1 text-foreground">
-                          {produto.nome}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {produto.categoria_nome || 'Sem categoria'}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs sm:text-sm font-bold ${
-                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'
-                        }`}>
-                          {produto.preco.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          })}
-                        </span>
-                        <span className={`text-xs ${
-                          obterEstoqueAtual(produto) === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-muted-foreground'
-                        }`}>
-                          {formatarEstoque(produto)}
-                        </span>
-                      </div>
-                      {obterEstoqueAtual(produto) === 0 && (
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-medium text-center">
-                          Sem estoque
+                  produtosFiltrados.map((produto) => {
+                    const estoqueAtual = obterEstoqueAtual(produto);
+                    const semEstoque = estoqueAtual <= 0;
+                    
+                    return (
+                      <div 
+                        key={produto.id} 
+                        className={`bg-card rounded-lg border-2 p-2 sm:p-3 transition-all h-24 sm:h-32 flex flex-col justify-between relative ${
+                          semEstoque 
+                            ? 'opacity-60 cursor-not-allowed border-gray-300 dark:border-gray-600' 
+                            : 'cursor-pointer hover:shadow-lg border-border hover:border-green-300 dark:hover:border-green-600'
+                        }`}
+                        onClick={() => {
+                          if (!semEstoque) {
+                            adicionarAoCarrinho(produto, 1);
+                          }
+                        }}
+                        style={semEstoque ? { 
+                          filter: 'grayscale(100%)',
+                          pointerEvents: 'none'
+                        } : {}}
+                      >
+                        <div className="flex-1">
+                          <h3 className={`font-medium text-xs sm:text-sm line-clamp-2 mb-1 ${
+                            semEstoque ? 'text-gray-400 dark:text-gray-500' : 'text-foreground'
+                          }`}>
+                            {produto.nome}
+                          </h3>
+                          <p className={`text-xs ${
+                            semEstoque ? 'text-gray-300 dark:text-gray-600' : 'text-muted-foreground'
+                          }`}>
+                            {produto.categoria_nome || 'Sem categoria'}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs sm:text-sm font-bold ${
+                            semEstoque ? 'text-gray-400 dark:text-gray-500' : 'text-green-600 dark:text-green-400'
+                          }`}>
+                            {produto.preco.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            })}
+                          </span>
+                          <span className={`text-xs ${
+                            semEstoque ? 'text-gray-300 dark:text-gray-600' : 'text-muted-foreground'
+                          }`}>
+                            {formatarEstoque(produto)}
+                          </span>
+                        </div>
+                        {semEstoque && (
+                          <div className="mt-1 text-xs text-gray-400 dark:text-gray-500 font-medium text-center">
+                            Sem estoque
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

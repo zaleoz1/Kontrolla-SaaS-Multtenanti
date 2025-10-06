@@ -17,11 +17,13 @@ export interface FinanceiroStats {
       total_contas: number;
       valor_pendente: number;
       valor_vencido: number;
+      valor_pago: number;
     };
     contas_pagar: {
       total_contas: number;
       valor_pendente: number;
       valor_vencido: number;
+      valor_pago: number;
     };
   };
   periodo: string;

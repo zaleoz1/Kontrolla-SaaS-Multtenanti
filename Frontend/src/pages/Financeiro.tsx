@@ -321,10 +321,16 @@ export default function Financeiro() {
   // Calcular totais dos dados reais
   const totalReceber = Number(stats?.stats?.contas_receber?.valor_pendente) || 0;
   const totalPagar = Number(stats?.stats?.contas_pagar?.valor_pendente) || 0;
-  const fluxoCaixa = Number(stats?.stats?.fluxo_caixa) || 0;
   const totalEntradas = Number(stats?.stats?.total_entradas) || 0;
   const totalSaidas = Number(stats?.stats?.total_saidas) || 0;
   const saldoAtual = Number((stats?.stats as any)?.saldo_atual) || 0;
+  const totalPagoReceber = Number(stats?.stats?.contas_receber?.valor_pago) || 0;
+  const totalPagoPagar = Number(stats?.stats?.contas_pagar?.valor_pago) || 0;
+
+  // Calcular total recebido apenas das transações de entrada
+  const totalRecebidoTransacoes = transacoes
+    .filter(transacao => transacao.tipo === 'entrada' && transacao.status === 'concluida')
+    .reduce((total, transacao) => total + (Number(transacao.valor) || 0), 0);
 
   // Função para filtrar contas a receber
   const contasReceberFiltradas = contasReceber.filter((conta) => {
@@ -729,7 +735,53 @@ export default function Financeiro() {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="bg-gradient-card shadow-card">
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Saldo Atual</p>
+                {loadingStats ? (
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
+                ) : (
+                  <p className={`text-sm sm:text-2xl font-bold break-words ${
+                    saldoAtual >= 0 ? 'text-success' : 'text-destructive'
+                  }`}>
+                    {formatarValor(saldoAtual)}
+                  </p>
+                )}
+              </div>
+              <div className={`p-1 sm:p-2 rounded-lg flex-shrink-0 self-start sm:self-auto ${
+                saldoAtual >= 0 ? 'bg-success/10' : 'bg-destructive/10'
+              }`}>
+                <DollarSign className={`h-3 w-3 sm:h-5 sm:w-5 ${
+                  saldoAtual >= 0 ? 'text-success' : 'text-destructive'
+                }`} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-card shadow-card">
+          <CardContent className="p-2 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">Total Recebido</p>
+                {loadingTransacoes ? (
+                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
+                ) : (
+                  <p className="text-sm sm:text-2xl font-bold text-success break-words">
+                    {formatarValor(totalRecebidoTransacoes)}
+                  </p>
+                )}
+              </div>
+              <div className="p-1 sm:p-2 rounded-lg bg-success/10 flex-shrink-0 self-start sm:self-auto">
+                <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5 text-success" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-2 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -738,7 +790,7 @@ export default function Financeiro() {
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-success break-words">
+                  <p className="text-sm sm:text-2xl font-bold text-yellow-600 break-words">
                     {formatarValor(totalReceber)}
                   </p>
                 )}
@@ -774,37 +826,17 @@ export default function Financeiro() {
           <CardContent className="p-2 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground">Fluxo de Caixa</p>
+                <p className="text-xs font-medium text-muted-foreground">Total Pago</p>
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className={`text-sm sm:text-2xl font-bold break-words ${fluxoCaixa >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatarValor(fluxoCaixa)}
+                  <p className="text-sm sm:text-2xl font-bold text-green-500 break-words">
+                    {formatarValor(totalPagoPagar)}
                   </p>
                 )}
               </div>
-              <div className={`p-1 sm:p-2 rounded-lg flex-shrink-0 self-start sm:self-auto ${fluxoCaixa >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
-                <Wallet className={`h-3 w-3 sm:h-5 sm:w-5 ${fluxoCaixa >= 0 ? 'text-success' : 'text-destructive'}`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-2 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground">Saldo Atual</p>
-                {loadingStats ? (
-                  <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
-                ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-primary break-words">
-                    {formatarValor(saldoAtual)}
-                  </p>
-                )}
-              </div>
-              <div className="p-1 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 self-start sm:self-auto">
-                <DollarSign className="h-3 w-3 sm:h-5 sm:w-5 text-primary" />
+              <div className="p-1 sm:p-2 rounded-lg bg-success/10 flex-shrink-0 self-start sm:self-auto">
+                <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5 text-success" />
               </div>
             </div>
           </CardContent>
@@ -1332,7 +1364,7 @@ export default function Financeiro() {
                         </div>
                         <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
                           <p className={`text-sm sm:text-lg font-bold break-words ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
-                            {transacao.tipo === 'entrada' ? '+' : '-'}{formatarValor(Number(transacao.valor) || 0)}
+                            {transacao.tipo === 'entrada' ? '+' : ''}{formatarValor(Number(transacao.valor) || 0)}
                           </p>
                           {obterBadgeStatus(transacao.status)}
                         </div>
