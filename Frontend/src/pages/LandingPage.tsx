@@ -48,6 +48,7 @@ import {
   FileText,
   CreditCard,
   Settings,
+  Download,
   Zap as Lightning
 } from "lucide-react";
 
@@ -286,7 +287,7 @@ export default function LandingPage() {
             >
               <div className="relative">
                 <img 
-                  src="./logo.png" 
+                  src="/logo.png" 
                   alt="KontrollaPro Logo" 
                   className="h-12 w-12 rounded-xl shadow-sm"
                 />
@@ -530,11 +531,11 @@ export default function LandingPage() {
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="text-lg px-8 py-4 border-2 border-white/20 text-black hover:bg-white/10 backdrop-blur-sm"
-                  onClick={() => navigate("/demo")}
+                  className="text-lg px-8 py-4 border-2 border-blue-500/30 text-blue-600 hover:bg-blue-500/10 backdrop-blur-sm"
+                  onClick={() => navigate("/download")}
                 >
-                  <Play className="mr-2 h-5 w-5" />
-                  Ver Demonstração
+                  <Download className="mr-2 h-5 w-5" />
+                  Baixar Desktop
                 </Button>
               </motion.div>
 
@@ -1351,21 +1352,6 @@ export default function LandingPage() {
               </Button>
             </motion.div>
             
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="text-lg px-8 py-4 border-2 border-white/20 text-black hover:bg-white/10 backdrop-blur-sm"
-                onClick={() => navigate("/demo")}
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Ver Demonstração
-              </Button>
-            </motion.div>
           </motion.div>
           
           <motion.div 
@@ -1417,7 +1403,7 @@ export default function LandingPage() {
                 whileHover={{ scale: 1.05 }}
               >
                 <img 
-                  src="./logo.png" 
+                  src="/logo.png" 
                   alt="KontrollaPro Logo" 
                   className="h-10 w-10 rounded-lg"
                 />

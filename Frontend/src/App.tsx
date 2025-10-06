@@ -34,6 +34,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import CatalogoPublico from "./pages/CatalogoPublico";
 import ForgotPassword from "./pages/ForgotPassword";
+import DownloadPage from "./pages/Download";
 
 const clienteQuery = new QueryClient();
 
@@ -57,6 +58,9 @@ function AppContent() {
           
           {/* Catálogo Público */}
           <Route path="/catalogo-publico" element={<CatalogoPublico />} />
+          
+          {/* Download */}
+          <Route path="/download" element={<DownloadPage />} />
           
           {/* Dashboard */}
           <Route path="/dashboard" element={<AppLayout />}>
