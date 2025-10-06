@@ -315,13 +315,11 @@ export default function Configuracoes() {
   // Sincronizar métodos de pagamento do banco com estado local
   useEffect(() => {
     if (metodosPagamentoEditando && metodosPagamentoEditando.length > 0) {
-      console.log('Dados carregados da API:', metodosPagamentoEditando);
       const metodosFormatados = metodosPagamentoEditando.reduce((acc, metodo) => {
         const tipo = metodo.tipo as keyof typeof metodosPagamentoLocal;
         const parcelasValidas = (metodo.parcelas || [])
           .filter(p => p.quantidade && p.quantidade > 0 && p.taxa !== undefined && p.taxa !== null);
         
-        console.log(`Método ${tipo} - parcelas originais:`, metodo.parcelas, 'parcelas válidas:', parcelasValidas);
         
         acc[tipo] = {
           ativo: metodo.ativo,
@@ -332,11 +330,9 @@ export default function Configuracoes() {
         return acc;
       }, {} as typeof metodosPagamentoLocal);
       
-      console.log('Métodos formatados:', metodosFormatados);
       setMetodosPagamentoLocal(prev => ({ ...prev, ...metodosFormatados }));
     } else {
       // Se não há dados do banco, manter taxas zeradas
-      console.log('Nenhum método de pagamento encontrado no banco, mantendo taxas zeradas');
       setMetodosPagamentoLocal(prev => ({
         ...prev,
         cartao_credito: { ...prev.cartao_credito, taxa: 0 },
@@ -673,7 +669,6 @@ export default function Configuracoes() {
         return metodoData;
       });
 
-      console.log('Dados que serão enviados para a API:', metodosParaSalvar);
       await atualizarMetodosPagamento(metodosParaSalvar);
       
       // Recarregar dados para sincronizar
@@ -910,7 +905,6 @@ export default function Configuracoes() {
       return;
     }
 
-    console.log('Dados do usuário que serão enviados:', usuarioEditando);
 
     setSalvando(true);
     try {
@@ -1083,7 +1077,6 @@ export default function Configuracoes() {
       <ConfiguracoesSidebar
         activeTab={abaAtiva}
         onTabChange={handleMudarAba}
-        onLogout={handleLogout}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

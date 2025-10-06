@@ -2,6 +2,7 @@ import express from 'express';
 import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateVenda, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
+import NotificationService from '../services/notificationService.js';
 
 const router = express.Router();
 
@@ -622,6 +623,23 @@ router.post('/', validateVenda, async (req, res) => {
        ORDER BY id`,
       [vendaId]
     );
+
+    // Criar notificação da nova venda
+    try {
+      const clienteNome = venda.cliente_nome || null;
+      await NotificationService.notifyNewSale(req.user.tenant_id, vendaId, parseFloat(total), clienteNome);
+    } catch (notificationError) {
+      console.error('Erro ao criar notificação da venda:', notificationError);
+      // Não falhar a venda por causa da notificação
+    }
+
+    // Verificar estoque baixo após a venda
+    try {
+      await NotificationService.checkAndNotifyLowStock(req.user.tenant_id);
+    } catch (stockError) {
+      console.error('Erro ao verificar estoque baixo:', stockError);
+      // Não falhar a venda por causa da verificação de estoque
+    }
 
     res.status(201).json({
       message: 'Venda criada com sucesso',

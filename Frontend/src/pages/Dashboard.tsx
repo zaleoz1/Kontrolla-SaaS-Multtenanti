@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDashboard } from "@/hooks/useDashboard";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useState } from "react";
 
 export default function Dashboard() {
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('hoje');
   const [mudandoPeriodo, setMudandoPeriodo] = useState(false);
   const { hasPermission } = usePermissions();
+  const { triggerNovaVenda, triggerEstoqueBaixo, triggerContaVencida } = useNotificationContext();
   
   const { 
     data, 

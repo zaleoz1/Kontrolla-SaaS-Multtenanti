@@ -9,6 +9,7 @@ import { useOperador } from "@/contexts/OperadorContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ZoomControls } from "@/components/ui/ZoomControls";
+import { NotificationCenter } from "@/components/ui/NotificationCenter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -227,19 +228,9 @@ export function Header({ onMenuClick }: PropsCabecalho) {
           {/* Toggle de tema */}
           <ThemeToggle />
 
-          {/* Ícone de notificações com badge - só aparece se tiver permissão de dashboard */}
+          {/* Centro de notificações - só aparece se tiver permissão de dashboard */}
           {hasPermission('dashboard') && (
-            <div className="relative">
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                >
-                  3
-                </Badge>
-              </Button>
-            </div>
+            <NotificationCenter />
           )}
         </div>
       </div>

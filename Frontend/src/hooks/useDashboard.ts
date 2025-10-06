@@ -338,7 +338,7 @@ export function useDashboard() {
         // Criar venda à vista
         const vendaAVista: VendaRecente = {
           ...venda,
-          id: parseInt(`${venda.id}-avista`),
+          id: parseInt(`${venda.id}1`), // Usar sufixo numérico para evitar conflitos
           numero_venda: `${venda.numero_venda}-AV`,
           status: 'pago',
           total: totalAVista,
@@ -350,7 +350,7 @@ export function useDashboard() {
         // Criar venda a prazo
         const vendaPrazo: VendaRecente = {
           ...venda,
-          id: parseInt(`${venda.id}-prazo`),
+          id: parseInt(`${venda.id}2`), // Usar sufixo numérico diferente
           numero_venda: `${venda.numero_venda}-PZ`,
           status: 'pendente',
           total: venda.pagamento_prazo!.valor_com_juros,

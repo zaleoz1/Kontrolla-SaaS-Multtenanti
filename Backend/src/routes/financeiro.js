@@ -2,6 +2,7 @@ import express from 'express';
 import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateTransacao, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
+import NotificationService from '../services/notificationService.js';
 import { uploadImage } from '../services/uploadService.js';
 
 const router = express.Router();
@@ -324,6 +325,14 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
       );
 
       transacao = transacaoCriada;
+    }
+
+    // Criar notificação da nova transação
+    try {
+      await NotificationService.notifyNewTransaction(req.user.tenant_id, tipo, parseFloat(valor), descricao);
+    } catch (notificationError) {
+      console.error('Erro ao criar notificação da transação:', notificationError);
+      // Não falhar a transação por causa da notificação
     }
 
     res.status(201).json({
