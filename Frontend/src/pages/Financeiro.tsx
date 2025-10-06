@@ -78,6 +78,21 @@ interface RecebimentoData {
   taxaParcela?: number;
 }
 
+interface AdiantamentoData {
+  contaId: number;
+  valorAdiantamento: number;
+  metodoPagamento: 'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'transferencia' | 'boleto' | 'cheque';
+  dataAdiantamento: string;
+  comprovante?: File;
+  observacoes?: string;
+  numeroDocumento?: string;
+  bancoOrigem?: string;
+  agenciaOrigem?: string;
+  contaOrigem?: string;
+  parcelas?: number;
+  taxaParcela?: number;
+}
+
 export default function Financeiro() {
   const [termoBusca, setTermoBusca] = useState("");
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('mes');
@@ -94,6 +109,7 @@ export default function Financeiro() {
   const [modalRecebimento, setModalRecebimento] = useState(false);
   const [contaSelecionada, setContaSelecionada] = useState<any>(null);
   const [tipoOperacao, setTipoOperacao] = useState<'pagar' | 'receber'>('pagar');
+  const [tipoModalPagamento, setTipoModalPagamento] = useState<'pagamento' | 'adiantamento'>('pagamento');
   const [editandoValorRecebimento, setEditandoValorRecebimento] = useState(false);
   const [valorEditadoRecebimento, setValorEditadoRecebimento] = useState(0);
   const [valorOriginalRecebimento, setValorOriginalRecebimento] = useState(0);
@@ -121,13 +137,27 @@ export default function Financeiro() {
     parcelas: 1,
     taxaParcela: 0
   });
+  const [dadosAdiantamento, setDadosAdiantamento] = useState<AdiantamentoData>({
+    contaId: 0,
+    valorAdiantamento: 0,
+    metodoPagamento: 'pix',
+    dataAdiantamento: new Date().toISOString().split('T')[0],
+    observacoes: '',
+    numeroDocumento: '',
+    bancoOrigem: '',
+    agenciaOrigem: '',
+    contaOrigem: '',
+    parcelas: 1,
+    taxaParcela: 0
+  });
 
   // Hooks para dados financeiros
   const { 
     transacoes, 
     loading: loadingTransacoes, 
     error: errorTransacoes,
-    buscarTransacoes 
+    buscarTransacoes,
+    criarTransacao
   } = useTransacoes();
   
   const { 
@@ -145,7 +175,8 @@ export default function Financeiro() {
     error: errorContasPagar,
     buscarContas: buscarContasPagar,
     marcarComoPago: marcarContaPagarComoPago,
-    processarPagamento: processarPagamentoContaPagar
+    processarPagamento: processarPagamentoContaPagar,
+    atualizarConta
   } = useContasPagar();
   
   const { 
@@ -450,9 +481,10 @@ export default function Financeiro() {
   };
 
   // Função para abrir modal de pagamento
-  const abrirModalPagamento = (conta: any, tipo: 'receber' | 'pagar') => {
+  const abrirModalPagamento = (conta: any, tipo: 'receber' | 'pagar', modalTipo: 'pagamento' | 'adiantamento' = 'pagamento') => {
     setContaSelecionada(conta);
     setTipoOperacao(tipo);
+    setTipoModalPagamento(modalTipo);
     
     // Para recebimentos, sempre usar PIX como padrão. Para pagamentos, usar o primeiro método disponível
     const metodoPadrao = tipo === 'receber' ? 'pix' : (metodosPagamento.length > 0 ? metodosPagamento[0].tipo : 'pix');
@@ -506,20 +538,36 @@ export default function Financeiro() {
       setEditandoValorRecebimento(false);
       setModalRecebimento(true);
     } else {
-      setDadosPagamento({
-        contaId: conta.id,
-        valor: Number(conta.valor) || 0,
-        metodoPagamento: metodoPadrao,
-        dataPagamento: new Date().toISOString().split('T')[0],
-        observacoes: '',
-        numeroDocumento: '',
-        bancoOrigem: '',
-        agenciaOrigem: '',
-        contaOrigem: '',
-        tipo_origem: conta.tipo_origem,
-        parcelas: parcelasIniciais,
-        taxaParcela: taxaInicial
-      });
+      if (modalTipo === 'adiantamento') {
+        setDadosAdiantamento({
+          contaId: conta.id,
+          valorAdiantamento: 0, // Valor será preenchido pelo usuário
+          metodoPagamento: metodoPadrao,
+          dataAdiantamento: new Date().toISOString().split('T')[0],
+          observacoes: '',
+          numeroDocumento: '',
+          bancoOrigem: '',
+          agenciaOrigem: '',
+          contaOrigem: '',
+          parcelas: parcelasIniciais,
+          taxaParcela: taxaInicial
+        });
+      } else {
+        setDadosPagamento({
+          contaId: conta.id,
+          valor: Number(conta.valor) || 0,
+          metodoPagamento: metodoPadrao,
+          dataPagamento: new Date().toISOString().split('T')[0],
+          observacoes: '',
+          numeroDocumento: '',
+          bancoOrigem: '',
+          agenciaOrigem: '',
+          contaOrigem: '',
+          tipo_origem: conta.tipo_origem,
+          parcelas: parcelasIniciais,
+          taxaParcela: taxaInicial
+        });
+      }
       setModalPagamento(true);
     }
   };
@@ -570,6 +618,47 @@ export default function Financeiro() {
       console.log('Recebimento processado com sucesso:', dadosRecebimento);
     } catch (error) {
       console.error('Erro ao processar recebimento:', error);
+    }
+  };
+
+  // Função para processar adiantamento
+  const processarAdiantamento = async () => {
+    try {
+      // 1. Criar transação de saída para o adiantamento
+      await criarTransacao({
+        tipo: 'saida',
+        categoria: 'Adiantamento',
+        descricao: `Adiantamento - ${contaSelecionada?.fornecedor || 'Fornecedor'}`,
+        valor: dadosAdiantamento.valorAdiantamento,
+        data_transacao: new Date(dadosAdiantamento.dataAdiantamento).toISOString().split('T')[0],
+        metodo_pagamento: dadosAdiantamento.metodoPagamento,
+        conta: 'Caixa',
+        fornecedor_id: contaSelecionada?.fornecedor_id || null,
+        observacoes: `Adiantamento: ${dadosAdiantamento.observacoes || 'Sem observações'}`,
+        status: 'concluida'
+      });
+
+      // 2. Atualizar o valor da conta a pagar (descontar o adiantamento)
+      const novoValor = (Number(contaSelecionada?.valor) || 0) - dadosAdiantamento.valorAdiantamento;
+      
+      // Se o valor restante for zero ou negativo, marcar como pago
+      if (novoValor <= 0) {
+        await marcarContaPagarComoPago(dadosAdiantamento.contaId, dadosAdiantamento.dataAdiantamento, contaSelecionada?.tipo_origem);
+      } else {
+        // Apenas atualizar o valor da conta com o valor restante (sem processar pagamento)
+        await atualizarConta(dadosAdiantamento.contaId, {
+          valor: novoValor,
+          observacoes: `Adiantamento de ${formatarValor(dadosAdiantamento.valorAdiantamento)} - Valor restante: ${formatarValor(novoValor)}`
+        });
+      }
+      
+      setModalPagamento(false);
+      await recarregarDados();
+      
+      // Aqui você pode adicionar notificação de sucesso
+      console.log('Adiantamento processado com sucesso:', dadosAdiantamento);
+    } catch (error) {
+      console.error('Erro ao processar adiantamento:', error);
     }
   };
 
@@ -1219,16 +1308,28 @@ export default function Financeiro() {
                             )}
                           </div>
                           {item.status === 'pendente' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => abrirModalPagamento(item, 'pagar')}
-                              className="text-xs sm:text-sm"
-                            >
-                              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">Pagar</span>
-                              <span className="sm:hidden">Pagar</span>
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => abrirModalPagamento(item, 'pagar', 'pagamento')}
+                                className="text-xs sm:text-sm"
+                              >
+                                <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Pagar</span>
+                                <span className="sm:hidden">Pagar</span>
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => abrirModalPagamento(item, 'pagar', 'adiantamento')}
+                                className="text-xs sm:text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                              >
+                                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Adiantamento</span>
+                                <span className="sm:hidden">Adiant.</span>
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1439,7 +1540,9 @@ export default function Financeiro() {
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
               <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="truncate">Realizar Pagamento</span>
+              <span className="truncate">
+                {tipoModalPagamento === 'adiantamento' ? 'Adiantamento de Pagamento' : 'Realizar Pagamento'}
+              </span>
             </DialogTitle>
           </DialogHeader>
           
@@ -1454,17 +1557,43 @@ export default function Financeiro() {
                 {contaSelecionada?.descricao}
               </p>
               <p className="text-lg font-bold text-destructive">
-                {formatarValor(dadosPagamento.valor)}
+                {formatarValor(Number(contaSelecionada?.valor) || 0)}
               </p>
+              {tipoModalPagamento === 'adiantamento' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Valor restante após adiantamento: {formatarValor((Number(contaSelecionada?.valor) || 0) - (dadosAdiantamento.valorAdiantamento || 0))}
+                </p>
+              )}
             </div>
+
+            {/* Valor do adiantamento (apenas para adiantamento) */}
+            {tipoModalPagamento === 'adiantamento' && (
+              <div className="space-y-2">
+                <Label className="text-sm">Valor do Adiantamento</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="h-10"
+                  placeholder="Digite o valor do adiantamento"
+                  value={dadosAdiantamento.valorAdiantamento}
+                  onChange={(e) => setDadosAdiantamento({...dadosAdiantamento, valorAdiantamento: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+            )}
 
             {/* Método de pagamento e Data */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Método de Pagamento</Label>
                 <Select 
-                  value={dadosPagamento.metodoPagamento} 
-                  onValueChange={(value: any) => setDadosPagamento({...dadosPagamento, metodoPagamento: value})}
+                  value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento} 
+                  onValueChange={(value: any) => {
+                    if (tipoModalPagamento === 'adiantamento') {
+                      setDadosAdiantamento({...dadosAdiantamento, metodoPagamento: value});
+                    } else {
+                      setDadosPagamento({...dadosPagamento, metodoPagamento: value});
+                    }
+                  }}
                 >
                   <SelectTrigger className="h-10">
                     <SelectValue placeholder="Selecione o método de pagamento" />
@@ -1488,35 +1617,53 @@ export default function Financeiro() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm">Data do Pagamento</Label>
+                <Label className="text-sm">
+                  {tipoModalPagamento === 'adiantamento' ? 'Data do Adiantamento' : 'Data do Pagamento'}
+                </Label>
                 <Input
                   type="date"
                   className="h-10"
-                  value={dadosPagamento.dataPagamento}
-                  onChange={(e) => setDadosPagamento({...dadosPagamento, dataPagamento: e.target.value})}
+                  value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.dataAdiantamento : dadosPagamento.dataPagamento}
+                  onChange={(e) => {
+                    if (tipoModalPagamento === 'adiantamento') {
+                      setDadosAdiantamento({...dadosAdiantamento, dataAdiantamento: e.target.value});
+                    } else {
+                      setDadosPagamento({...dadosPagamento, dataPagamento: e.target.value});
+                    }
+                  }}
                 />
               </div>
             </div>
 
 
             {/* Seleção de parcelas (para cartão de crédito) */}
-            {dadosPagamento.metodoPagamento === 'cartao_credito' && (() => {
-              const parcelasDisponiveis = obterParcelasFixasDisponiveis(dadosPagamento.metodoPagamento);
+            {((tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento) === 'cartao_credito') && (() => {
+              const metodoAtual = tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento;
+              const parcelasDisponiveis = obterParcelasFixasDisponiveis(metodoAtual);
               return parcelasDisponiveis.length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-sm">Parcelas</Label>
                   <Select 
-                    value={dadosPagamento.parcelas?.toString() || '1'} 
+                    value={(tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.parcelas : dadosPagamento.parcelas)?.toString() || '1'} 
                     onValueChange={(value) => {
                       const parcelas = parseInt(value);
-                      const metodo = obterMetodoFixoSelecionado(dadosPagamento.metodoPagamento);
+                      const metodoAtual = tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento;
+                      const metodo = obterMetodoFixoSelecionado(metodoAtual);
                       const parcelaSelecionada = metodo?.parcelas.find(p => p.quantidade === parcelas);
                       
-                      setDadosPagamento({
-                        ...dadosPagamento, 
-                        parcelas,
-                        taxaParcela: parcelaSelecionada?.taxa || 0
-                      });
+                      if (tipoModalPagamento === 'adiantamento') {
+                        setDadosAdiantamento({
+                          ...dadosAdiantamento, 
+                          parcelas,
+                          taxaParcela: parcelaSelecionada?.taxa || 0
+                        });
+                      } else {
+                        setDadosPagamento({
+                          ...dadosPagamento, 
+                          parcelas,
+                          taxaParcela: parcelaSelecionada?.taxa || 0
+                        });
+                      }
                     }}
                   >
                     <SelectTrigger className="h-10">
@@ -1524,7 +1671,8 @@ export default function Financeiro() {
                     </SelectTrigger>
                     <SelectContent>
                       {parcelasDisponiveis.map((parcela) => {
-                        const valorParcela = calcularValorParcela(dadosPagamento.valor, parcela.quantidade, parcela.taxa);
+                        const valorBase = tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.valorAdiantamento : dadosPagamento.valor;
+                        const valorParcela = calcularValorParcela(valorBase, parcela.quantidade, parcela.taxa);
                         const valorTotal = valorParcela * parcela.quantidade;
                         return (
                           <SelectItem key={parcela.id} value={parcela.quantidade.toString()}>
@@ -1552,28 +1700,41 @@ export default function Financeiro() {
 
 
             {/* Número do documento (para transferência/boleto) */}
-            {(dadosPagamento.metodoPagamento === 'transferencia' || dadosPagamento.metodoPagamento === 'boleto') && (
+            {((tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento) === 'transferencia' || 
+              (tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento) === 'boleto') && (
               <div className="space-y-2">
                 <Label className="text-sm">Número do Documento</Label>
                 <Input
                   className="h-10"
                   placeholder="Ex: 123456789"
-                  value={dadosPagamento.numeroDocumento}
-                  onChange={(e) => setDadosPagamento({...dadosPagamento, numeroDocumento: e.target.value})}
+                  value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.numeroDocumento : dadosPagamento.numeroDocumento}
+                  onChange={(e) => {
+                    if (tipoModalPagamento === 'adiantamento') {
+                      setDadosAdiantamento({...dadosAdiantamento, numeroDocumento: e.target.value});
+                    } else {
+                      setDadosPagamento({...dadosPagamento, numeroDocumento: e.target.value});
+                    }
+                  }}
                 />
               </div>
             )}
 
             {/* Dados bancários (para transferência) */}
-            {dadosPagamento.metodoPagamento === 'transferencia' && (
+            {(tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.metodoPagamento : dadosPagamento.metodoPagamento) === 'transferencia' && (
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label className="text-sm">Banco</Label>
                   <Input
                     className="h-10"
                     placeholder="Ex: 001"
-                    value={dadosPagamento.bancoOrigem}
-                    onChange={(e) => setDadosPagamento({...dadosPagamento, bancoOrigem: e.target.value})}
+                    value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.bancoOrigem : dadosPagamento.bancoOrigem}
+                    onChange={(e) => {
+                      if (tipoModalPagamento === 'adiantamento') {
+                        setDadosAdiantamento({...dadosAdiantamento, bancoOrigem: e.target.value});
+                      } else {
+                        setDadosPagamento({...dadosPagamento, bancoOrigem: e.target.value});
+                      }
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1581,8 +1742,14 @@ export default function Financeiro() {
                   <Input
                     className="h-10"
                     placeholder="Ex: 1234"
-                    value={dadosPagamento.agenciaOrigem}
-                    onChange={(e) => setDadosPagamento({...dadosPagamento, agenciaOrigem: e.target.value})}
+                    value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.agenciaOrigem : dadosPagamento.agenciaOrigem}
+                    onChange={(e) => {
+                      if (tipoModalPagamento === 'adiantamento') {
+                        setDadosAdiantamento({...dadosAdiantamento, agenciaOrigem: e.target.value});
+                      } else {
+                        setDadosPagamento({...dadosPagamento, agenciaOrigem: e.target.value});
+                      }
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1590,8 +1757,14 @@ export default function Financeiro() {
                   <Input
                     className="h-10"
                     placeholder="Ex: 12345-6"
-                    value={dadosPagamento.contaOrigem}
-                    onChange={(e) => setDadosPagamento({...dadosPagamento, contaOrigem: e.target.value})}
+                    value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.contaOrigem : dadosPagamento.contaOrigem}
+                    onChange={(e) => {
+                      if (tipoModalPagamento === 'adiantamento') {
+                        setDadosAdiantamento({...dadosAdiantamento, contaOrigem: e.target.value});
+                      } else {
+                        setDadosPagamento({...dadosPagamento, contaOrigem: e.target.value});
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -1613,7 +1786,11 @@ export default function Financeiro() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        setDadosPagamento({...dadosPagamento, comprovante: file});
+                        if (tipoModalPagamento === 'adiantamento') {
+                          setDadosAdiantamento({...dadosAdiantamento, comprovante: file});
+                        } else {
+                          setDadosPagamento({...dadosPagamento, comprovante: file});
+                        }
                       }
                     }}
                   />
@@ -1624,9 +1801,15 @@ export default function Financeiro() {
                 <Label className="text-sm">Observações (Opcional)</Label>
                 <Textarea
                   className="min-h-[120px] text-sm"
-                  placeholder="Adicione observações sobre o pagamento..."
-                  value={dadosPagamento.observacoes}
-                  onChange={(e) => setDadosPagamento({...dadosPagamento, observacoes: e.target.value})}
+                  placeholder={tipoModalPagamento === 'adiantamento' ? "Adicione observações sobre o adiantamento..." : "Adicione observações sobre o pagamento..."}
+                  value={tipoModalPagamento === 'adiantamento' ? dadosAdiantamento.observacoes : dadosPagamento.observacoes}
+                  onChange={(e) => {
+                    if (tipoModalPagamento === 'adiantamento') {
+                      setDadosAdiantamento({...dadosAdiantamento, observacoes: e.target.value});
+                    } else {
+                      setDadosPagamento({...dadosPagamento, observacoes: e.target.value});
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -1641,11 +1824,13 @@ export default function Financeiro() {
                 Cancelar
               </Button>
               <Button 
-                onClick={processarPagamento}
+                onClick={tipoModalPagamento === 'adiantamento' ? processarAdiantamento : processarPagamento}
                 className="flex-1 h-10 bg-gradient-primary text-xs sm:text-sm"
               >
                 <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Confirmar Pagamento</span>
+                <span className="hidden sm:inline">
+                  {tipoModalPagamento === 'adiantamento' ? 'Confirmar Adiantamento' : 'Confirmar Pagamento'}
+                </span>
                 <span className="sm:hidden">Confirmar</span>
               </Button>
             </div>

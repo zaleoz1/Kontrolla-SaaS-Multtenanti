@@ -9,7 +9,6 @@ import {
   Shield,
   Settings,
   ArrowLeft,
-  LogOut,
   Users,
   UserCog,
   X
@@ -20,7 +19,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 interface ConfiguracoesSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  onLogout: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -99,7 +97,6 @@ const configuracoesTabs = [
 export function ConfiguracoesSidebar({ 
   activeTab, 
   onTabChange, 
-  onLogout,
   isOpen,
   onClose
 }: ConfiguracoesSidebarProps) {
@@ -231,16 +228,16 @@ export function ConfiguracoesSidebar({
         })}
       </nav>
 
-        {/* Ações rápidas na parte inferior */}
-        <div className="border-t border-sidebar-border p-4 space-y-2 flex-shrink-0">
+        {/* Botão voltar na parte inferior */}
+        <div className="border-t border-sidebar-border p-4 flex-shrink-0">
           <Button 
-            onClick={onLogout}
+            onClick={() => navigate("/dashboard")}
             variant="outline" 
             size="sm" 
-            className="w-full justify-start text-destructive hover:text-destructive"
+            className="w-full justify-start"
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao Dashboard
           </Button>
         </div>
       </div>
