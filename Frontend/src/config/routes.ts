@@ -20,6 +20,7 @@ export const routes = {
   signup: "/signup",
   esqueciSenha: "/esqueci-senha",
   demo: "/demo",
+  download: "/download",
 } as const;
 
 // Tipos para as rotas

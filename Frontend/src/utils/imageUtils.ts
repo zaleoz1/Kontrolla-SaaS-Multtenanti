@@ -59,7 +59,7 @@ export const getImageWithFallback = (url: string | null, fallback?: string): str
     return url;
   }
   
-  return fallback || './placeholder.svg';
+  return fallback || '/placeholder.svg';
 };
 
 /**

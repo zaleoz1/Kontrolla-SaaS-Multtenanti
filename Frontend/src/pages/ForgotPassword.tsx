@@ -707,7 +707,7 @@ export default function ForgotPassword() {
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
                 <img 
-                  src="./logo.png" 
+                  src="/logo.png" 
                   alt="KontrollaPro Logo" 
                   className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg mr-2 sm:mr-3"
                 />
