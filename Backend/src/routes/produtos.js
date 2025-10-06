@@ -3,6 +3,7 @@ import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateProduto, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import { uploadImagensProduto, deleteImagensProduto } from '../services/uploadService.js';
+import NotificationService from '../services/notificationService.js';
 
 const router = express.Router();
 
@@ -280,6 +281,14 @@ router.post('/', validateProduto, async (req, res) => {
        WHERE p.id = ?`,
       [produtoId]
     );
+
+    // Criar notificação do novo produto
+    try {
+      await NotificationService.notifyNewProduct(req.user.tenant_id, produtoId, nome);
+    } catch (notificationError) {
+      console.error('Erro ao criar notificação do produto:', notificationError);
+      // Não falhar a criação do produto por causa da notificação
+    }
 
     res.status(201).json({
       message: 'Produto criado com sucesso',

@@ -24,6 +24,7 @@ import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { useBuscaProdutos } from "@/hooks/useBuscaProdutos";
 import { Cliente } from "@/hooks/useClientes";
 import { useToast } from "@/hooks/use-toast";
+import { useNotificationTriggers } from "@/hooks/useNotificationTriggers";
 
 interface Produto {
   id?: number;
@@ -67,6 +68,7 @@ export default function NovaVenda() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { triggerNovaVenda } = useNotificationTriggers();
   
   // Dados da venda vindos do estado da navegação (quando volta da página Pagamentos)
   const vendaData = location.state as {

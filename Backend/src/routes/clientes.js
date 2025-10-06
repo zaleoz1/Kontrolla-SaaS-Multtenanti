@@ -2,6 +2,7 @@ import express from 'express';
 import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateCliente, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
+import NotificationService from '../services/notificationService.js';
 
 const router = express.Router();
 
@@ -223,6 +224,14 @@ router.post('/', validateCliente, async (req, res) => {
       'SELECT * FROM clientes WHERE id = ?',
       [result.insertId]
     );
+
+    // Criar notificação do novo cliente
+    try {
+      await NotificationService.notifyNewClient(req.user.tenant_id, result.insertId, nome);
+    } catch (notificationError) {
+      console.error('Erro ao criar notificação do cliente:', notificationError);
+      // Não falhar a criação do cliente por causa da notificação
+    }
 
     res.status(201).json({
       message: 'Cliente criado com sucesso',

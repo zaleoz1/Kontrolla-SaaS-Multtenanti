@@ -316,7 +316,7 @@ export const useConfiguracoes = () => {
   // Atualizar configurações do sistema
   const atualizarConfiguracoes = async (dados: Partial<ConfiguracoesSistema>) => {
     try {
-      const response = await makeRequest('/configuracoes/sistema', { method: 'PUT', body: dados });
+      const response = await makeRequest('/configuracoes/sistema', { method: 'PUT', body: { configuracoes: dados } });
       if (response.configuracoes) {
         setConfiguracoes(response.configuracoes);
       }

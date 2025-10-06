@@ -5,8 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AppLayout } from "./components/layout/AppLayout";
-import { NotificationContainer } from "./components/ui/notification";
-import { useNotifications } from "./hooks/useNotifications";
 import { OperadorProvider } from "./contexts/OperadorContext";
 import { DebugRoute } from "./components/DebugRoute";
 import LandingPage from "./pages/LandingPage";
@@ -39,11 +37,6 @@ import DownloadPage from "./pages/Download";
 const clienteQuery = new QueryClient();
 
 function AppContent() {
-  const { notifications, removeNotification } = useNotifications();
-
-  console.log('🔍 AppContent renderizado');
-  console.log('🔍 Notificações:', notifications.length);
-
   return (
     <>
       <HashRouter>
@@ -157,10 +150,6 @@ function AppContent() {
         </Routes>
       </HashRouter>
       
-      <NotificationContainer 
-        notifications={notifications} 
-        onClose={removeNotification} 
-      />
       <Toaster />
       <Sonner />
     </>

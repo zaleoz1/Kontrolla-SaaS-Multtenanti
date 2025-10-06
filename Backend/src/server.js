@@ -21,6 +21,7 @@ import catalogoRoutes from './routes/catalogo.js';
 import configuracoesRoutes from './routes/configuracoes.js';
 import fornecedoresRoutes from './routes/fornecedores.js';
 import funcionariosRoutes from './routes/funcionarios.js';
+import notificationsRoutes from './routes/notifications.js';
 
 // Importar middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -115,6 +116,7 @@ app.use('/api/catalogo', catalogoRoutes);
 app.use('/api/configuracoes', configuracoesRoutes);
 app.use('/api/fornecedores', fornecedoresRoutes);
 app.use('/api/funcionarios', funcionariosRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Middleware para rotas não encontradas
 app.use(notFound);
