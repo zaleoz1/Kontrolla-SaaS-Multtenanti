@@ -38,6 +38,14 @@ export interface ContasReceberResponse {
   };
 }
 
+export interface PagamentoParcialData {
+  valorRecebido: number;
+  dataPagamento: string;
+  metodoPagamento: string;
+  observacoes?: string;
+  anexos?: string[];
+}
+
 export interface ContaReceberResponse {
   conta: ContaReceber;
 }
@@ -131,12 +139,7 @@ export function useContasReceber() {
     }
   }, [atualizarConta]);
 
-  const processarPagamentoParcial = useCallback(async (id: number, dados: {
-    valorRecebido: number;
-    dataPagamento: string;
-    metodoPagamento: string;
-    observacoes?: string;
-  }) => {
+  const processarPagamentoParcial = useCallback(async (id: number, dados: PagamentoParcialData) => {
     try {
       const response = await api.makeRequest(`/financeiro/contas-receber/${id}/pagar`, {
         method: 'POST',
