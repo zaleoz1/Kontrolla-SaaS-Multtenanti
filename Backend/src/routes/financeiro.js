@@ -2,6 +2,7 @@ import express from 'express';
 import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateTransacao, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
+import { uploadImage } from '../services/uploadService.js';
 
 const router = express.Router();
 
@@ -185,8 +186,8 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
       result = await queryWithResult(
         `INSERT INTO contas_pagar (
           tenant_id, fornecedor_id, descricao, valor, data_vencimento, 
-          status, categoria, observacoes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          status, categoria, observacoes, anexos
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.tenant_id,
           fornecedor_id || null,
@@ -195,7 +196,8 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
           data_transacao, // Usar a data da transação como data de vencimento
           'pendente',
           categoria,
-          observacoes || `Conta a pagar criada a partir de transação de saída pendente`
+          observacoes || `Conta a pagar criada a partir de transação de saída pendente`,
+          JSON.stringify(anexos || [])
         ]
       );
 
@@ -231,6 +233,72 @@ router.post('/transacoes', validateTransacao, async (req, res) => {
       };
 
       console.log('✅ Conta a pagar criada diretamente:', result.insertId);
+    } else if (tipo === 'entrada' && status === 'pendente') {
+      // Se for uma transação de entrada pendente, salvar apenas na tabela contas_receber
+      console.log('🔄 Salvando transação de entrada pendente apenas em contas_receber...');
+      
+      // Buscar nome do cliente se cliente_id foi fornecido
+      let nomeCliente = 'Cliente não informado';
+      if (cliente_id) {
+        const clientes = await query(
+          'SELECT nome FROM clientes WHERE id = ? AND tenant_id = ?',
+          [cliente_id, req.user.tenant_id]
+        );
+        if (clientes.length > 0) {
+          nomeCliente = clientes[0].nome;
+        }
+      }
+
+      // Criar conta a receber diretamente
+      result = await queryWithResult(
+        `INSERT INTO contas_receber (
+          tenant_id, cliente_id, descricao, valor, data_vencimento, 
+          status, observacoes, anexos
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id,
+          cliente_id || null,
+          descricao,
+          valor,
+          data_transacao, // Usar a data da transação como data de vencimento
+          'pendente',
+          observacoes || `Conta a receber criada a partir de transação de entrada pendente`,
+          JSON.stringify(anexos || [])
+        ]
+      );
+
+      // Buscar conta a receber criada para retornar
+      const [contaReceber] = await query(
+        `SELECT cr.*, c.nome as cliente_nome
+         FROM contas_receber cr 
+         LEFT JOIN clientes c ON cr.cliente_id = c.id
+         WHERE cr.id = ?`,
+        [result.insertId]
+      );
+
+      transacao = {
+        id: result.insertId,
+        tipo: 'entrada',
+        categoria,
+        descricao,
+        valor,
+        data_transacao,
+        metodo_pagamento,
+        conta,
+        fornecedor_id: null,
+        cliente_id,
+        observacoes,
+        anexos: [],
+        status: 'pendente',
+        data_criacao: contaReceber.data_criacao,
+        data_atualizacao: contaReceber.data_atualizacao,
+        cliente_nome: contaReceber.cliente_nome,
+        fornecedor_nome: null,
+        // Flag para indicar que foi salva em contas_receber
+        salva_em_contas_receber: true
+      };
+
+      console.log('✅ Conta a receber criada diretamente:', result.insertId);
     } else {
       // Para outros tipos de transação, salvar na tabela transacoes normalmente
       result = await queryWithResult(
@@ -289,7 +357,7 @@ router.put('/transacoes/:id', validateId, validateTransacao, handleValidationErr
       status
     } = req.body;
 
-    // Verificar se transação existe (pode estar em transacoes ou contas_pagar)
+    // Verificar se transação existe (pode estar em transacoes, contas_pagar ou contas_receber)
     const existingTransacoes = await query(
       'SELECT id FROM transacoes WHERE id = ? AND tenant_id = ?',
       [id, req.user.tenant_id]
@@ -300,10 +368,16 @@ router.put('/transacoes/:id', validateId, validateTransacao, handleValidationErr
       [id, req.user.tenant_id]
     );
 
+    const existingContasReceber = await query(
+      'SELECT id FROM contas_receber WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+
     const isInContasPagar = existingContasPagar.length > 0;
+    const isInContasReceber = existingContasReceber.length > 0;
     const isInTransacoes = existingTransacoes.length > 0;
 
-    if (!isInTransacoes && !isInContasPagar) {
+    if (!isInTransacoes && !isInContasPagar && !isInContasReceber) {
       return res.status(404).json({
         error: 'Transação não encontrada'
       });
@@ -383,6 +457,51 @@ router.put('/transacoes/:id', validateId, validateTransacao, handleValidationErr
         cliente_nome: null,
         fornecedor_nome: contaPagar.fornecedor_nome,
         salva_em_contas_pagar: true
+      };
+    } else if (isInContasReceber) {
+      // Se a transação está em contas_receber, atualizar lá
+      console.log('🔄 Atualizando transação em contas_receber...');
+      
+      await query(
+        `UPDATE contas_receber SET 
+          cliente_id = ?, descricao = ?, valor = ?, data_vencimento = ?,
+          status = ?, observacoes = ?
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          cliente_id, descricao, valor, data_transacao,
+          status === 'pendente' ? 'pendente' : status === 'concluida' ? 'pago' : 'cancelado',
+          observacoes, id, req.user.tenant_id
+        ]
+      );
+
+      // Buscar conta a receber atualizada
+      const [contaReceber] = await query(
+        `SELECT cr.*, c.nome as cliente_nome
+         FROM contas_receber cr 
+         LEFT JOIN clientes c ON cr.cliente_id = c.id
+         WHERE cr.id = ?`,
+        [id]
+      );
+
+      transacao = {
+        id: contaReceber.id,
+        tipo: 'entrada',
+        categoria: categoria,
+        descricao: contaReceber.descricao,
+        valor: contaReceber.valor,
+        data_transacao: contaReceber.data_vencimento,
+        metodo_pagamento: 'pix', // Default para contas a receber
+        conta: 'caixa', // Default para contas a receber
+        fornecedor_id: null,
+        cliente_id: contaReceber.cliente_id,
+        observacoes: contaReceber.observacoes,
+        anexos: [],
+        status: contaReceber.status === 'pago' ? 'concluida' : contaReceber.status === 'cancelado' ? 'cancelada' : 'pendente',
+        data_criacao: contaReceber.data_criacao,
+        data_atualizacao: contaReceber.data_atualizacao,
+        cliente_nome: contaReceber.cliente_nome,
+        fornecedor_nome: null,
+        salva_em_contas_receber: true
       };
     } else {
       // Se a transação está em transacoes, atualizar lá
@@ -484,7 +603,43 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
       params.push(data_fim);
     }
 
-    // Buscar APENAS contas a receber da tabela contas_receber
+    // Construir query para buscar contas a receber tradicionais
+    let whereClauseContas = 'WHERE cr.tenant_id = ?';
+    let paramsContas = [req.user.tenant_id];
+
+    // Adicionar filtro de status
+    if (status) {
+      whereClauseContas += ' AND cr.status = ?';
+      paramsContas.push(status);
+    }
+
+    // Adicionar filtro de data
+    if (data_inicio) {
+      whereClauseContas += ' AND cr.data_vencimento >= ?';
+      paramsContas.push(data_inicio);
+    }
+
+    if (data_fim) {
+      whereClauseContas += ' AND cr.data_vencimento <= ?';
+      paramsContas.push(data_fim);
+    }
+
+    // Construir query para buscar transações pendentes do tipo entrada
+    let whereClauseTransacoes = 'WHERE t.tenant_id = ? AND t.tipo = ? AND t.status = ?';
+    let paramsTransacoes = [req.user.tenant_id, 'entrada', 'pendente'];
+
+    // Adicionar filtro de data para transações
+    if (data_inicio) {
+      whereClauseTransacoes += ' AND t.data_transacao >= ?';
+      paramsTransacoes.push(data_inicio);
+    }
+
+    if (data_fim) {
+      whereClauseTransacoes += ' AND t.data_transacao <= ?';
+      paramsTransacoes.push(data_fim);
+    }
+
+    // Buscar contas a receber tradicionais
     const contasReceber = await query(
       `SELECT 
         cr.id,
@@ -508,20 +663,47 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
         'conta_receber' as tipo_origem
        FROM contas_receber cr 
        LEFT JOIN clientes c ON cr.cliente_id = c.id 
-       ${whereClause} 
+       ${whereClauseContas} 
        ORDER BY cr.data_vencimento ASC`,
-      params
+      paramsContas
     );
 
-    // Contar total de registros
-    const [totalResult] = await query(
-      `SELECT COUNT(*) as total FROM contas_receber cr ${whereClause}`,
-      params
+    // Buscar transações pendentes do tipo entrada
+    const transacoesPendentes = await query(
+      `SELECT 
+        t.id,
+        t.cliente_id,
+        NULL as venda_id,
+        t.descricao,
+        t.valor,
+        t.data_transacao as data_vencimento,
+        NULL as data_pagamento,
+        t.status,
+        '1/1' as parcela,
+        t.observacoes,
+        NULL as dias,
+        NULL as juros,
+        NULL as valor_original,
+        NULL as valor_com_juros,
+        t.data_criacao,
+        t.data_atualizacao,
+        c.nome as cliente_nome,
+        c.email as cliente_email,
+        'transacao_entrada' as tipo_origem
+       FROM transacoes t 
+       LEFT JOIN clientes c ON t.cliente_id = c.id
+       ${whereClauseTransacoes} 
+       ORDER BY t.data_transacao ASC`,
+      paramsTransacoes
     );
 
-    const total = totalResult.total;
+    // Combinar os resultados
+    const contas = [...contasReceber, ...transacoesPendentes];
+
+    // Aplicar paginação no resultado combinado
+    const total = contas.length;
     const totalPages = Math.ceil(total / limit);
-    const contasPaginadas = contasReceber.slice(offset, offset + Number(limit));
+    const contasPaginadas = contas.slice(offset, offset + Number(limit));
 
     res.json({
       contas: contasPaginadas,
@@ -1367,7 +1549,8 @@ router.post('/contas-pagar/:id/pagar', validateId, handleValidationErrors, async
       agenciaOrigem,
       contaOrigem,
       parcelas = 1,
-      taxaParcela = 0
+      taxaParcela = 0,
+      anexos = []
     } = req.body;
 
     // Buscar conta a pagar
@@ -1404,8 +1587,8 @@ router.post('/contas-pagar/:id/pagar', validateId, handleValidationErrors, async
       const transacaoId = await connection.execute(
         `INSERT INTO transacoes (
           tenant_id, tipo, categoria, descricao, valor, data_transacao,
-          metodo_pagamento, conta, fornecedor_id, cliente_id, observacoes, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          metodo_pagamento, conta, fornecedor_id, cliente_id, observacoes, anexos, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.tenant_id,
           'saida',
@@ -1418,6 +1601,7 @@ router.post('/contas-pagar/:id/pagar', validateId, handleValidationErrors, async
           conta.fornecedor_id,
           null,
           observacoes || `Pagamento de conta a pagar #${id}`,
+          JSON.stringify(anexos || []),
           'concluida'
         ]
       );
@@ -1451,7 +1635,8 @@ router.post('/contas-receber/:id/pagar', validateId, handleValidationErrors, asy
       dataPagamento,
       metodoPagamento,
       observacoes,
-      comprovante
+      comprovante,
+      anexos = []
     } = req.body;
 
     // Buscar conta a receber
@@ -1545,8 +1730,8 @@ router.post('/contas-receber/:id/pagar', validateId, handleValidationErrors, asy
       await connection.execute(
         `INSERT INTO transacoes (
           tenant_id, tipo, categoria, descricao, valor, data_transacao,
-          metodo_pagamento, conta, cliente_id, observacoes, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          metodo_pagamento, conta, cliente_id, observacoes, anexos, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.tenant_id,
           'entrada',
@@ -1558,6 +1743,7 @@ router.post('/contas-receber/:id/pagar', validateId, handleValidationErrors, asy
           'caixa',
           conta.cliente_id,
           observacoes || `Pagamento parcial de conta a receber #${id}`,
+          JSON.stringify(anexos || []),
           'concluida'
         ]
       );
@@ -1577,6 +1763,58 @@ router.post('/contas-receber/:id/pagar', validateId, handleValidationErrors, asy
   } catch (error) {
     console.error('Erro ao processar pagamento parcial:', error);
     res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Upload de anexos para transações
+router.post('/upload-anexo', async (req, res) => {
+  try {
+    const { fileBase64, fileName, fileType } = req.body;
+
+    if (!fileBase64) {
+      return res.status(400).json({
+        success: false,
+        error: 'Arquivo é obrigatório'
+      });
+    }
+
+    console.log('📤 Enviando arquivo para Cloudinary:', {
+      fileName,
+      fileType,
+      base64Length: fileBase64.length,
+      hasDataPrefix: fileBase64.startsWith('data:')
+    });
+
+    // Upload para Cloudinary
+    const uploadResult = await uploadImage(
+      fileBase64, 
+      `kontrolla/transacoes/${req.user.tenant_id}`
+    );
+
+    if (!uploadResult.success) {
+      console.error('❌ Erro no upload para Cloudinary:', uploadResult.error);
+      return res.status(500).json({
+        success: false,
+        error: uploadResult.error
+      });
+    }
+
+    console.log('✅ Upload realizado com sucesso:', uploadResult.url);
+
+    res.json({
+      success: true,
+      url: uploadResult.url,
+      public_id: uploadResult.public_id,
+      fileName: fileName || 'anexo',
+      fileType: fileType || 'unknown'
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no upload de anexo:', error);
+    res.status(500).json({
+      success: false,
       error: 'Erro interno do servidor'
     });
   }

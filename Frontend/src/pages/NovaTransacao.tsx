@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTransacoes, Transacao } from "@/hooks/useTransacoes";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { useBuscaFornecedores } from "@/hooks/useBuscaFornecedores";
+import { api } from "@/lib/api";
 import { 
   Save, 
   X, 
@@ -24,7 +25,12 @@ import {
   CheckCircle,
   Plus,
   Minus,
-  Loader2
+  Loader2,
+  Upload,
+  File,
+  Image,
+  FileText,
+  Trash2
 } from "lucide-react";
 
 // Removido interface Transacao duplicada - usando a do hook
@@ -46,10 +52,23 @@ export default function NovaTransacao() {
     conta: "caixa",
     observacoes: "",
     anexos: [],
-    status: "pendente"
+    status: undefined
   });
   const [clienteSelecionado, setClienteSelecionado] = useState<string>("");
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string>("");
+  const [uploadingAnexos, setUploadingAnexos] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Verificar se a aba detalhes deve estar disponível
+  const detalhesDisponivel = (transacao.tipo === "saida" && transacao.categoria === "Fornecedores") || 
+                            (transacao.tipo === "entrada" && transacao.categoria === "Vendas");
+
+  // Redirecionar para aba básico se detalhes não estiver disponível e estiver ativa
+  useEffect(() => {
+    if (!detalhesDisponivel && abaAtiva === "detalhes") {
+      setAbaAtiva("basico");
+    }
+  }, [detalhesDisponivel, abaAtiva]);
 
   const categoriasEntrada = [
     "Vendas",
@@ -80,13 +99,6 @@ export default function NovaTransacao() {
     { label: "Cheque", value: "cheque" }
   ];
 
-  const contas = [
-    { label: "Caixa", value: "caixa" },
-    { label: "Banco Principal", value: "banco_principal" },
-    { label: "Banco Secundário", value: "banco_secundario" },
-    { label: "Poupança", value: "poupanca" },
-    { label: "Investimentos", value: "investimentos" }
-  ];
 
   // Os fornecedores são carregados automaticamente pelo hook useBuscaFornecedores
 
@@ -108,6 +120,107 @@ export default function NovaTransacao() {
       ...prev,
       anexos: prev.anexos.filter((_, i) => i !== index)
     }));
+  };
+
+  const converterArquivoParaBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Manter o prefixo completo para o Cloudinary
+        resolve(result);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const uploadAnexo = async (file: File) => {
+    try {
+      setUploadingAnexos(true);
+      
+      const base64 = await converterArquivoParaBase64(file);
+      
+      const response = await api.post('/financeiro/upload-anexo', {
+        fileBase64: base64,
+        fileName: file.name,
+        fileType: file.type
+      });
+
+      if (response.data.success) {
+        adicionarAnexo(response.data.url);
+        toast({
+          title: "Sucesso!",
+          description: "Arquivo anexado com sucesso.",
+        });
+      } else {
+        throw new Error(response.data.error || 'Erro no upload');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao anexar arquivo. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingAnexos(false);
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      // Validar tamanho do arquivo (máximo 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Erro",
+          description: "Arquivo muito grande. Tamanho máximo: 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validar tipo de arquivo
+      const allowedTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'application/pdf', 'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Erro",
+          description: "Tipo de arquivo não permitido.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      uploadAnexo(file);
+    }
+    
+    // Limpar o input para permitir selecionar o mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const getFileIcon = (url: string) => {
+    const extension = url.split('.').pop()?.toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return <Image className="h-4 w-4" />;
+    } else if (extension === 'pdf') {
+      return <FileText className="h-4 w-4" />;
+    } else {
+      return <File className="h-4 w-4" />;
+    }
   };
 
   const salvarTransacao = async () => {
@@ -148,10 +261,20 @@ export default function NovaTransacao() {
 
       await criarTransacao(dadosTransacao);
       
-      // Mensagem específica para transações de saída pendentes
-      const mensagem = transacao.tipo === "saida" && transacao.status === "pendente" 
-        ? "Conta a pagar criada com sucesso. A transação foi salva diretamente em contas a pagar."
-        : "Transação criada com sucesso.";
+      // Mensagem específica para transações pendentes
+      let mensagem = "Transação criada com sucesso.";
+      
+      if (transacao.tipo === "saida" && transacao.status === "pendente") {
+        mensagem = "Conta a pagar criada com sucesso. A transação foi salva diretamente em contas a pagar.";
+        if (transacao.anexos && transacao.anexos.length > 0) {
+          mensagem += ` ${transacao.anexos.length} anexo(s) foi(ram) salvo(s) junto com a conta.`;
+        }
+      } else if (transacao.tipo === "entrada" && transacao.status === "pendente") {
+        mensagem = "Conta a receber criada com sucesso. A transação foi salva diretamente em contas a receber.";
+        if (transacao.anexos && transacao.anexos.length > 0) {
+          mensagem += ` ${transacao.anexos.length} anexo(s) foi(ram) salvo(s) junto com a conta.`;
+        }
+      }
       
       toast({
         title: "Sucesso!",
@@ -169,7 +292,12 @@ export default function NovaTransacao() {
     }
   };
 
-  const formularioValido = transacao.categoria && transacao.descricao && transacao.valor && transacao.valor > 0;
+  const formularioValido = transacao.categoria && 
+                          transacao.descricao && 
+                          transacao.valor && 
+                          transacao.valor > 0 &&
+                          transacao.status &&
+                          (transacao.tipo === "entrada" || (transacao.tipo === "saida" && (transacao.categoria !== "Fornecedores" || fornecedorSelecionado)));
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
@@ -216,15 +344,17 @@ export default function NovaTransacao() {
         {/* Coluna Esquerda - Formulário */}
         <div className="lg:col-span-2">
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-3 sm:space-y-4">
-            <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsList className={`grid w-full h-auto ${(transacao.tipo === "saida" && transacao.categoria === "Fornecedores") || (transacao.tipo === "entrada" && transacao.categoria === "Vendas") ? "grid-cols-3" : "grid-cols-2"}`}>
               <TabsTrigger value="basico" className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-1">
                 <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="text-xs sm:text-sm">Básico</span>
               </TabsTrigger>
-              <TabsTrigger value="detalhes" className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-1">
-                <Receipt className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Detalhes</span>
-              </TabsTrigger>
+              {((transacao.tipo === "saida" && transacao.categoria === "Fornecedores") || (transacao.tipo === "entrada" && transacao.categoria === "Vendas")) && (
+                <TabsTrigger value="detalhes" className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-1">
+                  <Receipt className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs sm:text-sm">Detalhes</span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="anexos" className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-1">
                 <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="text-xs sm:text-sm">Anexos</span>
@@ -292,12 +422,41 @@ export default function NovaTransacao() {
                     <div>
                       <label className="text-xs sm:text-sm font-medium">Valor *</label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
                         placeholder="0,00"
                         value={transacao.valor}
-                        onChange={(e) => atualizarTransacao("valor", parseFloat(e.target.value) || 0)}
+                        onChange={(e) => {
+                          // Permitir apenas números, vírgula e ponto
+                          let valor = e.target.value.replace(/[^0-9,.]/g, '');
+                          
+                          // Remover zeros à esquerda, exceto se for "0," ou "0."
+                          if (valor.length > 1 && valor.startsWith('0') && !valor.startsWith('0,') && !valor.startsWith('0.')) {
+                            valor = valor.replace(/^0+/, '');
+                          }
+                          
+                          // Se ficou vazio após remover zeros, permitir apenas "0"
+                          if (valor === '') {
+                            valor = '0';
+                          }
+                          
+                          // Evitar múltiplas vírgulas ou pontos
+                          const virgulas = (valor.match(/,/g) || []).length;
+                          const pontos = (valor.match(/\./g) || []).length;
+                          
+                          if (virgulas > 1) {
+                            valor = valor.replace(/,/g, '');
+                            valor = valor.replace(/(\d+)(\d{2})$/, '$1,$2');
+                          }
+                          
+                          if (pontos > 1) {
+                            valor = valor.replace(/\./g, '');
+                            valor = valor.replace(/(\d+)(\d{2})$/, '$1.$2');
+                          }
+                          
+                          // Converter vírgula para ponto para cálculo
+                          const valorNumerico = parseFloat(valor.replace(',', '.')) || 0;
+                          atualizarTransacao("valor", valorNumerico);
+                        }}
                         className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
@@ -315,7 +474,7 @@ export default function NovaTransacao() {
 
                   <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <label className="text-xs sm:text-sm font-medium">Data</label>
+                      <label className="text-xs sm:text-sm font-medium">Data de pagamento</label>
                       <Input
                         type="date"
                         value={transacao.data_transacao}
@@ -342,99 +501,26 @@ export default function NovaTransacao() {
 
                   <div>
                     <label className="text-xs sm:text-sm font-medium">Conta</label>
-                    <select
+                    <Input
+                      placeholder="Digite o nome da conta..."
                       value={transacao.conta}
                       onChange={(e) => atualizarTransacao("conta", e.target.value)}
-                      className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
-                    >
-                      {contas.map(conta => (
-                        <option key={conta.value} value={conta.value}>
-                          {conta.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Aba Detalhes */}
-            <TabsContent value="detalhes" className="space-y-3 sm:space-y-4">
-              <Card className="bg-gradient-card shadow-card">
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">Detalhes Adicionais</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 sm:space-y-4">
-                  {transacao.tipo === "saida" && (
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium">Fornecedor</label>
-                      <select
-                        value={fornecedorSelecionado}
-                        onChange={(e) => setFornecedorSelecionado(e.target.value)}
-                        className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
-                        disabled={loadingFornecedores}
-                      >
-                        <option value="">Selecione um fornecedor</option>
-                        {fornecedores.map(fornecedor => (
-                          <option key={fornecedor.id} value={fornecedor.id}>
-                            {fornecedor.nome}
-                          </option>
-                        ))}
-                      </select>
-                      {loadingFornecedores && (
-                        <div className="flex items-center mt-1 text-xs sm:text-sm text-muted-foreground">
-                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
-                          Carregando fornecedores...
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {transacao.tipo === "entrada" && (
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium">Cliente</label>
-                      <select
-                        value={clienteSelecionado}
-                        onChange={(e) => setClienteSelecionado(e.target.value)}
-                        className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
-                        disabled={loadingClientes}
-                      >
-                        <option value="">Selecione um cliente</option>
-                        {clientes.map(cliente => (
-                          <option key={cliente.id} value={cliente.id}>
-                            {cliente.nome}
-                          </option>
-                        ))}
-                      </select>
-                      {loadingClientes && (
-                        <div className="flex items-center mt-1 text-xs sm:text-sm text-muted-foreground">
-                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
-                          Carregando clientes...
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium">Observações</label>
-                    <textarea
-                      placeholder="Observações sobre a transação..."
-                      value={transacao.observacoes}
-                      onChange={(e) => atualizarTransacao("observacoes", e.target.value)}
-                      className="w-full mt-1 p-2 border rounded-md bg-background min-h-[60px] sm:min-h-[80px] resize-none text-xs sm:text-sm"
+                      className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs sm:text-sm font-medium">Status</label>
+                    <label className="text-xs sm:text-sm font-medium">Status *</label>
                     <select
-                      value={transacao.status}
+                      value={transacao.status || ""}
                       onChange={(e) => atualizarTransacao("status", e.target.value)}
-                      className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
+                      className={`w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm ${
+                        !transacao.status ? "border-red-500 focus:border-red-500" : ""
+                      }`}
                     >
+                      <option value="">Selecione o status</option>
                       <option value="pendente">Pendente</option>
                       <option value="concluida">Concluída</option>
-                      <option value="cancelada">Cancelada</option>
                     </select>
                     {transacao.tipo === "saida" && transacao.status === "pendente" && (
                       <p className="text-xs text-blue-600 mt-1 flex items-center">
@@ -442,10 +528,93 @@ export default function NovaTransacao() {
                         Será salva diretamente em contas a pagar
                       </p>
                     )}
+                    {transacao.tipo === "entrada" && transacao.status === "pendente" && (
+                      <p className="text-xs text-green-600 mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Será salva diretamente em contas a receber
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Aba Detalhes - Só aparece para Fornecedores (saída) ou Vendas (entrada) */}
+            {detalhesDisponivel && (
+              <TabsContent value="detalhes" className="space-y-3 sm:space-y-4">
+                <Card className="bg-gradient-card shadow-card">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="text-base sm:text-lg">Detalhes Adicionais</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    {transacao.tipo === "saida" && transacao.categoria === "Fornecedores" && (
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Fornecedor *</label>
+                        <select
+                          value={fornecedorSelecionado}
+                          onChange={(e) => setFornecedorSelecionado(e.target.value)}
+                          className={`w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm ${
+                            !fornecedorSelecionado 
+                              ? "border-red-500 focus:border-red-500" 
+                              : ""
+                          }`}
+                          disabled={loadingFornecedores}
+                        >
+                          <option value="">Selecione um fornecedor</option>
+                          {fornecedores.map(fornecedor => (
+                            <option key={fornecedor.id} value={fornecedor.id}>
+                              {fornecedor.nome}
+                            </option>
+                          ))}
+                        </select>
+                        {loadingFornecedores && (
+                          <div className="flex items-center mt-1 text-xs sm:text-sm text-muted-foreground">
+                            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
+                            Carregando fornecedores...
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {transacao.tipo === "entrada" && transacao.categoria === "Vendas" && (
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Cliente</label>
+                        <select
+                          value={clienteSelecionado}
+                          onChange={(e) => setClienteSelecionado(e.target.value)}
+                          className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
+                          disabled={loadingClientes}
+                        >
+                          <option value="">Selecione um cliente</option>
+                          {clientes.map(cliente => (
+                            <option key={cliente.id} value={cliente.id}>
+                              {cliente.nome}
+                            </option>
+                          ))}
+                        </select>
+                        {loadingClientes && (
+                          <div className="flex items-center mt-1 text-xs sm:text-sm text-muted-foreground">
+                            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
+                            Carregando clientes...
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">Observações</label>
+                      <textarea
+                        placeholder="Observações sobre a transação..."
+                        value={transacao.observacoes}
+                        onChange={(e) => atualizarTransacao("observacoes", e.target.value)}
+                        className="w-full mt-1 p-2 border rounded-md bg-background min-h-[60px] sm:min-h-[80px] resize-none text-xs sm:text-sm"
+                      />
+                    </div>
+
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {/* Aba Anexos */}
             <TabsContent value="anexos" className="space-y-3 sm:space-y-4">
@@ -455,31 +624,88 @@ export default function NovaTransacao() {
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
                   <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-3 sm:p-4 text-center">
-                    <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-muted-foreground" />
+                    <Upload className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-xs sm:text-sm text-muted-foreground mb-2">
                       Arraste arquivos aqui ou clique para selecionar
                     </p>
-                    <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm">
-                      Selecionar Arquivos
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Formatos permitidos: JPG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX, TXT (máx. 10MB)
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 sm:h-9 text-xs sm:text-sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAnexos}
+                    >
+                      {uploadingAnexos ? (
+                        <>
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          Selecionar Arquivos
+                        </>
+                      )}
                     </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
                   </div>
 
                   {transacao.anexos.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-xs sm:text-sm">Arquivos Anexados</h4>
+                      <h4 className="font-medium text-xs sm:text-sm">Arquivos Anexados ({transacao.anexos.length})</h4>
                       {transacao.anexos.map((anexo, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 rounded bg-muted/30">
-                          <span className="text-xs sm:text-sm truncate flex-1 mr-2">{anexo}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => removerAnexo(index)}
-                            className="h-7 sm:h-8 w-7 sm:w-8 p-0"
-                          >
-                            <X className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            {getFileIcon(anexo)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs sm:text-sm font-medium truncate">
+                                {anexo.split('/').pop()?.split('?')[0] || 'Anexo'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {anexo.includes('cloudinary') ? 'Armazenado no Cloudinary' : 'URL externa'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(anexo, '_blank')}
+                              className="h-7 sm:h-8 w-7 sm:w-8 p-0"
+                              title="Visualizar arquivo"
+                            >
+                              <File className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removerAnexo(index)}
+                              className="h-7 sm:h-8 w-7 sm:w-8 p-0 text-destructive hover:text-destructive"
+                              title="Remover anexo"
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {transacao.anexos.length === 0 && (
+                    <div className="text-center py-4">
+                      <File className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Nenhum arquivo anexado ainda
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -521,10 +747,10 @@ export default function NovaTransacao() {
                       <span className="text-muted-foreground">Valor:</span>
                       <span className={`text-base sm:text-lg font-bold ${transacao.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
                         {transacao.tipo === "entrada" ? "+" : "-"}
-                        {transacao.valor.toLocaleString("pt-BR", {
+                        {transacao.valor > 0 ? transacao.valor.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL"
-                        })}
+                        }) : "R$ 0,00"}
                       </span>
                     </div>
 
@@ -540,7 +766,7 @@ export default function NovaTransacao() {
 
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Conta:</span>
-                      <span className="truncate">{contas.find(c => c.value === transacao.conta)?.label || transacao.conta}</span>
+                      <span className="truncate">{transacao.conta || "Não informado"}</span>
                     </div>
 
                     {fornecedorSelecionado && (
@@ -556,15 +782,30 @@ export default function NovaTransacao() {
                         <span className="truncate">{clientes.find(c => c.id === parseInt(clienteSelecionado))?.nome || ""}</span>
                       </div>
                     )}
+
+                    {transacao.anexos.length > 0 && (
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Anexos:</span>
+                        <span className="truncate">{transacao.anexos.length} arquivo(s)</span>
+                      </div>
+                    )}
                   </div>
 
-                  <Badge 
-                    variant={transacao.status === "concluida" ? "default" : "secondary"}
-                    className={`text-xs ${transacao.status === "concluida" ? "bg-success" : ""}`}
-                  >
-                    {transacao.status === "concluida" ? "Concluída" : 
-                     transacao.status === "pendente" ? "Pendente" : "Cancelada"}
-                  </Badge>
+                  <div className="flex items-center justify-between">
+                    <Badge 
+                      variant={transacao.status === "concluida" ? "default" : "secondary"}
+                      className={`text-xs ${transacao.status === "concluida" ? "bg-success" : ""}`}
+                    >
+                      {transacao.status === "concluida" ? "Concluída" : 
+                       transacao.status === "pendente" ? "Pendente" : "Cancelada"}
+                    </Badge>
+                    
+                    {transacao.anexos.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {transacao.anexos.length} anexo(s)
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground">
@@ -614,8 +855,28 @@ export default function NovaTransacao() {
                 ) : (
                   <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 )}
-                <span className="text-xs sm:text-sm">Data</span>
+                <span className="text-xs sm:text-sm">Data de Pagamento</span>
               </div>
+
+              <div className="flex items-center space-x-2">
+                {transacao.status ? (
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+                ) : (
+                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                )}
+                <span className="text-xs sm:text-sm">Status</span>
+              </div>
+
+              {transacao.tipo === "saida" && transacao.categoria === "Fornecedores" && (
+                <div className="flex items-center space-x-2">
+                  {fornecedorSelecionado ? (
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-xs sm:text-sm">Fornecedor</span>
+                </div>
+              )}
 
               {formularioValido && (
                 <div className="pt-2 border-t">
@@ -638,7 +899,6 @@ export default function NovaTransacao() {
               <p>• Use categorias específicas para melhor organização</p>
               <p>• Anexe comprovantes quando necessário</p>
               <p>• Mantenha as observações claras e objetivas</p>
-              <p>• Transações de saída pendentes são salvas diretamente em contas a pagar</p>
             </CardContent>
           </Card>
         </div>

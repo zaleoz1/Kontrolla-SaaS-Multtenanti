@@ -138,6 +138,7 @@ export function useContasPagar() {
     contaOrigem?: string;
     parcelas?: number;
     taxaParcela?: number;
+    anexos?: string[];
   }) => {
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.FINANCIAL.ACCOUNTS_PAYABLE}/${id}/pagar`, {

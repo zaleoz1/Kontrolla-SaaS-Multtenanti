@@ -39,13 +39,18 @@ import {
   CreditCard as CreditCardIcon,
   Smartphone as SmartphoneIcon,
   Building2,
-  FileText as FileTextIcon
+  FileText as FileTextIcon,
+  File,
+  Image,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import { useTransacoes } from "@/hooks/useTransacoes";
 import { useContasReceber } from "@/hooks/useContasReceber";
 import { useContasPagar } from "@/hooks/useContasPagar";
 import { useFinanceiroStats } from "@/hooks/useFinanceiroStats";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
+import { api } from "@/lib/api";
 
 // Interfaces para pagamentos e recebimentos
 interface PagamentoData {
@@ -62,6 +67,7 @@ interface PagamentoData {
   tipo_origem?: 'conta_pagar' | 'transacao' | 'conta_receber' | 'venda' | 'transacao_entrada';
   parcelas?: number;
   taxaParcela?: number;
+  anexos?: string[];
 }
 
 interface RecebimentoData {
@@ -76,6 +82,7 @@ interface RecebimentoData {
   tipo_origem?: 'conta_pagar' | 'transacao' | 'conta_receber' | 'venda' | 'transacao_entrada';
   parcelas?: number;
   taxaParcela?: number;
+  anexos?: string[];
 }
 
 interface AdiantamentoData {
@@ -113,6 +120,7 @@ export default function Financeiro() {
   const [editandoValorRecebimento, setEditandoValorRecebimento] = useState(false);
   const [valorEditadoRecebimento, setValorEditadoRecebimento] = useState(0);
   const [valorOriginalRecebimento, setValorOriginalRecebimento] = useState(0);
+  const [uploadingAnexos, setUploadingAnexos] = useState(false);
   const [dadosPagamento, setDadosPagamento] = useState<PagamentoData>({
     contaId: 0,
     valor: 0,
@@ -124,7 +132,8 @@ export default function Financeiro() {
     agenciaOrigem: '',
     contaOrigem: '',
     parcelas: 1,
-    taxaParcela: 0
+    taxaParcela: 0,
+    anexos: []
   });
   const [dadosRecebimento, setDadosRecebimento] = useState<RecebimentoData>({
     contaId: 0,
@@ -135,7 +144,8 @@ export default function Financeiro() {
     desconto: 0,
     juros: 0,
     parcelas: 1,
-    taxaParcela: 0
+    taxaParcela: 0,
+    anexos: []
   });
   const [dadosAdiantamento, setDadosAdiantamento] = useState<AdiantamentoData>({
     contaId: 0,
@@ -484,7 +494,7 @@ export default function Financeiro() {
   const abrirModalPagamento = (conta: any, tipo: 'receber' | 'pagar', modalTipo: 'pagamento' | 'adiantamento' = 'pagamento') => {
     setContaSelecionada(conta);
     setTipoOperacao(tipo);
-    setTipoModalPagamento(modalTipo);
+    setTipoModalPagamento('pagamento'); // Sempre iniciar como pagamento, o usuário pode alternar
     
     // Para recebimentos, sempre usar PIX como padrão. Para pagamentos, usar o primeiro método disponível
     const metodoPadrao = tipo === 'receber' ? 'pix' : (metodosPagamento.length > 0 ? metodosPagamento[0].tipo : 'pix');
@@ -527,7 +537,8 @@ export default function Financeiro() {
         juros: 0,
         tipo_origem: conta.tipo_origem,
         parcelas: parcelasIniciais,
-        taxaParcela: taxaInicial
+        taxaParcela: taxaInicial,
+        anexos: []
       });
       setValorOriginalRecebimento(valorOriginal);
       // Inicializar com o valor calculado (original + taxas)
@@ -565,7 +576,8 @@ export default function Financeiro() {
           contaOrigem: '',
           tipo_origem: conta.tipo_origem,
           parcelas: parcelasIniciais,
-          taxaParcela: taxaInicial
+          taxaParcela: taxaInicial,
+          anexos: []
         });
       }
       setModalPagamento(true);
@@ -586,7 +598,8 @@ export default function Financeiro() {
         agenciaOrigem: dadosPagamento.agenciaOrigem,
         contaOrigem: dadosPagamento.contaOrigem,
         parcelas: dadosPagamento.parcelas,
-        taxaParcela: dadosPagamento.taxaParcela
+        taxaParcela: dadosPagamento.taxaParcela,
+        anexos: dadosPagamento.anexos || []
       });
       
       setModalPagamento(false);
@@ -608,7 +621,8 @@ export default function Financeiro() {
         valorRecebido: valorEditadoRecebimento,
         dataPagamento: dadosRecebimento.dataRecebimento,
         metodoPagamento: dadosRecebimento.metodoPagamento,
-        observacoes: dadosRecebimento.observacoes
+        observacoes: dadosRecebimento.observacoes,
+        anexos: dadosRecebimento.anexos || []
       });
       
       setModalRecebimento(false);
@@ -745,6 +759,117 @@ export default function Financeiro() {
       return calcularValorParcela(valorOriginalRecebimento, dadosRecebimento.parcelas || 1, dadosRecebimento.taxaParcela || 0) * (dadosRecebimento.parcelas || 1);
     } else {
       return valorOriginalRecebimento;
+    }
+  };
+
+  // Funções para manipulação de anexos
+  const adicionarAnexo = (url: string) => {
+    setDadosRecebimento(prev => ({
+      ...prev,
+      anexos: [...(prev.anexos || []), url]
+    }));
+  };
+
+  const removerAnexo = (index: number) => {
+    setDadosRecebimento(prev => ({
+      ...prev,
+      anexos: (prev.anexos || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const converterArquivoParaBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const uploadAnexo = async (file: File) => {
+    try {
+      setUploadingAnexos(true);
+      
+      const base64 = await converterArquivoParaBase64(file);
+      
+      const response = await api.post('/financeiro/upload-anexo', {
+        fileBase64: base64,
+        fileName: file.name,
+        fileType: file.type
+      });
+
+      if (response.data.success) {
+        adicionarAnexo(response.data.url);
+        console.log('Anexo adicionado com sucesso:', response.data.url);
+      } else {
+        throw new Error(response.data.error || 'Erro no upload');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+    } finally {
+      setUploadingAnexos(false);
+    }
+  };
+
+  const getFileIcon = (url: string) => {
+    const extension = url.split('.').pop()?.toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return <Image className="h-4 w-4" />;
+    } else if (extension === 'pdf') {
+      return <FileText className="h-4 w-4" />;
+    } else {
+      return <File className="h-4 w-4" />;
+    }
+  };
+
+  // Função para abrir anexos diretamente
+  const abrirAnexos = (anexos: string[]) => {
+    anexos.forEach(anexo => {
+      window.open(anexo, '_blank');
+    });
+  };
+
+  // Funções para manipulação de anexos de pagamento
+  const adicionarAnexoPagamento = (url: string) => {
+    setDadosPagamento(prev => ({
+      ...prev,
+      anexos: [...(prev.anexos || []), url]
+    }));
+  };
+
+  const removerAnexoPagamento = (index: number) => {
+    setDadosPagamento(prev => ({
+      ...prev,
+      anexos: (prev.anexos || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const uploadAnexoPagamento = async (file: File) => {
+    try {
+      setUploadingAnexos(true);
+      
+      const base64 = await converterArquivoParaBase64(file);
+      
+      const response = await api.post('/financeiro/upload-anexo', {
+        fileBase64: base64,
+        fileName: file.name,
+        fileType: file.type
+      });
+
+      if (response.data.success) {
+        adicionarAnexoPagamento(response.data.url);
+        console.log('Anexo adicionado com sucesso:', response.data.url);
+      } else {
+        throw new Error(response.data.error || 'Erro no upload');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+    } finally {
+      setUploadingAnexos(false);
     }
   };
 
@@ -1308,28 +1433,16 @@ export default function Financeiro() {
                             )}
                           </div>
                           {item.status === 'pendente' && (
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => abrirModalPagamento(item, 'pagar', 'pagamento')}
-                                className="text-xs sm:text-sm"
-                              >
-                                <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                <span className="hidden sm:inline">Pagar</span>
-                                <span className="sm:hidden">Pagar</span>
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => abrirModalPagamento(item, 'pagar', 'adiantamento')}
-                                className="text-xs sm:text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                              >
-                                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                <span className="hidden sm:inline">Adiantamento</span>
-                                <span className="sm:hidden">Adiant.</span>
-                              </Button>
-                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => abrirModalPagamento(item, 'pagar')}
+                              className="text-xs sm:text-sm"
+                            >
+                              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Pagar</span>
+                              <span className="sm:hidden">Pagar</span>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -1464,10 +1577,30 @@ export default function Financeiro() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
-                          <p className={`text-sm sm:text-lg font-bold break-words ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
-                            {transacao.tipo === 'entrada' ? '+' : ''}{formatarValor(Number(transacao.valor) || 0)}
-                          </p>
-                          {obterBadgeStatus(transacao.status)}
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm sm:text-lg font-bold break-words ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
+                              {transacao.tipo === 'entrada' ? '+' : ''}{formatarValor(Number(transacao.valor) || 0)}
+                            </p>
+                            {transacao.anexos && transacao.anexos.length > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => abrirAnexos(transacao.anexos)}
+                                className="h-6 w-6 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                title={`Abrir ${transacao.anexos.length} anexo(s)`}
+                              >
+                                <File className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {obterBadgeStatus(transacao.status)}
+                            {transacao.anexos && transacao.anexos.length > 0 && (
+                              <Badge variant="outline" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer" onClick={() => abrirAnexos(transacao.anexos)}>
+                                {transacao.anexos.length} anexo(s)
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1549,7 +1682,28 @@ export default function Financeiro() {
           <div className="space-y-4">
             {/* Informações da conta */}
             <div className="p-4 bg-muted/30 rounded-lg">
-              <h4 className="font-semibold mb-2 text-base">Conta a Pagar</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-base">Conta a Pagar</h4>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={tipoModalPagamento === 'pagamento' ? "default" : "outline"}
+                    onClick={() => setTipoModalPagamento('pagamento')}
+                    className="text-xs"
+                  >
+                    Pagamento Completo
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={tipoModalPagamento === 'adiantamento' ? "default" : "outline"}
+                    onClick={() => setTipoModalPagamento('adiantamento')}
+                    className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  >
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    Adiantamento
+                  </Button>
+                </div>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {contaSelecionada?.fornecedor || 'Fornecedor não informado'}
               </p>
@@ -1770,31 +1924,112 @@ export default function Financeiro() {
               </div>
             )}
 
-            {/* Upload de comprovante e Observações */}
+            {/* Upload de anexos e Observações */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Comprovante (Opcional)</Label>
+                <Label className="text-sm">Anexos (Opcional)</Label>
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Clique para fazer upload
                   </p>
-                  <Input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="mt-2 h-9"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (tipoModalPagamento === 'adiantamento') {
-                          setDadosAdiantamento({...dadosAdiantamento, comprovante: file});
-                        } else {
-                          setDadosPagamento({...dadosPagamento, comprovante: file});
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Formatos permitidos: JPG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX, TXT (máx. 10MB)
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          // Validar tamanho do arquivo (máximo 10MB)
+                          if (file.size > 10 * 1024 * 1024) {
+                            console.error('Arquivo muito grande. Tamanho máximo: 10MB');
+                            return;
+                          }
+
+                          // Validar tipo de arquivo
+                          const allowedTypes = [
+                            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                            'application/pdf', 'application/msword', 
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'application/vnd.ms-excel',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'text/plain'
+                          ];
+
+                          if (!allowedTypes.includes(file.type)) {
+                            console.error('Tipo de arquivo não permitido.');
+                            return;
+                          }
+
+                          uploadAnexoPagamento(file);
                         }
-                      }
+                      };
+                      input.click();
                     }}
-                  />
+                    disabled={uploadingAnexos}
+                  >
+                    {uploadingAnexos ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3 w-3 mr-2" />
+                        Selecionar Arquivos
+                      </>
+                    )}
+                  </Button>
                 </div>
+
+                {/* Lista de anexos */}
+                {(dadosPagamento.anexos || []).length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-xs">Arquivos Anexados ({(dadosPagamento.anexos || []).length})</h4>
+                    {(dadosPagamento.anexos || []).map((anexo, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          {getFileIcon(anexo)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">
+                              {anexo.split('/').pop()?.split('?')[0] || 'Anexo'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {anexo.includes('cloudinary') ? 'Armazenado no Cloudinary' : 'URL externa'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(anexo, '_blank')}
+                            className="h-7 w-7 p-0"
+                            title="Visualizar arquivo"
+                          >
+                            <File className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removerAnexoPagamento(index)}
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            title="Remover anexo"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -2073,27 +2308,112 @@ export default function Financeiro() {
               </div>
             </div>
 
-            {/* Upload de comprovante e Observações */}
+            {/* Upload de anexos e Observações */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Comprovante (Opcional)</Label>
+                <Label className="text-sm">Anexos (Opcional)</Label>
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Clique para fazer upload
                   </p>
-                  <Input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="mt-2 h-9"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setDadosRecebimento({...dadosRecebimento, comprovante: file});
-                      }
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Formatos permitidos: JPG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX, TXT (máx. 10MB)
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          // Validar tamanho do arquivo (máximo 10MB)
+                          if (file.size > 10 * 1024 * 1024) {
+                            console.error('Arquivo muito grande. Tamanho máximo: 10MB');
+                            return;
+                          }
+
+                          // Validar tipo de arquivo
+                          const allowedTypes = [
+                            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                            'application/pdf', 'application/msword', 
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'application/vnd.ms-excel',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'text/plain'
+                          ];
+
+                          if (!allowedTypes.includes(file.type)) {
+                            console.error('Tipo de arquivo não permitido.');
+                            return;
+                          }
+
+                          uploadAnexo(file);
+                        }
+                      };
+                      input.click();
                     }}
-                  />
+                    disabled={uploadingAnexos}
+                  >
+                    {uploadingAnexos ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3 w-3 mr-2" />
+                        Selecionar Arquivos
+                      </>
+                    )}
+                  </Button>
                 </div>
+
+                {/* Lista de anexos */}
+                {(dadosRecebimento.anexos || []).length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-xs">Arquivos Anexados ({(dadosRecebimento.anexos || []).length})</h4>
+                    {(dadosRecebimento.anexos || []).map((anexo, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          {getFileIcon(anexo)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">
+                              {anexo.split('/').pop()?.split('?')[0] || 'Anexo'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {anexo.includes('cloudinary') ? 'Armazenado no Cloudinary' : 'URL externa'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(anexo, '_blank')}
+                            className="h-7 w-7 p-0"
+                            title="Visualizar arquivo"
+                          >
+                            <File className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removerAnexo(index)}
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            title="Remover anexo"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -326,6 +326,7 @@ CREATE TABLE IF NOT EXISTS contas_receber (
     status ENUM('pendente', 'pago', 'vencido', 'cancelado') DEFAULT 'pendente',
     parcela VARCHAR(10),
     observacoes TEXT,
+    anexos JSON,
     -- Campos específicos para pagamentos a prazo
     dias INT NULL COMMENT 'Prazo em dias para pagamento',
     juros DECIMAL(5,2) NULL COMMENT 'Percentual de juros aplicado',
@@ -351,6 +352,7 @@ CREATE TABLE IF NOT EXISTS contas_pagar (
     status ENUM('pendente', 'pago', 'vencido', 'cancelado') DEFAULT 'pendente',
     categoria VARCHAR(100),
     observacoes TEXT,
+    anexos JSON,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
