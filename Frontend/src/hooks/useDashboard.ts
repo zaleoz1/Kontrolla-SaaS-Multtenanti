@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from './useApi';
 import { API_ENDPOINTS } from '@/config/api';
+import { useImagePath } from './useImagePath';
 
 export interface DashboardMetricas {
   vendas: {
@@ -132,10 +133,12 @@ export function useDashboard() {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchDashboardData = useCallback(async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje') => {
+    console.log('📊 fetchDashboardData called with periodo:', periodo);
     try {
       setLoading(true);
       setError(null);
 
+      console.log('📊 Starting dashboard data fetch...');
       // Buscar todas as métricas em paralelo
       const [
         metricasResponse,
@@ -163,11 +166,13 @@ export function useDashboard() {
         periodo: metricasResponse.periodo
       };
 
+      console.log('📊 Dashboard data loaded successfully:', dashboardData);
       setData(dashboardData);
     } catch (err: any) {
-      console.error('Erro ao buscar dados do dashboard:', err);
+      console.error('❌ Erro ao buscar dados do dashboard:', err);
       setError(err.message || 'Erro ao carregar dados do dashboard');
     } finally {
+      console.log('📊 Dashboard loading finished');
       setLoading(false);
     }
   }, [makeRequest]);
@@ -232,11 +237,12 @@ export function useDashboard() {
   };
 
   const getPaymentIcon = (forma_pagamento: string) => {
+    const logopixPath = useImagePath('logopix.png');
     const iconMap = {
       'dinheiro': '💵',
       'cartao_credito': '💳',
       'cartao_debito': '💳',
-      'pix': '/logopix.png',
+      'pix': logopixPath,
       'transferencia': '🏦',
       'boleto': '📄',
       'cheque': '📝',

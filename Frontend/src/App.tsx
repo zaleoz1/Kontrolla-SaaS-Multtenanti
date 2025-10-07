@@ -157,6 +157,9 @@ function AppContent() {
 }
 
 const App = () => {
+  // Debug: Log the Google Client ID
+  console.log('🔑 Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  
   return (
     <QueryClientProvider client={clienteQuery}>
       <TooltipProvider>

@@ -2,6 +2,8 @@ const { app, BrowserWindow, Menu, shell, ipcMain, dialog, screen } = require('el
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const { createServer } = require('http');
+const { parse } = require('url');
 
 // Configurações
 const isDev = process.env.NODE_ENV === 'development' && !process.env.FORCE_FILE_MODE;
@@ -12,10 +14,77 @@ let mainWindow;
 let backendProcess;
 let backendStarted = false;
 let isCheckingBackend = false;
+let staticServer = null;
 
 // Função para calcular zoom padrão (fixo em 100%)
 function calculateResponsiveZoom() {
   return 1.0; // Zoom fixo em 100%
+}
+
+// Função para criar servidor estático para arquivos
+function createStaticServer() {
+  const distPath = path.join(__dirname, '../Frontend/dist');
+  
+  return createServer((req, res) => {
+    const parsedUrl = parse(req.url, true);
+    let pathname = parsedUrl.pathname;
+    
+    console.log(`📁 Requisição: ${pathname}`);
+    
+    // Se for a raiz, servir index.html
+    if (pathname === '/') {
+      pathname = '/index.html';
+    }
+    
+    const filePath = path.join(distPath, pathname);
+    console.log(`📂 Caminho do arquivo: ${filePath}`);
+    
+    // Verificar se o arquivo existe
+    if (fs.existsSync(filePath)) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes = {
+        '.html': 'text/html; charset=utf-8',
+        '.js': 'text/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2'
+      };
+      
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      console.log(`✅ Servindo arquivo: ${pathname} (${contentType})`);
+      
+      // Adicionar headers CORS para garantir que as imagens sejam carregadas
+      res.writeHead(200, { 
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      console.log(`❌ Arquivo não encontrado: ${pathname}`);
+      // Se não encontrar, servir index.html (para SPA)
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        console.log('🔄 Servindo index.html como fallback');
+        res.writeHead(200, { 
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache'
+        });
+        fs.createReadStream(indexPath).pipe(res);
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('File not found');
+      }
+    }
+  });
 }
 
 // Função para criar a janela principal
@@ -28,15 +97,29 @@ function createMainWindow() {
   const windowWidth = Math.min(1400, Math.floor(screenWidth * 0.9));
   const windowHeight = Math.min(900, Math.floor(screenHeight * 0.9));
   
+  // Verificar e definir ícone com fallbacks
+  const iconPath = path.join(__dirname, '../assets/app.ico');
+  const fallbackIconPath = path.join(__dirname, '../Frontend/dist/logo.png');
+  const finalIconPath = fs.existsSync(iconPath) ? iconPath : fallbackIconPath;
+  
   console.log(`🖥️ Tela detectada: ${screenWidth}x${screenHeight}`);
   console.log(`🔍 Zoom padrão aplicado: ${(responsiveZoom * 100).toFixed(0)}%`);
   console.log(`📏 Tamanho da janela: ${windowWidth}x${windowHeight}`);
+  console.log(`🎨 Ícone do aplicativo: ${finalIconPath}`);
   
+  // Configuração do ícone baseada na plataforma
+  const iconConfig = process.platform === 'win32' 
+    ? { icon: finalIconPath }
+    : process.platform === 'darwin' 
+    ? { icon: finalIconPath }
+    : { icon: finalIconPath };
+
   mainWindow = new BrowserWindow({
     width: windowWidth,
     height: windowHeight,
     minWidth: 1024,
     minHeight: 600,
+    fullscreen: true, // Iniciar em tela cheia
     autoHideMenuBar: true, // Ocultar barra de menu por padrão
     webPreferences: {
       nodeIntegration: false,
@@ -45,7 +128,7 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.js'),
       zoomFactor: responsiveZoom // Zoom responsivo baseado no tamanho da tela
     },
-    icon: path.join(__dirname, '../Frontend/dist/logo.png'),
+    ...iconConfig,
     title: 'KontrollaPro - Sistema de Gestão',
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
@@ -66,6 +149,8 @@ function createMainWindow() {
     mainWindow.webContents.openDevTools();
   } else if (fs.existsSync(indexPath)) {
     console.log('✅ Carregando arquivo local:', indexPath);
+    
+    // Usar loadFile diretamente - mais simples e confiável
     mainWindow.loadFile(indexPath);
   } else {
     console.log('⚠️ Arquivo não encontrado, usando fallback para desenvolvimento');
@@ -85,6 +170,14 @@ function createMainWindow() {
   // Mostrar janela quando estiver pronta
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    
+    // Garantir que o ícone seja aplicado corretamente
+    try {
+      mainWindow.setIcon(finalIconPath);
+      console.log('✅ Ícone aplicado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao aplicar ícone:', error);
+    }
     
     // Verificar se o backend está rodando
     checkBackendHealth();
@@ -287,6 +380,15 @@ function createMenu() {
           }
         },
         { type: 'separator' },
+        { 
+          label: 'Alternar Tela Cheia',
+          accelerator: 'F11',
+          click: () => {
+            const isFullscreen = mainWindow.isFullScreen();
+            mainWindow.setFullScreen(!isFullscreen);
+            console.log(`🖥️ Tela cheia: ${!isFullscreen ? 'Ativada' : 'Desativada'}`);
+          }
+        },
         { role: 'togglefullscreen' }
       ]
     },
@@ -389,6 +491,9 @@ app.on('before-quit', () => {
   if (backendProcess) {
     backendProcess.kill();
   }
+  if (staticServer) {
+    staticServer.close();
+  }
 });
 
 // Handlers IPC
@@ -432,6 +537,24 @@ ipcMain.handle('reset-zoom', () => {
   mainWindow.webContents.setZoomFactor(defaultZoom);
   console.log(`🔍 Zoom resetado para: ${(defaultZoom * 100).toFixed(0)}%`);
   return defaultZoom;
+});
+
+// Handlers para controle de tela cheia
+ipcMain.handle('is-fullscreen', () => {
+  return mainWindow.isFullScreen();
+});
+
+ipcMain.handle('set-fullscreen', (event, fullscreen) => {
+  mainWindow.setFullScreen(fullscreen);
+  console.log(`🖥️ Tela cheia: ${fullscreen ? 'Ativada' : 'Desativada'}`);
+  return fullscreen;
+});
+
+ipcMain.handle('toggle-fullscreen', () => {
+  const isFullscreen = mainWindow.isFullScreen();
+  mainWindow.setFullScreen(!isFullscreen);
+  console.log(`🖥️ Tela cheia: ${!isFullscreen ? 'Ativada' : 'Desativada'}`);
+  return !isFullscreen;
 });
 
 // Prevenir navegação para URLs externas

@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getResponsiveZoom: () => ipcRenderer.invoke('get-responsive-zoom'),
   resetZoom: () => ipcRenderer.invoke('reset-zoom'),
   
+  // Controle de tela cheia
+  isFullScreen: () => ipcRenderer.invoke('is-fullscreen'),
+  setFullScreen: (fullscreen) => ipcRenderer.invoke('set-fullscreen', fullscreen),
+  toggleFullScreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  
   // Utilitários
   platform: process.platform,
   isElectron: true
