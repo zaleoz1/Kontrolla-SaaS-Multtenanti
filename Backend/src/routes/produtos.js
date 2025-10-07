@@ -290,11 +290,26 @@ router.post('/', validateProduto, async (req, res) => {
       // Não falhar a criação do produto por causa da notificação
     }
 
+    // Processar imagens de forma segura
+    let imagensProcessadas = [];
+    if (imagensCloudinary.length > 0) {
+      imagensProcessadas = imagensCloudinary;
+    } else if (produto.imagens) {
+      try {
+        imagensProcessadas = typeof produto.imagens === 'string' 
+          ? JSON.parse(produto.imagens) 
+          : produto.imagens;
+      } catch (parseError) {
+        console.warn('Erro ao parsear imagens do produto:', parseError);
+        imagensProcessadas = [];
+      }
+    }
+
     res.status(201).json({
       message: 'Produto criado com sucesso',
       produto: {
         ...produto,
-        imagens: imagensCloudinary.length > 0 ? imagensCloudinary : JSON.parse(produto.imagens || '[]')
+        imagens: imagensProcessadas
       }
     });
   } catch (error) {

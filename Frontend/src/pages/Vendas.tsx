@@ -371,78 +371,78 @@ export default function Vendas() {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Hoje</p>
-                <p className="text-2xl font-bold">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Hoje</p>
+                <p className="text-lg sm:text-2xl font-bold truncate">
                   {stats ? formatCurrency(stats.receita_total || 0) : formatCurrency(totalVendas || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {stats ? `${stats.total_vendas || 0} vendas hoje` : `${vendas.length || 0} vendas hoje`}
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <DollarSign className="h-5 w-5 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0 ml-2">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Vendas</p>
-                <p className="text-2xl font-bold">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total de Vendas</p>
+                <p className="text-lg sm:text-2xl font-bold">
                   {pagination.total || 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {stats ? `${stats.total_vendas || 0} vendas hoje` : 'Carregando...'}
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-secondary/10">
-                <ShoppingCart className="h-5 w-5 text-secondary" />
+              <div className="p-2 rounded-lg bg-secondary/10 flex-shrink-0 ml-2">
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
-                <p className="text-2xl font-bold text-yellow-600">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">A Receber</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600 truncate">
                   {formatCurrency(saldoPendente || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {estatisticasPendentes?.quantidade || 0} {(estatisticasPendentes?.quantidade || 0) === 1 ? 'venda' : 'vendas'} pendente{(estatisticasPendentes?.quantidade || 0) !== 1 ? 's' : ''}
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-yellow-100">
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
+              <div className="p-2 rounded-lg bg-yellow-100 flex-shrink-0 ml-2">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Saldo Efetivo</p>
-                <p className="text-2xl font-bold text-green-600">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Saldo Efetivo</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">
                   {formatCurrency(saldoEfetivo || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Valores já recebidos
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-green-100">
-                <DollarSign className="h-5 w-5 text-green-600" />
+              <div className="p-2 rounded-lg bg-green-100 flex-shrink-0 ml-2">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -450,11 +450,127 @@ export default function Vendas() {
       </div>
 
       {/* Filtros */}
-      <Card className="bg-gradient-card shadow-card">
-        <CardContent className="p-6">
+      <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden">
+        <CardContent className="p-0">
+          {/* Header dos Filtros - Mobile */}
+          <div className="block sm:hidden">
+            <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-4 border-b border-slate-200/50">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
+                  <Filter className="h-4 w-4 text-primary" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">Filtros</h3>
+              </div>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {/* Busca */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-600">Buscar vendas</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  {buscandoAuto && (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                  )}
+                  <Input
+                    placeholder="Cliente, email ou código..."
+                    value={termoBusca}
+                    onChange={(e) => {
+                      setTermoBusca(e.target.value);
+                      handleAutoSearch(e.target.value);
+                    }}
+                    className="pl-10 text-sm h-10"
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-600">Status</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    variant={filtros.status === '' ? "default" : "outline"}
+                    onClick={() => handleStatusFilter('')}
+                    size="sm"
+                    className="h-9 text-xs font-medium"
+                  >
+                    Todas
+                  </Button>
+                  <Button 
+                    variant={filtros.status === 'pago' ? "default" : "outline"}
+                    onClick={() => handleStatusFilter('pago')}
+                    size="sm"
+                    className="h-9 text-xs font-medium"
+                  >
+                    Pagas
+                  </Button>
+                  <Button 
+                    variant={filtros.status === 'pendente' ? "default" : "outline"}
+                    onClick={() => handleStatusFilter('pendente')}
+                    size="sm"
+                    className="h-9 text-xs font-medium"
+                  >
+                    Pendentes
+                  </Button>
+                </div>
+              </div>
+
+              {/* Datas */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-600">Período</label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-slate-600 w-8">De:</span>
+                    <Input
+                      type="date"
+                      value={dataInicio}
+                      onChange={(e) => setDataInicio(e.target.value)}
+                      className="flex-1 h-9 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-slate-600 w-8">Até:</span>
+                    <Input
+                      type="date"
+                      value={dataFim}
+                      onChange={(e) => setDataFim(e.target.value)}
+                      className="flex-1 h-9 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex space-x-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={limparPesquisa}
+                  disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
+                  size="sm"
+                  className="flex-1 h-9 text-xs font-medium"
+                >
+                  Limpar Tudo
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={limparFiltrosData}
+                  disabled={!dataInicio && !dataFim}
+                  size="sm"
+                  className="flex-1 h-9 text-xs font-medium"
+                >
+                  Limpar Datas
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Layout Desktop - Original */}
+          <div className="hidden sm:block p-4 sm:p-6">
           <div className="space-y-4">
             {/* Busca e Status */}
-            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+              <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 {buscandoAuto && (
@@ -467,21 +583,25 @@ export default function Vendas() {
                     setTermoBusca(e.target.value);
                     handleAutoSearch(e.target.value);
                   }}
-                  className="pl-10"
+                    className="pl-10 text-sm"
                 />
               </div>
+                <div className="flex flex-col sm:flex-row gap-2">
               <Button 
                 variant="outline" 
                 onClick={limparPesquisa}
                 disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
+                    className="w-full sm:w-auto"
+                    size="sm"
               >
                 Limpar
               </Button>
-              <div className="flex space-x-2">
+                  <div className="flex space-x-1 sm:space-x-2 overflow-x-auto">
                 <Button 
                   variant={filtros.status === '' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('')}
                   size="sm"
+                      className="whitespace-nowrap"
                 >
                   Todas
                 </Button>
@@ -489,6 +609,7 @@ export default function Vendas() {
                   variant={filtros.status === 'pago' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('pago')}
                   size="sm"
+                      className="whitespace-nowrap"
                 >
                   Pagas
                 </Button>
@@ -496,44 +617,48 @@ export default function Vendas() {
                   variant={filtros.status === 'pendente' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('pendente')}
                   size="sm"
+                      className="whitespace-nowrap"
                 >
                   Pendentes
                 </Button>
+                  </div>
               </div>
             </div>
 
             {/* Filtros de Data */}
-            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-              <div className="flex space-x-2">
+              <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">De:</span>
-                </div>
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">De:</span>
                 <Input
                   type="date"
                   value={dataInicio}
                   onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-40"
+                      className="w-full sm:w-40"
                 />
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">Até:</span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Até:</span>
                 <Input
                   type="date"
                   value={dataFim}
                   onChange={(e) => setDataFim(e.target.value)}
-                  className="w-40"
+                      className="w-full sm:w-40"
                 />
               </div>
-              <div className="flex space-x-2">
+                </div>
+                <div className="flex justify-end">
                 <Button 
                   variant="outline" 
                   onClick={limparFiltrosData}
                   disabled={!dataInicio && !dataFim}
                   size="sm"
+                    className="w-full sm:w-auto"
                 >
-                  Limpar
+                    Limpar Datas
                 </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -563,28 +688,136 @@ export default function Vendas() {
 
       {/* Lista de Vendas */}
       {!loading && !error && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {vendasSeparadas.map((venda) => {
             const statusBadge = getStatusBadge(venda.status);
             const paymentMethod = getDisplayPaymentMethod(venda);
             
             return (
-              <Card key={venda.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-lg bg-primary/10">
-                        <ShoppingCart className="h-6 w-6 text-primary" />
+              <Card key={venda.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 sm:bg-gradient-card sm:shadow-card sm:hover:shadow-lg sm:transition-shadow sm:duration-300">
+                <CardContent className="p-0 sm:p-4 sm:p-6">
+                  {/* Layout Mobile - Cards Responsivos */}
+                  <div className="block sm:hidden">
+                    <div className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg hover:shadow-xl transition-all duration-300 border-0 overflow-hidden group rounded-xl">
+                      <CardContent className="p-0">
+                        {/* Header com gradiente - Mobile Otimizado */}
+                        <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-3 border-b border-slate-200/50">
+                          <div className="flex flex-col space-y-3">
+                            {/* Primeira linha: Número e Status */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
+                                  <ShoppingCart className="h-4 w-4 text-primary" />
+                                </div>
+                                <h3 className="font-bold text-sm text-slate-900">#{venda.numero_venda}</h3>
+                              </div>
+                              <Badge className={`${statusBadge.className} text-xs px-2 py-1 shadow-sm`}>
+                                {statusBadge.text}
+                              </Badge>
                       </div>
                       
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold">#{venda.numero_venda}</h3>
-                          <Badge className={statusBadge.className}>
+                            {/* Segunda linha: Cliente e Valor */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-slate-600 font-medium truncate">
+                                  {venda.cliente_nome || 'Cliente não informado'}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  {formatDateTime(venda.data_venda)}
+                                </p>
+                              </div>
+                              <div className="text-right ml-3">
+                                <p className="text-lg font-bold text-slate-900">
+                                  {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Conteúdo principal - Mobile Otimizado */}
+                        <div className="p-3">
+                          <div className="space-y-3">
+                            {/* Informações da venda - Layout vertical para mobile */}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2 text-xs text-slate-600">
+                                  <Package className="h-3 w-3" />
+                                  <span>{venda.itens?.length || 0} {venda.itens?.length === 1 ? 'item' : 'itens'}</span>
+                                </div>
+                              </div>
+                              
+                              {/* Métodos de pagamento - Layout compacto */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-1 flex-wrap">
+                                  {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
+                                    <>
+                                      {venda.metodos_pagamento.slice(0, 2).map((metodo: any, index: number) => (
+                                        <div key={index} className="flex items-center space-x-1 px-1.5 py-0.5 bg-slate-100 rounded-full">
+                                          <span className={`text-xs font-medium ${getPaymentColor(metodo.metodo)}`}>
+                                            {getPaymentText(metodo.metodo)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {venda.metodos_pagamento.length > 2 && (
+                                        <span className="text-xs text-slate-500">+{venda.metodos_pagamento.length - 2}</span>
+                                      )}
+                                      {venda.pagamento_prazo && (
+                                        <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-yellow-100 rounded-full">
+                                          <span className="text-xs font-medium text-yellow-700">Prazo</span>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-slate-100 rounded-full">
+                                      <span className={`text-xs font-medium ${paymentMethod.color}`}>{paymentMethod.text}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Observações se houver - Layout compacto */}
+                            {venda.observacoes && (
+                              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                                <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{venda.observacoes}</p>
+                              </div>
+                            )}
+
+                            {/* Botão de ação - Touch friendly */}
+                            <div className="pt-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => abrirDetalhesVenda(venda)}
+                                className="w-full h-10 bg-white hover:bg-slate-50 border-slate-200 hover:border-primary/30 hover:text-primary transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalhes
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </div>
+                  </div>
+
+                  {/* Layout Desktop - Original */}
+                  <div className="hidden sm:block">
+                    <div className="flex flex-col space-y-3 sm:space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
+                        <div className="p-2 sm:p-3 rounded-lg bg-primary/10 flex-shrink-0">
+                          <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                        </div>
+                        
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                            <h3 className="font-semibold text-sm sm:text-base">#{venda.numero_venda}</h3>
+                            <Badge className={`${statusBadge.className} text-xs w-fit`}>
                             {statusBadge.text}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
                           {venda.cliente_nome || 'Cliente não informado'}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -593,30 +826,30 @@ export default function Vendas() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                        <div className="text-left sm:text-right">
+                          <p className="text-lg sm:text-2xl font-bold text-primary">
                           {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
                         </p>
-                        <div className="text-sm text-muted-foreground text-right">
+                          <div className="text-xs sm:text-sm text-muted-foreground">
                           {/* Exibir múltiplos métodos de pagamento se disponível */}
                           {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
-                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <div className="flex flex-wrap items-center gap-1 sm:justify-end">
                               {venda.metodos_pagamento.map((metodo: any, index: number) => (
                                 <div key={index} className="flex items-center space-x-1">
-                                  <span className={getPaymentColor(metodo.metodo)}>{getPaymentText(metodo.metodo)}</span>
+                                    <span className={`text-xs ${getPaymentColor(metodo.metodo)}`}>{getPaymentText(metodo.metodo)}</span>
                                 </div>
                               ))}
                               {/* Exibir pagamento a prazo se houver */}
                               {venda.pagamento_prazo && (
                                 <div className="flex items-center space-x-1">
-                                  <span className="text-yellow-600">Prazo</span>
+                                    <span className="text-xs text-yellow-600">Prazo</span>
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center justify-end space-x-1">
-                              <span className={paymentMethod.color}>{paymentMethod.text}</span>
+                              <div className="flex items-center space-x-1 sm:justify-end">
+                                <span className={`text-xs ${paymentMethod.color}`}>{paymentMethod.text}</span>
                             </div>
                           )}
                         </div>
@@ -626,13 +859,15 @@ export default function Vendas() {
                         variant="outline" 
                         size="sm"
                         onClick={() => abrirDetalhesVenda(venda)}
+                          className="w-full sm:w-auto"
                       >
                         <Eye className="h-4 w-4 mr-2" />
-                        Ver Detalhes
+                          <span className="hidden sm:inline">Ver Detalhes</span>
+                          <span className="sm:hidden">Detalhes</span>
                       </Button>
                     </div>
                   </div>
-
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -660,27 +895,31 @@ export default function Vendas() {
       {/* Paginação */}
       {!loading && !error && vendasSeparadas.length > 0 && pagination.totalPages > 1 && (
         <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
                 Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} vendas
               </p>
-              <div className="flex space-x-2">
+              <div className="flex justify-center sm:justify-end space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={!pagination.hasPrev}
+                  className="flex-1 sm:flex-none"
                 >
-                  Anterior
+                  <span className="hidden sm:inline">Anterior</span>
+                  <span className="sm:hidden">‹</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={!pagination.hasNext}
+                  className="flex-1 sm:flex-none"
                 >
-                  Próxima
+                  <span className="hidden sm:inline">Próxima</span>
+                  <span className="sm:hidden">›</span>
                 </Button>
               </div>
             </div>
@@ -690,18 +929,18 @@ export default function Vendas() {
 
       {/* Modal de Detalhes da Venda */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader className="pb-3 border-b border-border/50">
-            <DialogTitle className="flex items-center space-x-2 text-xl">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 text-lg sm:text-xl">
+              <div className="flex items-center space-x-2">
               <div className="p-1.5 rounded-md bg-primary/10">
-                <Receipt className="h-5 w-5 text-primary" />
+                  <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <div>
                 <span>Detalhes da Venda</span>
-                <span className="text-primary font-bold">#{vendaSelecionada?.numero_venda}</span>
               </div>
+              <span className="text-primary font-bold text-sm sm:text-base">#{vendaSelecionada?.numero_venda}</span>
             </DialogTitle>
-            <DialogDescription className="text-sm mt-1">
+            <DialogDescription className="text-xs sm:text-sm mt-1">
               Informações completas da venda, itens e pagamentos
             </DialogDescription>
           </DialogHeader>
@@ -709,20 +948,20 @@ export default function Vendas() {
           {vendaSelecionada && (
             <div className="space-y-4 py-2">
               {/* Header com Status e Data */}
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border space-y-2 sm:space-y-0">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-full bg-primary/10">
+                  <div className="p-2 rounded-full bg-primary/10 flex-shrink-0">
                     <User className="h-4 w-4 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-base">{vendaSelecionada.cliente_nome || 'Cliente não informado'}</h3>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-sm sm:text-base truncate">{vendaSelecionada.cliente_nome || 'Cliente não informado'}</h3>
                     {vendaSelecionada.vendedor_nome && (
-                      <p className="text-xs text-muted-foreground">Vendedor: {vendaSelecionada.vendedor_nome}</p>
+                      <p className="text-xs text-muted-foreground truncate">Vendedor: {vendaSelecionada.vendedor_nome}</p>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Badge className={getStatusBadge(vendaSelecionada.status).className + " text-xs px-2 py-1"}>
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3">
+                  <Badge className={`${getStatusBadge(vendaSelecionada.status).className} text-xs px-2 py-1 w-fit`}>
                     {getStatusBadge(vendaSelecionada.status).text}
                   </Badge>
                   <p className="text-xs text-muted-foreground">
@@ -732,7 +971,7 @@ export default function Vendas() {
               </div>
 
               {/* Layout em duas colunas */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 {/* Itens da Venda */}
                 {vendaSelecionada.itens && vendaSelecionada.itens.length > 0 && (
                   <Card className="shadow-sm border-0 bg-gradient-to-br from-white to-slate-50/50">
@@ -895,7 +1134,7 @@ export default function Vendas() {
               </div>
 
               {/* Pagamento a Prazo e Observações em linha */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 {/* Pagamento a Prazo */}
                 {vendaSelecionada.pagamento_prazo && (
                   <Card className="shadow-sm border-0 bg-gradient-to-br from-yellow-50/50 to-orange-50/50 border-yellow-200">
@@ -971,27 +1210,27 @@ export default function Vendas() {
 
               {/* Ações */}
               <Card className="shadow-sm border-0 bg-gradient-to-br from-white to-slate-50/50">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col space-y-2">
                     <Button 
                       variant="destructive" 
                       onClick={abrirModalExclusao}
                       disabled={vendaSelecionada.status !== 'pendente'}
-                      className="w-full sm:w-auto"
+                      className="w-full"
                       size="sm"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Cancelar Venda
                     </Button>
-                  </div>
                   {vendaSelecionada.status !== 'pendente' && (
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
                       <p className="text-xs text-amber-700 text-center">
                         <AlertCircle className="h-3 w-3 inline mr-1" />
                         Apenas vendas pendentes podem ser excluídas
                       </p>
                     </div>
                   )}
+                  </div>
                 </CardContent>
               </Card>
             </div>

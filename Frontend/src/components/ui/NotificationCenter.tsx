@@ -122,7 +122,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" className="w-96 p-0">
+      <DropdownMenuContent align="end" className="w-96 sm:w-96 w-[calc(100vw-2rem)] max-w-sm p-0">
         <div className="p-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -161,24 +161,25 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
 
         {/* Filtros */}
         <div className="p-2 border-b">
-          <div className="flex space-x-1">
+          <div className="flex flex-wrap gap-1 sm:flex-nowrap sm:overflow-x-auto">
             {[
-              { key: 'all', label: 'Todas', count: notifications.length },
-              { key: 'unread', label: 'Não lidas', count: stats?.unread || 0 },
-              { key: 'venda', label: 'Vendas', count: stats?.by_type?.venda || 0 },
-              { key: 'estoque', label: 'Estoque', count: stats?.by_type?.estoque || 0 },
-              { key: 'financeiro', label: 'Financeiro', count: stats?.by_type?.financeiro || 0 },
-              { key: 'sistema', label: 'Sistema', count: stats?.by_type?.sistema || 0 },
-              { key: 'cliente', label: 'Clientes', count: stats?.by_type?.cliente || 0 }
-            ].map(({ key, label, count }) => (
+              { key: 'all', label: 'Todas', mobileLabel: 'Todas', count: notifications.length },
+              { key: 'unread', label: 'Não lidas', mobileLabel: 'Não lidas', count: stats?.unread || 0 },
+              { key: 'venda', label: 'Vendas', mobileLabel: 'Vendas', count: stats?.by_type?.venda || 0 },
+              { key: 'estoque', label: 'Estoque', mobileLabel: 'Estoque', count: stats?.by_type?.estoque || 0 },
+              { key: 'financeiro', label: 'Financeiro', mobileLabel: 'Financeiro', count: stats?.by_type?.financeiro || 0 },
+              { key: 'sistema', label: 'Sistema', mobileLabel: 'Sistema', count: stats?.by_type?.sistema || 0 },
+              { key: 'cliente', label: 'Clientes', mobileLabel: 'Clientes', count: stats?.by_type?.cliente || 0 }
+            ].map(({ key, label, mobileLabel, count }) => (
               <Button
                 key={key}
                 variant={filter === key ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setFilter(key as any)}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs flex-shrink-0"
               >
-                {label}
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{mobileLabel}</span>
                 {count > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
                     {count}
@@ -190,7 +191,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
         </div>
 
         {/* Lista de notificações */}
-        <ScrollArea className="h-96">
+        <ScrollArea className="h-96 sm:h-96 h-80">
           {loading ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               Carregando notificações...
@@ -205,7 +206,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                 <div
                   key={notification.id}
                   className={cn(
-                    "flex items-start space-x-3 p-3 rounded-lg border-l-4 cursor-pointer transition-colors hover:bg-muted/50",
+                    "flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-lg border-l-4 cursor-pointer transition-colors hover:bg-muted/50",
                     !notification.read && "bg-blue-50 dark:bg-blue-950/20",
                     getPriorityColor(notification.priority)
                   )}
@@ -217,9 +218,9 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className={cn(
-                          "text-sm font-medium",
+                          "text-sm font-medium truncate",
                           !notification.read && "font-semibold"
                         )}>
                           {notification.title}
@@ -227,7 +228,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                           {notification.message}
                         </p>
-                        <div className="flex items-center space-x-2 mt-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mt-2">
                           <span className="text-xs text-muted-foreground">
                             {(() => {
                               try {
@@ -264,20 +265,22 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                               }
                             })()}
                           </span>
-                          {notification.priority === 'urgent' && (
-                            <Badge variant="destructive" className="text-xs">
-                              Urgente
-                            </Badge>
-                          )}
-                          {notification.priority === 'high' && (
-                            <Badge variant="secondary" className="text-xs">
-                              Alta
-                            </Badge>
-                          )}
+                          <div className="flex space-x-1">
+                            {notification.priority === 'urgent' && (
+                              <Badge variant="destructive" className="text-xs">
+                                Urgente
+                              </Badge>
+                            )}
+                            {notification.priority === 'high' && (
+                              <Badge variant="secondary" className="text-xs">
+                                Alta
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-1 ml-2">
+                      <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
                         {!notification.read && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full" />
                         )}
@@ -300,14 +303,14 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 text-xs"
+                          className="h-7 text-xs w-full sm:w-auto"
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(notification.action_url, '_blank');
                           }}
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
-                          {notification.action_text || 'Ver detalhes'}
+                          <span className="truncate">{notification.action_text || 'Ver detalhes'}</span>
                         </Button>
                       </div>
                     )}

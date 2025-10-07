@@ -64,16 +64,16 @@ export function Notification({
   return (
     <div
       className={cn(
-        'relative flex items-start gap-3 rounded-lg border p-4 shadow-lg transition-all duration-300',
+        'relative flex items-start gap-2 sm:gap-3 rounded-lg border p-3 sm:p-4 shadow-lg transition-all duration-300',
         notificationStyles[type] || notificationStyles.info // Fallback para info se o tipo não existir
       )}
     >
       <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
       
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-semibold">{title}</h4>
+        <h4 className="text-sm font-semibold truncate">{title}</h4>
         {message && (
-          <p className="mt-1 text-sm opacity-90">{message}</p>
+          <p className="mt-1 text-sm opacity-90 line-clamp-2">{message}</p>
         )}
       </div>
 
@@ -106,7 +106,7 @@ export function NotificationContainer({
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+    <div className="fixed top-4 right-4 sm:right-4 right-2 z-50 space-y-2 max-w-sm w-[calc(100vw-1rem)] sm:w-96">
       {notifications.map((notification) => {
         // Mapear a estrutura da notificação para o formato esperado pelo componente Notification
         const mappedNotification = {
