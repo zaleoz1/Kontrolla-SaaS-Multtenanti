@@ -148,6 +148,7 @@ export default function NovaVenda() {
         toast({
           title: "Produto encontrado",
           description: `${produto.nome} adicionado ao carrinho`,
+          className: "bg-green-50 border-green-200 text-green-800",
         });
         // Focar novamente no campo de código de barras
         setTimeout(() => {
@@ -446,6 +447,7 @@ export default function NovaVenda() {
     toast({
       title: editandoItem ? "Produto atualizado" : "Produto adicionado",
       description: `${quantidade} ${unidadeParaExibicao} de ${produtoSelecionado.nome} ${editandoItem ? 'atualizado no' : 'adicionado ao'} carrinho`,
+      className: "bg-green-50 border-green-200 text-green-800",
     });
 
     setModalPesoVolumeAberto(false);

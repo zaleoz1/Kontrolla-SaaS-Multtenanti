@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Importar rotas
 import authRoutes from './routes/auth.js';
@@ -38,7 +39,17 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware de segurança
 app.use(helmet());
-app.use(compression());
+
+// Configurar compressão para não comprimir arquivos binários
+app.use(compression({
+  filter: (req, res) => {
+    // Não comprimir arquivos executáveis e outros binários
+    if (req.url.includes('.exe') || req.url.includes('.zip') || req.url.includes('.msi')) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
 // Middleware de CORS
 const allowedOrigins = [
@@ -92,6 +103,39 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Servir arquivos do aplicativo desktop
+app.use('/dist-electron', express.static(path.join(__dirname, '../../dist-electron')));
+app.use('/downloads', express.static(path.join(__dirname, '../../dist-electron')));
+
+// Rota específica para download do aplicativo
+app.get('/api/download/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, '../../dist-electron', filename);
+  
+  // Verificar se o arquivo existe
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Arquivo não encontrado' });
+  }
+  
+  // Obter informações do arquivo
+  const stats = fs.statSync(filePath);
+  const fileSize = stats.size;
+  
+  // Configurar headers para download correto
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Length', fileSize);
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // Desabilitar compressão para este arquivo específico
+  res.setHeader('Content-Encoding', 'identity');
+  
+  // Enviar o arquivo
+  res.sendFile(filePath);
+});
 
 // Rota de health check
 app.get('/health', (req, res) => {

@@ -54,26 +54,56 @@ const DownloadPage = () => {
         });
       }, 200);
 
-      // Fazer download do arquivo
-      const response = await fetch('/downloads/KontrollaPro-Setup-1.0.0.exe');
+      // Usar a rota específica de download que não comprime o arquivo
+      const downloadUrl = '/api/download/KontrollaPro-Setup-1.0.0.exe';
+      
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/octet-stream',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Erro ao baixar o arquivo');
+        throw new Error(`Erro ao baixar o arquivo: ${response.status} ${response.statusText}`);
+      }
+
+      // Verificar se o conteúdo é realmente um arquivo binário
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('octet-stream')) {
+        console.warn('Tipo de conteúdo inesperado:', contentType);
       }
 
       const blob = await response.blob();
+      
+      // Verificar se o blob tem o tamanho esperado (aproximadamente 171MB)
+      const expectedSize = 171 * 1024 * 1024; // 171MB em bytes
+      if (blob.size < expectedSize * 0.5) { // Se for menor que 50% do esperado, pode estar corrompido
+        throw new Error('Arquivo baixado parece estar corrompido ou incompleto');
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'KontrollaPro-Setup-1.0.0.exe';
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Limpar recursos
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
 
     } catch (error) {
       console.error('Erro no download:', error);
       setIsDownloading(false);
       setDownloadProgress(0);
+      
+      // Mostrar erro para o usuário
+      alert('Erro ao baixar o arquivo. Verifique se o servidor está configurado para servir arquivos estáticos da pasta dist-electron.');
     }
   };
 
