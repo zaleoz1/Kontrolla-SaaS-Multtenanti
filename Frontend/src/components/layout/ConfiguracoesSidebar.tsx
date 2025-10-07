@@ -58,13 +58,6 @@ const configuracoesTabs = [
     permissao: "configuracoes_administradores"
   },
   { 
-    id: "pagamentos", 
-    nome: "Meu Plano", 
-    icone: CreditCard, 
-    descricao: "Planos e assinatura",
-    permissao: "configuracoes_gerais"
-  },
-  { 
     id: "metodos-pagamento", 
     nome: "Métodos De Pagamentos", 
     icone: CreditCard, 

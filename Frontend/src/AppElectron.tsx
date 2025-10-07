@@ -5,8 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AppLayout } from "./components/layout/AppLayout";
-import { NotificationContainer } from "./components/ui/notification";
-import { useNotifications } from "./hooks/useNotifications";
+// Removido: sistema duplo de notificações - usar apenas NotificationContext
 import { OperadorProvider } from "./contexts/OperadorContext";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
@@ -37,7 +36,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 const clienteQuery = new QueryClient();
 
 function AppContent() {
-  const { notifications, removeNotification } = useNotifications();
+  // Removido: sistema duplo de notificações - usar apenas NotificationContext
 
   return (
     <>
@@ -85,10 +84,7 @@ function AppContent() {
         </Routes>
       </HashRouter>
       
-      <NotificationContainer 
-        notifications={notifications} 
-        onClose={removeNotification} 
-      />
+      {/* Removido: NotificationContainer - usar apenas NotificationContext */}
       <Toaster />
       <Sonner />
     </>
