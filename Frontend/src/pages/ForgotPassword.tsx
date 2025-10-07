@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { API_CONFIG, API_ENDPOINTS } from "@/config/api";
+import { useImagePath } from "@/hooks/useImagePath";
 import { 
   ArrowRight, 
   Mail, 
@@ -29,6 +30,7 @@ import {
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const logoPath = useImagePath('logo.png');
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -707,7 +709,7 @@ export default function ForgotPassword() {
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
                 <img 
-                  src="/logo.png" 
+                  src={logoPath} 
                   alt="KontrollaPro Logo" 
                   className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg mr-2 sm:mr-3"
                 />

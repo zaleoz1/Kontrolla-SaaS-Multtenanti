@@ -3,10 +3,12 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, CheckCircle, Clock, ArrowRight, Sparkles } from "lucide-react";
+import { useImagePath } from "@/hooks/useImagePath";
 
 const DownloadPage = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const logoPath = useImagePath('logo.png');
   
   // Refs para animações
   const heroRef = useRef(null);
@@ -95,7 +97,7 @@ const DownloadPage = () => {
             >
               <div className="relative">
                 <img 
-                  src="/logo.png" 
+                  src={logoPath} 
                   alt="KontrollaPro Logo" 
                   className="h-12 w-12 rounded-xl shadow-sm"
                 />

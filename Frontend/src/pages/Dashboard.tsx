@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { useDashboard } from "@/hooks/useDashboard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useImagePath } from "@/hooks/useImagePath";
 import { useState } from "react";
 
 export default function Dashboard() {
@@ -28,6 +29,7 @@ export default function Dashboard() {
   const [mudandoPeriodo, setMudandoPeriodo] = useState(false);
   const { hasPermission } = usePermissions();
   const { triggerNovaVenda, triggerEstoqueBaixo, triggerContaVencida } = useNotificationContext();
+  const logopixPath = useImagePath('logopix.png');
   
   const { 
     data, 
@@ -342,7 +344,7 @@ export default function Dashboard() {
                                 <div key={index} className="flex items-center space-x-1">
                                   {metodo.metodo === 'pix' ? (
                                     <img 
-                                      src={getPaymentIcon(metodo.metodo)} 
+                                      src={logopixPath} 
                                       alt="PIX" 
                                       className="w-3 h-3"
                                     />

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useElectron } from "@/hooks/useElectron";
+import { useImagePath } from "@/hooks/useImagePath";
 import { 
   ArrowRight, 
   Check, 
@@ -56,6 +58,8 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isElectron = useElectron();
+  const logoPath = useImagePath('logo.png');
   
   // Refs para animações
   const heroRef = useRef(null);
@@ -287,7 +291,7 @@ export default function LandingPage() {
             >
               <div className="relative">
                 <img 
-                  src="/logo.png" 
+                  src={logoPath} 
                   alt="KontrollaPro Logo" 
                   className="h-12 w-12 rounded-xl shadow-sm"
                 />
@@ -528,15 +532,18 @@ export default function LandingPage() {
                   Começar Teste Grátis
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="text-lg px-8 py-4 border-2 border-blue-500/30 text-blue-600 hover:bg-blue-500/10 backdrop-blur-sm"
-                  onClick={() => navigate("/download")}
-                >
-                  <Download className="mr-2 h-5 w-5" />
-                  Baixar Desktop
-                </Button>
+                {/* Ocultar botão "Baixar Desktop" quando estiver rodando no Electron */}
+                {!isElectron && (
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="text-lg px-8 py-4 border-2 border-blue-500/30 text-blue-600 hover:bg-blue-500/10 backdrop-blur-sm"
+                    onClick={() => navigate("/download")}
+                  >
+                    <Download className="mr-2 h-5 w-5" />
+                    Baixar Desktop
+                  </Button>
+                )}
               </motion.div>
 
               <motion.div 
@@ -1403,7 +1410,7 @@ export default function LandingPage() {
                 whileHover={{ scale: 1.05 }}
               >
                 <img 
-                  src="/logo.png" 
+                  src={logoPath} 
                   alt="KontrollaPro Logo" 
                   className="h-10 w-10 rounded-lg"
                 />

@@ -40,6 +40,7 @@ import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
 import { useApi } from "@/hooks/useApi";
 import { usePixConfiguracoes } from "@/hooks/usePixConfiguracoes";
 import { useDadosBancarios } from "@/hooks/useDadosBancarios";
+import { useImagePath } from "@/hooks/useImagePath";
 
 interface ItemCarrinho {
   produto: any;
@@ -97,6 +98,7 @@ export default function Pagamentos() {
   const { loading: carregandoMetodos } = useApi();
   const { configuracao: pixConfiguracao, loading: carregandoPix } = usePixConfiguracoes();
   const { dadosBancarios, loading: carregandoDadosBancarios } = useDadosBancarios();
+  const logopixPath = useImagePath('logopix.png');
   
   // Estados do formulário
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData.clienteSelecionado);
@@ -1060,7 +1062,7 @@ export default function Pagamentos() {
                                 {metodo.tipo === "dinheiro" && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                                 {metodo.tipo === "pix" && (
                                   <img 
-                                    src="/logopix.png" 
+                                    src={logopixPath} 
                                     alt="PIX" 
                                     className="h-3 w-3 sm:h-4 sm:w-4 object-contain"
                                   />
@@ -1222,7 +1224,7 @@ export default function Pagamentos() {
                       <div>
                         <h4 className="font-medium text-green-800 dark:text-green-200 mb-1 flex items-center text-sm sm:text-base">
                           <img 
-                            src="/logopix.png" 
+                            src={logopixPath} 
                             alt="PIX" 
                             className="h-3 w-3 sm:h-4 sm:w-4 mr-1 object-contain"
                           />
@@ -1242,7 +1244,7 @@ export default function Pagamentos() {
                           <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
                         ) : (
                           <img 
-                            src="/logopix.png" 
+                            src={logopixPath} 
                             alt="PIX" 
                             className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 object-contain"
                           />
@@ -1691,7 +1693,7 @@ export default function Pagamentos() {
                       <div>
                         <h4 className="font-medium text-green-800 dark:text-green-200 mb-1 flex items-center">
                           <img 
-                            src="/logopix.png" 
+                            src={logopixPath} 
                             alt="PIX" 
                             className="h-4 w-4 mr-1 object-contain"
                           />
@@ -1711,7 +1713,7 @@ export default function Pagamentos() {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
                           <img 
-                            src="/logopix.png" 
+                            src={logopixPath} 
                             alt="PIX" 
                             className="h-4 w-4 mr-2 object-contain"
                           />

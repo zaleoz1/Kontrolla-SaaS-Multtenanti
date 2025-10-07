@@ -24,6 +24,17 @@ export default defineConfig(({ mode }) => ({
   },
   // Usar a pasta public padrão para assets estáticos
   publicDir: 'public',
+  build: {
+    // Garantir que os arquivos estáticos sejam copiados
+    assetsDir: 'assets',
+    copyPublicDir: true,
+    rollupOptions: {
+      output: {
+        // Manter estrutura de arquivos
+        assetFileNames: 'assets/[name].[ext]'
+      }
+    }
+  },
   plugins: [
     react(),
     // Plugin personalizado para servir arquivos de download

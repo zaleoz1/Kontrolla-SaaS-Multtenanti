@@ -25,6 +25,7 @@ export function useApi<T = any>() {
     endpoint: string,
     options: ApiOptions = {}
   ): Promise<T> => {
+    console.log('🌐 API Request:', { endpoint, options });
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
@@ -36,6 +37,8 @@ export function useApi<T = any>() {
       } = options;
 
       const token = localStorage.getItem('token');
+      console.log('🔑 Token:', token ? 'Present' : 'Missing');
+      
       const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
         ...headers,

@@ -34,19 +34,24 @@ export function useAuth() {
 
   // Verificar se há token no localStorage
   useEffect(() => {
+    console.log('🔐 useAuth: Checking authentication...');
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+
+    console.log('🔐 useAuth: Token:', token ? 'Present' : 'Missing');
+    console.log('🔐 useAuth: UserData:', userData ? 'Present' : 'Missing');
 
     if (token && userData) {
       try {
         const user = JSON.parse(userData);
+        console.log('🔐 useAuth: User parsed successfully:', user);
         setAuthState({
           user,
           isAuthenticated: true,
           loading: false,
         });
       } catch (error) {
-        console.error('Erro ao parsear dados do usuário:', error);
+        console.error('❌ useAuth: Erro ao parsear dados do usuário:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setAuthState({
