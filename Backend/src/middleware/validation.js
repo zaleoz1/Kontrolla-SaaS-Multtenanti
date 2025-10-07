@@ -617,8 +617,42 @@ export const validateTransacao = [
 // Validações para parâmetros de ID
 export const validateId = [
   param('id')
-    .isInt({ min: 1 })
-    .withMessage('ID deve ser um número inteiro positivo'),
+    .custom((value) => {
+      // Aceitar IDs numéricos ou IDs com sufixos (ex: 101-prazo, 101-avista)
+      if (!value) {
+        throw new Error('ID é obrigatório');
+      }
+      
+      // Se é um número puro, validar como antes
+      if (/^\d+$/.test(value)) {
+        const numValue = parseInt(value);
+        if (isNaN(numValue) || numValue < 1) {
+          throw new Error('ID deve ser um número inteiro positivo');
+        }
+        return true;
+      }
+      
+      // Se tem sufixo, validar formato (número-sufixo)
+      if (/^\d+-(.+)$/.test(value)) {
+        const match = value.match(/^(\d+)-(.+)$/);
+        if (match) {
+          const idNum = parseInt(match[1]);
+          const sufixo = match[2];
+          
+          if (isNaN(idNum) || idNum < 1) {
+            throw new Error('ID deve ser um número inteiro positivo');
+          }
+          
+          if (!sufixo || sufixo.length < 2) {
+            throw new Error('Sufixo deve ter pelo menos 2 caracteres');
+          }
+          
+          return true;
+        }
+      }
+      
+      throw new Error('ID deve ser um número inteiro positivo ou um número seguido de sufixo (ex: 101-prazo)');
+    }),
   handleValidationErrors
 ];
 

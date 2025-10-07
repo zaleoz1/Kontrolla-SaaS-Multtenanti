@@ -662,11 +662,14 @@ router.post('/', validateVenda, async (req, res) => {
 router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Extrair ID numérico real (remover sufixos como -prazo, -avista)
+    const idNumerico = id.includes('-') ? id.split('-')[0] : id;
 
     // Verificar se venda existe
     const existingVendas = await query(
       'SELECT id, status, cliente_id, total FROM vendas WHERE id = ? AND tenant_id = ?',
-      [id, req.user.tenant_id]
+      [idNumerico, req.user.tenant_id]
     );
 
     if (existingVendas.length === 0) {
@@ -677,17 +680,13 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
 
     const venda = existingVendas[0];
 
-    // Só permitir deletar vendas pendentes
-    if (venda.status !== 'pendente') {
-      return res.status(400).json({
-        error: 'Só é possível deletar vendas pendentes'
-      });
-    }
+    // Permitir deletar vendas de qualquer status
+    // A lógica de reversão será aplicada conforme o status da venda
 
     // Restaurar estoque dos produtos
     const itens = await query(
       'SELECT produto_id, quantidade FROM venda_itens WHERE venda_id = ?',
-      [id]
+      [idNumerico]
     );
 
     for (const item of itens) {
@@ -723,7 +722,7 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
       // Buscar métodos de pagamento da venda para calcular o valor pago à vista
       const metodosPagamento = await query(
         'SELECT valor FROM venda_pagamentos WHERE venda_id = ?',
-        [id]
+        [idNumerico]
       );
       
       let valorPagoAVista = 0;
@@ -746,17 +745,122 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
       }
     }
 
+    // Nota: As transações serão removidas automaticamente no final da função
+
+    // Verificar se é uma venda com pagamento múltiplo (tem tanto métodos de pagamento quanto pagamento a prazo)
+    const temMetodosPagamento = await query(
+      'SELECT COUNT(*) as count FROM venda_pagamentos WHERE venda_id = ?',
+      [idNumerico]
+    );
+    
+    const temPagamentoPrazo = await query(
+      'SELECT COUNT(*) as count FROM contas_receber WHERE venda_id = ? AND descricao LIKE "Pagamento a prazo%"',
+      [idNumerico]
+    );
+
+    const isVendaMultipla = temMetodosPagamento[0].count > 0 && temPagamentoPrazo[0].count > 0;
+
+    if (isVendaMultipla) {
+      // Para vendas com pagamento múltiplo, precisamos encontrar e remover a venda "parceira"
+      // A venda parceira terá o mesmo número base (sem sufixos -AV ou -PZ)
+      const numeroBase = venda.numero_venda ? venda.numero_venda.replace(/-AV$|-PZ$/, '') : '';
+      
+      // Buscar vendas com o mesmo número base
+      const vendasRelacionadas = await query(
+        'SELECT id, numero_venda, status FROM vendas WHERE tenant_id = ? AND (numero_venda = ? OR numero_venda LIKE ?)',
+        [req.user.tenant_id, numeroBase, `${numeroBase}-%`]
+      );
+
+      // Remover todas as vendas relacionadas (incluindo a atual)
+      for (const vendaRelacionada of vendasRelacionadas) {
+        if (vendaRelacionada.id !== parseInt(idNumerico)) {
+          console.log(`Removendo venda relacionada: ${vendaRelacionada.numero_venda} (ID: ${vendaRelacionada.id})`);
+          
+          // Restaurar estoque da venda relacionada
+          const itensRelacionados = await query(
+            'SELECT produto_id, quantidade FROM venda_itens WHERE venda_id = ?',
+            [vendaRelacionada.id]
+          );
+
+          for (const item of itensRelacionados) {
+            const produtoInfo = await query(
+              'SELECT tipo_preco FROM produtos WHERE id = ?',
+              [item.produto_id]
+            );
+            
+            if (produtoInfo.length > 0) {
+              const produto = produtoInfo[0];
+              if (produto.tipo_preco === 'kg') {
+                await query(
+                  'UPDATE produtos SET estoque_kg = estoque_kg + ? WHERE id = ?',
+                  [item.quantidade, item.produto_id]
+                );
+              } else if (produto.tipo_preco === 'litros') {
+                await query(
+                  'UPDATE produtos SET estoque_litros = estoque_litros + ? WHERE id = ?',
+                  [item.quantidade, item.produto_id]
+                );
+              } else {
+                await query(
+                  'UPDATE produtos SET estoque = estoque + ? WHERE id = ?',
+                  [item.quantidade, item.produto_id]
+                );
+              }
+            }
+          }
+
+          // Reverter total_compras do cliente para a venda relacionada
+          if (venda.cliente_id) {
+            const metodosPagamentoRelacionados = await query(
+              'SELECT valor FROM venda_pagamentos WHERE venda_id = ?',
+              [vendaRelacionada.id]
+            );
+            
+            let valorPagoAVistaRelacionado = 0;
+            if (metodosPagamentoRelacionados.length > 0) {
+              valorPagoAVistaRelacionado = metodosPagamentoRelacionados.reduce((sum, metodo) => {
+                return sum + (parseFloat(metodo.valor) || 0);
+              }, 0);
+            } else {
+              valorPagoAVistaRelacionado = vendaRelacionada.total || 0;
+            }
+            
+            if (valorPagoAVistaRelacionado > 0) {
+              await query(
+                'UPDATE clientes SET total_compras = total_compras - ? WHERE id = ?',
+                [valorPagoAVistaRelacionado, venda.cliente_id]
+              );
+            }
+          }
+
+          // Deletar todas as transações relacionadas à venda relacionada
+          await query('DELETE FROM transacoes WHERE venda_id = ?', [vendaRelacionada.id]);
+
+          // Deletar todas as contas a receber relacionadas à venda relacionada
+          await query('DELETE FROM contas_receber WHERE venda_id = ?', [vendaRelacionada.id]);
+
+          // Deletar dados da venda relacionada
+          await query('DELETE FROM venda_itens WHERE venda_id = ?', [vendaRelacionada.id]);
+          await query('DELETE FROM venda_pagamentos WHERE venda_id = ?', [vendaRelacionada.id]);
+          await query('DELETE FROM vendas WHERE id = ? AND tenant_id = ?', [vendaRelacionada.id, req.user.tenant_id]);
+        }
+      }
+    }
+
+    // Deletar todas as transações relacionadas à venda
+    await query('DELETE FROM transacoes WHERE venda_id = ?', [idNumerico]);
+
+    // Deletar todas as contas a receber relacionadas à venda
+    await query('DELETE FROM contas_receber WHERE venda_id = ?', [idNumerico]);
+
     // Deletar itens da venda
-    await query('DELETE FROM venda_itens WHERE venda_id = ?', [id]);
+    await query('DELETE FROM venda_itens WHERE venda_id = ?', [idNumerico]);
 
     // Deletar métodos de pagamento da venda
-    await query('DELETE FROM venda_pagamentos WHERE venda_id = ?', [id]);
+    await query('DELETE FROM venda_pagamentos WHERE venda_id = ?', [idNumerico]);
 
-    // Deletar contas a receber relacionadas à venda
-    await query('DELETE FROM contas_receber WHERE venda_id = ?', [id]);
-
-    // Deletar venda
-    await query('DELETE FROM vendas WHERE id = ? AND tenant_id = ?', [id, req.user.tenant_id]);
+    // Deletar venda (último para manter integridade referencial)
+    await query('DELETE FROM vendas WHERE id = ? AND tenant_id = ?', [idNumerico, req.user.tenant_id]);
 
     res.json({
       message: 'Venda deletada com sucesso'
