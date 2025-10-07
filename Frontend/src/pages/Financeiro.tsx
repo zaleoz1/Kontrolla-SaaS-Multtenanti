@@ -1080,53 +1080,126 @@ export default function Financeiro() {
 
         <TabsContent value="receber" className="space-y-4">
           {/* Filtros para Contas a Receber */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {/* Busca e Status */}
-                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por nome do cliente..."
-                      value={filtroCliente}
-                      onChange={(e) => setFiltroCliente(e.target.value)}
-                      className="pl-10"
-                    />
+          <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden">
+            <CardContent className="p-0">
+              {/* Header dos Filtros - Mobile */}
+              <div className="block sm:hidden">
+                <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-4 border-b border-slate-200/50">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
+                      <Filter className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900">Filtros - Contas a Receber</h3>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={limparFiltros}
-                    disabled={!filtroCliente && filtroStatus === 'todos'}
-                  >
-                    Limpar
-                  </Button>
-                  <div className="flex space-x-2">
+                </div>
+                
+                <div className="p-4 space-y-4">
+                  {/* Busca */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-600">Buscar clientes</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Nome do cliente..."
+                        value={filtroCliente}
+                        onChange={(e) => setFiltroCliente(e.target.value)}
+                        className="pl-10 text-sm h-10"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-600">Status</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button 
+                        variant={filtroStatus === 'todos' ? "default" : "outline"}
+                        onClick={() => setFiltroStatus('todos')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Todos
+                      </Button>
+                      <Button 
+                        variant={filtroStatus === 'pendente' ? "default" : "outline"}
+                        onClick={() => setFiltroStatus('pendente')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Pendentes
+                      </Button>
+                      <Button 
+                        variant={filtroStatus === 'vencido' ? "default" : "outline"}
+                        onClick={() => setFiltroStatus('vencido')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Vencidos
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Botão de Ação */}
+                  <div className="pt-2">
                     <Button 
-                      variant={filtroStatus === 'todos' ? "default" : "outline"}
-                      onClick={() => setFiltroStatus('todos')}
+                      variant="outline" 
+                      onClick={limparFiltros}
+                      disabled={!filtroCliente && filtroStatus === 'todos'}
                       size="sm"
+                      className="w-full h-9 text-xs font-medium"
                     >
-                      Todos
-                    </Button>
-                    <Button 
-                      variant={filtroStatus === 'pendente' ? "default" : "outline"}
-                      onClick={() => setFiltroStatus('pendente')}
-                      size="sm"
-                    >
-                      Pendentes
-                    </Button>
-                    <Button 
-                      variant={filtroStatus === 'vencido' ? "default" : "outline"}
-                      onClick={() => setFiltroStatus('vencido')}
-                      size="sm"
-                    >
-                      Vencidos
+                      Limpar Filtros
                     </Button>
                   </div>
                 </div>
+              </div>
 
-                
+              {/* Layout Desktop - Original */}
+              <div className="hidden sm:block p-6">
+                <div className="space-y-4">
+                  {/* Busca e Status */}
+                  <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por nome do cliente..."
+                        value={filtroCliente}
+                        onChange={(e) => setFiltroCliente(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={limparFiltros}
+                      disabled={!filtroCliente && filtroStatus === 'todos'}
+                    >
+                      Limpar
+                    </Button>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant={filtroStatus === 'todos' ? "default" : "outline"}
+                        onClick={() => setFiltroStatus('todos')}
+                        size="sm"
+                      >
+                        Todos
+                      </Button>
+                      <Button 
+                        variant={filtroStatus === 'pendente' ? "default" : "outline"}
+                        onClick={() => setFiltroStatus('pendente')}
+                        size="sm"
+                      >
+                        Pendentes
+                      </Button>
+                      <Button 
+                        variant={filtroStatus === 'vencido' ? "default" : "outline"}
+                        onClick={() => setFiltroStatus('vencido')}
+                        size="sm"
+                      >
+                        Vencidos
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1256,60 +1329,141 @@ export default function Financeiro() {
 
         <TabsContent value="pagar" className="space-y-4">
           {/* Filtros para Contas a Pagar */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {/* Busca e Status */}
-                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por nome do fornecedor..."
-                      value={filtroFornecedor}
-                      onChange={(e) => setFiltroFornecedor(e.target.value)}
-                      className="pl-10"
-                    />
+          <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden">
+            <CardContent className="p-0">
+              {/* Header dos Filtros - Mobile */}
+              <div className="block sm:hidden">
+                <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-4 border-b border-slate-200/50">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
+                      <Filter className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900">Filtros - Contas a Pagar</h3>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={limparFiltrosPagar}
-                    disabled={!filtroFornecedor && filtroStatusPagar === 'todos'}
-                  >
-                    Limpar
-                  </Button>
-                  <div className="flex space-x-2">
+                </div>
+                
+                <div className="p-4 space-y-4">
+                  {/* Busca */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-600">Buscar fornecedores</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Nome do fornecedor..."
+                        value={filtroFornecedor}
+                        onChange={(e) => setFiltroFornecedor(e.target.value)}
+                        className="pl-10 text-sm h-10"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-600">Status</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant={filtroStatusPagar === 'todos' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('todos')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Todos
+                      </Button>
+                      <Button 
+                        variant={filtroStatusPagar === 'pago' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('pago')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Pagos
+                      </Button>
+                      <Button 
+                        variant={filtroStatusPagar === 'pendente' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('pendente')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Pendentes
+                      </Button>
+                      <Button 
+                        variant={filtroStatusPagar === 'vencido' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('vencido')}
+                        size="sm"
+                        className="h-9 text-xs font-medium"
+                      >
+                        Vencidos
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Botão de Ação */}
+                  <div className="pt-2">
                     <Button 
-                      variant={filtroStatusPagar === 'todos' ? "default" : "outline"}
-                      onClick={() => setFiltroStatusPagar('todos')}
+                      variant="outline" 
+                      onClick={limparFiltrosPagar}
+                      disabled={!filtroFornecedor && filtroStatusPagar === 'todos'}
                       size="sm"
+                      className="w-full h-9 text-xs font-medium"
                     >
-                      Todos
-                    </Button>
-                    <Button 
-                      variant={filtroStatusPagar === 'pago' ? "default" : "outline"}
-                      onClick={() => setFiltroStatusPagar('pago')}
-                      size="sm"
-                    >
-                      Pagos
-                    </Button>
-                    <Button 
-                      variant={filtroStatusPagar === 'pendente' ? "default" : "outline"}
-                      onClick={() => setFiltroStatusPagar('pendente')}
-                      size="sm"
-                    >
-                      Pendentes
-                    </Button>
-                    <Button 
-                      variant={filtroStatusPagar === 'vencido' ? "default" : "outline"}
-                      onClick={() => setFiltroStatusPagar('vencido')}
-                      size="sm"
-                    >
-                      Vencidos
+                      Limpar Filtros
                     </Button>
                   </div>
                 </div>
+              </div>
 
-                
+              {/* Layout Desktop - Original */}
+              <div className="hidden sm:block p-6">
+                <div className="space-y-4">
+                  {/* Busca e Status */}
+                  <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por nome do fornecedor..."
+                        value={filtroFornecedor}
+                        onChange={(e) => setFiltroFornecedor(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={limparFiltrosPagar}
+                      disabled={!filtroFornecedor && filtroStatusPagar === 'todos'}
+                    >
+                      Limpar
+                    </Button>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant={filtroStatusPagar === 'todos' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('todos')}
+                        size="sm"
+                      >
+                        Todos
+                      </Button>
+                      <Button 
+                        variant={filtroStatusPagar === 'pago' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('pago')}
+                        size="sm"
+                      >
+                        Pagos
+                      </Button>
+                      <Button 
+                        variant={filtroStatusPagar === 'pendente' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('pendente')}
+                        size="sm"
+                      >
+                        Pendentes
+                      </Button>
+                      <Button 
+                        variant={filtroStatusPagar === 'vencido' ? "default" : "outline"}
+                        onClick={() => setFiltroStatusPagar('vencido')}
+                        size="sm"
+                      >
+                        Vencidos
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1455,55 +1609,135 @@ export default function Financeiro() {
         </TabsContent>
 
         <TabsContent value="transacoes" className="space-y-4">
-          <Card className="bg-gradient-card shadow-card">
-            <CardContent>
-              {/* Filtros de Transações */}
-              <div className="space-y-4 mb-4">
-                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-end md:space-y-0 md:space-x-4">
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant={filtroTipoTransacao === 'todos' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFiltroTipoTransacao('todos')}
-                    >
-                      Todos
-                    </Button>
-                    <Button 
-                      variant={filtroTipoTransacao === 'entrada' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFiltroTipoTransacao('entrada')}
-                    >
-                      Recebimentos
-                    </Button>
-                    <Button 
-                      variant={filtroTipoTransacao === 'saida' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFiltroTipoTransacao('saida')}
-                    >
-                      Pagamentos
-                    </Button>
+          {/* Filtros de Transações */}
+          <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden">
+            <CardContent className="p-0">
+              {/* Header dos Filtros - Mobile */}
+              <div className="block sm:hidden">
+                <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-4 border-b border-slate-200/50">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
+                      <Filter className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900">Filtros - Transações</h3>
+                  </div>
+                </div>
+                
+                <div className="p-4 space-y-4">
+                  {/* Tipo de Transação */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-600">Tipo de Transação</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button 
+                        variant={filtroTipoTransacao === 'todos' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFiltroTipoTransacao('todos')}
+                        className="h-9 text-xs font-medium"
+                      >
+                        Todas as Transações
+                      </Button>
+                      <Button 
+                        variant={filtroTipoTransacao === 'entrada' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFiltroTipoTransacao('entrada')}
+                        className="h-9 text-xs font-medium"
+                      >
+                        Recebimentos
+                      </Button>
+                      <Button 
+                        variant={filtroTipoTransacao === 'saida' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFiltroTipoTransacao('saida')}
+                        className="h-9 text-xs font-medium"
+                      >
+                        Pagamentos
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Data:</span>
-                    <Input
-                      type="date"
-                      value={filtroDataInicioTrans}
-                      onChange={(e) => setFiltroDataInicioTrans(e.target.value)}
-                      className="w-40"
-                    />
+                  {/* Data */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-600">Data</label>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <Input
+                        type="date"
+                        value={filtroDataInicioTrans}
+                        onChange={(e) => setFiltroDataInicioTrans(e.target.value)}
+                        className="flex-1 h-10 text-sm"
+                      />
+                    </div>
                   </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={limparFiltrosTransacoes}
-                    disabled={filtroTipoTransacao === 'todos' && !filtroDataInicioTrans}
-                  >
-                    Limpar
-                  </Button>
+
+                  {/* Botão de Ação */}
+                  <div className="pt-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={limparFiltrosTransacoes}
+                      disabled={filtroTipoTransacao === 'todos' && !filtroDataInicioTrans}
+                      className="w-full h-9 text-xs font-medium"
+                    >
+                      Limpar Filtros
+                    </Button>
+                  </div>
                 </div>
               </div>
+
+              {/* Layout Desktop - Original */}
+              <div className="hidden sm:block p-6">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-end md:space-y-0 md:space-x-4">
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant={filtroTipoTransacao === 'todos' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFiltroTipoTransacao('todos')}
+                      >
+                        Todos
+                      </Button>
+                      <Button 
+                        variant={filtroTipoTransacao === 'entrada' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFiltroTipoTransacao('entrada')}
+                      >
+                        Recebimentos
+                      </Button>
+                      <Button 
+                        variant={filtroTipoTransacao === 'saida' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFiltroTipoTransacao('saida')}
+                      >
+                        Pagamentos
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Data:</span>
+                      <Input
+                        type="date"
+                        value={filtroDataInicioTrans}
+                        onChange={(e) => setFiltroDataInicioTrans(e.target.value)}
+                        className="w-40"
+                      />
+                    </div>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={limparFiltrosTransacoes}
+                      disabled={filtroTipoTransacao === 'todos' && !filtroDataInicioTrans}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card shadow-card">
+            <CardContent>
               {errorTransacoes && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" /> 
@@ -1557,53 +1791,111 @@ export default function Financeiro() {
                     const data = dataHora.toLocaleDateString("pt-BR");
                     const hora = dataHora.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
                     
-                    return (
-                      <div key={transacao.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
-                        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
-                          <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${transacao.tipo === 'entrada' ? 'bg-success/10' : 'bg-destructive/10'}`}>
-                            {transacao.tipo === 'entrada' ? (
-                              <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
-                            ) : (
-                              <ArrowDownRight className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
-                            )}
-                          </div>
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <p className="font-semibold text-sm sm:text-base line-clamp-1">{transacao.descricao}</p>
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
-                              <span>{data} às {hora}</span>
-                              <span className="capitalize">{transacao.metodo_pagamento.replace('_', ' ')}</span>
-                              {transacao.cliente_nome && <span className="truncate">Cliente: {transacao.cliente_nome}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className={`text-sm sm:text-lg font-bold break-words ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
-                              {transacao.tipo === 'entrada' ? '+' : ''}{formatarValor(Number(transacao.valor) || 0)}
-                            </p>
-                            {transacao.anexos && transacao.anexos.length > 0 && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => abrirAnexos(transacao.anexos)}
-                                className="h-6 w-6 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
-                                title={`Abrir ${transacao.anexos.length} anexo(s)`}
-                              >
-                                <File className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {obterBadgeStatus(transacao.status)}
-                            {transacao.anexos && transacao.anexos.length > 0 && (
-                              <Badge variant="outline" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer" onClick={() => abrirAnexos(transacao.anexos)}>
-                                {transacao.anexos.length} anexo(s)
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
+                     return (
+                       <div key={transacao.id} className="mb-4 last:mb-0">
+                         {/* Layout Mobile - Sem fundo */}
+                         <div className="block sm:hidden p-3 space-y-3 border-b border-gray-100 last:border-b-0">
+                           <div className="flex items-center justify-between">
+                             <div className="flex items-center space-x-2">
+                               <div className={`p-1.5 rounded-full ${transacao.tipo === 'entrada' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                 {transacao.tipo === 'entrada' ? (
+                                   <ArrowUpRight className="h-3 w-3" />
+                                 ) : (
+                                   <ArrowDownRight className="h-3 w-3" />
+                                 )}
+                               </div>
+                               <span className="font-bold text-sm">
+                                 {transacao.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                               </span>
+                             </div>
+                             <div className="text-right">
+                               <p className={`font-bold text-sm ${transacao.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                                 {transacao.tipo === 'entrada' ? '+' : ''}{formatarValor(Number(transacao.valor) || 0)}
+                               </p>
+                             </div>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <div>
+                               <p className="font-semibold text-gray-900 text-sm">{transacao.descricao}</p>
+                               <p className="text-xs text-gray-500">{data} às {hora}</p>
+                             </div>
+                             <div className="text-right">
+                               {obterBadgeStatus(transacao.status)}
+                             </div>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <div className="flex items-center space-x-2">
+                               <span className="text-xs text-gray-500 capitalize">
+                                 {transacao.metodo_pagamento.replace('_', ' ')}
+                               </span>
+                               {transacao.cliente_nome && (
+                                 <span className="text-xs text-gray-500 truncate">
+                                   Cliente: {transacao.cliente_nome}
+                                 </span>
+                               )}
+                             </div>
+                             {transacao.anexos && transacao.anexos.length > 0 && (
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => abrirAnexos(transacao.anexos)}
+                                 className="h-6 w-6 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                 title={`Abrir ${transacao.anexos.length} anexo(s)`}
+                               >
+                                 <File className="h-3 w-3" />
+                               </Button>
+                             )}
+                           </div>
+                         </div>
+
+                         {/* Layout Desktop */}
+                         <div className="hidden sm:block flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
+                           <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                             <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${transacao.tipo === 'entrada' ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                               {transacao.tipo === 'entrada' ? (
+                                 <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+                               ) : (
+                                 <ArrowDownRight className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
+                               )}
+                             </div>
+                             <div className="space-y-1 min-w-0 flex-1">
+                               <p className="font-semibold text-sm sm:text-base line-clamp-1">{transacao.descricao}</p>
+                               <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
+                                 <span>{data} às {hora}</span>
+                                 <span className="capitalize">{transacao.metodo_pagamento.replace('_', ' ')}</span>
+                                 {transacao.cliente_nome && <span className="truncate">Cliente: {transacao.cliente_nome}</span>}
+                               </div>
+                             </div>
+                           </div>
+                           <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
+                             <div className="flex items-center gap-2">
+                               <p className={`text-sm sm:text-lg font-bold break-words ${transacao.tipo === 'entrada' ? 'text-success' : 'text-destructive'}`}>
+                                 {transacao.tipo === 'entrada' ? '+' : ''}{formatarValor(Number(transacao.valor) || 0)}
+                               </p>
+                               {transacao.anexos && transacao.anexos.length > 0 && (
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   onClick={() => abrirAnexos(transacao.anexos)}
+                                   className="h-6 w-6 p-0 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                   title={`Abrir ${transacao.anexos.length} anexo(s)`}
+                                 >
+                                   <File className="h-3 w-3" />
+                                 </Button>
+                               )}
+                             </div>
+                             <div className="flex items-center gap-2">
+                               {obterBadgeStatus(transacao.status)}
+                               {transacao.anexos && transacao.anexos.length > 0 && (
+                                 <Badge variant="outline" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer" onClick={() => abrirAnexos(transacao.anexos)}>
+                                   {transacao.anexos.length} anexo(s)
+                                 </Badge>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     );
                   })}
                 </div>
               )}

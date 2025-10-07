@@ -20,7 +20,8 @@ import {
   CheckCircle,
   Image as ImageIcon,
   Loader2,
-  Eye
+  Eye,
+  Link
 } from "lucide-react";
 
 interface Produto {
@@ -73,6 +74,8 @@ export default function NovoProduto() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const [carregandoProduto, setCarregandoProduto] = useState(false);
+  const [urlImagem, setUrlImagem] = useState("");
+  const [mostrarInputUrl, setMostrarInputUrl] = useState(false);
   const { makeRequest, loading, error } = useApi();
   const { 
     categorias, 
@@ -369,6 +372,43 @@ export default function NovoProduto() {
       ...prev,
       imagens: [...prev.imagens, url]
     }));
+  };
+
+  const validarUrlImagem = (url: string): boolean => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const adicionarImagemPorUrl = () => {
+    if (!urlImagem.trim()) {
+      toast.error('URL da imagem é obrigatória');
+      return;
+    }
+
+    if (!validarUrlImagem(urlImagem)) {
+      toast.error('URL inválida. Use um link válido (http:// ou https://)');
+      return;
+    }
+
+    if (produto.imagens.length >= 5) {
+      toast.warning('Máximo de 5 imagens permitidas');
+      return;
+    }
+
+    // Verificar se a URL já existe
+    if (produto.imagens.includes(urlImagem)) {
+      toast.warning('Esta imagem já foi adicionada');
+      return;
+    }
+
+    adicionarImagem(urlImagem);
+    setUrlImagem("");
+    setMostrarInputUrl(false);
+    toast.success('Imagem adicionada com sucesso!');
   };
 
   const removerImagem = (index: number) => {
@@ -1525,6 +1565,8 @@ export default function NovoProduto() {
                 </div>
               )}
 
+
+
               {/* Informações sobre as imagens */}
               {produto.imagens.length > 0 && (
                 <div className="bg-muted/50 rounded-lg p-3">
@@ -1538,6 +1580,77 @@ export default function NovoProduto() {
               )}
             </CardContent>
           </Card>
+
+          {/* Card para Adicionar Imagem por Link */}
+          {produto.imagens.length < 5 && (
+            <Card className="bg-gradient-card shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                  <Link className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>Adicionar por Link</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 sm:space-y-4">
+                {!mostrarInputUrl ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMostrarInputUrl(true)}
+                    className="w-full text-xs sm:text-sm"
+                  >
+                    <Link className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    Adicionar Imagem por Link
+                  </Button>
+                ) : (
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                      <Input
+                        placeholder="https://exemplo.com/imagem.jpg"
+                        value={urlImagem}
+                        onChange={(e) => setUrlImagem(e.target.value)}
+                        className="flex-1 text-xs sm:text-sm"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            adicionarImagemPorUrl();
+                          }
+                        }}
+                      />
+                      <div className="flex space-x-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={adicionarImagemPorUrl}
+                          disabled={!urlImagem.trim() || loading}
+                          className="text-xs sm:text-sm"
+                        >
+                          {loading ? (
+                            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setMostrarInputUrl(false);
+                            setUrlImagem("");
+                          }}
+                          className="text-xs sm:text-sm"
+                        >
+                          <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Cole o link direto da imagem (deve terminar com .jpg, .png, .gif, etc.)
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Validação do Formulário */}
           <Card className="bg-gradient-card shadow-card">

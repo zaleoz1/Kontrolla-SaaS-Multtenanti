@@ -63,7 +63,7 @@ const getPriorityColor = (priority: Notification['priority']) => {
 export function NotificationToast({ notification, onClose, onAction }: NotificationToastProps) {
   return (
     <div className={cn(
-      "flex items-start space-x-3 p-4 rounded-lg border-l-4 shadow-lg bg-background border",
+      "flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 rounded-lg border-l-4 shadow-lg bg-background border",
       getPriorityColor(notification.priority),
       !notification.read && "ring-2 ring-blue-500/20"
     )}>
@@ -73,31 +73,33 @@ export function NotificationToast({ notification, onClose, onAction }: Notificat
       
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
               <p className={cn(
-                "text-sm font-medium",
+                "text-sm font-medium truncate",
                 !notification.read && "font-semibold"
               )}>
                 {notification.title}
               </p>
-              {notification.priority === 'urgent' && (
-                <Badge variant="destructive" className="text-xs">
-                  Urgente
-                </Badge>
-              )}
-              {notification.priority === 'high' && (
-                <Badge variant="secondary" className="text-xs">
-                  Alta
-                </Badge>
-              )}
+              <div className="flex space-x-1">
+                {notification.priority === 'urgent' && (
+                  <Badge variant="destructive" className="text-xs">
+                    Urgente
+                  </Badge>
+                )}
+                {notification.priority === 'high' && (
+                  <Badge variant="secondary" className="text-xs">
+                    Alta
+                  </Badge>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
               {notification.message}
             </p>
           </div>
           
-          <div className="flex items-center space-x-1 ml-2">
+          <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
             {!notification.read && (
               <div className="w-2 h-2 bg-blue-500 rounded-full" />
             )}
@@ -117,10 +119,10 @@ export function NotificationToast({ notification, onClose, onAction }: Notificat
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-xs"
+              className="h-7 text-xs w-full sm:w-auto"
               onClick={onAction}
             >
-              {notification.action_text || 'Ver detalhes'}
+              <span className="truncate">{notification.action_text || 'Ver detalhes'}</span>
             </Button>
           </div>
         )}
