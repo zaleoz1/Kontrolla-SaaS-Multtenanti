@@ -1010,18 +1010,6 @@ export default function Configuracoes() {
     navigate('/login');
   };
 
-  const obterBadgePlano = (plano: string) => {
-    switch (plano) {
-      case "premium":
-        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"><Crown className="h-3 w-3 mr-1" /> Premium</Badge>;
-      case "professional":
-        return <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white"><Star className="h-3 w-3 mr-1" /> Professional</Badge>;
-      case "enterprise":
-        return <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white"><Star className="h-3 w-3 mr-1" /> Enterprise</Badge>;
-      default:
-        return <Badge variant="secondary">Básico</Badge>;
-    }
-  };
 
   const obterBadgeStatus = (status: string) => {
     switch (status) {
@@ -1141,22 +1129,7 @@ export default function Configuracoes() {
             </div>
 
             {/* Cards de Resumo - Design Moderno */}
-            <div className="grid gap-3 sm:gap-6 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
-                <CardContent className="p-3 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400">Plano Atual</p>
-                      <div className="flex items-center space-x-2">
-                        {obterBadgePlano(dadosTenant.plano)}
-                      </div>
-                    </div>
-                    <div className="p-2 sm:p-3 rounded-full bg-blue-500/20 flex-shrink-0 self-start sm:self-auto">
-                      <Crown className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid gap-3 sm:gap-6 grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
 
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
                 <CardContent className="p-3 sm:p-6">
@@ -1900,114 +1873,6 @@ export default function Configuracoes() {
         )}
 
 
-        {/* Pagamentos e Assinatura */}
-        {abaAtiva === "pagamentos" && isTabVisible('pagamentos') && (
-          <div className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  Plano Atual
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center p-6 bg-muted/30 rounded-lg">
-                  <div className="flex items-center justify-center mb-4">
-                    {obterBadgePlano(dadosTenant.plano)}
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">R$ 97,00/mês</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Plano Pro com todas as funcionalidades
-                  </p>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center justify-between">
-                      <span>Vendas ilimitadas</span>
-                      <CheckCircle className="h-4 w-4 text-success" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Estoque completo</span>
-                      <CheckCircle className="h-4 w-4 text-success" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>NF-e integrada</span>
-                      <CheckCircle className="h-4 w-4 text-success" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Suporte prioritário</span>
-                      <CheckCircle className="h-4 w-4 text-success" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <Button className="flex-1">Atualizar Plano</Button>
-                  <Button variant="outline">Cancelar</Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  Método de Pagamento
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                        <CreditCard className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium">**** **** **** 1234</p>
-                        <p className="text-sm text-muted-foreground">Visa • Expira 12/25</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">Alterar</Button>
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  <p>Próxima cobrança: 18/02/2024</p>
-                  <p>Valor: R$ 97,00</p>
-                </div>
-                <Button className="w-full">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Adicionar Método de Pagamento
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Histórico de Pagamentos */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardHeader>
-              <CardTitle>Histórico de Pagamentos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { data: "2024-01-18", valor: "R$ 97,00", status: "Pago", metodo: "Visa ****1234" },
-                  { data: "2023-12-18", valor: "R$ 97,00", status: "Pago", metodo: "Visa ****1234" },
-                  { data: "2023-11-18", valor: "R$ 97,00", status: "Pago", metodo: "Visa ****1234" }
-                ].map((pagamento, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{pagamento.data}</p>
-                      <p className="text-sm text-muted-foreground">{pagamento.metodo}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{pagamento.valor}</p>
-                      <Badge className="bg-success hover:bg-success/90">{pagamento.status}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          </div>
-        )}
 
         {/* Métodos de Pagamento */}
         {abaAtiva === "metodos-pagamento" && isTabVisible('metodos-pagamento') && (

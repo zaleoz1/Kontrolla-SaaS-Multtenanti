@@ -360,12 +360,6 @@ export default function Catalogo() {
                 </CardHeader>
                 
                 <CardContent className="space-y-2 sm:space-y-3 p-3 sm:p-6 pt-0">
-                  {produto.descricao && produto.descricao.trim() && (
-                    <p className="hidden sm:block text-xs text-muted-foreground line-clamp-2">
-                      {produto.descricao}
-                    </p>
-                  )}
-
                   <div className="space-y-2">
                     <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                       <div className="space-y-1">

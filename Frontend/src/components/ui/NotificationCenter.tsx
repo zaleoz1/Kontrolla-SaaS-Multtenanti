@@ -26,7 +26,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem
 } from '@/components/ui/dropdown-menu';
-import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { useNotificationContext } from '@/contexts/NotificationContext';
+import { Notification } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 
 interface NotificationCenterProps {
@@ -78,7 +79,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
     markAllAsRead, 
     deleteNotification,
     deleteAllNotifications 
-  } = useNotifications();
+  } = useNotificationContext();
   
   const [filter, setFilter] = useState<'all' | 'unread' | 'venda' | 'estoque' | 'financeiro' | 'sistema' | 'cliente'>('all');
 
