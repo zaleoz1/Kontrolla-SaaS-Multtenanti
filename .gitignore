@@ -17,8 +17,8 @@ dist/
 dist-ssr/
 Frontend/dist/
 Backend/dist/
-dist-electron/
-dist-electron/*
+# dist-electron/ - comentado para permitir envio dos arquivos de build do Electron
+# dist-electron/*
 
 # Environment variables
 .env

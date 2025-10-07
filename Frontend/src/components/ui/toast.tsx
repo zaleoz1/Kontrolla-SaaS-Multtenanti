@@ -43,10 +43,18 @@ const Toast = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
+  const handleMouseEnter = () => {
+    // Fechar o toast quando o mouse passar por cima
+    if (props.onOpenChange) {
+      props.onOpenChange(false);
+    }
+  };
+
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
+      onMouseEnter={handleMouseEnter}
       {...props}
     />
   )
