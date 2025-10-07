@@ -1215,21 +1215,12 @@ export default function Vendas() {
                     <Button 
                       variant="destructive" 
                       onClick={abrirModalExclusao}
-                      disabled={vendaSelecionada.status !== 'pendente'}
                       className="w-full"
                       size="sm"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Cancelar Venda
                     </Button>
-                  {vendaSelecionada.status !== 'pendente' && (
-                      <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-xs text-amber-700 text-center">
-                        <AlertCircle className="h-3 w-3 inline mr-1" />
-                        Apenas vendas pendentes podem ser excluídas
-                      </p>
-                    </div>
-                  )}
                   </div>
                 </CardContent>
               </Card>
@@ -1244,11 +1235,16 @@ export default function Vendas() {
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-red-500" />
-              <span>Confirmar Exclusão</span>
+              <span>Confirmar Cancelamento</span>
             </DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir a venda #{vendaSelecionada?.numero_venda}? 
+              Tem certeza que deseja cancelar a venda #{vendaSelecionada?.numero_venda}? 
               Esta ação não pode ser desfeita e o estoque dos produtos será restaurado.
+              {vendaSelecionada?.metodos_pagamento && vendaSelecionada?.metodos_pagamento.length > 0 && vendaSelecionada?.pagamento_prazo && (
+                <span className="block mt-2 text-amber-600 font-medium">
+                  ⚠️ Esta venda possui pagamento múltiplo. Tanto a parte à vista quanto a parte a prazo serão canceladas automaticamente.
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2 mt-4">
