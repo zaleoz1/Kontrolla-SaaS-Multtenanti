@@ -34,7 +34,8 @@ export default function Funcionarios() {
     funcionarios, 
     carregando: carregandoFuncionarios, 
     buscarFuncionarios, 
-    excluirFuncionario 
+    excluirFuncionario,
+    gerarContasMensais
   } = useFuncionarios();
 
   // Estados para filtros e busca
@@ -43,6 +44,7 @@ export default function Funcionarios() {
   const [filtroCargoFuncionario, setFiltroCargoFuncionario] = useState("todos");
   const [abaAtiva, setAbaAtiva] = useState("funcionarios");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [gerandoContas, setGerandoContas] = useState(false);
   
 
   // Carregar funcionários quando o componente montar
@@ -136,6 +138,29 @@ export default function Funcionarios() {
     }
   };
 
+  const handleGerarContasMensais = async () => {
+    if (!confirm("Deseja gerar as contas de salário para este mês? Isso criará contas a pagar para todos os funcionários ativos.")) return;
+
+    try {
+      setGerandoContas(true);
+      const resultado = await gerarContasMensais();
+      
+      toast({
+        title: "Contas Geradas",
+        description: `${resultado.contasCriadas} contas criadas, ${resultado.contasExistentes} já existiam`,
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar contas mensais",
+        variant: "destructive"
+      });
+    } finally {
+      setGerandoContas(false);
+    }
+  };
+
 
   // Filtros são aplicados na API, então usamos os dados diretamente
   const funcionariosFiltrados = funcionarios;
@@ -156,7 +181,7 @@ export default function Funcionarios() {
       <ConfiguracoesSidebar
         activeTab={abaAtiva}
         onTabChange={handleMudarAba}
-        onLogout={handleLogout}
+
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -187,6 +212,26 @@ export default function Funcionarios() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+              <Button 
+                onClick={handleGerarContasMensais} 
+                disabled={gerandoContas}
+                variant="outline"
+                className="text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none"
+              >
+                {gerandoContas ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-primary mr-1 sm:mr-2"></div>
+                    <span className="hidden sm:inline">Gerando...</span>
+                    <span className="sm:hidden">Gerando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Gerar Contas Mensais</span>
+                    <span className="sm:hidden">Contas</span>
+                  </>
+                )}
+              </Button>
               <Button onClick={handleNovoFuncionario} className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none">
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Funcionário</span>

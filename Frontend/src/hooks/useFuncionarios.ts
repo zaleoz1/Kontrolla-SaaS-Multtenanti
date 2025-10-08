@@ -152,6 +152,30 @@ export function useFuncionarios() {
     }
   }, []);
 
+  const gerarContasMensais = useCallback(async (mes?: number, ano?: number) => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/funcionarios/gerar-contas-mensais`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ mes, ano })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao gerar contas mensais');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Erro ao gerar contas mensais:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     funcionarios,
     pagination,
@@ -162,6 +186,7 @@ export function useFuncionarios() {
     criarFuncionario,
     atualizarFuncionario,
     excluirFuncionario,
-    buscarCep
+    buscarCep,
+    gerarContasMensais
   };
 }
