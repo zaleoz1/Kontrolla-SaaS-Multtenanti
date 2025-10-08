@@ -1,0 +1,43 @@
+version: '3.8'
+
+# Override para desenvolvimento
+services:
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: kontrollapro
+      DB_USER: root
+      DB_PASSWORD: 12435687
+      JWT_SECRET: seu_jwt_secret_muito_seguro_aqui
+      CLOUDINARY_CLOUD_NAME: dko7s3u3j
+      CLOUDINARY_API_KEY: 754366869343179
+      CLOUDINARY_API_SECRET: 1uMokyb2NhuzefxNt1ocJm3yfAU
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USER: kontrollapro@gmail.com
+      EMAIL_PASS: kbuz yhdu hdku htaq
+    volumes:
+      - ./Backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:3000
+      VITE_GOOGLE_CLIENT_ID: 505635879481-974u3cn4qac3eeti5i9gjsreo3o315dp.apps.googleusercontent.com
+    volumes:
+      - ./Frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    ports:
+      - "5173:5173"
