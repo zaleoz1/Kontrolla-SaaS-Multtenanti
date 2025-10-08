@@ -56,9 +56,11 @@ const allowedOrigins = [
   'http://localhost:5173', // Vite dev server padrão
   'http://localhost:8080', // Vite dev server alternativo
   'http://localhost:3000', // React dev server
+  'http://localhost', // Frontend Docker
   'http://127.0.0.1:5173',
   'http://127.0.0.1:8080',
-  'http://127.0.0.1:3000'
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1'
 ];
 
 app.use(cors({
@@ -144,6 +146,26 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV
+  });
+});
+
+// Rota raiz da API
+app.get('/', (req, res) => {
+  res.json({
+    message: 'KontrollaPro API',
+    version: '1.0.0',
+    status: 'OK',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      clientes: '/api/clientes',
+      produtos: '/api/produtos',
+      vendas: '/api/vendas',
+      financeiro: '/api/financeiro',
+      relatorios: '/api/relatorios',
+      dashboard: '/api/dashboard',
+      catalogo: '/api/catalogo'
+    }
   });
 });
 
