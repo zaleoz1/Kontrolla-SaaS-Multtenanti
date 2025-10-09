@@ -1,17 +1,6 @@
-# 🚀 Deploy KontrollaPro no Integrator Host
+# 🚀 Guia de Deploy - Integrator Host
 
-## 📋 Resumo do Projeto
-
-O **KontrollaPro** é um sistema SaaS multitenanti completo para gestão de vendas e estoque, desenvolvido com:
-
-- **Backend**: Node.js + Express + MySQL
-- **Frontend**: React + TypeScript + Vite
-- **Infraestrutura**: Docker + Nginx + Redis
-- **Autenticação**: JWT + Google OAuth
-- **Upload**: Cloudinary
-- **Email**: Nodemailer
-
-## 🎯 Dados do Servidor
+## 📋 Informações do Servidor
 
 ```
 IP: 207.58.174.116
@@ -19,18 +8,19 @@ Usuário: root
 Senha: ny59QZejCNOX7HZ4
 Porta: 22
 Domínio: vps6150.panel.icontainer.run
+UUID: 15174
 ```
 
-## ⚡ Deploy Rápido (Recomendado)
+## ⚡ Deploy Automático (Recomendado)
 
 ### 1. Conectar ao Servidor
 ```bash
 ssh root@207.58.174.116
 ```
 
-### 2. Executar Deploy Automático
+### 2. Executar Deploy
 ```bash
-# Baixar e executar script de deploy específico para Integrator Host
+# Baixar e executar script específico para Integrator Host
 wget https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/deploy-integrator.sh
 chmod +x deploy-integrator.sh
 ./deploy-integrator.sh
@@ -41,68 +31,26 @@ chmod +x deploy-integrator.sh
 https://vps6150.panel.icontainer.run
 ```
 
-## 🔧 Deploy Completo (Com SSL)
+## 🔧 O que o Script Faz
 
-### 1. Configurar Servidor
-```bash
-# Baixar e executar configuração do servidor
-wget https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/setup-server.sh
-chmod +x setup-server.sh
-./setup-server.sh
-```
+### Configurações Automáticas
+- ✅ **Sistema**: Atualização e dependências
+- ✅ **Docker**: Instalação e configuração
+- ✅ **Firewall**: UFW configurado
+- ✅ **SSL**: Let's Encrypt automático
+- ✅ **Backup**: Automático diário
+- ✅ **Monitoramento**: Scripts de verificação
 
-### 2. Deploy da Aplicação
-```bash
-# Baixar e executar deploy completo
-wget https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/deploy.sh
-chmod +x deploy.sh
-./deploy.sh
-```
-
-### 3. SSL Automático
-O SSL é configurado automaticamente com Let's Encrypt para o domínio `vps6150.panel.icontainer.run`
-
-## 🐳 Estrutura dos Containers
-
-| Container | Porta | Descrição |
-|-----------|-------|-----------|
-| `kontrolla-mysql-prod` | 3306 | Banco de dados MySQL |
-| `kontrolla-backend-prod` | 3000 | API Node.js |
-| `kontrolla-frontend-prod` | 80/443 | Interface React |
-| `kontrolla-redis-prod` | 6379 | Cache Redis |
-| `kontrolla-nginx-prod` | 80/443 | Proxy reverso |
-
-## ⚙️ Configurações Principais
-
-### Variáveis de Ambiente
-```bash
-# Banco de dados
-MYSQL_ROOT_PASSWORD=KontrollaPro2024!Secure
-MYSQL_DATABASE=kontrollapro
-MYSQL_USER=kontrolla_user
-MYSQL_PASSWORD=KontrollaUser2024!Secure
-
-# JWT
-JWT_SECRET=KontrollaPro_JWT_Secret_2024_Very_Secure_Key_For_Production_Environment
-
-# Email (Gmail)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_USER=kontrollapro@gmail.com
-EMAIL_PASS=kbuz yhdu hdku htaq
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=dko7s3u3j
-CLOUDINARY_API_KEY=754366869343179
-CLOUDINARY_API_SECRET=1uMokyb2NhuzefxNt1ocJm3yfAU
-
-# Google OAuth
-GOOGLE_CLIENT_ID=505635879481-974u3cn4qac3eeti5i9gjsreo3o315dp.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
-```
+### Containers Criados
+- `kontrolla-mysql-prod` - Banco de dados
+- `kontrolla-backend-prod` - API Node.js
+- `kontrolla-frontend-prod` - Interface React
+- `kontrolla-redis-prod` - Cache Redis
+- `kontrolla-nginx-prod` - Proxy reverso
 
 ## 🛠️ Comandos de Gerenciamento
 
-### Script de Gerenciamento
+### Script Principal
 ```bash
 # Localização: /opt/kontrollapro/manage.sh
 
@@ -123,6 +71,12 @@ GOOGLE_CLIENT_SECRET=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
 
 # Atualizar aplicação
 ./manage.sh update
+
+# Fazer backup
+./manage.sh backup
+
+# Renovar SSL
+./manage.sh ssl-renew
 ```
 
 ### Comandos Docker
@@ -135,26 +89,30 @@ docker-compose -f docker-compose.prod.yml logs -f
 
 # Reiniciar um serviço específico
 docker-compose -f docker-compose.prod.yml restart backend
-
-# Parar todos os serviços
-docker-compose -f docker-compose.prod.yml down
-
-# Iniciar todos os serviços
-docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ## 🔒 Segurança Configurada
 
-- ✅ Firewall (UFW) configurado
-- ✅ Fail2ban para proteção SSH
-- ✅ SSL/HTTPS com Let's Encrypt
+### Firewall (UFW)
+- ✅ Porta 22 (SSH)
+- ✅ Porta 80 (HTTP)
+- ✅ Porta 443 (HTTPS)
+- ✅ Porta 3000 (Backend - interno)
+
+### SSL/HTTPS
+- ✅ Certificado Let's Encrypt
+- ✅ Renovação automática
+- ✅ Redirecionamento HTTP → HTTPS
 - ✅ Headers de segurança
-- ✅ Rate limiting
-- ✅ Usuários não-root nos containers
+
+### Fail2ban
+- ✅ Proteção SSH
+- ✅ Bloqueio automático de IPs suspeitos
+- ✅ Configuração otimizada
 
 ## 📊 Monitoramento
 
-### Scripts Disponíveis
+### Scripts de Verificação
 ```bash
 # Status geral do sistema
 kontrolla-status
@@ -168,7 +126,7 @@ df -h
 free -h
 ```
 
-### Logs
+### Logs Disponíveis
 - **Nginx**: `/opt/kontrollapro/nginx/logs/`
 - **Backend**: `docker-compose -f docker-compose.prod.yml logs backend`
 - **Frontend**: `docker-compose -f docker-compose.prod.yml logs frontend`
@@ -176,10 +134,41 @@ free -h
 
 ## 💾 Backup Automático
 
-- ✅ Backup diário do banco de dados
-- ✅ Backup dos arquivos de upload
+### Configuração
+- ✅ Backup diário às 2:00 AM
+- ✅ Banco de dados MySQL
+- ✅ Arquivos de upload
 - ✅ Retenção de 30 dias
-- ✅ Limpeza automática de logs antigos
+- ✅ Limpeza automática
+
+### Backup Manual
+```bash
+# Executar backup manual
+/opt/kontrollapro/backup.sh
+
+# Restaurar banco de dados
+docker exec -i kontrolla-mysql-prod mysql -u root -p$MYSQL_ROOT_PASSWORD $MYSQL_DATABASE < backup.sql
+```
+
+## 🔄 Atualizações
+
+### Atualizar Aplicação
+```bash
+cd /opt/kontrollapro
+git pull origin main
+./manage.sh update
+```
+
+### Atualizar Dependências
+```bash
+# Backend
+cd /opt/kontrollapro/Backend
+docker-compose -f ../docker-compose.prod.yml build backend --no-cache
+
+# Frontend
+cd /opt/kontrollapro/Frontend
+docker-compose -f ../docker-compose.prod.yml build frontend --no-cache
+```
 
 ## 🚨 Troubleshooting
 
@@ -197,15 +186,6 @@ docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml restart [nome-do-container]
 ```
 
-#### Banco de dados não conecta
-```bash
-# Verificar se MySQL está rodando
-docker-compose -f docker-compose.prod.yml logs mysql
-
-# Testar conexão
-docker exec -it kontrolla-mysql-prod mysql -u root -p
-```
-
 #### SSL não funciona
 ```bash
 # Verificar certificados
@@ -218,6 +198,15 @@ certbot renew --dry-run
 docker-compose -f docker-compose.prod.yml logs nginx
 ```
 
+#### Banco de dados não conecta
+```bash
+# Verificar se MySQL está rodando
+docker-compose -f docker-compose.prod.yml logs mysql
+
+# Testar conexão
+docker exec -it kontrolla-mysql-prod mysql -u root -p
+```
+
 ## 📁 Estrutura de Arquivos
 
 ```
@@ -225,16 +214,15 @@ docker-compose -f docker-compose.prod.yml logs nginx
 ├── Backend/                 # Código do backend
 ├── Frontend/                # Código do frontend
 ├── nginx/                   # Configurações Nginx
-│   ├── nginx.conf
-│   ├── nginx-ssl.conf
+│   ├── nginx-ssl.conf       # Configuração SSL
 │   └── ssl/                 # Certificados SSL
 ├── mysql-init/              # Scripts de inicialização MySQL
 ├── backups/                 # Backups automáticos
 ├── docker-compose.prod.yml  # Configuração Docker
 ├── .env                     # Variáveis de ambiente
 ├── manage.sh                # Script de gerenciamento
-├── ssl-setup.sh             # Script de configuração SSL
-└── backup.sh                # Script de backup
+├── backup.sh                # Script de backup
+└── ssl-renew.sh             # Script de renovação SSL
 ```
 
 ## 🎯 Funcionalidades do Sistema
@@ -258,39 +246,6 @@ docker-compose -f docker-compose.prod.yml logs nginx
 - ✅ **SSL**: HTTPS obrigatório
 - ✅ **Responsivo**: Mobile-first
 
-## 🔄 Atualizações
-
-### Atualizar Aplicação
-```bash
-cd /opt/kontrollapro
-git pull origin main
-./manage.sh update
-```
-
-### Atualizar Dependências
-```bash
-# Backend
-cd /opt/kontrollapro/Backend
-docker-compose -f ../docker-compose.prod.yml build backend --no-cache
-
-# Frontend
-cd /opt/kontrollapro/Frontend
-docker-compose -f ../docker-compose.prod.yml build frontend --no-cache
-```
-
-## ✅ Checklist de Deploy
-
-- [ ] Servidor configurado
-- [ ] Docker e Docker Compose instalados
-- [ ] Aplicação deployada
-- [ ] Banco de dados funcionando
-- [ ] Frontend acessível
-- [ ] API respondendo
-- [ ] SSL configurado (se aplicável)
-- [ ] Backup configurado
-- [ ] Monitoramento ativo
-- [ ] Testes realizados
-
 ## 📞 Suporte
 
 ### Informações do Sistema
@@ -302,6 +257,19 @@ docker-compose -f ../docker-compose.prod.yml build frontend --no-cache
 ### Contatos
 - **Email**: suporte@kontrollapro.com
 - **GitHub**: https://github.com/zaleoz1/Kontrolla-SaaS-Multtenanti
+
+## ✅ Checklist de Deploy
+
+- [ ] Servidor configurado
+- [ ] Docker e Docker Compose instalados
+- [ ] Aplicação deployada
+- [ ] Banco de dados funcionando
+- [ ] Frontend acessível
+- [ ] API respondendo
+- [ ] SSL configurado
+- [ ] Backup configurado
+- [ ] Monitoramento ativo
+- [ ] Testes realizados
 
 ---
 
