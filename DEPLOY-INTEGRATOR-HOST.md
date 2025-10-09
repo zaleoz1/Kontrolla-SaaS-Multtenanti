@@ -1,311 +1,322 @@
-# 🚀 Deploy no Integrator Host - KontrollaPro
+# 🚀 Deploy KontrollaPro no Integrator Host
 
-## 📋 Informações do Servidor
+Este guia detalha como hospedar o sistema KontrollaPro SaaS Multitenanti no Integrator Host.
 
-- **IP**: 207.58.174.116
-- **Usuário SSH**: root
-- **Senha SSH**: ny59QZejCNOX7HZ4
-- **Domínio**: vps6150.panel.icontainer.run
-- **Painel ICP**: https://vps6150.panel.icontainer.run:2090/admin
-- **Usuário ICP**: vps6150
-- **Senha ICP**: kiu07SGHExnMt
+## 📋 Pré-requisitos
 
-## ⚡ Deploy Rápido (Recomendado)
+- Servidor VPS com Ubuntu 20.04+ ou Debian 11+
+- Acesso SSH como root
+- Domínio configurado (opcional, mas recomendado)
+- Pelo menos 2GB RAM e 20GB de espaço em disco
+
+## 🔧 Dados de Acesso do Servidor
+
+```
+IP SSH: 207.58.174.116
+Usuário: root
+Porta: 22
+Senha: ny59QZejCNOX7HZ4
+```
+
+## 📦 Passo a Passo do Deploy
 
 ### 1. Conectar ao Servidor
 
 ```bash
 ssh root@207.58.174.116
-# Senha: ny59QZejCNOX7HZ4
 ```
 
-### 2. Executar Deploy Automático
+### 2. Configurar Servidor
 
 ```bash
-# Baixar e executar o script de deploy
-curl -O https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/scripts/deploy-integrator.sh
-chmod +x deploy-integrator.sh
-./deploy-integrator.sh seu-email@dominio.com
-```
-
-**Substitua:**
-- `seu-email@dominio.com` pelo seu email real
-
-## 🔧 Deploy Manual
-
-### 1. Configurar Servidor
-
-```bash
-# Baixar script de configuração
-curl -O https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/scripts/setup-server.sh
+# Baixar e executar script de configuração
+wget https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/setup-server.sh
 chmod +x setup-server.sh
 ./setup-server.sh
 ```
 
-### 2. Clonar Repositório
+### 3. Deploy da Aplicação
 
 ```bash
-cd /opt
-git clone https://github.com/zaleoz1/Kontrolla-SaaS-Multtenanti.git kontrollapro
-cd kontrollapro
+# Baixar e executar script de deploy
+wget https://raw.githubusercontent.com/zaleoz1/Kontrolla-SaaS-Multtenanti/main/deploy.sh
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-### 3. Configurar Ambiente
+### 4. Configurar SSL (Opcional)
 
 ```bash
-# Copiar arquivo de ambiente
-cp env.production .env
-
-# Editar configurações
-nano .env
+# Para configurar SSL com Let's Encrypt
+./ssl-setup.sh seu-dominio.com admin@seu-dominio.com
 ```
 
-**Configure as seguintes variáveis no arquivo `.env`:**
+## 🐳 Estrutura dos Containers
+
+O sistema utiliza Docker Compose com os seguintes serviços:
+
+- **MySQL 8.0**: Banco de dados principal
+- **Backend Node.js**: API REST
+- **Frontend React**: Interface web
+- **Redis**: Cache e sessões
+- **Nginx**: Proxy reverso e servidor web
+
+## ⚙️ Configurações de Produção
+
+### Variáveis de Ambiente
+
+As configurações estão no arquivo `env.production`:
 
 ```bash
-# Banco de dados (senhas serão geradas automaticamente)
-DB_PASSWORD=sua_senha_super_segura
-MYSQL_ROOT_PASSWORD=sua_senha_super_segura
+# Banco de dados
+MYSQL_ROOT_PASSWORD=KontrollaPro2024!Secure
+MYSQL_DATABASE=kontrollapro
+MYSQL_USER=kontrolla_user
+MYSQL_PASSWORD=KontrollaUser2024!Secure
 
-# Autenticação
-JWT_SECRET=sua_chave_jwt_super_segura
+# JWT
+JWT_SECRET=KontrollaPro_JWT_Secret_2024_Very_Secure_Key_For_Production_Environment
 
-# Email (Gmail) - OBRIGATÓRIO
-EMAIL_USER=seu-email@gmail.com
-EMAIL_PASS=sua_senha_app_gmail
+# Email
+EMAIL_HOST=smtp.gmail.com
+EMAIL_USER=kontrollapro@gmail.com
+EMAIL_PASS=kbuz yhdu hdku htaq
 
-# Cloudinary - OBRIGATÓRIO
-CLOUDINARY_CLOUD_NAME=seu_cloud_name
-CLOUDINARY_API_KEY=sua_api_key
-CLOUDINARY_API_SECRET=sua_api_secret
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=dko7s3u3j
+CLOUDINARY_API_KEY=754366869343179
+CLOUDINARY_API_SECRET=1uMokyb2NhuzefxNt1ocJm3yfAU
 
-# Google OAuth - OBRIGATÓRIO
-GOOGLE_CLIENT_ID=seu_google_client_id
-GOOGLE_CLIENT_SECRET=seu_google_client_secret
-
-# Domínio (já configurado)
-CORS_ORIGIN=https://vps6150.panel.icontainer.run
+# Google OAuth
+GOOGLE_CLIENT_ID=505635879481-974u3cn4qac3eeti5i9gjsreo3o315dp.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
 ```
 
-### 4. Deploy da Aplicação
+## 🛠️ Comandos de Gerenciamento
+
+### Script de Gerenciamento
 
 ```bash
-# Executar deploy
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-```
+# Localização: /opt/kontrollapro/manage.sh
 
-### 5. Configurar SSL
+# Iniciar serviços
+./manage.sh start
 
-```bash
-# Configurar SSL com Let's Encrypt
-chmod +x scripts/ssl-setup.sh
-./scripts/ssl-setup.sh vps6150.panel.icontainer.run seu-email@dominio.com
-```
+# Parar serviços
+./manage.sh stop
 
-## 🔑 Credenciais Necessárias
+# Reiniciar serviços
+./manage.sh restart
 
-### Obrigatórias para Funcionamento
+# Ver logs
+./manage.sh logs
 
-1. **Gmail SMTP** (para envio de emails)
-   - Ative a verificação em 2 etapas
-   - Gere uma senha de app
-   - Use no campo `EMAIL_PASS`
-
-2. **Cloudinary** (para upload de imagens)
-   - Crie conta em [cloudinary.com](https://cloudinary.com)
-   - Obtenha as credenciais no dashboard
-
-3. **Google OAuth** (para login social)
-   - Acesse [Google Cloud Console](https://console.cloud.google.com)
-   - Crie um projeto
-   - Ative a Google+ API
-   - Crie credenciais OAuth 2.0
-   - Configure URL de redirecionamento: `https://vps6150.panel.icontainer.run/api/auth/google/callback`
-
-### Opcionais
-
-- **Certificado SSL personalizado**
-
-## 🌐 Acesso à Aplicação
-
-### URLs da Aplicação
-
-- **🌐 Frontend**: https://vps6150.panel.icontainer.run
-- **🔌 API**: https://vps6150.panel.icontainer.run/api
-- **⚙️ Admin**: https://vps6150.panel.icontainer.run/admin
-
-### Painel ICP
-
-- **🎛️ Painel**: https://vps6150.panel.icontainer.run:2090/admin
-- **Usuário**: vps6150
-- **Senha**: kiu07SGHExnMt
-
-## 🔧 Comandos Úteis
-
-### Gerenciar Aplicação
-
-```bash
 # Ver status
+./manage.sh status
+
+# Atualizar aplicação
+./manage.sh update
+
+# Fazer backup
+./manage.sh backup
+```
+
+### Comandos Docker Diretos
+
+```bash
+# Ver status dos containers
 docker-compose -f docker-compose.prod.yml ps
 
 # Ver logs
 docker-compose -f docker-compose.prod.yml logs -f
 
-# Reiniciar
-docker-compose -f docker-compose.prod.yml restart
+# Reiniciar um serviço específico
+docker-compose -f docker-compose.prod.yml restart backend
 
-# Parar
+# Parar todos os serviços
 docker-compose -f docker-compose.prod.yml down
 
-# Iniciar
+# Iniciar todos os serviços
 docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Backup
-
-```bash
-# Backup manual
-/usr/local/bin/kontrolla-backup.sh
-
-# Verificar backups
-ls -la /opt/backups/kontrollapro/
-```
-
-### Monitoramento
-
-```bash
-# Verificar saúde
-curl -f https://vps6150.panel.icontainer.run/health
-
-# Ver logs em tempo real
-docker-compose -f docker-compose.prod.yml logs -f backend
-
-# Verificar recursos
-docker stats
-```
-
-## 🚨 Solução de Problemas
-
-### Container não inicia
-
-```bash
-# Ver logs do container
-docker-compose -f docker-compose.prod.yml logs nome_do_container
-
-# Verificar status
-docker ps -a
-```
-
-### Banco de dados não conecta
-
-```bash
-# Verificar se MySQL está rodando
-docker exec kontrolla-mysql-prod mysql -u root -p -e "SHOW DATABASES;"
-
-# Ver logs do MySQL
-docker-compose -f docker-compose.prod.yml logs mysql
-```
-
-### SSL não funciona
-
-```bash
-# Verificar certificados
-certbot certificates
-
-# Renovar manualmente
-certbot renew
-
-# Verificar configuração
-docker-compose -f docker-compose.prod.yml logs nginx
-```
-
-### Aplicação não carrega
-
-```bash
-# Verificar todos os containers
-docker-compose -f docker-compose.prod.yml ps
-
-# Verificar logs do Nginx
-docker-compose -f docker-compose.prod.yml logs nginx
-
-# Testar conectividade
-curl -I https://vps6150.panel.icontainer.run
-```
-
-## 📊 Monitoramento
-
-### Health Checks
-
-- **Backend**: `http://localhost:3000/health`
-- **Frontend**: `http://localhost:80`
-- **MySQL**: `mysqladmin ping`
-- **Redis**: `redis-cli ping`
-
-### Logs
-
-```bash
-# Todos os serviços
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Serviço específico
-docker-compose -f docker-compose.prod.yml logs -f backend
 ```
 
 ## 🔒 Segurança
 
 ### Firewall Configurado
 
-- ✅ Porta 22 (SSH)
-- ✅ Porta 80 (HTTP)
-- ✅ Porta 443 (HTTPS)
-- ✅ Porta 3000 (Backend - interno)
+- Porta 22 (SSH)
+- Porta 80 (HTTP)
+- Porta 443 (HTTPS)
+- Porta 3000 (Backend - apenas interno)
 
-### SSL/TLS
+### Fail2ban
 
-- ✅ Certificado Let's Encrypt
-- ✅ Renovação automática
-- ✅ HSTS habilitado
+- Proteção contra ataques de força bruta
+- Bloqueio automático de IPs suspeitos
+- Configurado para SSH e Nginx
+
+### SSL/HTTPS
+
+- Certificados Let's Encrypt
+- Renovação automática
+- Headers de segurança configurados
+- Redirecionamento HTTP → HTTPS
+
+## 📊 Monitoramento
+
+### Scripts de Monitoramento
+
+```bash
+# Status geral do sistema
+kontrolla-status
+
+# Verificar logs de erro
+docker-compose -f docker-compose.prod.yml logs --tail=100 | grep ERROR
+
+# Verificar uso de recursos
+htop
+df -h
+free -h
+```
+
+### Logs
+
+- **Nginx**: `/opt/kontrollapro/nginx/logs/`
+- **Backend**: `docker-compose -f docker-compose.prod.yml logs backend`
+- **Frontend**: `docker-compose -f docker-compose.prod.yml logs frontend`
+- **MySQL**: `docker-compose -f docker-compose.prod.yml logs mysql`
+
+## 💾 Backup
 
 ### Backup Automático
 
-- ✅ Backup diário às 2h da manhã
-- ✅ Retenção de 7 dias
-- ✅ Backup do banco e arquivos
+- Executado diariamente às 2:00 AM
+- Backup do banco de dados MySQL
+- Backup dos arquivos de upload
+- Retenção de 30 dias
+
+### Backup Manual
+
+```bash
+# Executar backup manual
+/opt/kontrollapro/backup.sh
+
+# Restaurar banco de dados
+docker exec -i kontrolla-mysql-prod mysql -u root -p$MYSQL_ROOT_PASSWORD $MYSQL_DATABASE < backup.sql
+```
+
+## 🔄 Atualizações
+
+### Atualizar Aplicação
+
+```bash
+# Atualizar código
+cd /opt/kontrollapro
+git pull origin main
+
+# Reconstruir e reiniciar
+./manage.sh update
+```
+
+### Atualizar Dependências
+
+```bash
+# Atualizar dependências do backend
+cd /opt/kontrollapro/Backend
+docker-compose -f ../docker-compose.prod.yml build backend --no-cache
+
+# Atualizar dependências do frontend
+cd /opt/kontrollapro/Frontend
+docker-compose -f ../docker-compose.prod.yml build frontend --no-cache
+```
+
+## 🚨 Troubleshooting
+
+### Problemas Comuns
+
+#### Container não inicia
+
+```bash
+# Verificar logs
+docker-compose -f docker-compose.prod.yml logs [nome-do-container]
+
+# Verificar status
+docker-compose -f docker-compose.prod.yml ps
+
+# Reiniciar container
+docker-compose -f docker-compose.prod.yml restart [nome-do-container]
+```
+
+#### Banco de dados não conecta
+
+```bash
+# Verificar se MySQL está rodando
+docker-compose -f docker-compose.prod.yml logs mysql
+
+# Testar conexão
+docker exec -it kontrolla-mysql-prod mysql -u root -p
+```
+
+#### SSL não funciona
+
+```bash
+# Verificar certificados
+ls -la /opt/kontrollapro/nginx/ssl/
+
+# Testar renovação
+certbot renew --dry-run
+
+# Verificar configuração Nginx
+docker-compose -f docker-compose.prod.yml logs nginx
+```
+
+### Logs de Debug
+
+```bash
+# Ativar logs detalhados
+export LOG_LEVEL=debug
+docker-compose -f docker-compose.prod.yml restart backend
+
+# Ver logs em tempo real
+docker-compose -f docker-compose.prod.yml logs -f --tail=100
+```
 
 ## 📞 Suporte
 
-### Integrator Host
+### Informações do Sistema
 
-- **Painel ICP**: https://vps6150.panel.icontainer.run:2090/admin
-- **Usuário**: vps6150
-- **Senha**: kiu07SGHExnMt
+- **Diretório**: `/opt/kontrollapro`
+- **Logs**: `/opt/kontrollapro/nginx/logs/`
+- **Backups**: `/opt/kontrollapro/backups/`
+- **SSL**: `/opt/kontrollapro/nginx/ssl/`
 
-### Documentação
+### Contatos
 
-- **Guia Completo**: [DEPLOY-GUIDE.md](DEPLOY-GUIDE.md)
-- **Instruções**: [INSTRUCOES-DEPLOY.md](INSTRUCOES-DEPLOY.md)
-- **Painel ICP**: [PAINEL-ICP.md](PAINEL-ICP.md)
+- **Email**: suporte@kontrollapro.com
 - **GitHub**: https://github.com/zaleoz1/Kontrolla-SaaS-Multtenanti
+- **Documentação**: Este arquivo
 
-## 🎯 Checklist de Deploy
+## 🎯 Próximos Passos
+
+1. **Configurar domínio** (se ainda não configurado)
+2. **Configurar SSL** com `./ssl-setup.sh`
+3. **Testar todas as funcionalidades**
+4. **Configurar monitoramento adicional** (opcional)
+5. **Configurar backup em nuvem** (opcional)
+
+## ✅ Checklist de Deploy
 
 - [ ] Servidor configurado
-- [ ] Repositório clonado
-- [ ] Variáveis de ambiente configuradas
-- [ ] SSL configurado
-- [ ] Aplicação rodando
+- [ ] Docker e Docker Compose instalados
+- [ ] Aplicação deployada
+- [ ] Banco de dados funcionando
+- [ ] Frontend acessível
+- [ ] API respondendo
+- [ ] SSL configurado (se aplicável)
 - [ ] Backup configurado
 - [ ] Monitoramento ativo
-
-## 🎉 Deploy Concluído!
-
-Sua aplicação estará disponível em:
-
-- **🌐 Frontend**: https://vps6150.panel.icontainer.run
-- **🔌 API**: https://vps6150.panel.icontainer.run/api
-- **⚙️ Admin**: https://vps6150.panel.icontainer.run/admin
+- [ ] Testes realizados
 
 ---
 
-**📝 Nota**: Execute o script `deploy-integrator.sh` para fazer o deploy completo automaticamente, ou siga os passos manuais acima.
+**🎉 Parabéns! Seu KontrollaPro está rodando em produção!**
