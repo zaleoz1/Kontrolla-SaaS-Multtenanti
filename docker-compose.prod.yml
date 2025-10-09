@@ -181,24 +181,12 @@ services:
 volumes:
   mysql_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/kontrolla/mysql
   
   redis_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/kontrolla/redis
   
   uploads_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/kontrolla/uploads
   
   logs_data:
     driver: local
