@@ -60,7 +60,9 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://127.0.0.1:8080',
   'http://127.0.0.1:3000',
-  'http://127.0.0.1'
+  'http://127.0.0.1',
+  'http://vps6150.panel.icontainer.run', // Produção VPS
+  'https://vps6150.panel.icontainer.run' // Produção VPS HTTPS (futuro)
 ];
 
 app.use(cors({
