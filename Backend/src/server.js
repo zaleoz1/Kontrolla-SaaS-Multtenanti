@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import compression from 'compression';
+import compression from 'compression';   
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+import rateLimit from 'express-rate-limit';          
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import { fileURLToPath } from 'url';      
+import fs from 'fs';       
 
 // Importar rotas
 import authRoutes from './routes/auth.js';
@@ -28,10 +28,6 @@ import notificationsRoutes from './routes/notifications.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 
-// Importar configuração do banco
-import { testConnection } from './database/connection.js';
-import runMigrations from './database/migrate.js';
-
 // Configurar dotenv
 dotenv.config();
 
@@ -40,9 +36,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Configurar trust proxy para funcionar com nginx
-app.set('trust proxy', true);
 
 // Middleware de segurança
 app.use(helmet());
@@ -67,17 +60,8 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://127.0.0.1:8080',
   'http://127.0.0.1:3000',
-  'http://127.0.0.1',
-  // URLs de produção
-  'https://vps6150.panel.icontainer.run',
-  'http://vps6150.panel.icontainer.run'
+  'http://127.0.0.1'
 ];
-
-// Adicionar origins do CORS_ORIGIN se definido
-if (process.env.CORS_ORIGIN) {
-  const corsOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
-  allowedOrigins.push(...corsOrigins);
-}
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -91,14 +75,13 @@ app.use(cors({
       if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
         callback(null, true);
       } else {
-        console.log('CORS bloqueado para origin:', origin);
         callback(new Error('Não permitido pelo CORS'));
       }
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Forwarded-For', 'X-Real-IP']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Middleware de rate limiting (mais permissivo para desenvolvimento)
@@ -207,35 +190,11 @@ app.use(notFound);
 // Middleware de tratamento de erros
 app.use(errorHandler);
 
-// Função para inicializar o servidor
-const startServer = async () => {
-  try {
-    // Testar conexão com o banco
-    console.log('🔄 Testando conexão com o banco de dados...');
-    const connected = await testConnection();
-    
-    if (!connected) {
-      console.error('❌ Falha na conexão com o banco de dados');
-      process.exit(1);
-    }
-    
-    // Executar migrações
-    console.log('🔄 Executando migrações do banco de dados...');
-    await runMigrations();
-    
-    // Iniciar servidor
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor rodando na porta ${PORT}`);
-      console.log(`📊 Ambiente: ${process.env.NODE_ENV}`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-    });
-  } catch (error) {
-    console.error('❌ Erro ao inicializar servidor:', error);
-    process.exit(1);
-  }
-};
-
 // Iniciar servidor
-startServer();
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`📊 Ambiente: ${process.env.NODE_ENV}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+});
 
 export default app;
