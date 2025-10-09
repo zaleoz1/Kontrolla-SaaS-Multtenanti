@@ -79,7 +79,9 @@
       "protocols": [
         {
           "name": "KontrollaPro Protocol",
-          "schemes": ["kontrollapro"]
+          "schemes": [
+            "kontrollapro"
+          ]
         }
       ],
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
@@ -110,7 +112,9 @@
       "license": "assets/license.txt",
       "guid": "550e8400-e29b-41d4-a716-446655440000",
       "language": "1046",
-      "installerLanguages": ["pt_BR"],
+      "installerLanguages": [
+        "pt_BR"
+      ],
       "multiLanguageInstaller": false,
       "packElevateHelper": true,
       "perMachine": true,
@@ -124,6 +128,7 @@
     "compression": "normal"
   },
   "devDependencies": {
+    "cli-progress": "^3.12.0",
     "concurrently": "^8.2.2",
     "electron": "^28.0.0",
     "electron-builder": "^24.13.3",
