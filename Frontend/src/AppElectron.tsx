@@ -93,16 +93,28 @@ function AppContent() {
 
 const App = () => {
   // Debug: Log the Google Client ID
-  console.log('🔑 Google Client ID (Electron):', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  console.log('🔑 Google Client ID (Electron):', googleClientId);
+  
+  // Only render GoogleOAuthProvider if we have a valid client ID
+  if (!googleClientId) {
+    console.warn('⚠️ VITE_GOOGLE_CLIENT_ID not found in environment variables');
+  }
   
   return (
     <QueryClientProvider client={clienteQuery}>
       <TooltipProvider>
-        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+        {googleClientId ? (
+          <GoogleOAuthProvider clientId={googleClientId}>
+            <OperadorProvider>
+              <AppContent />
+            </OperadorProvider>
+          </GoogleOAuthProvider>
+        ) : (
           <OperadorProvider>
             <AppContent />
           </OperadorProvider>
-        </GoogleOAuthProvider>
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   );

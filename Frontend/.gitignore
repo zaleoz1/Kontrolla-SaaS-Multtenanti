@@ -15,10 +15,16 @@ dist/
 dist-ssr/
 
 # Environment variables
+# .env is allowed (contains non-sensitive config)
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Sensitive environment files (never commit these)
+.env.secrets
+.env.production
+.env.staging
 
 # Editor directories and files
 .vscode/*

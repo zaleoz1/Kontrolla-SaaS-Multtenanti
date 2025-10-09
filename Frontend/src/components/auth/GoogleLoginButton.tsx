@@ -25,6 +25,21 @@ export function GoogleLoginButton({
   const navigate = useNavigate();
   const { loginWithGoogle } = useAuth();
 
+  // Check if Google OAuth is available
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  
+  if (!googleClientId) {
+    console.warn('⚠️ Google OAuth not configured - VITE_GOOGLE_CLIENT_ID not found');
+    return (
+      <div className={`flex justify-center ${className}`}>
+        <div className="text-center p-4 text-gray-500">
+          <p>Google OAuth não configurado</p>
+          <p className="text-sm">Configure VITE_GOOGLE_CLIENT_ID no arquivo .env</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
       console.log('🎫 Credencial Google recebida:', credentialResponse);
@@ -90,6 +105,21 @@ export function GoogleLoginButtonCustom({
 }: GoogleLoginButtonProps) {
   const navigate = useNavigate();
   const { loginWithGoogle } = useAuth();
+
+  // Check if Google OAuth is available
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  
+  if (!googleClientId) {
+    console.warn('⚠️ Google OAuth not configured - VITE_GOOGLE_CLIENT_ID not found');
+    return (
+      <div className={`flex justify-center ${className}`}>
+        <div className="text-center p-4 text-gray-500">
+          <p>Google OAuth não configurado</p>
+          <p className="text-sm">Configure VITE_GOOGLE_CLIENT_ID no arquivo .env</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleGoogleLogin = async () => {
     try {
