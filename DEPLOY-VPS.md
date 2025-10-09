@@ -20,14 +20,44 @@
 - Docker Compose
 - Nginx
 - Certbot (Let's Encrypt)
-- UFW (Firewall)
+- Firewall configurado
 
-## 🚀 Deploy Automático
+## 🚀 Deploy Rápido
 
-### 1. Clone o repositório localmente:
+### Opção 1: Deploy Completo (Recomendado)
 ```bash
-git clone https://github.com/zaleoz1/Kontrolla-SaaS-Multtenanti.git
-cd Kontrolla-SaaS-Multtenanti
+# Conectar ao VPS
+ssh root@207.58.174.116
+
+# Clonar repositório
+git clone https://github.com/zaleoz1/Kontrolla-SaaS-Multtenanti.git /opt/kontrollapro
+cd /opt/kontrollapro
+
+# Copiar configurações de produção
+cp .env.production .env
+
+# Deploy completo
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Opção 2: Deploy Simplificado (Em caso de problemas)
+```bash
+# Use esta opção se houver problemas com volumes persistentes
+docker compose -f docker-compose.simple.yml up -d --build
+```
+
+## 🔧 Correções de Problemas Comuns
+
+### Problema com Volumes MySQL
+Se o MySQL não iniciar devido a problemas de volumes:
+
+```bash
+# Parar containers
+docker compose down -v
+
+# Usar versão simplificada
+docker compose -f docker-compose.simple.yml up -d --build
+```
 ```
 
 ### 2. Torne o script executável:
