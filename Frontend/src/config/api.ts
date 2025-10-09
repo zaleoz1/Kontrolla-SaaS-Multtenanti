@@ -1,6 +1,9 @@
 // Configuração da API
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  BASE_URL: import.meta.env.VITE_API_URL || 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000/api' 
+      : `${window.location.protocol}//${window.location.host}/api`),
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3,
 };
