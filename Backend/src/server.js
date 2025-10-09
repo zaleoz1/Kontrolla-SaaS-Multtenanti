@@ -31,11 +31,14 @@ import { notFound } from './middleware/notFound.js';
 // Configurar dotenv
 dotenv.config();
 
+// Importar configurações
+import config from './config/env.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.port;
 
 // Middleware de segurança
 app.use(helmet());
@@ -86,18 +89,18 @@ app.use(cors({
 
 // Middleware de rate limiting (mais permissivo para desenvolvimento)
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 1 * 60 * 1000, // 1 minuto
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limite de 1000 requests por IP
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.maxRequests,
   message: {
     error: 'Muitas tentativas. Tente novamente em alguns minutos.'
   },
   // Pular rate limiting em desenvolvimento
-  skip: (req) => process.env.NODE_ENV === 'development'
+  skip: (req) => config.nodeEnv === 'development'
 });
 app.use('/api/', limiter);
 
 // Middleware de logging
-app.use(morgan('combined'));
+app.use(morgan(config.log.format));
 
 // Middleware para parsing de JSON
 app.use(express.json({ limit: '10mb' }));
@@ -141,6 +144,16 @@ app.get('/api/download/:filename', (req, res) => {
 
 // Rota de health check
 app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV
+  });
+});
+
+// Rota de health check para Railway
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -193,8 +206,9 @@ app.use(errorHandler);
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📊 Ambiente: ${process.env.NODE_ENV}`);
+  console.log(`📊 Ambiente: ${config.nodeEnv}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔧 Configurações carregadas do arquivo: ${config.nodeEnv === 'production' ? 'env.production' : '.env'}`);
 });
 
 export default app;

@@ -1,136 +1,35 @@
 {
-  "name": "kontrollapro-desktop",
+  "name": "kontrollapro-saas",
   "version": "1.0.0",
-  "description": "KontrollaPro - Sistema SaaS Multitenanti Desktop",
-  "author": "KontrollaPro Team",
-  "main": "electron/main.js",
-  "homepage": "./",
-  "private": true,
+  "description": "Sistema SaaS Multitenanti KontrollaPro",
+  "main": "Backend/src/server.js",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:electron\"",
-    "dev:backend": "cd Backend && npm run dev",
-    "dev:frontend": "cd Frontend && npm run dev",
-    "dev:electron": "wait-on http://localhost:5173 && electron .",
-    "start:desktop": "node scripts/start-desktop.js",
-    "desktop": "node scripts/start-desktop.js",
-    "debug:electron": "node scripts/debug-electron.js",
-    "create:installer": "node scripts/create-nsis-installer.js",
-    "pack:simple": "npm run build:frontend && npm run build:backend && node scripts/create-valid-ico.js && npx electron-packager . KontrollaPro --platform=win32 --arch=x64 --out=dist-electron --icon=assets/app.ico --overwrite",
-    "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
-    "build:frontend": "node scripts/prepare-for-electron.js && cd Frontend && npm run build && node ../scripts/fix-electron-paths.js && node ../scripts/restore-app.js",
-    "build:backend": "cd Backend && npm install --production",
-    "build:electron": "electron-builder",
-    "dist": "npm run build && electron-builder --publish=never",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "pack": "npm run build && electron-builder --dir",
-    "postinstall": "electron-builder install-app-deps"
+    "start": "cd Backend && npm start",
+    "start:prod": "cd Backend && npm run start:prod",
+    "start:railway": "cd Backend && npm run start:railway",
+    "dev": "concurrently \"cd Backend && npm run dev\" \"cd Frontend && npm run dev\"",
+    "build": "cd Frontend && npm run build",
+    "install:all": "npm install && cd Backend && npm install && cd ../Frontend && npm install",
+    "setup": "cd Backend && npm run setup",
+    "migrate": "cd Backend && npm run migrate",
+    "seed": "cd Backend && npm run seed",
+    "generate-secrets": "node generate-secrets.js",
+    "railway:deploy": "railway up",
+    "railway:logs": "railway logs",
+    "railway:shell": "railway shell"
   },
-  "build": {
-    "appId": "com.kontrollapro.desktop",
-    "productName": "KontrollaPro",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "electron/**/*",
-      "Backend/**/*",
-      "Frontend/dist/**/*",
-      "node_modules/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "Backend",
-        "to": "Backend",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "assets/app.ico",
-      "requestedExecutionLevel": "requireAdministrator",
-      "sign": false,
-      "verifyUpdateCodeSignature": false,
-      "publisherName": "KontrollaPro Team",
-      "fileAssociations": [
-        {
-          "ext": "kontrolla",
-          "name": "KontrollaPro Document",
-          "description": "Documento do KontrollaPro",
-          "icon": "assets/app.ico"
-        }
-      ],
-      "protocols": [
-        {
-          "name": "KontrollaPro Protocol",
-          "schemes": ["kontrollapro"]
-        }
-      ],
-      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/app.ico",
-      "category": "public.app-category.business",
-      "sign": false
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/app.ico",
-      "category": "Office"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "assets/app.ico",
-      "uninstallerIcon": "assets/app.ico",
-      "installerHeaderIcon": "assets/app.ico",
-      "runAfterFinish": true,
-      "menuCategory": "Produtividade",
-      "shortcutName": "KontrollaPro Desktop",
-      "license": "assets/license.txt",
-      "guid": "550e8400-e29b-41d4-a716-446655440000",
-      "language": "1046",
-      "installerLanguages": ["pt_BR"],
-      "multiLanguageInstaller": false,
-      "packElevateHelper": true,
-      "perMachine": true,
-      "warningsAsErrors": false,
-      "displayLanguageSelector": false,
-      "artifactName": "${productName}-Setup-${version}.${ext}",
-      "uninstallDisplayName": "${productName} ${version}",
-      "deleteAppDataOnUninstall": false
-    },
-    "publish": null,
-    "compression": "normal"
-  },
+  "keywords": [
+    "saas",
+    "multitenant",
+    "ecommerce",
+    "react",
+    "nodejs",
+    "mysql"
+  ],
+  "author": "KontrollaPro Team",
+  "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "electron": "^28.0.0",
-    "electron-builder": "^24.13.3",
-    "electron-packager": "^17.1.2",
-    "icon-gen": "^5.0.0",
-    "png-to-ico": "^3.0.1",
-    "sharp": "^0.34.4",
-    "wait-on": "^7.2.0"
+    "concurrently": "^8.2.2"
   }
 }
