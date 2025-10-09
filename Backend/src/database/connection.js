@@ -5,7 +5,7 @@ dotenv.config();
 
 // Configuração da conexão com o banco de dados
 const dbConfig = {
-  host: process.env.DB_HOST || 'mysql',
+  host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '12435687',
@@ -14,10 +14,7 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
-  multipleStatements: true,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  multipleStatements: true
 };
 
 // Pool de conexões
@@ -26,19 +23,12 @@ const pool = mysql.createPool(dbConfig);
 // Função para testar a conexão
 export const testConnection = async () => {
   try {
-    console.log('🔄 Tentando conectar com MySQL...');
-    console.log('Host:', process.env.DB_HOST || 'mysql');
-    console.log('Port:', process.env.DB_PORT || 3306);
-    console.log('Database:', process.env.DB_NAME || 'kontrollapro');
-    console.log('User:', process.env.DB_USER || 'root');
-    
     const connection = await pool.getConnection();
     console.log('✅ Conexão com MySQL estabelecida com sucesso');
     connection.release();
     return true;
   } catch (error) {
     console.error('❌ Erro ao conectar com MySQL:', error.message);
-    console.error('Detalhes do erro:', error);
     return false;
   }
 };
