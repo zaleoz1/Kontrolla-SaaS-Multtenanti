@@ -1,0 +1,218 @@
+version: '3.8'
+
+# =========================================================================
+# KONTROLLAPRO - DOCKER COMPOSE PRODUÇÃO VPS
+# =========================================================================
+# Domínio: vps6150.panel.icontainer.run
+# IP: 207.58.174.116
+
+services:
+  # =====================================================
+  # NGINX - PROXY REVERSO E SSL
+  # =====================================================
+  nginx:
+    image: nginx:alpine
+    container_name: kontrolla-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./Frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - kontrolla-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =====================================================
+  # MYSQL - BANCO DE DADOS
+  # =====================================================
+  mysql:
+    image: mysql:8.0
+    container_name: kontrolla-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./Backend/src/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./backups:/backups
+    networks:
+      - kontrolla-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --innodb-buffer-pool-size=256M
+      --max-connections=100
+      --query-cache-size=0
+      --query-cache-type=0
+      --innodb-log-file-size=128M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$MYSQL_USER", "-p$MYSQL_PASSWORD"]
+      timeout: 20s
+      retries: 10
+      interval: 30s
+
+  # =====================================================
+  # BACKEND NODE.JS
+  # =====================================================
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: kontrolla-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      DOMAIN: ${DOMAIN}
+      FRONTEND_URL: ${FRONTEND_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kontrolla-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =====================================================
+  # REDIS - CACHE E SESSÕES
+  # =====================================================
+  redis:
+    image: redis:7-alpine
+    container_name: kontrolla-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
+    networks:
+      - kontrolla-network
+    command: redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =====================================================
+  # BACKUP SERVICE
+  # =====================================================
+  backup:
+    image: alpine:latest
+    container_name: kontrolla-backup
+    restart: unless-stopped
+    volumes:
+      - mysql_data:/mysql-data:ro
+      - uploads_data:/uploads-data:ro
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    depends_on:
+      - mysql
+    networks:
+      - kontrolla-network
+    command: >
+      sh -c "apk add --no-cache mysql-client dcron &&
+             echo '0 2 * * * /backup.sh' | crontab - &&
+             crond -f"
+
+  # =====================================================
+  # MONITORING - WATCHTOWER
+  # =====================================================
+  watchtower:
+    image: containrrr/watchtower
+    container_name: kontrolla-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 3600
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_INCLUDE_RESTARTING: true
+    command: --interval 3600
+
+# =========================================================================
+# VOLUMES PERSISTENTES
+# =========================================================================
+volumes:
+  mysql_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/kontrolla/mysql
+  
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/kontrolla/redis
+  
+  uploads_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/kontrolla/uploads
+  
+  logs_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/log/kontrolla
+
+# =========================================================================
+# REDE
+# =========================================================================
+networks:
+  kontrolla-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
