@@ -77,7 +77,13 @@ app.use(cors({
       if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
         callback(null, true);
       } else {
-        callback(new Error('Não permitido pelo CORS'));
+        // Em produção, permitir proxy interno do nginx
+        if (process.env.NODE_ENV === 'production' && !origin) {
+          callback(null, true);
+        } else {
+          console.log('❌ CORS bloqueado para origin:', origin);
+          callback(new Error('Não permitido pelo CORS'));
+        }
       }
     }
   },
@@ -104,6 +110,14 @@ app.use(morgan('combined'));
 // Middleware para parsing de JSON
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Middleware de debug para requisições (apenas em produção para debug)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    console.log(`🔍 ${req.method} ${req.originalUrl} - IP: ${req.ip} - Origin: ${req.headers.origin || 'No origin'}`);
+    next();
+  });
+}
 
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
