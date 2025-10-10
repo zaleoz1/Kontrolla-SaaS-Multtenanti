@@ -356,6 +356,12 @@
 }
 
 /* Google Login Button Custom Styles */
+.google-login-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .google-login-wrapper div[role="button"] {
   background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(12px) !important;
@@ -373,9 +379,17 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   position: relative !important;
   overflow: hidden !important;
-  width: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
   min-width: 200px !important;
   padding: 0 1rem !important;
+}
+
+/* Prevenir duplicação em mobile */
+@media screen and (max-width: 639px) {
+  .google-login-wrapper {
+    display: none !important;
+  }
 }
 
 .google-login-wrapper div[role="button"]:hover {
@@ -433,8 +447,12 @@
   opacity: 1 !important;
 }
 
-/* Responsividade */
+/* Responsividade - Desktop */
 @media (min-width: 640px) {
+  .google-login-wrapper {
+    display: flex !important;
+  }
+  
   .google-login-wrapper div[role="button"] {
     height: 3rem !important;
     font-size: 1rem !important;

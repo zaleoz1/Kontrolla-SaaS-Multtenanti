@@ -81,45 +81,46 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
           onClick={onClose}
         />
       )}
-      
-      {/* Container principal da sidebar */}
-      <div className={cn(
-        "fixed min-[1378px]:static inset-y-0 left-0 z-50 flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
-        isOpen ? "translate-x-0" : "-translate-x-full min-[1378px]:translate-x-0"
-      )}>
-        
+
+      {/* Sidebar responsiva: w-full no mobile, w-64 no desktop */}
+      <div
+        className={cn(
+          "fixed min-[1378px]:static inset-y-0 left-0 z-50 flex h-full flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
+          isOpen ? "translate-x-0" : "-translate-x-full min-[1378px]:translate-x-0",
+          "w-full max-w-xs min-[400px]:max-w-sm min-[1378px]:w-64"
+        )}
+        style={{ maxWidth: '100vw' }}
+      >
         {/* Logo e nome do sistema */}
-        <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0">
+        <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0 relative">
           <div className="flex items-center space-x-2">
             <Store className="h-8 w-8 text-white" />
             <span className="text-xl font-bold text-white">
               {tenant?.nome || "KontrollaPro"}
             </span>
           </div>
-          
           {/* Botão de fechar para mobile */}
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="min-[1378px]:hidden absolute right-2 text-white hover:bg-white/20"
+            className="min-[1378px]:hidden absolute right-2 top-2 text-white hover:bg-white/20"
+            aria-label="Fechar menu"
           >
             <X className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Navegação principal */}
-        <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+        <nav className="flex-1 space-y-1 p-3 sm:p-4 overflow-y-auto">
           {navegacao
-            .filter((item) => hasPermission(item.permissao as any)) // Filtrar itens baseado em permissões
+            .filter((item) => hasPermission(item.permissao as any))
             .map((item) => (
-              // Cada item de navegação é um NavLink do React Router
               <NavLink
                 key={item.nome}
                 to={item.href}
                 end={item.href === "/dashboard"}
                 onClick={() => {
-                  // Fecha o sidebar em mobile ao clicar em um item
                   if (window.innerWidth < 1378) {
                     onClose();
                   }
@@ -128,30 +129,26 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
                   cn(
                     "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
                     "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    isActive 
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
                       : "text-sidebar-foreground"
                   )
                 }
               >
-                {/* Ícone do item */}
                 <item.icone className="mr-3 h-5 w-5" />
-                {/* Nome do item */}
                 {item.nome}
               </NavLink>
             ))}
         </nav>
 
         {/* Seção do usuário na parte inferior */}
-        <div className="border-t border-sidebar-border p-4 flex-shrink-0">
+        <div className="border-t border-sidebar-border p-3 sm:p-4 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-3">
-            {/* Avatar do usuário */}
             <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center">
               <span className="text-sm font-medium text-white">
                 {user ? (user.nome.charAt(0) + user.sobrenome.charAt(0)).toUpperCase() : "U"}
               </span>
             </div>
-            {/* Informações do usuário */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
                 {user ? `${user.nome} ${user.sobrenome}` : "Usuário"}
@@ -161,13 +158,11 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
               </p>
             </div>
           </div>
-          
-          {/* Botão de configurações - só aparece se tiver permissão */}
+
           {hasPermission('configuracoes') && (
             <NavLink
               to="/dashboard/configuracoes"
               onClick={() => {
-                // Fecha o sidebar em mobile ao clicar em um item
                 if (window.innerWidth < 1378) {
                   onClose();
                 }
@@ -176,8 +171,8 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
                 cn(
                   "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 w-full justify-start",
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
                     : "text-sidebar-foreground"
                 )
               }
@@ -186,10 +181,9 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
               Configurações
             </NavLink>
           )}
-          
-          {/* Botão de sair */}
-          <Button 
-            variant="ghost" 
+
+          <Button
+            variant="ghost"
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent mt-1"
             onClick={() => navigate("/")}
           >
