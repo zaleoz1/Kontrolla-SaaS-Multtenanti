@@ -2,9 +2,9 @@
 // Conecta diretamente ao VPS para dados na nuvem
 
 const VPS_CONFIG = {
-  HOST: '207.58.174.116',
-  PORT: '80',
-  PROTOCOL: 'http'
+  HOST: 'kontrollapro.com.br',
+  PORT: '443',
+  PROTOCOL: 'https'
 };
 
 export const API_CONFIG_ELECTRON = {

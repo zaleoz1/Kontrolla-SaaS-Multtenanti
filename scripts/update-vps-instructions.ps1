@@ -46,7 +46,7 @@ Write-Host "   docker-compose logs -f backend" -ForegroundColor Gray
 Write-Host ""
 
 Write-Host "8. 🧪 Testar as rotas:" -ForegroundColor White
-Write-Host "   curl -X POST http://vps6150.panel.icontainer.run/api/auth/send-verification-code \\" -ForegroundColor Gray
+Write-Host "   curl -X POST https://kontrollapro.com.br/api/auth/send-verification-code \\" -ForegroundColor Gray
 Write-Host "     -H 'Content-Type: application/json' \\" -ForegroundColor Gray
 Write-Host "     -d '{\"email\":\"teste@exemplo.com\"}'" -ForegroundColor Gray
 Write-Host ""

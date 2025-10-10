@@ -6,7 +6,7 @@ REM =========================================================================
 echo 🚀 KontrollaPro - Deploy para VPS
 echo ================================
 echo.
-echo Dominio: vps6150.panel.icontainer.run
+echo Dominio: kontrollapro.com.br
 echo IP: 207.58.174.116
 echo.
 
@@ -44,13 +44,13 @@ echo OU execute os comandos manualmente conforme o arquivo DEPLOY-VPS.md
 echo.
 
 echo 🔗 Links úteis após o deploy:
-echo - Aplicação: https://vps6150.panel.icontainer.run
-echo - Health Check: https://vps6150.panel.icontainer.run/health
-echo - API: https://vps6150.panel.icontainer.run/api
+echo - Aplicação: https://kontrollapro.com.br
+echo - Health Check: https://kontrollapro.com.br/health
+echo - API: https://kontrollapro.com.br/api
 echo.
 
 echo ⚠️ IMPORTANTE:
-echo - Certifique-se de que o domínio vps6150.panel.icontainer.run
+echo - Certifique-se de que o domínio kontrollapro.com.br
 echo   está apontando para o IP 207.58.174.116
 echo - O deploy pode levar alguns minutos para concluir
 echo - Verifique os logs em caso de problemas

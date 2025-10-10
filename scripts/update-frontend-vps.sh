@@ -37,4 +37,4 @@ curl -s -I http://localhost/health | head -10
 
 echo ""
 echo "✨ Atualização frontend concluída!"
-echo "🌍 Acesse: http://207.58.174.116"
+echo "🌍 Acesse: https://kontrollapro.com.br"
