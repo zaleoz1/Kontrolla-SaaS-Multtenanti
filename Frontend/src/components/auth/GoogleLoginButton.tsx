@@ -94,7 +94,10 @@ export function GoogleLoginButtonCustom({
   const handleGoogleLogin = async () => {
     try {
       // Redirecionar para o backend que fará o redirect para o Google
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const backendUrl = import.meta.env.VITE_API_URL || 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+          ? 'http://localhost:3000' 
+          : `${window.location.protocol}//${window.location.host}`);
       const googleAuthUrl = `${backendUrl}/api/auth/google${tenantSlug ? `?tenant_slug=${tenantSlug}` : ''}`;
       
       console.log('🔗 Redirecionando para Google OAuth:', googleAuthUrl);
