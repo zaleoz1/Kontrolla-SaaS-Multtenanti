@@ -519,13 +519,9 @@ CREATE INDEX idx_administradores_tenant ON administradores(tenant_id);
 CREATE INDEX idx_administradores_codigo ON administradores(codigo);
 CREATE INDEX idx_administradores_role ON administradores(role);
 CREATE INDEX idx_administradores_status ON administradores(status);
-CREATE INDEX idx_notificacoes_tenant ON notificacoes(tenant_id);
-CREATE INDEX idx_notificacoes_lida ON notificacoes(lida);
-CREATE INDEX idx_notificacoes_tipo ON notificacoes(tipo);
-CREATE INDEX idx_notificacoes_data_criacao ON notificacoes(data_criacao);
 
 -- Tabela de notificações
-CREATE TABLE notificacoes (
+CREATE TABLE IF NOT EXISTS notificacoes (
   id INT PRIMARY KEY AUTO_INCREMENT,
   tenant_id INT NOT NULL,
   titulo VARCHAR(255) NOT NULL,
@@ -536,6 +532,12 @@ CREATE TABLE notificacoes (
   data_leitura TIMESTAMP NULL,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 );
+
+-- Índices para a tabela de notificações
+CREATE INDEX idx_notificacoes_tenant ON notificacoes(tenant_id);
+CREATE INDEX idx_notificacoes_lida ON notificacoes(lida);
+CREATE INDEX idx_notificacoes_tipo ON notificacoes(tipo);
+CREATE INDEX idx_notificacoes_data_criacao ON notificacoes(data_criacao);
 
 -- Índices para busca
 CREATE INDEX idx_clientes_nome ON clientes(nome);
