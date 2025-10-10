@@ -145,7 +145,7 @@ export default function Catalogo() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>

@@ -128,7 +128,7 @@ export default function NFe() {
     }, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>

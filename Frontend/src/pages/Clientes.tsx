@@ -241,7 +241,7 @@ export default function Clientes() {
   };
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="w-full">
         {/* Título e Descrição - Sempre no topo */}

@@ -176,7 +176,7 @@ export default function Funcionarios() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background prevent-zoom touch-optimized mobile-scroll overflow-x-hidden">
       {/* Sidebar de configurações */}
       <ConfiguracoesSidebar
         activeTab={abaAtiva}

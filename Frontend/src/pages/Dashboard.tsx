@@ -188,7 +188,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="w-full">
         <div className="mb-4 md:mb-0">

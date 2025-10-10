@@ -338,7 +338,7 @@ export default function NovoFuncionario() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background prevent-zoom touch-optimized mobile-scroll overflow-x-hidden">
       {/* Sidebar de configurações */}
       <ConfiguracoesSidebar
         activeTab="funcionarios"
@@ -347,7 +347,6 @@ export default function NovoFuncionario() {
             navigate("/dashboard/configuracoes");
           }
         }}
-        onLogout={handleLogout}
         isOpen={false}
         onClose={() => {}}
       />

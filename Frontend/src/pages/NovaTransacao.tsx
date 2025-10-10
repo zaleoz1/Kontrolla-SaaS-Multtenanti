@@ -300,7 +300,7 @@ export default function NovaTransacao() {
                           (transacao.tipo === "entrada" || (transacao.tipo === "saida" && (transacao.categoria !== "Fornecedores" || fornecedorSelecionado)));
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="w-full flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
