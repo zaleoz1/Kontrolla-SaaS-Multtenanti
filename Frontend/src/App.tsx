@@ -5,9 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AppLayout } from "./components/layout/AppLayout";
+// Removido: sistema duplo de notificações - usar apenas NotificationContext
 import { OperadorProvider } from "./contexts/OperadorContext";
 import { DebugRoute } from "./components/DebugRoute";
 import LandingPage from "./pages/LandingPage";
+import DownloadPage from "./pages/Download";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
 import Vendas from "./pages/Vendas";
@@ -32,17 +34,20 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import CatalogoPublico from "./pages/CatalogoPublico";
 import ForgotPassword from "./pages/ForgotPassword";
-import DownloadPage from "./pages/Download";
 
 const clienteQuery = new QueryClient();
 
 function AppContent() {
+  // Removido: sistema duplo de notificações - usar apenas NotificationContext
+  console.log('🔍 AppContent renderizado');
+
   return (
     <>
       <HashRouter>
         <Routes>
           {/* Landing Page */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/download" element={<DownloadPage />} />
           
           {/* Páginas de Autenticação */}
           <Route path="/login" element={<Login />} />
@@ -51,9 +56,6 @@ function AppContent() {
           
           {/* Catálogo Público */}
           <Route path="/catalogo-publico" element={<CatalogoPublico />} />
-          
-          {/* Download */}
-          <Route path="/download" element={<DownloadPage />} />
           
           {/* Dashboard */}
           <Route path="/dashboard" element={<AppLayout />}>
@@ -150,6 +152,7 @@ function AppContent() {
         </Routes>
       </HashRouter>
       
+      {/* Removido: NotificationContainer - usar apenas NotificationContext */}
       <Toaster />
       <Sonner />
     </>
@@ -158,7 +161,7 @@ function AppContent() {
 
 const App = () => {
   // Debug: Log the Google Client ID
-  console.log('🔑 Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  console.log('🔑 Google Client ID (Electron Simple):', import.meta.env.VITE_GOOGLE_CLIENT_ID);
   
   return (
     <QueryClientProvider client={clienteQuery}>

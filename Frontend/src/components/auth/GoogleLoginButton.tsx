@@ -60,10 +60,16 @@ export function GoogleLoginButton({
   const handleGoogleLoginCustom = async () => {
     try {
       // Redirecionar para o backend que fará o redirect para o Google
-      const backendUrl = import.meta.env.VITE_API_URL || 
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-          ? 'http://localhost:3000' 
-          : `${window.location.protocol}//${window.location.host}`);
+      let backendUrl = import.meta.env.VITE_API_URL;
+      if (!backendUrl) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          backendUrl = 'http://localhost:3000';
+        } else if (window.location.hostname === 'pvd.kontrollapro.com.br') {
+          backendUrl = 'https://pvd.kontrollapro.com.br';
+        } else {
+          backendUrl = `${window.location.protocol}//${window.location.host}`;
+        }
+      }
       const googleAuthUrl = `${backendUrl}/api/auth/google${tenantSlug ? `?tenant_slug=${tenantSlug}` : ''}`;
       
       console.log('🔗 Redirecionando para Google OAuth:', googleAuthUrl);
