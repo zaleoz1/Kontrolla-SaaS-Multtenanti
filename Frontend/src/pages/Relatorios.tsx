@@ -840,7 +840,10 @@ export default function Relatorios() {
 
         try {
 
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/relatorios/cliente-compras/${cliente.id}?data_inicio=${dataInicio}&data_fim=${dataFim}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 
+            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+              ? 'http://localhost:3000/api' 
+              : `${window.location.protocol}//${window.location.host}/api`)}/relatorios/cliente-compras/${cliente.id}?data_inicio=${dataInicio}&data_fim=${dataFim}`, {
 
             headers: {
 

@@ -13,6 +13,9 @@ RUN npm ci
 # Copiar código fonte
 COPY . .
 
+# Copiar variáveis de ambiente de produção
+COPY .env.production .env
+
 # Build da aplicação
 RUN npm run build
 
