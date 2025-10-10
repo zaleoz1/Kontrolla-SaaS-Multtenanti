@@ -37,74 +37,12 @@ const DownloadPage = () => {
     transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }
   };
 
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    setDownloadProgress(0);
+  const handleDownload = () => {
+    window.open('https://www.mediafire.com/file/aa0ctovogxff3oa/KontrollaPro-Setup-1.0.0.exe/file', '_blank');
+  };
 
-    try {
-      // Simular progresso do download
-      const interval = setInterval(() => {
-        setDownloadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsDownloading(false);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      // Usar a rota específica de download que não comprime o arquivo
-      const downloadUrl = '/api/download/KontrollaPro-Setup-1.0.0.exe';
-      
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/octet-stream',
-          'Cache-Control': 'no-cache'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao baixar o arquivo: ${response.status} ${response.statusText}`);
-      }
-
-      // Verificar se o conteúdo é realmente um arquivo binário
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('octet-stream')) {
-        console.warn('Tipo de conteúdo inesperado:', contentType);
-      }
-
-      const blob = await response.blob();
-      
-      // Verificar se o blob tem o tamanho esperado (aproximadamente 171MB)
-      const expectedSize = 171 * 1024 * 1024; // 171MB em bytes
-      if (blob.size < expectedSize * 0.5) { // Se for menor que 50% do esperado, pode estar corrompido
-        throw new Error('Arquivo baixado parece estar corrompido ou incompleto');
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'KontrollaPro-Setup-1.0.0.exe';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      
-      // Limpar recursos
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 100);
-
-    } catch (error) {
-      console.error('Erro no download:', error);
-      setIsDownloading(false);
-      setDownloadProgress(0);
-      
-      // Mostrar erro para o usuário
-      alert('Erro ao baixar o arquivo. Verifique se o servidor está configurado para servir arquivos estáticos da pasta dist-electron.');
-    }
+  const handleManualDownload = () => {
+    window.open('https://www.mediafire.com/file/fqtvdiobas86xia/KontrollaPro-win32-x64.rar/file', '_blank');
   };
 
 
@@ -233,55 +171,48 @@ const DownloadPage = () => {
                 Instale e use offline com todas as funcionalidades.
               </motion.p>
 
-              {/* Download Button */}
+              {/* Download Buttons */}
               <motion.div 
                 variants={fadeInUp}
-                className="text-center mb-6 sm:mb-8 px-4"
+                className="text-center mb-6 sm:mb-8 px-4 flex flex-col gap-4 items-center"
               >
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-full sm:w-auto"
                 >
                   <Button
                     onClick={handleDownload}
-                    disabled={isDownloading}
                     size="lg"
                     className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-green-500/25 transition-all duration-300 w-full sm:w-auto max-w-sm mx-auto"
                   >
-                    {isDownloading ? (
-                      <div className="flex items-center justify-center gap-2 sm:gap-3">
-                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
-                        <span className="text-sm sm:text-base">Baixando... {downloadProgress}%</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 sm:gap-3">
-                        <Download className="h-5 w-5 sm:h-6 sm:w-6" />
-                        <span className="text-sm sm:text-base whitespace-nowrap">Baixar Agora (171 MB)</span>
-                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </div>
-                    )}
+                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                      <Download className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <span className="text-sm sm:text-base whitespace-nowrap">Instalador Automático (EXE)</span>
+                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </div>
                   </Button>
                 </motion.div>
 
-                {/* Progress Bar */}
-                {isDownloading && (
-                  <motion.div 
-                    className="mt-4 w-full max-w-md mx-auto px-4"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-full sm:w-auto"
+                >
+                  <Button
+                    onClick={handleManualDownload}
+                    size="lg"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-300 w-full sm:w-auto max-w-sm mx-auto"
                   >
-                    <div className="bg-gray-200 rounded-full h-2">
-                      <motion.div 
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${downloadProgress}%` }}
-                        transition={{ duration: 0.3 }}
-                      ></motion.div>
+                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                      <Download className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <span className="text-sm sm:text-base whitespace-nowrap">Instalação Manual (RAR)</span>
+                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                  </motion.div>
-                )}
+                  </Button>
+                </motion.div>
 
                 <motion.p 
                   className="text-xs sm:text-sm text-slate-400 mt-4 flex items-center justify-center px-4"
