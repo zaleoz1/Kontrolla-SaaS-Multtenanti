@@ -52,39 +52,24 @@ app.use(compression({
 }));
 
 // Middleware de CORS
-const getallowedOrigins = () => {
-  const defaultOrigins = [
-    'http://localhost:5173', // Vite dev server padrão
-    'http://localhost:8080', // Vite dev server alternativo
-    'http://localhost:3000', // React dev server
-    'http://localhost', // Frontend Docker
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1',
-    'https://pvd.kontrollapro.com.br', // Produção subdomínio principal
-    'http://pvd.kontrollapro.com.br', // Produção subdomínio principal HTTP
-    'https://kontrollapro.com.br', // Produção domínio principal
-    'http://kontrollapro.com.br', // Produção domínio principal HTTP
-    'http://vps6150.panel.icontainer.run', // Produção VPS (legacy)
-    'https://vps6150.panel.icontainer.run', // Produção VPS HTTPS (legacy)
-    'http://207.58.174.116', // IP do VPS
-    'https://207.58.174.116' // IP do VPS HTTPS
-  ];
-
-  // Adicionar origens das variáveis de ambiente se existirem
-  const envOrigins = process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS;
-  if (envOrigins) {
-    const additionalOrigins = envOrigins.split(',').map(origin => origin.trim());
-    return [...defaultOrigins, ...additionalOrigins];
-  }
-
-  return defaultOrigins;
-};
-
-const allowedOrigins = getallowedOrigins();
-
-console.log('🌐 CORS Origens permitidas:', allowedOrigins);
+const allowedOrigins = [
+  'http://localhost:5173', // Vite dev server padrão
+  'http://localhost:8080', // Vite dev server alternativo
+  'http://localhost:3000', // React dev server
+  'http://localhost', // Frontend Docker
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1',
+  'https://pvd.kontrollapro.com.br', // Produção subdomínio principal
+  'http://pvd.kontrollapro.com.br', // Produção subdomínio principal HTTP
+  'https://kontrollapro.com.br', // Produção domínio principal
+  'http://kontrollapro.com.br', // Produção domínio principal HTTP
+  'http://vps6150.panel.icontainer.run', // Produção VPS (legacy)
+  'https://vps6150.panel.icontainer.run', // Produção VPS HTTPS (legacy)
+  'http://207.58.174.116', // IP do VPS
+  'https://207.58.174.116' // IP do VPS HTTPS
+];
 
 app.use(cors({
   origin: function (origin, callback) {

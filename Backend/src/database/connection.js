@@ -1,7 +1,7 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.production' });
+dotenv.config();
 
 // Configuração da conexão com o banco de dados
 const dbConfig = {
