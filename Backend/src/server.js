@@ -61,10 +61,12 @@ const allowedOrigins = [
   'http://127.0.0.1:8080',
   'http://127.0.0.1:3000',
   'http://127.0.0.1',
-  'http://vps6150.panel.icontainer.run', // Produção VPS
-  'https://vps6150.panel.icontainer.run', // Produção VPS HTTPS (futuro)
+  'https://kontrollapro.com.br', // Produção domínio principal
+  'http://kontrollapro.com.br', // Produção domínio principal HTTP
+  'http://vps6150.panel.icontainer.run', // Produção VPS (legacy)
+  'https://vps6150.panel.icontainer.run', // Produção VPS HTTPS (legacy)
   'http://207.58.174.116', // IP do VPS
-  'https://207.58.174.116' // IP do VPS HTTPS (futuro)
+  'https://207.58.174.116' // IP do VPS HTTPS
 ];
 
 app.use(cors({

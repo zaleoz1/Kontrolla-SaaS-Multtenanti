@@ -3,7 +3,7 @@
 # =========================================================================
 # KONTROLLAPRO - SCRIPT DE DEPLOY PARA VPS
 # =========================================================================
-# Domínio: vps6150.panel.icontainer.run
+# Domínio: kontrollapro.com.br
 # IP: 207.58.174.116
 
 set -e  # Exit on any error
@@ -14,7 +14,7 @@ set -e  # Exit on any error
 VPS_IP="207.58.174.116"
 VPS_USER="root"
 VPS_PORT="22"
-DOMAIN="vps6150.panel.icontainer.run"
+DOMAIN="kontrollapro.com.br"
 REPO_URL="https://github.com/zaleoz1/Kontrolla-SaaS-Multtenanti.git"
 PROJECT_DIR="/opt/kontrollapro"
 BACKUP_DIR="/opt/kontrollapro-backup"

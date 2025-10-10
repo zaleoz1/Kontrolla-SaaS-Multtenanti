@@ -135,9 +135,15 @@ npm run dev
 
 ## 📱 **Acesso ao Sistema**
 
+### 🏠 **Desenvolvimento Local**
 - **Frontend:** http://localhost:5173
 - **Backend API:** http://localhost:3000
 - **Health Check:** http://localhost:3000/health
+
+### 🌐 **Produção**
+- **Aplicação:** https://kontrollapro.com.br
+- **API:** https://kontrollapro.com.br/api
+- **Health Check:** https://kontrollapro.com.br/api/health
 
 ### 🔑 **Credenciais de Teste**
 - **Email:** admin@lojaexemplo.com.br

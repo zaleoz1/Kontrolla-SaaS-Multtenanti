@@ -1,7 +1,7 @@
 // Teste de conectividade VPS para o aplicativo desktop híbrido
 import fetch from 'node-fetch';
 
-const VPS_BASE_URL = 'http://207.58.174.116';
+const VPS_BASE_URL = 'https://kontrollapro.com.br';
 const API_BASE_URL = `${VPS_BASE_URL}/api`;
 
 async function testVPSConnectivity() {
