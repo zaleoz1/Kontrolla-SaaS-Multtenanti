@@ -33,5 +33,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true
 });
 
+// Expor APIs VPS separadamente para evitar conflitos de tipo
+contextBridge.exposeInMainWorld('electronVPS', {
+  vpsHealthCheck: () => ipcRenderer.invoke('vps-health-check'),
+  onVPSStatusUpdate: (callback) => {
+    ipcRenderer.on('vps-status-update', (event, status) => {
+      callback(status);
+    });
+  }
+});
+
 // Log para debug
 console.log('Preload script carregado');

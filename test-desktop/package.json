@@ -1,0 +1,12 @@
+{
+  "name": "test-desktop-hybrid",
+  "version": "1.0.0",
+  "description": "Teste para verificar conectividade VPS do aplicativo desktop",
+  "main": "test-vps.js",
+  "scripts": {
+    "test": "node test-vps.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.0.0"
+  }
+}

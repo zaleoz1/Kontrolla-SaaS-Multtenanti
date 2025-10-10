@@ -1,10 +1,26 @@
 // Configuração da API
+// Detecta se está rodando no Electron para usar configuração específica
+const isElectron = () => {
+  return typeof window !== 'undefined' && 
+         window.navigator && 
+         window.navigator.userAgent && 
+         window.navigator.userAgent.includes('Electron');
+};
+
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000/api' 
-      : `${window.location.protocol}//${window.location.host}/api`),
-  TIMEOUT: 10000,
+  BASE_URL: (() => {
+    // Se estiver rodando no Electron, usar VPS diretamente
+    if (isElectron()) {
+      return 'http://207.58.174.116/api';
+    }
+    
+    // Configuração normal para web
+    return import.meta.env.VITE_API_URL || 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://localhost:3000/api' 
+        : `${window.location.protocol}//${window.location.host}/api`);
+  })(),
+  TIMEOUT: isElectron() ? 15000 : 10000, // Timeout maior para Electron
   RETRY_ATTEMPTS: 3,
 };
 

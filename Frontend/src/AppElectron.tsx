@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AppLayout } from "./components/layout/AppLayout";
+import { VPSStatus } from "./components/VPSStatus";
 // Removido: sistema duplo de notificações - usar apenas NotificationContext
 import { OperadorProvider } from "./contexts/OperadorContext";
 import LandingPage from "./pages/LandingPage";
@@ -83,6 +84,9 @@ function AppContent() {
           <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
       </HashRouter>
+      
+      {/* Status VPS para aplicativo Desktop */}
+      <VPSStatus />
       
       {/* Removido: NotificationContainer - usar apenas NotificationContext */}
       <Toaster />
