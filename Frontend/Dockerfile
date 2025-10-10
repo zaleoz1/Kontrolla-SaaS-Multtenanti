@@ -14,8 +14,8 @@ RUN npm ci
 COPY . .
 
 # Argumentos de build para variáveis de ambiente
-ARG VITE_API_URL=http://207.58.174.116/api
-ARG VITE_APP_URL=http://207.58.174.116
+ARG VITE_API_URL
+ARG VITE_APP_URL
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_APP_URL=$VITE_APP_URL
 
