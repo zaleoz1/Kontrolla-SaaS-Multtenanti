@@ -1,4 +1,4 @@
--- Schema do banco de dados para o sistema KontrollaPro (SaaS Multitenanti)
+ -- Schema do banco de dados para o sistema KontrollaPro (SaaS Multitenanti)
 
 -- Criar banco de dados se não existir
 CREATE DATABASE IF NOT EXISTS kontrollapro_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -555,7 +555,3 @@ CREATE INDEX idx_produtos_estoque_minimo_litros ON produtos(estoque_minimo_litro
 CREATE INDEX idx_vendas_numero ON vendas(numero_venda);
 CREATE INDEX idx_vendas_data ON vendas(data_venda);
 CREATE INDEX idx_venda_pagamentos_venda ON venda_pagamentos(venda_id);
-
-CREATE USER IF NOT EXISTS 'kontrollapro'@'%' IDENTIFIED BY 'KontrollaProd2024@DB!';
-GRANT ALL PRIVILEGES ON kontrollapro_prod.* TO 'kontrollapro'@'%';
-FLUSH PRIVILEGES;
