@@ -300,7 +300,7 @@ export default function Dashboard() {
       </div>
 
       {/* Cards de Métricas */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 sm:gap-3 lg:gap-4 grid-cols-2 xl:grid-cols-4">
         {metricas.map((metrica, index) => (
           <CartaoMetrica key={index} {...metrica} />
         ))}

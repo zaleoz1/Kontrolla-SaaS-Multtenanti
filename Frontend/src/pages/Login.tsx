@@ -143,16 +143,16 @@ export default function Login() {
         />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4 lg:py-8 min-h-screen flex flex-col justify-between">
         {/* Header */}
         <motion.div 
-          className="text-center mb-6 sm:mb-12"
+          className="text-center mb-4 sm:mb-6 lg:mb-8 flex-shrink-0"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           <motion.h1 
-            className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2 sm:mb-4"
+            className="text-xl sm:text-2xl lg:text-4xl xl:text-5xl font-bold text-white mb-2 sm:mb-3 lg:mb-4"
             variants={fadeInUp}
             initial="initial"
             animate="animate"
@@ -161,7 +161,7 @@ export default function Login() {
           </motion.h1>
           
           <motion.p 
-            className="text-slate-300 text-base sm:text-xl max-w-2xl mx-auto px-4 sm:px-0"
+            className="text-slate-300 text-sm sm:text-base lg:text-xl max-w-2xl mx-auto px-2 sm:px-4 lg:px-0"
             variants={fadeInUp}
             initial="initial"
             animate="animate"
@@ -170,28 +170,31 @@ export default function Login() {
           </motion.p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-6 sm:gap-12 items-start">
-          {/* Left Side - Login Form */}
-          <motion.div
-            variants={scaleIn}
-            initial="initial"
-            animate="animate"
-          >
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col justify-center">
+          <div className="w-full grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-center max-w-6xl mx-auto mb-6 sm:mb-8 lg:mb-12">
+            {/* Left Side - Login Form */}
+            <motion.div
+              variants={scaleIn}
+              initial="initial"
+              animate="animate"
+              className="w-full max-w-md lg:max-w-none mx-auto"
+            >
 
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
-              <CardHeader className="space-y-1 pb-4 sm:pb-6">
-                <CardTitle className="text-xl sm:text-2xl font-bold text-center text-white">
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl w-full mx-auto">
+              <CardHeader className="space-y-1 pb-3 sm:pb-4 lg:pb-6 px-4 sm:px-6">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-center text-white">
                   Fazer Login
                 </CardTitle>
-                <p className="text-center text-slate-300 text-sm sm:text-base">
+                <p className="text-center text-slate-300 text-xs sm:text-sm lg:text-base">
                   Entre com suas credenciais
                 </p>
               </CardHeader>
             
-            <CardContent>
+            <CardContent className="px-4 sm:px-6">
               <motion.form 
                 onSubmit={handleSubmit}
-                className="space-y-4 sm:space-y-6"
+                className="space-y-3 sm:space-y-4 lg:space-y-6"
                 variants={staggerContainer}
                 initial="initial"
                 animate="animate"
@@ -248,7 +251,7 @@ export default function Login() {
                   variants={fadeInUp}
                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0"
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="hidden sm:flex items-center space-x-2">
                     <Checkbox
                       id="rememberMe"
                       name="rememberMe"
@@ -416,42 +419,43 @@ export default function Login() {
           </motion.div>
         </div>
 
-        {/* Features Preview - Mobile */}
-        <motion.div 
-          className="mt-8 sm:mt-12 grid grid-cols-3 gap-3 sm:gap-4 lg:hidden"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-        >
-          {[
-            { icon: Shield, text: "Seguro" },
-            { icon: Zap, text: "Rápido" },
-            { icon: Sparkles, text: "Inteligente" }
-          ].map((feature, index) => (
-            <motion.div
-              key={index}
-              className="text-center p-3 sm:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10"
-              whileHover={{ scale: 1.05, y: -2 }}
-              transition={{ duration: 0.2 }}
-            >
-              <feature.icon className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400 mx-auto mb-1 sm:mb-2" />
-              <p className="text-xs sm:text-sm text-slate-300 font-medium">{feature.text}</p>
-            </motion.div>
-          ))}
-        </motion.div>
+          {/* Features Preview - Mobile */}
+          <motion.div 
+            className="mt-6 sm:mt-8 grid grid-cols-3 gap-3 sm:gap-4 lg:hidden max-w-md mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+          >
+            {[
+              { icon: Shield, text: "Seguro" },
+              { icon: Zap, text: "Rápido" },
+              { icon: Sparkles, text: "Inteligente" }
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                className="text-center p-3 sm:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10"
+                whileHover={{ scale: 1.05, y: -2 }}
+                transition={{ duration: 0.2 }}
+              >
+                <feature.icon className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400 mx-auto mb-1 sm:mb-2" />
+                <p className="text-xs sm:text-sm text-slate-300 font-medium">{feature.text}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
 
         {/* Back to Home */}
         <motion.div 
-          className="text-center mt-8 sm:mt-12"
+          className="text-center mt-6 sm:mt-8 lg:mt-12 w-full flex justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
           <Link 
             to="/" 
-            className="inline-flex items-center text-slate-400 hover:text-white transition-colors text-sm sm:text-base"
+            className="inline-flex items-center text-slate-400 hover:text-white transition-colors text-sm sm:text-base lg:text-lg group"
           >
-            <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 group-hover:scale-110 transition-transform" />
             Voltar para o início
           </Link>
         </motion.div>
