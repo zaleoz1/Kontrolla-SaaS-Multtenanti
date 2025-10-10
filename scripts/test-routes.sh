@@ -11,7 +11,7 @@ if [ "$1" = "local" ]; then
     BASE_URL="http://localhost:3000"
     echo "🏠 Testando ambiente local"
 elif [ "$1" = "prod" ]; then
-    BASE_URL="https://kontrollapro.com.br"
+    BASE_URL="https://pvd.kontrollapro.com.br"
     echo "🌐 Testando ambiente de produção"
 else
     echo "❌ Uso: $0 [local|prod]"

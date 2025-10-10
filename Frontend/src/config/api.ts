@@ -11,7 +11,7 @@ export const API_CONFIG = {
   BASE_URL: (() => {
     // Se estiver rodando no Electron, usar VPS diretamente
     if (isElectron()) {
-      return 'https://kontrollapro.com.br/api';
+      return 'https://pvd.kontrollapro.com.br/api';
     }
     
     // Configuração normal para web

@@ -61,6 +61,8 @@ const allowedOrigins = [
   'http://127.0.0.1:8080',
   'http://127.0.0.1:3000',
   'http://127.0.0.1',
+  'https://pvd.kontrollapro.com.br', // Produção subdomínio principal
+  'http://pvd.kontrollapro.com.br', // Produção subdomínio principal HTTP
   'https://kontrollapro.com.br', // Produção domínio principal
   'http://kontrollapro.com.br', // Produção domínio principal HTTP
   'http://vps6150.panel.icontainer.run', // Produção VPS (legacy)

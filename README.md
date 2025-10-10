@@ -141,9 +141,9 @@ npm run dev
 - **Health Check:** http://localhost:3000/health
 
 ### 🌐 **Produção**
-- **Aplicação:** https://kontrollapro.com.br
-- **API:** https://kontrollapro.com.br/api
-- **Health Check:** https://kontrollapro.com.br/api/health
+- **Aplicação:** https://pvd.kontrollapro.com.br
+- **API:** https://pvd.kontrollapro.com.br/api
+- **Health Check:** https://pvd.kontrollapro.com.br/api/health
 
 ### 🔑 **Credenciais de Teste**
 - **Email:** admin@lojaexemplo.com.br
