@@ -294,8 +294,12 @@ export default function Login() {
                   </Button>
                 </motion.div>
 
-                {/* Divider e Google Login - Ocultos no Electron */}
-                {!window.electronAPI?.isElectron && (
+                {/* Divider e Google Login - Apenas para Web (não Electron) */}
+                {(typeof window !== 'undefined' && 
+                  !window.electronAPI && 
+                  !window.require && 
+                  typeof process === 'undefined' || 
+                  (typeof process !== 'undefined' && !process.versions?.electron)) && (
                   <>
                     {/* Divider */}
                     <motion.div 
