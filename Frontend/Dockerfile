@@ -13,8 +13,11 @@ RUN npm ci
 # Copiar código fonte
 COPY . .
 
-# Copiar variáveis de ambiente de produção
-COPY .env.production .env
+# Argumentos de build para variáveis de ambiente
+ARG VITE_API_URL=http://207.58.174.116/api
+ARG VITE_APP_URL=http://207.58.174.116
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_APP_URL=$VITE_APP_URL
 
 # Build da aplicação
 RUN npm run build
