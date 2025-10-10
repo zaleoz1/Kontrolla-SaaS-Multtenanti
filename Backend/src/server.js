@@ -202,6 +202,17 @@ app.use('/api/fornecedores', fornecedoresRoutes);
 app.use('/api/funcionarios', funcionariosRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
+// Health check também no prefixo da API (para compatibilidade com frontend)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    service: 'KontrollaPro API'
+  });
+});
+
 // Middleware para rotas não encontradas
 app.use(notFound);
 

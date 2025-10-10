@@ -10,8 +10,13 @@ const isDev = process.env.NODE_ENV === 'development' && !process.env.FORCE_FILE_
 const isProd = process.env.NODE_ENV === 'production' || app.isPackaged;
 const forceFileMode = process.env.FORCE_FILE_MODE === 'true';
 
+// MODO HÍBRIDO: Interface desktop + dados na nuvem VPS
+const HYBRID_MODE = true; // Forçar modo híbrido
+const VPS_API_URL = 'http://207.58.174.116/api';
+const VPS_HEALTH_URL = 'http://207.58.174.116/health';
+
 let mainWindow;
-let backendProcess;
+let backendProcess = null; // Não usar backend local no modo híbrido
 let backendStarted = false;
 let isCheckingBackend = false;
 let staticServer = null;
@@ -179,8 +184,13 @@ function createMainWindow() {
       console.error('❌ Erro ao aplicar ícone:', error);
     }
     
-    // Verificar se o backend está rodando
-    checkBackendHealth();
+    // Verificar conectividade VPS se estiver no modo híbrido
+    if (HYBRID_MODE) {
+      checkVPSHealth();
+    } else {
+      // Verificar se o backend local está rodando
+      checkBackendHealth();
+    }
   });
 
   // Zoom automático removido - apenas zoom manual pelos botões
@@ -254,6 +264,51 @@ function startBackend() {
   backendProcess.stderr.on('data', (data) => {
     console.error('[Backend Error]', data.toString().trim());
   });
+}
+
+// Função para verificar conectividade com VPS (modo híbrido)
+async function checkVPSHealth() {
+  console.log('🌐 Verificando conectividade VPS...');
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch(VPS_HEALTH_URL, {
+      method: 'GET',
+      timeout: 5000
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const latency = Date.now() - startTime;
+      console.log('✅ VPS conectado:', data, `(${latency}ms)`);
+      
+      // Notificar o frontend sobre o status
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('vps-status', {
+          connected: true,
+          timestamp: new Date().toISOString(),
+          latency: latency
+        });
+      }
+      
+      return true;
+    } else {
+      throw new Error('VPS não disponível');
+    }
+  } catch (error) {
+    console.warn('❌ VPS não disponível:', error.message);
+    
+    // Notificar o frontend sobre falha na conexão
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('vps-status', {
+        connected: false,
+        timestamp: new Date().toISOString(),
+        error: error.message
+      });
+    }
+    
+    return false;
+  }
 }
 
 // Função para verificar se o backend está funcionando
@@ -568,3 +623,18 @@ app.on('web-contents-created', (event, contents) => {
     }
   });
 });
+
+// IPC handler para status VPS (modo híbrido)
+ipcMain.handle('vps-health-check', async () => {
+  return await checkVPSHealth();
+});
+
+// Monitoramento periódico do VPS
+setInterval(async () => {
+  if (mainWindow && HYBRID_MODE) {
+    const vpsStatus = await checkVPSHealth();
+    mainWindow.webContents.send('vps-status-update', vpsStatus);
+  }
+}, 30000); // Verificar a cada 30 segundos
+
+console.log('🌐 Aplicativo Desktop em modo híbrido - conectado ao VPS:', VPS_BASE_URL);
