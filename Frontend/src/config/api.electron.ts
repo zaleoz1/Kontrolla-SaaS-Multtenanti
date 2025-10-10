@@ -2,7 +2,7 @@
 // Conecta diretamente ao VPS para dados na nuvem
 
 const VPS_CONFIG = {
-  HOST: 'kontrollapro.com.br',
+  HOST: 'pvd.kontrollapro.com.br',
   PORT: '443',
   PROTOCOL: 'https'
 };

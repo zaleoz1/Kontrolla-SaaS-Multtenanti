@@ -32,7 +32,7 @@ export function useVPSConnection() {
       }
       
       // Fallback para web browser
-      const response = await fetch('https://kontrollapro.com.br/api/health', {
+      const response = await fetch('https://pvd.kontrollapro.com.br/api/health', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
