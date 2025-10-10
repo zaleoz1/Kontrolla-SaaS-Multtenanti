@@ -34,17 +34,17 @@ services:
       PORT: 3000
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: ${MYSQL_DATABASE:-kontrollapro}
-      DB_USER: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-12435687}
-      JWT_SECRET: ${JWT_SECRET:-seu_jwt_secret_muito_seguro_aqui}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-      EMAIL_HOST: ${EMAIL_HOST}
-      EMAIL_PORT: ${EMAIL_PORT:-587}
-      EMAIL_USER: ${EMAIL_USER}
-      EMAIL_PASS: ${EMAIL_PASS}
+      DB_NAME: kontrollapro_prod
+      DB_USER: kontrollapro
+      DB_PASSWORD: KontrollaProd2024@DB!
+      JWT_SECRET: KontrollaPro_VPS_JWT_Ultra_Secure_Key_2024_Production_nx8wQ2vR9pL3mK7jF5tY
+      CLOUDINARY_CLOUD_NAME: dko7s3u3j
+      CLOUDINARY_API_KEY: 754366869343179
+      CLOUDINARY_API_SECRET: 1uMokyb2NhuzefxNt1ocJm3yfAU
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USER: kontrollapro@gmail.com
+      EMAIL_PASS: kbuz yhdu hdku htaq
     ports:
       - "3000:3000"
     volumes:
