@@ -79,7 +79,9 @@
       "protocols": [
         {
           "name": "KontrollaPro Protocol",
-          "schemes": ["kontrollapro"]
+          "schemes": [
+            "kontrollapro"
+          ]
         }
       ],
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
@@ -110,7 +112,9 @@
       "license": "assets/license.txt",
       "guid": "550e8400-e29b-41d4-a716-446655440000",
       "language": "1046",
-      "installerLanguages": ["pt_BR"],
+      "installerLanguages": [
+        "pt_BR"
+      ],
       "multiLanguageInstaller": false,
       "packElevateHelper": true,
       "perMachine": true,
@@ -132,5 +136,8 @@
     "png-to-ico": "^3.0.1",
     "sharp": "^0.34.4",
     "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
   }
 }

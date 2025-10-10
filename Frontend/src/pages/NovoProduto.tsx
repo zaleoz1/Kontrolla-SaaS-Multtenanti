@@ -557,7 +557,7 @@ export default function NovoProduto() {
   }, [produto.nome, produto.categoria_id, produto.fornecedor_id, produto.codigo_barras, produto.sku, produto.tipo_preco, produto.preco, produto.estoque, produto.estoque_minimo, produto.estoque_kg, produto.estoque_litros, produto.estoque_minimo_kg, produto.estoque_minimo_litros]);
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="w-full">
         {/* Título e Descrição - Sempre no topo */}

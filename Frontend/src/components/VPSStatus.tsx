@@ -18,33 +18,27 @@ interface VPSStatusProps {
 
 export const VPSStatus = ({ className, showDetails = false }: VPSStatusProps) => {
   const { 
-    isOnline, 
-    vpsStatus, 
-    lastCheck, 
-    latency, 
-    isVPSAvailable, 
-    checkConnection 
+    status, 
+    isLoading, 
+    refreshStatus 
   } = useVPSConnection();
 
   const getStatusColor = () => {
-    if (!isOnline) return 'bg-red-500';
-    if (vpsStatus === 'connected') return 'bg-green-500';
-    if (vpsStatus === 'checking') return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (!status.isConnected) return 'bg-red-500';
+    if (isLoading) return 'bg-yellow-500';
+    return 'bg-green-500';
   };
 
   const getStatusText = () => {
-    if (!isOnline) return 'Offline';
-    if (vpsStatus === 'connected') return 'Conectado';
-    if (vpsStatus === 'checking') return 'Verificando...';
-    return 'Desconectado';
+    if (isLoading) return 'Verificando...';
+    if (!status.isConnected) return 'Desconectado';
+    return 'Conectado';
   };
 
   const getStatusIcon = () => {
-    if (!isOnline) return <WifiOff className="h-4 w-4" />;
-    if (vpsStatus === 'connected') return <Cloud className="h-4 w-4" />;
-    if (vpsStatus === 'checking') return <RefreshCcw className="h-4 w-4 animate-spin" />;
-    return <CloudOff className="h-4 w-4" />;
+    if (isLoading) return <RefreshCcw className="h-4 w-4 animate-spin" />;
+    if (!status.isConnected) return <CloudOff className="h-4 w-4" />;
+    return <Cloud className="h-4 w-4" />;
   };
 
   return (
@@ -60,8 +54,8 @@ export const VPSStatus = ({ className, showDetails = false }: VPSStatusProps) =>
         {showDetails && (
           <span className="text-xs">
             {getStatusText()}
-            {latency && (
-              <span className="ml-1">({latency}ms)</span>
+            {status.latency && (
+              <span className="ml-1">({status.latency}ms)</span>
             )}
           </span>
         )}
@@ -71,11 +65,11 @@ export const VPSStatus = ({ className, showDetails = false }: VPSStatusProps) =>
         <div className="flex flex-col text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Signal className="h-3 w-3" />
-            <span>VPS: {isVPSAvailable ? 'Online' : 'Offline'}</span>
+            <span>VPS: {status.isConnected ? 'Online' : 'Offline'}</span>
           </div>
-          {lastCheck && (
+          {status.lastCheck && (
             <span>
-              Última verificação: {lastCheck.toLocaleTimeString()}
+              Última verificação: {status.lastCheck}
             </span>
           )}
         </div>
@@ -84,13 +78,13 @@ export const VPSStatus = ({ className, showDetails = false }: VPSStatusProps) =>
       <Button
         variant="ghost"
         size="sm"
-        onClick={checkConnection}
-        disabled={vpsStatus === 'checking'}
+        onClick={refreshStatus}
+        disabled={isLoading}
         className="h-8 w-8 p-0"
       >
         <RefreshCcw className={cn(
           "h-4 w-4",
-          vpsStatus === 'checking' && "animate-spin"
+          isLoading && "animate-spin"
         )} />
       </Button>
     </div>

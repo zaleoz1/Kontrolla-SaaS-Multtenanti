@@ -109,27 +109,27 @@ const DownloadPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 scroll-smooth">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 scroll-smooth overflow-x-hidden touch-optimized">
       {/* Header */}
       <motion.header 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="fixed top-0 w-full bg-white/95 backdrop-blur-xl border-b border-slate-200/60 z-50 shadow-sm"
+        className="fixed top-0 w-full bg-white/95 backdrop-blur-xl border-b border-slate-200/60 z-50 shadow-sm safe-area-top"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-18">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-18">
             <motion.div 
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex items-center space-x-3 cursor-pointer"
+              className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
               onClick={() => window.history.back()}
             >
               <div className="relative">
                 <img 
                   src={logoPath} 
                   alt="KontrollaPro Logo" 
-                  className="h-12 w-12 rounded-xl shadow-sm"
+                  className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shadow-sm"
                 />
                 <motion.div
                   className="absolute inset-0 rounded-xl bg-gradient-to-r from-green-500/20 to-blue-500/20"
@@ -138,7 +138,7 @@ const DownloadPage = () => {
                   transition={{ duration: 0.3 }}
                 />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
                 KontrollaPro
               </span>
             </motion.div>
@@ -151,10 +151,10 @@ const DownloadPage = () => {
               <Button 
                 variant="ghost" 
                 onClick={() => window.history.back()}
-                className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium px-6 py-2"
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium px-3 sm:px-6 py-2 text-sm sm:text-base"
               >
-                <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
-                Voltar
+                <ArrowRight className="mr-1 sm:mr-2 h-4 w-4 rotate-180" />
+                <span className="hidden sm:inline">Voltar</span>
               </Button>
             </motion.div>
           </div>
@@ -164,7 +164,7 @@ const DownloadPage = () => {
       {/* Hero Section */}
       <motion.section 
         ref={heroRef}
-        className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20"
+        className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-16 sm:pt-20"
       >
         {/* Background Elements */}
         <div className="absolute inset-0">
@@ -172,44 +172,45 @@ const DownloadPage = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90" />
           
           {/* Animated Grid */}
-          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:30px_30px] sm:bg-[size:50px_50px]" />
           
-          {/* Floating Elements */}
+          {/* Floating Elements - Reduzidos no mobile */}
           <motion.div
-            className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"
+            className="absolute top-20 left-5 sm:left-10 w-48 h-48 sm:w-72 sm:h-72 bg-blue-500/10 rounded-full blur-3xl"
             animate={{
-              x: [0, 100, 0],
-              y: [0, -50, 0],
+              x: [0, 50, 0],
+              y: [0, -25, 0],
             }}
             transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="absolute bottom-20 right-10 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"
+            className="absolute bottom-20 right-5 sm:right-10 w-64 h-64 sm:w-96 sm:h-96 bg-green-500/10 rounded-full blur-3xl"
             animate={{
-              x: [0, -100, 0],
-              y: [0, 50, 0],
+              x: [0, -50, 0],
+              y: [0, 25, 0],
             }}
             transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-24 safe-area-bottom">
           <div className="text-center">
             <motion.div 
               variants={staggerContainer}
               initial="initial"
               animate={heroInView ? "animate" : "initial"}
+              className="no-select"
             >
               <motion.div variants={fadeInUp}>
-                <div className="mb-6 bg-green-500/10 text-green-400 border border-green-500/20 inline-flex items-center px-4 py-2 rounded-full text-sm font-medium">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Versão Desktop Disponível
+                <div className="mb-4 sm:mb-6 bg-green-500/10 text-green-400 border border-green-500/20 inline-flex items-center px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium">
+                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  <span className="whitespace-nowrap">Versão Desktop Disponível</span>
                 </div>
               </motion.div>
               
               <motion.h1 
                 variants={fadeInUp}
-                className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight"
+                className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight px-2"
               >
                 Baixe o
                 <motion.span 
@@ -226,7 +227,7 @@ const DownloadPage = () => {
               
               <motion.p 
                 variants={fadeInUp}
-                className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed"
+                className="text-base sm:text-xl text-slate-300 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4"
               >
                 A versão desktop completa do seu sistema de gestão empresarial. 
                 Instale e use offline com todas as funcionalidades.
@@ -235,7 +236,7 @@ const DownloadPage = () => {
               {/* Download Button */}
               <motion.div 
                 variants={fadeInUp}
-                className="text-center mb-8"
+                className="text-center mb-6 sm:mb-8 px-4"
               >
                 <motion.div
                   whileHover={{ scale: 1.02 }}
@@ -246,18 +247,18 @@ const DownloadPage = () => {
                     onClick={handleDownload}
                     disabled={isDownloading}
                     size="lg"
-                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-green-500/25 transition-all duration-300"
+                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-green-500/25 transition-all duration-300 w-full sm:w-auto max-w-sm mx-auto"
                   >
                     {isDownloading ? (
-                      <div className="flex items-center gap-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Baixando... {downloadProgress}%
+                      <div className="flex items-center justify-center gap-2 sm:gap-3">
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
+                        <span className="text-sm sm:text-base">Baixando... {downloadProgress}%</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3">
-                        <Download className="h-6 w-6" />
-                        Baixar Agora (171 MB)
-                        <ArrowRight className="h-5 w-5" />
+                      <div className="flex items-center justify-center gap-2 sm:gap-3">
+                        <Download className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <span className="text-sm sm:text-base whitespace-nowrap">Baixar Agora (171 MB)</span>
+                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                     )}
                   </Button>
@@ -266,7 +267,7 @@ const DownloadPage = () => {
                 {/* Progress Bar */}
                 {isDownloading && (
                   <motion.div 
-                    className="mt-4 w-full max-w-md mx-auto"
+                    className="mt-4 w-full max-w-md mx-auto px-4"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
@@ -283,14 +284,14 @@ const DownloadPage = () => {
                 )}
 
                 <motion.p 
-                  className="text-sm text-slate-400 mt-4 flex items-center justify-center"
+                  className="text-xs sm:text-sm text-slate-400 mt-4 flex items-center justify-center px-4"
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   transition={{ delay: 0.7 }}
                   viewport={{ once: true }}
                 >
-                  <Clock className="inline h-4 w-4 mr-1" />
-                  Tempo estimado: 2-5 minutos (dependendo da conexão)
+                  <Clock className="inline h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="text-center">Tempo estimado: 2-5 minutos (dependendo da conexão)</span>
                 </motion.p>
               </motion.div>
             </motion.div>

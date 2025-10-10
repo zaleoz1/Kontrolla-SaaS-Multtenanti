@@ -5,6 +5,18 @@ const fs = require('fs');
 const { createServer } = require('http');
 const { parse } = require('url');
 
+// Fetch para versões mais antigas do Node.js
+const fetch = globalThis.fetch;
+if (!fetch) {
+  // Fallback para node-fetch v2
+  try {
+    const nodeFetch = require('node-fetch');
+    globalThis.fetch = nodeFetch;
+  } catch (error) {
+    console.warn('⚠️ node-fetch não disponível:', error.message);
+  }
+}
+
 // Configurações
 const isDev = process.env.NODE_ENV === 'development' && !process.env.FORCE_FILE_MODE;
 const isProd = process.env.NODE_ENV === 'production' || app.isPackaged;
@@ -12,7 +24,8 @@ const forceFileMode = process.env.FORCE_FILE_MODE === 'true';
 
 // MODO HÍBRIDO: Interface desktop + dados na nuvem VPS
 const HYBRID_MODE = true; // Forçar modo híbrido
-const VPS_API_URL = 'http://207.58.174.116/api';
+const VPS_BASE_URL = 'http://207.58.174.116/api';
+const VPS_HEALTH_ENDPOINT = `${VPS_BASE_URL}/health`;
 const VPS_HEALTH_URL = 'http://207.58.174.116/health';
 
 let mainWindow;
@@ -637,4 +650,8 @@ setInterval(async () => {
   }
 }, 30000); // Verificar a cada 30 segundos
 
-console.log('🌐 Aplicativo Desktop em modo híbrido - conectado ao VPS:', VPS_BASE_URL);
+if (HYBRID_MODE) {
+  console.log('🌐 Aplicativo Desktop em modo híbrido - conectado ao VPS:', VPS_BASE_URL);
+} else {
+  console.log('🏠 Aplicativo Desktop em modo local');
+}

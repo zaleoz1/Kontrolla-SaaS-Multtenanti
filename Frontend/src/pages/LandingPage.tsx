@@ -273,7 +273,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 scroll-smooth scroll-snap-type-y-mandatory">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 scroll-smooth scroll-snap-type-y-mandatory prevent-zoom touch-optimized mobile-scroll overflow-x-hidden">
       {/* Header */}
       <motion.header 
         initial={{ y: -20, opacity: 0 }}
