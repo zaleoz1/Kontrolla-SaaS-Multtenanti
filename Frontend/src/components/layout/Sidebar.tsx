@@ -77,24 +77,18 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
       {/* Overlay para mobile - só aparece quando sidebar está aberta */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 min-[1378px]:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar responsiva: w-full no mobile, w-64 no desktop */}
-      <div
-        className={cn(
-          "fixed min-[1378px]:static inset-y-0 left-0 z-50 flex h-full flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
-          isOpen ? "translate-x-0" : "-translate-x-full min-[1378px]:translate-x-0",
-          // Mobile: largura total com limitação
-          "w-full max-w-xs min-[400px]:max-w-sm",
-          // Desktop: largura fixa de 256px (w-64)
-          "min-[1378px]:w-64 min-[1378px]:max-w-64"
-        )}
-      >
+      {/* Container principal da sidebar */}
+      <div className={cn(
+        "fixed lg:static inset-y-0 left-0 z-50 flex h-full w-80 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
         {/* Logo e nome do sistema */}
-        <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0 relative">
+        <div className="flex h-16 items-center justify-between border-b border-sidebar-border bg-gradient-primary px-6 flex-shrink-0">
           <div className="flex items-center space-x-2">
             <Store className="h-8 w-8 text-white" />
             <span className="text-xl font-bold text-white">
@@ -106,7 +100,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="min-[1378px]:hidden absolute right-2 top-2 text-white hover:bg-white/20"
+            className="lg:hidden text-white hover:bg-white/20"
             aria-label="Fechar menu"
           >
             <X className="h-5 w-5" />
@@ -114,7 +108,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
         </div>
 
         {/* Navegação principal */}
-        <nav className="flex-1 space-y-1 p-3 sm:p-4 overflow-y-auto">
+        <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
           {navegacao
             .filter((item) => hasPermission(item.permissao as any))
             .map((item) => (
@@ -123,7 +117,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
                 to={item.href}
                 end={item.href === "/dashboard"}
                 onClick={() => {
-                  if (window.innerWidth < 1378) {
+                  if (window.innerWidth < 1024) {
                     onClose();
                   }
                 }}
@@ -144,7 +138,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
         </nav>
 
         {/* Seção do usuário na parte inferior */}
-        <div className="border-t border-sidebar-border p-3 sm:p-4 flex-shrink-0">
+        <div className="border-t border-sidebar-border p-4 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-3">
             <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center">
               <span className="text-sm font-medium text-white">
@@ -165,7 +159,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
             <NavLink
               to="/dashboard/configuracoes"
               onClick={() => {
-                if (window.innerWidth < 1378) {
+                if (window.innerWidth < 1024) {
                   onClose();
                 }
               }}
