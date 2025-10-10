@@ -87,7 +87,10 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
         className={cn(
           "fixed min-[1378px]:static inset-y-0 left-0 z-50 flex h-full flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
           isOpen ? "translate-x-0" : "-translate-x-full min-[1378px]:translate-x-0",
-          "w-full max-w-xs min-[400px]:max-w-sm min-[1378px]:w-64 min-[1378px]:max-w-none"
+          // Mobile: largura total com limitação
+          "w-full max-w-xs min-[400px]:max-w-sm",
+          // Desktop: largura fixa de 256px (w-64)
+          "min-[1378px]:w-64 min-[1378px]:max-w-64"
         )}
       >
         {/* Logo e nome do sistema */}
