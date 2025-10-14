@@ -1312,11 +1312,28 @@ export default function Financeiro() {
                               {obterTextoDias(dias)}
                             </span>
                           </div>
+                          {/* Exibir anexos se existirem */}
+                          {item.anexos && item.anexos.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2 items-center">
+                              <span className="text-xs font-medium">Anexos:</span>
+                              {item.anexos.map((anexoUrl: string, idx: number) => (
+                                <Button
+                                  key={idx}
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-7 w-7 p-0"
+                                  title="Visualizar anexo"
+                                  onClick={() => window.open(anexoUrl, '_blank')}
+                                >
+                                  {getFileIcon(anexoUrl)}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
                           {/* Valor principal */}
                           <p className="text-sm sm:text-lg font-bold text-success break-words">{formatarValor(Number(item.valor) || 0)}</p>
-                          
                           {item.status === 'pendente' && (
                             <Button 
                               size="sm" 

@@ -24,6 +24,7 @@ export interface ContaReceber {
   cliente_nome?: string;
   cliente_email?: string;
   tipo_origem?: 'conta_receber' | 'venda' | 'transacao_entrada';
+  anexos?: string[];
 }
 
 export interface ContasReceberResponse {

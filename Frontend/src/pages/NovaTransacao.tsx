@@ -47,7 +47,7 @@ export default function NovaTransacao() {
     categoria: "",
     descricao: "",
     valor: 0,
-    data_transacao: new Date().toISOString().split('T')[0],
+    data_transacao: "",
     metodo_pagamento: "pix",
     conta: "caixa",
     observacoes: "",
@@ -464,11 +464,11 @@ export default function NovaTransacao() {
 
                   <div>
                     <label className="text-xs sm:text-sm font-medium">Descrição *</label>
-                    <Input
+                    <textarea
                       placeholder="Descreva a transação..."
                       value={transacao.descricao}
                       onChange={(e) => atualizarTransacao("descricao", e.target.value)}
-                      className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
+                      className="mt-1 h-16 sm:h-24 text-xs sm:text-sm w-full p-2 border rounded-md bg-background resize-none"
                     />
                   </div>
 
@@ -477,37 +477,43 @@ export default function NovaTransacao() {
                       <label className="text-xs sm:text-sm font-medium">Data de pagamento</label>
                       <Input
                         type="date"
-                        value={transacao.data_transacao}
+                        value={transacao.status === "pendente" ? "" : transacao.data_transacao}
                         onChange={(e) => atualizarTransacao("data_transacao", e.target.value)}
+                        className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
+                        placeholder={transacao.status === "pendente" ? "Selecione a data" : undefined}
+                      />
+                    </div>
+                    {/* Mostrar método de pagamento e conta apenas para saída */}
+                    {transacao.tipo === "saida" && (
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Método de Pagamento</label>
+                        <select
+                          value={transacao.metodo_pagamento}
+                          onChange={(e) => atualizarTransacao("metodo_pagamento", e.target.value)}
+                          className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
+                        >
+                          {metodosPagamento.map(metodo => (
+                            <option key={metodo.value} value={metodo.value}>
+                              {metodo.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mostrar campo conta apenas para saída */}
+                  {transacao.tipo === "saida" && (
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">Conta</label>
+                      <Input
+                        placeholder="Digite o nome da conta..."
+                        value={transacao.conta}
+                        onChange={(e) => atualizarTransacao("conta", e.target.value)}
                         className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
-
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium">Método de Pagamento</label>
-                      <select
-                        value={transacao.metodo_pagamento}
-                        onChange={(e) => atualizarTransacao("metodo_pagamento", e.target.value)}
-                        className="w-full mt-1 p-2 border rounded-md bg-background h-8 sm:h-10 text-xs sm:text-sm"
-                      >
-                        {metodosPagamento.map(metodo => (
-                          <option key={metodo.value} value={metodo.value}>
-                            {metodo.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium">Conta</label>
-                    <Input
-                      placeholder="Digite o nome da conta..."
-                      value={transacao.conta}
-                      onChange={(e) => atualizarTransacao("conta", e.target.value)}
-                      className="mt-1 h-8 sm:h-10 text-xs sm:text-sm"
-                    />
-                  </div>
+                  )}
 
                   <div>
                     <label className="text-xs sm:text-sm font-medium">Status *</label>
