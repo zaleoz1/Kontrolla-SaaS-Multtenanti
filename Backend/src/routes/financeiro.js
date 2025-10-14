@@ -667,6 +667,7 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
         cr.valor_com_juros,
         cr.data_criacao,
         cr.data_atualizacao,
+        cr.anexos,
         c.nome as cliente_nome,
         c.email as cliente_email,
         'conta_receber' as tipo_origem
