@@ -38,7 +38,6 @@ const clienteQuery = new QueryClient();
 
 function AppContent() {
   // Removido: sistema duplo de notificações - usar apenas NotificationContext
-  console.log('🔍 AppContent renderizado');
 
   return (
     <>
@@ -158,8 +157,6 @@ function AppContent() {
 }
 
 const App = () => {
-  // Debug: Log the Google Client ID
-  console.log('🔑 Google Client ID (Electron Simple):', import.meta.env.VITE_GOOGLE_CLIENT_ID);
   
   return (
     <QueryClientProvider client={clienteQuery}>

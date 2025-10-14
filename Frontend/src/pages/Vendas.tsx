@@ -344,9 +344,7 @@ export default function Vendas() {
       
       // Mostrar mensagem de sucesso
       // Aqui você pode adicionar um toast de sucesso se tiver implementado
-      console.log('Venda excluída com sucesso');
     } catch (error) {
-      console.error('Erro ao excluir venda:', error);
       // Aqui você pode adicionar um toast de erro se tiver implementado
     } finally {
       setExcluindoVenda(false);
@@ -1068,20 +1066,16 @@ export default function Vendas() {
                               if (metodo.metodo === 'cartao_debito') {
                                 // Buscar a taxa do método de pagamento configurado
                                 const metodoDebito = metodosPagamento.find(m => m.tipo === 'cartao_debito');
-                                console.log('Método débito encontrado:', metodoDebito);
                                 if (metodoDebito) {
                                   taxaAplicar = metodoDebito.taxa || 0;
-                                  console.log('Taxa aplicada para débito:', taxaAplicar);
                                 }
                               }
                               
                               // Calcular valor com taxa aplicando a taxa sobre o valor original
                               let valorComTaxa = valorOriginal;
-                              console.log('Valor original:', valorOriginal, 'Taxa a aplicar:', taxaAplicar);
                               if (taxaAplicar > 0) {
                                 // Aplicar taxa simples sobre o valor original
                                 valorComTaxa = valorOriginal * (1 + taxaAplicar / 100);
-                                console.log('Valor com taxa calculado:', valorComTaxa);
                               }
                               
                               const valorParcela = valorComTaxa / parcelas;

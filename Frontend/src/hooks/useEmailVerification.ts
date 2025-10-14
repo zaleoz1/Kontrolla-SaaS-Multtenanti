@@ -25,15 +25,12 @@ export function useEmailVerification() {
     setIsLoading(true);
     
     try {
-      console.log('📧 Enviando código de verificação para:', data.email);
-      
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.SEND_VERIFICATION_CODE, {
         method: 'POST',
         body: data
       });
 
       if (response.success) {
-        console.log('✅ Código enviado com sucesso');
         toast.success('Código de verificação enviado!');
         return { success: true, data: response };
       } else {
@@ -57,8 +54,6 @@ export function useEmailVerification() {
     setIsLoading(true);
     
     try {
-      console.log('🔍 Verificando código para:', email);
-      
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.VERIFY_CODE, {
         method: 'POST',
         body: {
@@ -69,7 +64,6 @@ export function useEmailVerification() {
       });
 
       if (response.success) {
-        console.log('✅ Código verificado com sucesso');
         toast.success('Email verificado com sucesso!');
         return { success: true, data: response };
       } else {
@@ -92,8 +86,6 @@ export function useEmailVerification() {
     setIsResending(true);
     
     try {
-      console.log('🔄 Reenviando código para:', email);
-      
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.RESEND_VERIFICATION_CODE, {
         method: 'POST',
         body: {
@@ -103,7 +95,6 @@ export function useEmailVerification() {
       });
 
       if (response.success) {
-        console.log('✅ Código reenviado com sucesso');
         toast.success('Código reenviado com sucesso!');
         return { success: true, data: response };
       } else {
@@ -121,14 +112,11 @@ export function useEmailVerification() {
 
   const testEmailConfig = useCallback(async (): Promise<VerificationResult> => {
     try {
-      console.log('🧪 Testando configuração de email...');
-      
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.TEST_EMAIL_CONFIG, {
         method: 'GET'
       });
 
       if (response.success) {
-        console.log('✅ Configuração de email válida');
         return { success: true, data: response };
       } else {
         throw new Error(response.error || 'Configuração de email inválida');

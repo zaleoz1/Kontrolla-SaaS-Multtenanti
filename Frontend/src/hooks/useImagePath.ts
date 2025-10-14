@@ -8,7 +8,6 @@ import { useElectron } from './useElectron';
 export function useImagePath(imageName: string): string {
   // Sempre usar caminho relativo - funciona tanto no Electron quanto no navegador
   const path = `./${imageName}`;
-  console.log('🖼️ useImagePath:', { imageName, path });
   return path;
 }
 

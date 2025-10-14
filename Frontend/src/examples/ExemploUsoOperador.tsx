@@ -26,7 +26,6 @@ export function ExemploUsoOperador() {
       data_criacao: new Date().toISOString(),
     };
 
-    console.log('Dados da venda com operador:', dadosVenda);
     // Aqui você enviaria os dados para a API
   };
 

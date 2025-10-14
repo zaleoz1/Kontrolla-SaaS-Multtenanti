@@ -321,7 +321,7 @@ export default function Login() {
                     >
                       <GoogleLoginButton
                         onSuccess={() => {
-                          console.log('✅ Login Google realizado com sucesso');
+                          // Login Google realizado com sucesso
                         }}
                         onError={(error) => {
                           console.error('❌ Erro no login Google:', error);

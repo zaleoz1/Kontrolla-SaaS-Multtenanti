@@ -96,8 +96,6 @@ export default function ForgotPassword() {
     
     setIsLoading(true);
     
-    console.log('🔍 Dados sendo enviados para verificação:', { email, codigo, codigoLength: codigo.length });
-    
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.VERIFY_RESET_CODE}`, {
         method: 'POST',
@@ -176,13 +174,6 @@ export default function ForgotPassword() {
     }
 
     setIsLoading(true);
-    
-    console.log('🔍 Dados sendo enviados para redefinição:', { 
-      email, 
-      codigo, 
-      codigoLength: codigo.length, 
-      novaSenhaLength: novaSenha.length 
-    });
     
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, {

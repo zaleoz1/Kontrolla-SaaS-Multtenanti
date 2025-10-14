@@ -492,8 +492,6 @@ export default function Financeiro() {
 
   // Função para abrir modal de pagamento
   const abrirModalPagamento = (conta: any, tipo: 'receber' | 'pagar', modalTipo: 'pagamento' | 'adiantamento' = 'pagamento') => {
-    console.log('🔍 Abrindo modal de pagamento:', { conta, tipo, modalTipo });
-    console.log('🔍 ID da conta:', conta.id);
     setContaSelecionada(conta);
     setTipoOperacao(tipo);
     setTipoModalPagamento('pagamento'); // Sempre iniciar como pagamento, o usuário pode alternar
@@ -552,7 +550,6 @@ export default function Financeiro() {
       setModalRecebimento(true);
     } else {
       if (modalTipo === 'adiantamento') {
-        console.log('🔍 Configurando adiantamento para conta ID:', conta.id);
         setDadosAdiantamento({
           contaId: conta.id,
           valorAdiantamento: 0, // Valor será preenchido pelo usuário
@@ -609,9 +606,7 @@ export default function Financeiro() {
       await recarregarDados();
       
       // Aqui você pode adicionar notificação de sucesso
-      console.log('Pagamento processado com sucesso:', dadosPagamento);
     } catch (error) {
-      console.error('Erro ao processar pagamento:', error);
     }
   };
 
@@ -632,18 +627,13 @@ export default function Financeiro() {
       await recarregarDados();
       
       // Aqui você pode adicionar notificação de sucesso
-      console.log('Recebimento processado com sucesso:', dadosRecebimento);
     } catch (error) {
-      console.error('Erro ao processar recebimento:', error);
     }
   };
 
   // Função para processar adiantamento
   const processarAdiantamento = async () => {
     try {
-      console.log('🔍 Processando adiantamento:', dadosAdiantamento);
-      console.log('🔍 ID da conta no adiantamento:', dadosAdiantamento.contaId);
-      
       // 1. Criar transação de saída para o adiantamento
       await criarTransacao({
         tipo: 'saida',
@@ -661,17 +651,11 @@ export default function Financeiro() {
       // 2. Atualizar o valor da conta a pagar (descontar o adiantamento)
       const novoValor = (Number(contaSelecionada?.valor) || 0) - dadosAdiantamento.valorAdiantamento;
       
-      console.log('🔍 Conta selecionada:', contaSelecionada);
-      console.log('🔍 Novo valor calculado:', novoValor);
-      console.log('🔍 ID da conta selecionada:', contaSelecionada?.id);
-      
       // Se o valor restante for zero ou negativo, marcar como pago
       if (novoValor <= 0) {
-        console.log('🔍 Marcando conta como paga, ID:', contaSelecionada.id);
         await marcarContaPagarComoPago(contaSelecionada.id, dadosAdiantamento.dataAdiantamento, contaSelecionada?.tipo_origem);
       } else {
         // Apenas atualizar o valor da conta com o valor restante (sem processar pagamento)
-        console.log('🔍 Atualizando conta, ID:', contaSelecionada.id);
         await atualizarConta(contaSelecionada.id, {
           valor: novoValor,
           observacoes: `Adiantamento de ${formatarValor(dadosAdiantamento.valorAdiantamento)} - Valor restante: ${formatarValor(novoValor)}`
@@ -682,9 +666,7 @@ export default function Financeiro() {
       await recarregarDados();
       
       // Aqui você pode adicionar notificação de sucesso
-      console.log('Adiantamento processado com sucesso:', dadosAdiantamento);
     } catch (error) {
-      console.error('Erro ao processar adiantamento:', error);
     }
   };
 
@@ -815,7 +797,6 @@ export default function Financeiro() {
 
       if (response.data.success) {
         adicionarAnexo(response.data.url);
-        console.log('Anexo adicionado com sucesso:', response.data.url);
       } else {
         throw new Error(response.data.error || 'Erro no upload');
       }
@@ -874,7 +855,6 @@ export default function Financeiro() {
 
       if (response.data.success) {
         adicionarAnexoPagamento(response.data.url);
-        console.log('Anexo adicionado com sucesso:', response.data.url);
       } else {
         throw new Error(response.data.error || 'Erro no upload');
       }

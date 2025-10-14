@@ -133,12 +133,9 @@ export function useDashboard() {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchDashboardData = useCallback(async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje') => {
-    console.log('📊 fetchDashboardData called with periodo:', periodo);
     try {
       setLoading(true);
       setError(null);
-
-      console.log('📊 Starting dashboard data fetch...');
       // Buscar todas as métricas em paralelo
       const [
         metricasResponse,
@@ -166,13 +163,10 @@ export function useDashboard() {
         periodo: metricasResponse.periodo
       };
 
-      console.log('📊 Dashboard data loaded successfully:', dashboardData);
       setData(dashboardData);
     } catch (err: any) {
-      console.error('❌ Erro ao buscar dados do dashboard:', err);
       setError(err.message || 'Erro ao carregar dados do dashboard');
     } finally {
-      console.log('📊 Dashboard loading finished');
       setLoading(false);
     }
   }, [makeRequest]);

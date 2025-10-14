@@ -142,11 +142,8 @@ export default function Signup() {
     if (cepLimpo.length === 8) {
       setIsLoadingCep(true);
       try {
-        console.log('🔍 Buscando CEP:', cepLimpo);
         const response = await fetch(`/api/auth/cep/${cepLimpo}`);
         const data = await response.json();
-        
-        console.log('📦 Resposta da API:', data);
         
         if (response.ok && !data.erro) {
           setFormData(prev => ({
@@ -155,9 +152,7 @@ export default function Signup() {
             cidade: data.localidade || '',
             estado: data.uf || ''
           }));
-          console.log('✅ CEP encontrado e preenchido automaticamente');
         } else {
-          console.log('❌ CEP não encontrado:', data.error || 'CEP inválido');
           // Limpar campos se CEP não for encontrado
           setFormData(prev => ({
             ...prev,
@@ -232,13 +227,10 @@ export default function Signup() {
     setCnpjValido(null);
 
     try {
-      console.log('🔍 Consultando CNPJ na BrasilAPI:', cnpjLimpo);
-      
       const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
       const data = await response.json();
 
       if (response.ok && data.cnpj) {
-        console.log('✅ CNPJ válido encontrado:', data);
         setCnpjValido(true);
         
         // Preencher automaticamente os dados da empresa se disponíveis
@@ -313,7 +305,6 @@ export default function Signup() {
         }
 
       } else {
-        console.log('❌ CNPJ não encontrado ou inválido:', data);
         setCnpjValido(false);
       }
     } catch (error) {
@@ -411,9 +402,7 @@ export default function Signup() {
       if (companyLogoFile) {
         try {
           await uploadLogo(companyLogoFile);
-          console.log('✅ Logo enviada com sucesso para o Cloudinary');
         } catch (logoError) {
-          console.error('❌ Erro ao fazer upload da logo:', logoError);
           // Continuar com o cadastro mesmo se o upload da logo falhar
         }
       }

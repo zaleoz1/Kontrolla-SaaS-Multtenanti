@@ -332,7 +332,6 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                 className="w-full"
                 onClick={() => {
                   // Implementar navegação para página de notificações
-                  console.log('Ver todas as notificações');
                 }}
               >
                 Ver todas as notificações

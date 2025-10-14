@@ -28,12 +28,6 @@ export const HEALTH_CHECK = {
   TIMEOUT: 5000
 };
 
-// Debug para Electron
-console.log('🖥️ Electron API Config:', {
-  mode: 'desktop-cloud-hybrid',
-  vps_host: VPS_CONFIG.HOST,
-  api_url: API_CONFIG_ELECTRON.BASE_URL,
-  health_check: HEALTH_CHECK.URL
-});
+// Electron API Configuration
 
 export default API_CONFIG_ELECTRON;

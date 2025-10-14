@@ -34,24 +34,18 @@ export function useAuth() {
 
   // Verificar se há token no localStorage
   useEffect(() => {
-    console.log('🔐 useAuth: Checking authentication...');
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-
-    console.log('🔐 useAuth: Token:', token ? 'Present' : 'Missing');
-    console.log('🔐 useAuth: UserData:', userData ? 'Present' : 'Missing');
 
     if (token && userData) {
       try {
         const user = JSON.parse(userData);
-        console.log('🔐 useAuth: User parsed successfully:', user);
         setAuthState({
           user,
           isAuthenticated: true,
           loading: false,
         });
       } catch (error) {
-        console.error('❌ useAuth: Erro ao parsear dados do usuário:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setAuthState({
@@ -92,26 +86,16 @@ export function useAuth() {
       const newUser = urlParams.get('new_user');
 
       if (token && googleAuth === 'true') {
-        console.log('🔄 Processando callback do Google OAuth...');
-        
         // Salvar token no localStorage
         localStorage.setItem('token', token);
         
         // Verificar se o token é válido
         const isValid = await verifyToken();
         if (isValid) {
-          console.log('✅ Token Google válido, usuário autenticado');
-          
           // Limpar parâmetros da URL
           const newUrl = window.location.pathname;
           window.history.replaceState({}, document.title, newUrl);
-          
-          // Mostrar mensagem de sucesso
-          if (newUser === 'true') {
-            console.log('🎉 Novo usuário criado com Google');
-          }
         } else {
-          console.error('❌ Token Google inválido');
           // Redirecionar para login em caso de erro
           navigate('/login?error=google_auth_failed');
         }
@@ -278,8 +262,6 @@ export function useAuth() {
 
   const loginWithGoogle = useCallback(async (googleToken: string, tenantSlug?: string) => {
     try {
-      console.log('🔐 Iniciando login com Google...');
-      
       const response = await api.makeRequest(API_ENDPOINTS.AUTH.GOOGLE_VERIFY, {
         method: 'POST',
         body: {
@@ -307,7 +289,6 @@ export function useAuth() {
 
       throw new Error('Resposta inválida do servidor');
     } catch (error: any) {
-      console.error('❌ Erro no login Google:', error);
       return { 
         success: false, 
         error: error.message || 'Erro ao fazer login com Google' 

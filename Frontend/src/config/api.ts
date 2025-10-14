@@ -24,12 +24,7 @@ export const API_CONFIG = {
   RETRY_ATTEMPTS: 3,
 };
 
-// Debug para verificar URL da API
-console.log('🔧 API Config:', {
-  hostname: window.location.hostname,
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  BASE_URL: API_CONFIG.BASE_URL
-});
+// API Configuration
 
 // Endpoints da API
 export const API_ENDPOINTS = {
