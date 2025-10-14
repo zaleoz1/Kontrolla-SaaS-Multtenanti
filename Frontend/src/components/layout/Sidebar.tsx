@@ -64,8 +64,6 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
-  // Debug: verificar dados do tenant
-  console.log('Sidebar - tenant data:', tenant);
 
   // Se não há operador selecionado, não renderizar a sidebar
   if (!operadorSelecionado) {

@@ -27,8 +27,6 @@ export function GoogleLoginButton({
 
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
-      console.log('🎫 Credencial Google recebida:', credentialResponse);
-      
       if (!credentialResponse.credential) {
         throw new Error('Credencial não fornecida pelo Google');
       }
@@ -72,7 +70,6 @@ export function GoogleLoginButton({
       }
       const googleAuthUrl = `${backendUrl}/api/auth/google${tenantSlug ? `?tenant_slug=${tenantSlug}` : ''}`;
       
-      console.log('🔗 Redirecionando para Google OAuth:', googleAuthUrl);
       window.location.href = googleAuthUrl;
     } catch (error: any) {
       console.error('❌ Erro ao iniciar login Google:', error);
@@ -158,7 +155,6 @@ export function GoogleLoginButtonCustom({
           : `${window.location.protocol}//${window.location.host}`);
       const googleAuthUrl = `${backendUrl}/api/auth/google${tenantSlug ? `?tenant_slug=${tenantSlug}` : ''}`;
       
-      console.log('🔗 Redirecionando para Google OAuth:', googleAuthUrl);
       window.location.href = googleAuthUrl;
     } catch (error: any) {
       console.error('❌ Erro ao iniciar login Google:', error);

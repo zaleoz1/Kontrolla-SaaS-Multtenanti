@@ -10,9 +10,7 @@ export function DebugRoute({ children, routeName }: DebugRouteProps) {
   const location = useLocation();
 
   useEffect(() => {
-    console.log(`🔍 Rota ${routeName} carregada:`, location.pathname);
-    console.log(`🔍 Hash:`, location.hash);
-    console.log(`🔍 Search:`, location.search);
+    // Debug route information removed for security
   }, [location, routeName]);
 
   return <>{children}</>;

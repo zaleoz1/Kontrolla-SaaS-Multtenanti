@@ -527,15 +527,6 @@ export default function Relatorios() {
 
 
 
-    // Debug logs
-
-    console.log('Debug - dadosProdutos:', dadosProdutos);
-
-    console.log('Debug - totalVendido:', totalVendido);
-
-    console.log('Debug - receitaTotal:', receitaTotal);
-
-    console.log('Debug - ticketMedio:', ticketMedio);
 
 
 
@@ -657,9 +648,6 @@ export default function Relatorios() {
 
 
 
-    // Debug final
-
-    console.log('Debug - dadosFormatados:', dadosFormatados);
 
 
 
@@ -818,15 +806,6 @@ export default function Relatorios() {
 
 
 
-    // Debug logs
-
-    console.log('Debug - dadosClientes:', dadosClientes);
-
-    console.log('Debug - totalClientes:', totalClientes);
-
-    console.log('Debug - clientesVip:', clientesVip);
-
-    console.log('Debug - receitaTotal:', receitaTotal);
 
 
 
@@ -1031,9 +1010,6 @@ export default function Relatorios() {
 
 
 
-    // Debug final
-
-    console.log('Debug - dadosFormatados clientes:', dadosFormatados);
 
 
 

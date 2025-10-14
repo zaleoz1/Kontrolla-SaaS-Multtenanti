@@ -87,6 +87,7 @@ export default function Pagamentos() {
   const { clientesFiltrados, termoBuscaCliente, setTermoBuscaCliente, carregando: carregandoClientes } = useBuscaClientes();
   const { 
     loading: salvandoVenda, 
+    error: erroVenda,
     calcularPagamentoPrazo, 
     calcularValorRestantePrazo, 
     validarFormulario, 
@@ -150,7 +151,6 @@ export default function Pagamentos() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('🔓 Usuário não autenticado, redirecionando para login');
       navigate('/login');
     }
   }, [navigate]);
@@ -400,22 +400,12 @@ export default function Pagamentos() {
   // Função para confirmar seleção de parcela
   const handleConfirmarParcela = () => {
     if (parcelaSelecionada) {
-      console.log('Debug - handleConfirmarParcela:', {
-        parcelaSelecionada,
-        metodoSelecionadoParaParcelas,
-        metodosPagamentoLength: metodosPagamento.length,
-        metodosPagamento,
-        metodosDisponiveisLength: metodosDisponiveis.length,
-        metodosDisponiveis
-      });
       
       // Verificar se é para múltiplos métodos (formato: metodo_index)
       const parts = metodoSelecionadoParaParcelas.split('_');
       if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
         const [metodo, tipo, indexStr] = parts;
         const index = parseInt(indexStr);
-        
-        console.log('Debug - múltiplos métodos:', { metodo, tipo, indexStr, index });
         
         // Validar se o índice é válido e o array de métodos selecionados não está vazio
         if (index >= 0 && metodosPagamento.length > 0 && index < metodosPagamento.length) {
@@ -452,10 +442,6 @@ export default function Pagamentos() {
         // Método único - definir cartao_credito como método primário e a parcela selecionada
         setMetodoPagamentoUnico("cartao_credito");
         setParcelaConfirmada(parcelaSelecionada);
-        console.log('Debug - método único configurado:', {
-          metodo: "cartao_credito",
-          parcela: parcelaSelecionada
-        });
       }
       
       // Limpar estados após sucesso

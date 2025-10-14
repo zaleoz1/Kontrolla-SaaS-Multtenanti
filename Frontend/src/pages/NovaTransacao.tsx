@@ -257,8 +257,6 @@ export default function NovaTransacao() {
         }
       });
 
-      console.log("📤 Dados da transação a serem enviados:", dadosTransacao);
-
       await criarTransacao(dadosTransacao);
       
       // Mensagem específica para transações pendentes

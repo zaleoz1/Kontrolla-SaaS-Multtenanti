@@ -211,7 +211,6 @@ export const usePagamentos = () => {
     }
     
     // Preparar itens da venda
-    console.log('Debug - Carrinho antes de processar:', carrinho);
     const itensVenda: ItemVenda[] = carrinho.map(item => {
       // Para produtos vendidos por kg/litros, manter quantidade decimal
       // Para produtos vendidos por unidade, usar quantidade inteira
@@ -228,15 +227,6 @@ export const usePagamentos = () => {
       const precoUnitario = parseFloat(item.precoUnitario.toString()) || 0;
       const precoTotal = parseFloat(item.precoTotal.toString()) || 0;
       
-      console.log('Debug - Item processado:', {
-        produto_id: produtoId,
-        quantidade: quantidade,
-        quantidadeOriginal: item.quantidade,
-        tipo_preco: item.produto.tipo_preco,
-        preco_unitario: precoUnitario,
-        preco_total: precoTotal
-      });
-      
       return {
         produto_id: produtoId,
         quantidade: quantidade,
@@ -245,11 +235,9 @@ export const usePagamentos = () => {
         desconto: 0
       };
     });
-    console.log('Debug - Itens da venda processados:', itensVenda);
     
     // Filtrar itens com quantidade válida (maior que 0)
     const itensValidos = itensVenda.filter(item => item.quantidade > 0);
-    console.log('Debug - Itens válidos após filtro:', itensValidos);
     
     if (itensValidos.length === 0) {
       throw new Error('Nenhum item válido no carrinho');

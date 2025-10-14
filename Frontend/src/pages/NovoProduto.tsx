@@ -493,8 +493,6 @@ export default function NovoProduto() {
         imagens: produto.imagens || []
       };
 
-      console.log('📦 Enviando dados do produto:', dadosProduto);
-
       let response;
       if (isEditMode && id) {
         // Modo de edição - fazer PUT

@@ -58,7 +58,6 @@ export function useContasPagar() {
   }) => {
     try {
       const response = await api.list(params);
-      console.log('Contas a pagar carregadas:', response.contas);
       setContas(response.contas);
       setPagination(response.pagination);
       return response;

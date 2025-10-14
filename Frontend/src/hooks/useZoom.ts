@@ -32,11 +32,7 @@ export function useZoom(): ZoomControls {
       
       setCurrentZoom(current);
       setResponsiveZoom(responsive);
-      
-      console.log(`🔍 Zoom atual: ${(current * 100).toFixed(0)}%`);
-      console.log(`🔍 Zoom responsivo: ${(responsive * 100).toFixed(0)}%`);
     } catch (error) {
-      console.error('Erro ao carregar zoom:', error);
     }
   };
 
@@ -46,9 +42,7 @@ export function useZoom(): ZoomControls {
     try {
       const newZoom = await window.electronAPI.setZoomFactor(zoom);
       setCurrentZoom(newZoom);
-      console.log(`🔍 Zoom alterado para: ${(newZoom * 100).toFixed(0)}%`);
     } catch (error) {
-      console.error('Erro ao definir zoom:', error);
     }
   };
 
@@ -58,9 +52,7 @@ export function useZoom(): ZoomControls {
     try {
       const newZoom = await window.electronAPI.resetZoom();
       setCurrentZoom(newZoom);
-      console.log(`🔍 Zoom resetado para: ${(newZoom * 100).toFixed(0)}%`);
     } catch (error) {
-      console.error('Erro ao resetar zoom:', error);
     }
   };
 

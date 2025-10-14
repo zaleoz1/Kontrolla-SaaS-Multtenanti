@@ -25,7 +25,6 @@ export function useApi<T = any>() {
     endpoint: string,
     options: ApiOptions = {}
   ): Promise<T> => {
-    console.log('🌐 API Request:', { endpoint, options });
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
@@ -37,7 +36,6 @@ export function useApi<T = any>() {
       } = options;
 
       const token = localStorage.getItem('token');
-      console.log('🔑 Token:', token ? 'Present' : 'Missing');
       
       const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -69,7 +67,7 @@ export function useApi<T = any>() {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        let errorMessage = ERROR_MESSAGES.UNKNOWN_ERROR;
+        let errorMessage: string = ERROR_MESSAGES.UNKNOWN_ERROR;
         
         // Tentar obter mensagem de erro do servidor
         try {
@@ -113,7 +111,7 @@ export function useApi<T = any>() {
       return data;
 
     } catch (error: any) {
-      let errorMessage = ERROR_MESSAGES.UNKNOWN_ERROR;
+      let errorMessage: string = ERROR_MESSAGES.UNKNOWN_ERROR;
 
       if (error.name === 'AbortError') {
         errorMessage = ERROR_MESSAGES.TIMEOUT;

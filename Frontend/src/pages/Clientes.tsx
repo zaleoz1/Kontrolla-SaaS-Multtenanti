@@ -24,7 +24,8 @@ import {
   Star,
   UserPlus,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 
 // Interface para o tipo Cliente
@@ -144,8 +145,6 @@ export default function Clientes() {
         try {
           const url = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.CLIENTS.LIST}/${cliente.id}/total-pagar`;
           const token = localStorage.getItem('token');
-          console.log(`🔗 Chamando URL: ${url}`);
-          console.log(`🔑 Token: ${token ? 'Presente' : 'Ausente'}`);
           
           const response = await fetch(url, {
             headers: {
@@ -156,7 +155,6 @@ export default function Clientes() {
           
           if (response.ok) {
             const data = await response.json();
-            console.log(`✅ Total a pagar para cliente ${cliente.id}:`, data);
             return { clienteId: cliente.id, data };
           } else {
             // Se a resposta não for ok, tentar ler o texto para debug
@@ -187,6 +185,13 @@ export default function Clientes() {
   const recarregarDados = () => {
     carregarClientes();
     carregarEstatisticas();
+  };
+
+  // Função para limpar filtros
+  const limparFiltros = () => {
+    setTermoBusca("");
+    setFiltroStatus("");
+    setPaginaAtual(1);
   };
 
   // Função para deletar cliente
@@ -403,6 +408,10 @@ export default function Clientes() {
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>
               </select>
+              <Button variant="outline" onClick={limparFiltros}>
+                <X className="h-4 w-4 mr-2" />
+                Limpar
+              </Button>
               <Button variant="outline" onClick={recarregarDados}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Atualizar
@@ -438,6 +447,15 @@ export default function Clientes() {
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>
               </select>
+              <Button 
+                variant="outline" 
+                onClick={limparFiltros}
+                className="text-xs sm:text-sm"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Limpar</span>
+                <span className="sm:hidden">Limpar</span>
+              </Button>
               <Button 
                 variant="outline" 
                 onClick={recarregarDados}
@@ -509,7 +527,7 @@ export default function Clientes() {
                 <div>
                   <h3 className="font-semibold text-base sm:text-lg line-clamp-2 flex items-center space-x-2">
                     <span>{cliente.nome}</span>
-                    {cliente.vip && <Star className="h-3 w-3 sm:h-4 sm:w-4 text-warning fill-warning flex-shrink-0" />}
+                    {cliente.vip ? <Star className="h-3 w-3 sm:h-4 sm:w-4 text-warning fill-warning flex-shrink-0" /> : null}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     {cliente.tipo_pessoa === 'juridica' ? 'Pessoa Jurídica' : 'Pessoa Física'}

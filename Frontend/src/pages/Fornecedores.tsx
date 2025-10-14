@@ -70,7 +70,6 @@ export default function Fornecedores() {
 
   const handleVisualizarFornecedor = (fornecedor: any) => {
     // Implementar modal de visualização se necessário
-    console.log('Visualizar fornecedor:', fornecedor);
   };
 
   // Filtrar fornecedores
