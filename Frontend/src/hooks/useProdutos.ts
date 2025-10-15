@@ -58,7 +58,7 @@ export const useProdutos = () => {
 
   // Buscar produtos
   const buscarProdutos = async (filtros?: { 
-    page?: number; 
+    page?: number;  
     limit?: number; 
     q?: string; 
     status?: string; 
