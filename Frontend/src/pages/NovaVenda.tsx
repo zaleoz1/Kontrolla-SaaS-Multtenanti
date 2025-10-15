@@ -523,26 +523,30 @@ export default function NovaVenda() {
   };
 
   const obterUnidadeEstoque = (tipo_preco: string, nomeProduto: string) => {
-    // Primeiro verifica o tipo_preco do banco
+    // Primeiro verifica o tipo_preco do banco - esta é a fonte de verdade
     if (tipo_preco === 'kg') return 'kg';
     if (tipo_preco === 'litros') return 'L';
+    if (tipo_preco === 'unidade') return 'un.';
     
-    // Se tipo_preco for 'unidade' ou não definido, tenta detectar pelo nome
+    // Se tipo_preco não estiver definido ou for inválido, usar detecção por nome
+    // mas com critérios mais restritivos para evitar falsos positivos
     const nome = nomeProduto.toLowerCase();
     
-    // Detectar por peso (kg, gramas, g, peso)
-    if (nome.includes('kg') || nome.includes('quilo') || nome.includes('grama') || 
-        nome.includes('g ') || nome.includes('peso') || nome.includes('balança')) {
+    // Detectar por peso apenas se o nome indicar claramente que é vendido por peso
+    // Ex: "carne por kg", "produto vendido por peso", etc.
+    if (nome.includes('por kg') || nome.includes('por quilo') || 
+        nome.includes('vendido por peso') || nome.includes('balança')) {
       return 'kg';
     }
     
-    // Detectar por volume (litros, ml, volume)
-    if (nome.includes('litro') || nome.includes('l ') || nome.includes('ml') || 
-        nome.includes('volume') || nome.includes('líquido') || nome.includes('bebida')) {
+    // Detectar por volume apenas se o nome indicar claramente que é vendido por volume
+    // Ex: "bebida por litro", "líquido vendido por volume", etc.
+    if (nome.includes('por litro') || nome.includes('por l') || 
+        nome.includes('vendido por volume') || nome.includes('líquido por volume')) {
       return 'L';
     }
     
-    // Padrão para unidade
+    // Padrão para unidade - produtos com ml/kg no nome são vendidos por unidade
     return 'un.';
   };
 

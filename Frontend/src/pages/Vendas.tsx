@@ -448,27 +448,27 @@ export default function Vendas() {
       </div>
 
       {/* Filtros */}
-      <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden">
+      <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden dark:from-slate-900 dark:via-slate-800/95 dark:to-slate-700/90">
         <CardContent className="p-0">
           {/* Header dos Filtros - Mobile */}
           <div className="block sm:hidden">
-            <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-4 border-b border-slate-200/50">
+            <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-4 border-b border-slate-200/50 dark:from-slate-800/80 dark:via-slate-700/60 dark:to-slate-600/50 dark:border-slate-700/70">
               <div className="flex items-center space-x-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
-                  <Filter className="h-4 w-4 text-primary" />
+                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm dark:from-slate-700/80 dark:to-slate-600/70">
+                  <Filter className="h-4 w-4 text-primary dark:text-slate-300" />
                 </div>
-                <h3 className="font-bold text-sm text-slate-900">Filtros</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Filtros</h3>
               </div>
             </div>
             
             <div className="p-4 space-y-4">
               {/* Busca */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-600">Buscar vendas</label>
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Buscar vendas</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground dark:text-slate-400" />
                   {buscandoAuto && (
-                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground dark:text-slate-400" />
                   )}
                   <Input
                     placeholder="Cliente, email ou código..."
@@ -477,20 +477,20 @@ export default function Vendas() {
                       setTermoBusca(e.target.value);
                       handleAutoSearch(e.target.value);
                     }}
-                    className="pl-10 text-sm h-10"
+                    className="pl-10 text-sm h-10 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-primary/60"
                   />
                 </div>
               </div>
 
               {/* Status */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-600">Status</label>
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Status</label>
                 <div className="grid grid-cols-3 gap-2">
                   <Button 
                     variant={filtros.status === '' ? "default" : "outline"}
                     onClick={() => handleStatusFilter('')}
                     size="sm"
-                    className="h-9 text-xs font-medium"
+                    className="h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
                   >
                     Todas
                   </Button>
@@ -498,7 +498,7 @@ export default function Vendas() {
                     variant={filtros.status === 'pago' ? "default" : "outline"}
                     onClick={() => handleStatusFilter('pago')}
                     size="sm"
-                    className="h-9 text-xs font-medium"
+                    className="h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
                   >
                     Pagas
                   </Button>
@@ -506,7 +506,7 @@ export default function Vendas() {
                     variant={filtros.status === 'pendente' ? "default" : "outline"}
                     onClick={() => handleStatusFilter('pendente')}
                     size="sm"
-                    className="h-9 text-xs font-medium"
+                    className="h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
                   >
                     Pendentes
                   </Button>
@@ -515,26 +515,26 @@ export default function Vendas() {
 
               {/* Datas */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-600">Período</label>
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Período</label>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs text-slate-600 w-8">De:</span>
+                    <Calendar className="h-4 w-4 text-muted-foreground dark:text-slate-400 flex-shrink-0" />
+                    <span className="text-xs text-slate-600 dark:text-slate-300 w-8">De:</span>
                     <Input
                       type="date"
                       value={dataInicio}
                       onChange={(e) => setDataInicio(e.target.value)}
-                      className="flex-1 h-9 text-sm"
+                      className="flex-1 h-9 text-sm dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs text-slate-600 w-8">Até:</span>
+                    <Calendar className="h-4 w-4 text-muted-foreground dark:text-slate-400 flex-shrink-0" />
+                    <span className="text-xs text-slate-600 dark:text-slate-300 w-8">Até:</span>
                     <Input
                       type="date"
                       value={dataFim}
                       onChange={(e) => setDataFim(e.target.value)}
-                      className="flex-1 h-9 text-sm"
+                      className="flex-1 h-9 text-sm dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100"
                     />
                   </div>
                 </div>
@@ -547,7 +547,7 @@ export default function Vendas() {
                   onClick={limparPesquisa}
                   disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
                   size="sm"
-                  className="flex-1 h-9 text-xs font-medium"
+                  className="flex-1 h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                 >
                   Limpar Tudo
                 </Button>
@@ -556,7 +556,7 @@ export default function Vendas() {
                   onClick={limparFiltrosData}
                   disabled={!dataInicio && !dataFim}
                   size="sm"
-                  className="flex-1 h-9 text-xs font-medium"
+                  className="flex-1 h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                 >
                   Limpar Datas
                 </Button>
@@ -570,9 +570,9 @@ export default function Vendas() {
             {/* Busca e Status */}
               <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground dark:text-slate-400" />
                 {buscandoAuto && (
-                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground dark:text-slate-400" />
                 )}
                 <Input
                   placeholder="Buscar por nome do cliente, email ou código da venda..."
@@ -581,7 +581,7 @@ export default function Vendas() {
                     setTermoBusca(e.target.value);
                     handleAutoSearch(e.target.value);
                   }}
-                    className="pl-10 text-sm"
+                    className="pl-10 text-sm dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-primary/60"
                 />
               </div>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -589,7 +589,7 @@ export default function Vendas() {
                 variant="outline" 
                 onClick={limparPesquisa}
                 disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                     size="sm"
               >
                 Limpar
@@ -599,7 +599,7 @@ export default function Vendas() {
                   variant={filtros.status === '' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('')}
                   size="sm"
-                      className="whitespace-nowrap"
+                      className="whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
                 >
                   Todas
                 </Button>
@@ -607,7 +607,7 @@ export default function Vendas() {
                   variant={filtros.status === 'pago' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('pago')}
                   size="sm"
-                      className="whitespace-nowrap"
+                      className="whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
                 >
                   Pagas
                 </Button>
@@ -615,7 +615,7 @@ export default function Vendas() {
                   variant={filtros.status === 'pendente' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('pendente')}
                   size="sm"
-                      className="whitespace-nowrap"
+                      className="whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
                 >
                   Pendentes
                 </Button>
@@ -627,22 +627,22 @@ export default function Vendas() {
               <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">De:</span>
+                    <Calendar className="h-4 w-4 text-muted-foreground dark:text-slate-400 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground dark:text-slate-300 whitespace-nowrap">De:</span>
                 <Input
                   type="date"
                   value={dataInicio}
                   onChange={(e) => setDataInicio(e.target.value)}
-                      className="w-full sm:w-40"
+                      className="w-full sm:w-40 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100"
                 />
               </div>
               <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">Até:</span>
+                    <span className="text-sm text-muted-foreground dark:text-slate-300 whitespace-nowrap">Até:</span>
                 <Input
                   type="date"
                   value={dataFim}
                   onChange={(e) => setDataFim(e.target.value)}
-                      className="w-full sm:w-40"
+                      className="w-full sm:w-40 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100"
                 />
               </div>
                 </div>
@@ -652,7 +652,7 @@ export default function Vendas() {
                   onClick={limparFiltrosData}
                   disabled={!dataInicio && !dataFim}
                   size="sm"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                 >
                     Limpar Datas
                 </Button>
@@ -696,18 +696,18 @@ export default function Vendas() {
                 <CardContent className="p-0 sm:p-4 sm:p-6">
                   {/* Layout Mobile - Cards Responsivos */}
                   <div className="block sm:hidden">
-                    <div className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg hover:shadow-xl transition-all duration-300 border-0 overflow-hidden group rounded-xl">
+                    <div className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg hover:shadow-xl transition-all duration-300 border-0 overflow-hidden group rounded-xl dark:from-slate-800 dark:via-slate-700/90 dark:to-slate-600/80">
                       <CardContent className="p-0">
                         {/* Header com gradiente - Mobile Otimizado */}
-                        <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-3 border-b border-slate-200/50">
+                        <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-secondary/5 p-3 border-b border-slate-200/50 dark:from-primary/10 dark:via-primary/5 dark:to-secondary/10 dark:border-slate-600/50">
                           <div className="flex flex-col space-y-3">
                             {/* Primeira linha: Número e Status */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2">
-                                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 shadow-sm dark:from-primary/30 dark:to-primary/20">
                                   <ShoppingCart className="h-4 w-4 text-primary" />
                                 </div>
-                                <h3 className="font-bold text-sm text-slate-900">#{venda.numero_venda}</h3>
+                                <h3 className="font-bold text-sm text-slate-900 dark:text-white">#{venda.numero_venda}</h3>
                               </div>
                               <Badge className={`${statusBadge.className} text-xs px-2 py-1 shadow-sm`}>
                                 {statusBadge.text}
@@ -717,15 +717,15 @@ export default function Vendas() {
                             {/* Segunda linha: Cliente e Valor */}
                             <div className="flex items-center justify-between">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs text-slate-600 font-medium truncate">
+                                <p className="text-xs text-slate-600 font-medium truncate dark:text-slate-300">
                                   {venda.cliente_nome || 'Cliente não informado'}
                                 </p>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
                                   {formatDateTime(venda.data_venda)}
                                 </p>
                               </div>
                               <div className="text-right ml-3">
-                                <p className="text-lg font-bold text-slate-900">
+                                <p className="text-lg font-bold text-slate-900 dark:text-white">
                                   {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
                                 </p>
                               </div>
@@ -739,7 +739,7 @@ export default function Vendas() {
                             {/* Informações da venda - Layout vertical para mobile */}
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2 text-xs text-slate-600">
+                                <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
                                   <Package className="h-3 w-3" />
                                   <span>{venda.itens?.length || 0} {venda.itens?.length === 1 ? 'item' : 'itens'}</span>
                                 </div>
@@ -751,23 +751,23 @@ export default function Vendas() {
                                   {venda.metodos_pagamento && venda.metodos_pagamento.length > 0 ? (
                                     <>
                                       {venda.metodos_pagamento.slice(0, 2).map((metodo: any, index: number) => (
-                                        <div key={index} className="flex items-center space-x-1 px-1.5 py-0.5 bg-slate-100 rounded-full">
+                                        <div key={index} className="flex items-center space-x-1 px-1.5 py-0.5 bg-slate-100 rounded-full dark:bg-slate-600/50">
                                           <span className={`text-xs font-medium ${getPaymentColor(metodo.metodo)}`}>
                                             {getPaymentText(metodo.metodo)}
                                           </span>
                                         </div>
                                       ))}
                                       {venda.metodos_pagamento.length > 2 && (
-                                        <span className="text-xs text-slate-500">+{venda.metodos_pagamento.length - 2}</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">+{venda.metodos_pagamento.length - 2}</span>
                                       )}
                                       {venda.pagamento_prazo && (
-                                        <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-yellow-100 rounded-full">
-                                          <span className="text-xs font-medium text-yellow-700">Prazo</span>
+                                        <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-yellow-100 rounded-full dark:bg-yellow-600/20">
+                                          <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Prazo</span>
                                         </div>
                                       )}
                                     </>
                                   ) : (
-                                    <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-slate-100 rounded-full">
+                                    <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-slate-100 rounded-full dark:bg-slate-600/50">
                                       <span className={`text-xs font-medium ${paymentMethod.color}`}>{paymentMethod.text}</span>
                                     </div>
                                   )}
@@ -777,8 +777,8 @@ export default function Vendas() {
 
                             {/* Observações se houver - Layout compacto */}
                             {venda.observacoes && (
-                              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                                <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">{venda.observacoes}</p>
+                              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600/50">
+                                <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed dark:text-slate-300">{venda.observacoes}</p>
                               </div>
                             )}
 
@@ -788,7 +788,7 @@ export default function Vendas() {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => abrirDetalhesVenda(venda)}
-                                className="w-full h-10 bg-white hover:bg-slate-50 border-slate-200 hover:border-primary/30 hover:text-primary transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
+                                className="w-full h-10 bg-white hover:bg-slate-50 border-slate-200 hover:border-primary/30 hover:text-primary transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium dark:bg-slate-700 dark:hover:bg-slate-600 dark:border-slate-600 dark:hover:border-primary/50 dark:hover:text-primary dark:text-white"
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ver Detalhes

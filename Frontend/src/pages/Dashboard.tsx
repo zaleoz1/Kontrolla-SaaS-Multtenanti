@@ -73,7 +73,7 @@ export default function Dashboard() {
   // Dados das métricas baseados nos dados reais
   const metricas = data ? [
     {
-      titulo: periodo === 'hoje' ? "Vendas Hoje" : `Vendas ${periodo === 'semana' ? 'da Semana' : periodo === 'mes' ? 'do Mês' : 'do Ano'}`,
+      titulo: periodo === 'hoje' ? "Total Hoje" : `Vendas ${periodo === 'semana' ? 'da Semana' : periodo === 'mes' ? 'do Mês' : 'do Ano'}`,
       valor: formatCurrency(data.metricas.vendas.receita_total),
       mudanca: hasValidComparison(data.metricas.comparacao) ? 
         `${getVariationIcon(data.metricas.comparacao.receita.variacao)} ${formatVariation(data.metricas.comparacao.receita.variacao)}` : 
@@ -87,7 +87,7 @@ export default function Dashboard() {
         data.metricas.comparacao?.receita.anterior === 0 ? "primeira vez" : "sem comparação"
     },
     {
-      titulo: periodo === 'hoje' ? "Pedidos Hoje" : `Pedidos ${periodo === 'semana' ? 'da Semana' : periodo === 'mes' ? 'do Mês' : 'do Ano'}`,
+      titulo: periodo === 'hoje' ? "Vendas Hoje" : `Pedidos ${periodo === 'semana' ? 'da Semana' : periodo === 'mes' ? 'do Mês' : 'do Ano'}`,
       valor: data.metricas.vendas.total_vendas.toString(),
       mudanca: hasValidComparison(data.metricas.comparacao) ? 
         `${getVariationIcon(data.metricas.comparacao.vendas.variacao)} ${formatVariation(data.metricas.comparacao.vendas.variacao)}` : 

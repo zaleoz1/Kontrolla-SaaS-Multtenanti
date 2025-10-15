@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User, Crown, Shield, ShoppingBag, ArrowRight, Sparkles, CheckCircle, X, ChevronLeft, LogOut, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,25 @@ export function OperadorRequired() {
   const [criandoCodigo, setCriandoCodigo] = useState(false);
   const [novoCodigo, setNovoCodigo] = useState("");
   const [codigoCriado, setCodigoCriado] = useState<string | null>(null);
+  const [codigoInputFocused, setCodigoInputFocused] = useState(false);
+  
+  // Refs para os campos de input
+  const accessCodeRef = useRef<HTMLInputElement>(null);
+  const novoCodigoRef = useRef<HTMLInputElement>(null);
+
+  // Focar automaticamente no campo de código quando ele for exibido
+  useEffect(() => {
+    if (operadorEmCodigo && codigoInputFocused) {
+      const timer = setTimeout(() => {
+        if (accessCodeRef.current) {
+          accessCodeRef.current.focus();
+        } else if (novoCodigoRef.current) {
+          novoCodigoRef.current.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [operadorEmCodigo, codigoInputFocused]);
 
   // Variantes de animação
   const fadeInUp = {
@@ -66,6 +85,7 @@ export function OperadorRequired() {
     setAccessCodeError("");
     setNovoCodigo("");
     setCodigoCriado(null);
+    setCodigoInputFocused(true);
   };
 
   // Função para validar e selecionar operador
@@ -128,6 +148,7 @@ export function OperadorRequired() {
     setAccessCodeError("");
     setNovoCodigo("");
     setCodigoCriado(null);
+    setCodigoInputFocused(false);
   };
 
   // Função para voltar à seleção de roles
@@ -428,6 +449,7 @@ export function OperadorRequired() {
                           {operador.nome} {operador.sobrenome}
                         </h3>
 
+                        {/* Campo de código sempre visível quando operador está em modo código */}
                         {operadorEmCodigo === operador.id ? (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
@@ -462,6 +484,7 @@ export function OperadorRequired() {
                                       </p>
                                       <div className="relative">
                                         <Input
+                                          ref={novoCodigoRef}
                                           type="text"
                                           placeholder="Digite seu código"
                                           value={novoCodigo}
@@ -477,6 +500,7 @@ export function OperadorRequired() {
                                           spellCheck="false"
                                           data-form-type="other"
                                           data-lpignore="true"
+                                          autoFocus
                                         />
                                       </div>
                                       <Button
@@ -528,6 +552,7 @@ export function OperadorRequired() {
                                   </p>
                                   <div className="relative">
                                      <Input
+                                       ref={accessCodeRef}
                                        type="text"
                                        placeholder="Código de acesso"
                                        value={accessCode}
@@ -547,6 +572,7 @@ export function OperadorRequired() {
                                        spellCheck="false"
                                        data-form-type="other"
                                        data-lpignore="true"
+                                       autoFocus
                                      />
                                   </div>
                                   {accessCodeError && (
