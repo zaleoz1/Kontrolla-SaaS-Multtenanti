@@ -267,7 +267,7 @@ export default function NFe() {
 
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">{nfe.valor}</p>
+                        <p className="text-2xl font-bold text-foreground">{nfe.valor}</p>
                         <p className="text-sm text-muted-foreground">{nfe.tipo}</p>
                       </div>
 

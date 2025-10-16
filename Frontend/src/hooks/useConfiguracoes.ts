@@ -40,6 +40,7 @@ interface DadosTenant {
 
 interface ConfiguracoesSistema {
   tema: 'claro' | 'escuro' | 'sistema';
+  cor_primaria: string;
   idioma: string;
   fuso_horario: string;
   moeda: string;

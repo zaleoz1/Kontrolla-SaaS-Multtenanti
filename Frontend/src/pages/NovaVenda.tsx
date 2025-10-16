@@ -645,7 +645,7 @@ export default function NovaVenda() {
                 <Button 
                   onClick={buscarPorCodigoBarras} 
                   disabled={!codigoBarras.trim() || carregandoProdutos}
-                  className="h-10 sm:h-12 px-4 sm:px-6 bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
+                  className="h-10 sm:h-12 px-4 sm:px-6 bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm"
                 >
                   <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
@@ -682,7 +682,7 @@ export default function NovaVenda() {
                         className={`bg-card rounded-lg border-2 p-2 sm:p-3 transition-all h-24 sm:h-32 flex flex-col justify-between relative ${
                           semEstoque 
                             ? 'opacity-60 cursor-not-allowed border-gray-300 dark:border-gray-600' 
-                            : 'cursor-pointer hover:shadow-lg border-border hover:border-green-300 dark:hover:border-green-600'
+                            : 'cursor-pointer hover:shadow-lg border-border hover:border-primary/50'
                         }`}
                         onClick={() => {
                           if (!semEstoque) {
@@ -743,7 +743,7 @@ export default function NovaVenda() {
                 <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>Carrinho de Compras</span>
               </CardTitle>
-              <Badge variant="secondary" className="bg-green-600 text-white text-xs">
+              <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
                 {carrinho.length} itens
               </Badge>
             </div>
@@ -783,15 +783,15 @@ export default function NovaVenda() {
                       
                       {/* Botão Novo Cliente */}
                       <div
-                        className="p-2 sm:p-3 rounded-lg border border-dashed border-green-400 cursor-pointer hover:bg-green-50 transition-colors"
+                        className="p-2 sm:p-3 rounded-lg border border-dashed border-primary/50 cursor-pointer hover:bg-primary/5 transition-colors"
                         onClick={() => {
                           setModalClienteAberto(false);
                           irParaNovoCliente();
                         }}
                       >
                         <div className="flex items-center space-x-2">
-                          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                          <p className="text-green-600 font-medium text-xs sm:text-sm">Novo Cliente</p>
+                          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                          <p className="text-primary font-medium text-xs sm:text-sm">Novo Cliente</p>
                         </div>
                       </div>
                       
@@ -812,7 +812,7 @@ export default function NovaVenda() {
                               key={cliente.id}
                               className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors border ${
                                 clienteSelecionado?.id === cliente.id
-                                  ? "bg-green-600 text-white border-green-600"
+                                  ? "bg-primary text-primary-foreground border-primary"
                                   : "bg-muted hover:bg-muted/80 border-border"
                               }`}
                               onClick={() => {
@@ -823,7 +823,7 @@ export default function NovaVenda() {
                               <p className="font-medium text-xs sm:text-sm">{cliente.nome}</p>
                               <p className={`text-xs ${
                                 clienteSelecionado?.id === cliente.id
-                                  ? "text-green-100"
+                                  ? "text-primary-foreground/80"
                                   : "text-muted-foreground"
                               }`}>
                                 {cliente.cpf_cnpj}
@@ -966,7 +966,7 @@ export default function NovaVenda() {
                             }
                           })()}
                         </div>
-                        <span className="text-green-600 font-bold text-xs">
+                        <span className="text-foreground font-bold text-xs">
                           {item.precoTotal.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
@@ -991,7 +991,7 @@ export default function NovaVenda() {
                 </div>
                 
                 {parseFloat(desconto) > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between text-success">
                     <span>Desconto ({desconto}%):</span>
                     <span>-{valorDesconto.toLocaleString("pt-BR", {
                       style: "currency",
@@ -1003,7 +1003,7 @@ export default function NovaVenda() {
                 <div className="border-t pt-1 sm:pt-2">
                   <div className="flex justify-between text-base sm:text-lg font-bold">
                     <span>TOTAL:</span>
-                    <span className="text-green-600">
+                    <span className="text-foreground">
                       {total.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -1015,7 +1015,7 @@ export default function NovaVenda() {
 
               {/* Botão de Pagamento */}
               <Button 
-                className="w-full mt-3 sm:mt-4 bg-green-600 hover:bg-green-700 text-white h-10 sm:h-12 text-sm sm:text-lg font-bold"
+                className="w-full mt-3 sm:mt-4 bg-primary hover:bg-primary/90 text-primary-foreground h-10 sm:h-12 text-sm sm:text-lg font-bold"
                 onClick={() => navigate("/dashboard/pagamentos", { 
                   state: { 
                     carrinho, 
@@ -1062,7 +1062,7 @@ export default function NovaVenda() {
                     <span className="text-sm font-medium text-slate-600">
                       Preço por {obterUnidadeEstoque(produtoSelecionado.tipo_preco, produtoSelecionado.nome)}:
                     </span>
-                    <span className="text-lg font-bold text-green-600">
+                    <span className="text-lg font-bold text-foreground">
                       {produtoSelecionado.preco.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -1214,7 +1214,7 @@ export default function NovaVenda() {
                 <Button
                   onClick={confirmarPesoVolume}
                   disabled={!quantidadePesoVolume || isNaN(parseFloat(quantidadePesoVolume)) || parseFloat(quantidadePesoVolume) <= 0}
-                  className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   {editandoItem ? 'Atualizar no Carrinho' : 'Adicionar ao Carrinho'}

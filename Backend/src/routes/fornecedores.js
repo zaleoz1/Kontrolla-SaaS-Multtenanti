@@ -25,6 +25,9 @@ router.get('/', async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const offset = (pageNum - 1) * limitNum;
     
+    // Se o limite for muito alto (>= 10000), carregar todos os registros
+    const shouldLoadAll = limitNum >= 10000;
+    
     // Verificar se req.user existe
     if (!req.user || !req.user.tenant_id) {
       return res.status(401).json({
@@ -73,7 +76,12 @@ router.get('/', async (req, res) => {
       params.push(filtroStatus);
     }
 
-    fornecedoresQuery += ` ORDER BY f.nome ASC LIMIT ${limitNum} OFFSET ${offset}`;
+    // Aplicar LIMIT apenas se não for para carregar todos
+    if (!shouldLoadAll) {
+      fornecedoresQuery += ` ORDER BY f.nome ASC LIMIT ${limitNum} OFFSET ${offset}`;
+    } else {
+      fornecedoresQuery += ` ORDER BY f.nome ASC`;
+    }
 
     console.log('🔍 Query SQL:', fornecedoresQuery);
     console.log('🔍 Parâmetros finais:', params);
@@ -106,7 +114,12 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       data: fornecedores,
-      pagination: {
+      pagination: shouldLoadAll ? {
+        page: 1,
+        limit: total,
+        total: total,
+        pages: 1
+      } : {
         page: pageNum,
         limit: limitNum,
         total: total,

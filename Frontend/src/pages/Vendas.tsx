@@ -826,7 +826,7 @@ export default function Vendas() {
 
                       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                         <div className="text-left sm:text-right">
-                          <p className="text-lg sm:text-2xl font-bold text-primary">
+                          <p className="text-lg sm:text-2xl font-bold text-foreground">
                           {venda.pagamento_prazo ? formatCurrency(venda.pagamento_prazo.valor_com_juros) : formatCurrency(venda.total)}
                         </p>
                           <div className="text-xs sm:text-sm text-muted-foreground">

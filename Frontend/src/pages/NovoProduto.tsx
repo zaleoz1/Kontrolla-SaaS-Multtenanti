@@ -1394,7 +1394,7 @@ export default function NovoProduto() {
                   <div className="space-y-1.5 sm:space-y-2">
                     {produto.preco_promocional && produto.preco_promocional > 0 ? (
                       <div className="flex items-center space-x-2">
-                        <span className="text-base sm:text-lg font-bold text-primary">
+                        <span className="text-base sm:text-lg font-bold text-foreground">
                           R$ {Number(produto.preco_promocional).toFixed(2)}
                         </span>
                         <span className="text-xs sm:text-sm text-muted-foreground line-through">
@@ -1402,7 +1402,7 @@ export default function NovoProduto() {
                         </span>
                       </div>
                     ) : (
-                      <span className="text-base sm:text-lg font-bold text-primary">
+                      <span className="text-base sm:text-lg font-bold text-foreground">
                         R$ {produto.preco ? Number(produto.preco).toFixed(2) : "0,00"}
                       </span>
                     )}

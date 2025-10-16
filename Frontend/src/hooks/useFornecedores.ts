@@ -32,7 +32,8 @@ export const useFornecedores = () => {
   const carregarFornecedores = async () => {
     setCarregando(true);
     try {
-      const response = await api.list();
+      // Passar um limite muito alto para carregar todos os fornecedores
+      const response = await api.list({ limit: 10000 });
       if (response.success) {
         setFornecedores(response.data);
       } else {

@@ -292,7 +292,7 @@ export default function Clientes() {
                 {statsApi.loading ? (
                   <Skeleton className="h-5 sm:h-8 w-16 sm:w-20" />
                 ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-primary break-words">{stats?.total_clientes || 0}</p>
+                  <p className="text-sm sm:text-2xl font-bold text-foreground break-words">{stats?.total_clientes || 0}</p>
                 )}
               </div>
               <div className="p-1 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0 self-start sm:self-auto">
