@@ -278,7 +278,7 @@ export function OperadorRequired() {
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-green-500/10 rounded-full blur-3xl hidden sm:block"
+          className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl hidden sm:block"
           animate={{
             x: [0, -100, 0],
             y: [0, 50, 0],
@@ -299,7 +299,7 @@ export function OperadorRequired() {
             variants={fadeInUp}
           >
             <motion.div
-              className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-xs sm:text-sm font-medium mb-3 sm:mb-4 md:mb-6"
+              className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs sm:text-sm font-medium mb-3 sm:mb-4 md:mb-6"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -352,7 +352,7 @@ export function OperadorRequired() {
                     className="group cursor-pointer"
                     onClick={() => setSelectedRole(roleKey)}
                   >
-                    <Card className="bg-white/10 backdrop-blur-sm border border-white/30 shadow-2xl hover:shadow-3xl transition-all duration-500 h-full overflow-hidden group-hover:border-green-400/60 dark-light:bg-white/20 dark-light:border-white/50 windows-dark:bg-white/15 windows-dark:border-white/40">
+                    <Card className="bg-white/10 backdrop-blur-sm border border-white/30 shadow-2xl hover:shadow-3xl transition-all duration-500 h-full overflow-hidden group-hover:border-primary/60 dark-light:bg-white/20 dark-light:border-white/50 windows-dark:bg-white/15 windows-dark:border-white/40">
                       <CardContent className="p-3 sm:p-4 md:p-6 lg:p-8 text-center h-full flex flex-col">
                         <motion.div 
                           className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-gradient-to-br ${operator.color} rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-6 group-hover:scale-110 transition-all duration-300`}
@@ -362,7 +362,7 @@ export function OperadorRequired() {
                           <operator.icon className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-white" />
                         </motion.div>
                         
-                        <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 sm:mb-2 md:mb-3 group-hover:text-green-400 transition-colors duration-300">
+                        <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 sm:mb-2 md:mb-3 group-hover:text-primary transition-colors duration-300">
                           {operator.title}
                         </h3>
                         
@@ -433,19 +433,19 @@ export function OperadorRequired() {
                   >
                     <Card className={`bg-white/10 backdrop-blur-sm border shadow-xl hover:shadow-2xl transition-all duration-300 h-full dark-light:bg-white/20 windows-dark:bg-white/15 ${
                       operadorEmCodigo === operador.id 
-                        ? 'border-green-400/60' 
-                        : 'border-white/30 group-hover:border-green-400/60 dark-light:border-white/50 windows-dark:border-white/40'
+                        ? 'border-primary/60' 
+                        : 'border-white/30 group-hover:border-primary/60 dark-light:border-white/50 windows-dark:border-white/40'
                     }`}>
                       <CardContent className="p-3 sm:p-4 md:p-6 text-center h-full flex flex-col">
                         <motion.div 
-                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-md sm:rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:scale-110 transition-all duration-300"
+                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-primary to-primary/80 rounded-md sm:rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:scale-110 transition-all duration-300"
                           whileHover={{ rotate: 180 }}
                           transition={{ duration: 0.8, ease: "easeInOut" }}
                         >
                           <User className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                         </motion.div>
                         
-                        <h3 className="text-sm sm:text-base md:text-lg font-bold text-white mb-1 sm:mb-2 group-hover:text-green-400 transition-colors duration-300 truncate">
+                        <h3 className="text-sm sm:text-base md:text-lg font-bold text-white mb-1 sm:mb-2 group-hover:text-primary transition-colors duration-300 truncate">
                           {operador.nome} {operador.sobrenome}
                         </h3>
 

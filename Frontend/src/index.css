@@ -17,11 +17,19 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Primary Brand - Professional Green */
+    /* Primary Brand - Professional Green (fallback) */
     --primary: 142 69% 58%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 142 69% 48%;
     --primary-light: 142 50% 85%;
+    
+    /* Dynamic Primary Color - Will be overridden by JavaScript */
+    --primary-dynamic: var(--primary);
+    --primary-dynamic-foreground: var(--primary-foreground);
+    
+    /* Override primary with dynamic color */
+    --primary: var(--primary-dynamic);
+    --primary-foreground: var(--primary-dynamic-foreground);
 
     /* Secondary Brand - Professional Blue */
     --secondary: 217 91% 60%;
@@ -53,13 +61,13 @@
     /* Layout & Borders */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 142 69% 58%;
+    --ring: var(--primary-dynamic);
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(142 69% 58%), hsl(142 69% 48%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary-dynamic)), hsl(var(--primary-dynamic) / 0.8));
     --gradient-secondary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
     --gradient-success: linear-gradient(135deg, hsl(142 69% 58%), hsl(142 50% 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(142 69% 58%) 0%, hsl(217 91% 60%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary-dynamic)) 0%, hsl(217 91% 60%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
 
     /* Shadows - Professional & Elegant */
@@ -79,12 +87,12 @@
     /* Sidebar Specific */
     --sidebar-background: 222.2 84% 4.9%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 142 69% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: var(--primary-dynamic);
+    --sidebar-primary-foreground: var(--primary-dynamic-foreground);
     --sidebar-accent: 217.2 32.6% 17.5%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 142 69% 58%;
+    --sidebar-ring: var(--primary-dynamic);
   }
 
   .dark {
@@ -97,8 +105,8 @@
     --popover: 222.2 84% 6%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 142 69% 65%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary: var(--primary-dynamic);
+    --primary-foreground: var(--primary-dynamic-foreground);
 
     --secondary: 217 91% 65%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -114,7 +122,7 @@
 
     --border: 217.2 32.6% 25%;
     --input: 217.2 32.6% 20%;
-    --ring: 142 69% 65%;
+    --ring: var(--primary-dynamic);
 
     --gradient-card: linear-gradient(145deg, hsl(217.2 32.6% 20%) 0%, hsl(222.2 84% 6%) 100%);
     --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 6px -1px hsl(0 0% 0% / 0.3);
@@ -122,12 +130,12 @@
     /* Sidebar específico para dark */
     --sidebar-background: 222.2 84% 6%;
     --sidebar-foreground: 210 40% 95%;
-    --sidebar-primary: 142 69% 65%;
-    --sidebar-primary-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: var(--primary-dynamic);
+    --sidebar-primary-foreground: var(--primary-dynamic-foreground);
     --sidebar-accent: 217.2 32.6% 25%;
     --sidebar-accent-foreground: 210 40% 95%;
     --sidebar-border: 217.2 32.6% 25%;
-    --sidebar-ring: 142 69% 65%;
+    --sidebar-ring: var(--primary-dynamic);
 
     /* Cores de sucesso e erro mais vibrantes */
     --success: 142 76% 36%;
@@ -148,8 +156,8 @@
     --popover: 220 15% 16%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 142 76% 75%;
-    --primary-foreground: 220 15% 12%;
+    --primary: var(--primary-dynamic);
+    --primary-foreground: var(--primary-dynamic-foreground);
 
     --secondary: 217 91% 75%;
     --secondary-foreground: 220 15% 12%;
@@ -165,7 +173,7 @@
 
     --border: 220 15% 28%;
     --input: 220 15% 22%;
-    --ring: 142 76% 75%;
+    --ring: var(--primary-dynamic);
 
     --gradient-card: linear-gradient(145deg, hsl(220 15% 22%) 0%, hsl(220 15% 16%) 100%);
     --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.35), 0 2px 6px -1px hsl(0 0% 0% / 0.25);
@@ -173,12 +181,12 @@
     /* Sidebar específico para dark-light */
     --sidebar-background: 220 15% 14%;
     --sidebar-foreground: 210 40% 95%;
-    --sidebar-primary: 142 76% 75%;
-    --sidebar-primary-foreground: 220 15% 12%;
+    --sidebar-primary: var(--primary-dynamic);
+    --sidebar-primary-foreground: var(--primary-dynamic-foreground);
     --sidebar-accent: 220 15% 22%;
     --sidebar-accent-foreground: 210 40% 95%;
     --sidebar-border: 220 15% 28%;
-    --sidebar-ring: 142 76% 75%;
+    --sidebar-ring: var(--primary-dynamic);
 
     /* Cores de sucesso e erro mais vibrantes */
     --success: 142 76% 70%;
@@ -199,8 +207,8 @@
     --popover: 240 10% 5%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: var(--primary-dynamic);
+    --primary-foreground: var(--primary-dynamic-foreground);
 
     --secondary: 240 3.7% 18%;
     --secondary-foreground: 0 0% 98%;
@@ -216,7 +224,7 @@
 
     --border: 240 3.7% 22%;
     --input: 240 3.7% 18%;
-    --ring: 240 4.9% 83.9%;
+    --ring: var(--primary-dynamic);
 
     --gradient-card: linear-gradient(145deg, hsl(240 3.7% 18%) 0%, hsl(240 10% 5%) 100%);
     --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 6px -1px hsl(0 0% 0% / 0.3);
@@ -224,12 +232,12 @@
     /* Sidebar específico para windows-dark */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-primary: var(--primary-dynamic);
+    --sidebar-primary-foreground: var(--primary-dynamic-foreground);
     --sidebar-accent: 240 3.7% 22%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 240 3.7% 22%;
-    --sidebar-ring: 240 4.9% 83.9%;
+    --sidebar-ring: var(--primary-dynamic);
 
     /* Cores de sucesso e erro para Windows */
     --success: 142 76% 40%;
@@ -352,6 +360,27 @@
 
   .transition-bounce {
     transition: var(--transition-bounce);
+  }
+
+  /* Dynamic Color Utilities */
+  .bg-primary-dynamic {
+    background-color: hsl(var(--primary-dynamic));
+  }
+
+  .text-primary-dynamic {
+    color: hsl(var(--primary-dynamic));
+  }
+
+  .border-primary-dynamic {
+    border-color: hsl(var(--primary-dynamic));
+  }
+
+  .ring-primary-dynamic {
+    --tw-ring-color: hsl(var(--primary-dynamic));
+  }
+
+  .shadow-primary-dynamic {
+    box-shadow: 0 4px 14px 0 hsl(var(--primary-dynamic) / 0.3);
   }
 }
 

@@ -1160,7 +1160,7 @@ export default function Relatorios() {
               <Card>
                 <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-lg sm:text-2xl font-bold text-primary">
+                    <p className="text-lg sm:text-2xl font-bold text-foreground">
                       {formatarMoeda(dadosVendas.total_geral.receita_total)}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">Receita Total</p>
@@ -1305,7 +1305,7 @@ export default function Relatorios() {
               <Card>
                 <CardContent className="p-3 sm:p-4">
                   <div className="text-center">
-                    <p className="text-lg sm:text-2xl font-bold text-primary">
+                    <p className="text-lg sm:text-2xl font-bold text-foreground">
                       {dadosProdutos.produtos.length}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">Total de Produtos</p>
@@ -1454,7 +1454,7 @@ export default function Relatorios() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-2xl font-bold text-foreground">
                       {dadosClientes.clientes.length}
                     </p>
                     <p className="text-sm text-muted-foreground">Total de Clientes</p>
@@ -1640,7 +1640,7 @@ export default function Relatorios() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-2xl font-bold text-foreground">
                       {dadosFinanceiro.resumo.total_transacoes || 0}
                     </p>
                     <p className="text-sm text-muted-foreground">Total Transações</p>
@@ -1764,7 +1764,7 @@ export default function Relatorios() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-2xl font-bold text-foreground">
                       {dadosEstoque.estatisticas.total_produtos || 0}
                     </p>
                     <p className="text-sm text-muted-foreground">Total de Produtos</p>

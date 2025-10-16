@@ -12,6 +12,7 @@ import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useTheme } from "@/hooks/useTheme";
+import { useThemeColor, PREDEFINED_COLORS } from "../hooks/useThemeColor";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { 
   Settings, 
@@ -118,6 +119,7 @@ export default function Configuracoes() {
   const { toast } = useToast();
   const { hasPermission, operador } = usePermissions();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const { primaryColor, setPrimaryColor } = useThemeColor();
   
   // Função para determinar se uma aba deve ser visível
   const isTabVisible = (tabId: string) => {
@@ -371,6 +373,13 @@ export default function Configuracoes() {
     }
   }, [dadosBancarios]);
 
+  // Sincronizar cor primária das configurações
+  useEffect(() => {
+    if (configuracoesEditando?.cor_primaria) {
+      setPrimaryColor(configuracoesEditando.cor_primaria);
+    }
+  }, [configuracoesEditando?.cor_primaria, setPrimaryColor]);
+
 
   // Função para buscar dados do CEP
   const buscarCep = async (cep: string) => {
@@ -480,7 +489,13 @@ export default function Configuracoes() {
     
     setSalvando(true);
     try {
-      await atualizarConfiguracoes(configuracoesEditando);
+      // Incluir cor primária nas configurações
+      const configuracoesComCor = {
+        ...configuracoesEditando,
+        cor_primaria: primaryColor
+      };
+      
+      await atualizarConfiguracoes(configuracoesComCor);
       
       toast({
         title: "Sucesso",
@@ -2332,15 +2347,71 @@ export default function Configuracoes() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Cor Primária</Label>
-                  <div className="flex space-x-2">
-                    {["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"].map((cor) => (
+                  <div className="flex items-center justify-between">
+                    <Label>Cor Primária</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPrimaryColor('#31d46d'); // Verde padrão do sistema
+                        if (configuracoesEditando) {
+                          setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: '#31d46d' } : null);
+                        }
+                      }}
+                      className="text-xs h-8"
+                    >
+                      <Palette className="h-3 w-3 mr-1" />
+                      Cor Padrão
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {PREDEFINED_COLORS.map((cor) => (
                       <button
-                        key={cor}
-                        className="w-8 h-8 rounded-full border-2 border-border hover:border-primary"
-                        style={{ backgroundColor: cor }}
+                        key={cor.value}
+                        onClick={() => {
+                          setPrimaryColor(cor.value);
+                          // Atualizar configurações se disponível
+                          if (configuracoesEditando) {
+                            setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: cor.value } : null);
+                          }
+                        }}
+                        className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 ${
+                          primaryColor === cor.value 
+                            ? 'border-primary ring-2 ring-primary/20' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        style={{ backgroundColor: cor.value }}
+                        title={cor.name}
                       />
                     ))}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-color">Cor Personalizada</Label>
+                    <div className="flex space-x-2">
+                      <input
+                        id="custom-color"
+                        type="color"
+                        value={primaryColor}
+                        onChange={(e) => {
+                          setPrimaryColor(e.target.value);
+                          if (configuracoesEditando) {
+                            setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
+                          }
+                        }}
+                        className="w-12 h-10 rounded border border-border cursor-pointer"
+                      />
+                      <Input
+                        value={primaryColor}
+                        onChange={(e) => {
+                          setPrimaryColor(e.target.value);
+                          if (configuracoesEditando) {
+                            setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
+                          }
+                        }}
+                        placeholder="#3b82f6"
+                        className="flex-1 h-10 text-xs sm:text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">

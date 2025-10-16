@@ -630,7 +630,7 @@ export default function Produtos() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs sm:text-sm text-muted-foreground">Preço:</span>
                     <div className="text-right">
-                      <span className="font-semibold text-primary text-sm sm:text-base">
+                      <span className="font-semibold text-foreground text-sm sm:text-base">
                         {formatarPreco(produto.preco_promocional || produto.preco)}
                       </span>
                       {produto.preco_promocional && produto.preco_promocional < produto.preco && (

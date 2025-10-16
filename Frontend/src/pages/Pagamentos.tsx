@@ -961,7 +961,7 @@ export default function Pagamentos() {
           <Button 
             onClick={salvarVenda}
             disabled={!formularioValido || salvandoVenda}
-            className="bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
             {salvandoVenda ? (
               <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
@@ -984,10 +984,10 @@ export default function Pagamentos() {
         <div className="xl:col-span-2 space-y-4 sm:space-y-6 order-2 xl:order-1">
           {/* Método de Pagamento Único */}
           {metodosPagamento.length === 0 && (
-            <Card className="border-green-200 dark:border-green-800">
+            <Card className="border-primary/20 dark:border-primary/30">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg flex items-center text-foreground">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-600 dark:text-green-400" />
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary" />
                   Forma de Pagamento
                 </CardTitle>
               </CardHeader>
@@ -1034,8 +1034,8 @@ export default function Pagamentos() {
                             className={`
                               p-1.5 sm:p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md
                               ${isSelected 
-                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-400 shadow-md' 
-                                : 'border-border hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/10'
+                                ? 'border-primary bg-primary/5 dark:bg-primary/10 dark:border-primary/50 shadow-md' 
+                                : 'border-border hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10'
                               }
                               ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                             `}
@@ -1043,7 +1043,7 @@ export default function Pagamentos() {
                             <div className="text-center">
                               <div className={`
                                 w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 rounded-full flex items-center justify-center
-                                ${isSelected ? 'bg-green-100 dark:bg-green-800' : 'bg-muted'}
+                                ${isSelected ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}
                               `}>
                                 {metodo.tipo === "dinheiro" && <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                                 {metodo.tipo === "pix" && (
@@ -1066,7 +1066,7 @@ export default function Pagamentos() {
                                 </p>
                               )}
                               {metodo.tipo !== "cartao_debito" && metodo.tipo !== "transferencia" && metodo.taxa === 0 && (
-                                <p className="text-xs text-green-600 dark:text-green-400">
+                                <p className="text-xs text-primary">
                                   Sem taxa
                                 </p>
                               )}
@@ -1096,7 +1096,7 @@ export default function Pagamentos() {
                                 {parcelaConfirmada.quantidade}x
                               </span>
                               <span className="text-blue-600 dark:text-blue-400">de</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">
+                              <span className="font-bold text-foreground">
                                 {parcelaConfirmada.taxa > 0 
                                   ? ((total * (1 + parcelaConfirmada.taxa / 100)) / parcelaConfirmada.quantidade).toLocaleString("pt-BR", {
                                       style: "currency",
@@ -1111,8 +1111,8 @@ export default function Pagamentos() {
                             </div>
                             {parcelaConfirmada.taxa === 0 && (
                               <div className="flex items-center space-x-1">
-                                <span className="text-green-600 dark:text-green-400">•</span>
-                                <span className="text-green-600 dark:text-green-400 font-medium">
+                                <span className="text-primary">•</span>
+                                <span className="text-primary font-medium">
                                   Sem juros
                                 </span>
                               </div>
@@ -1205,10 +1205,10 @@ export default function Pagamentos() {
 
                 {/* Botão Visualizar Chave PIX */}
                 {metodoPagamentoUnico === "pix" && (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
+                  <div className="bg-primary/5 dark:bg-primary/10 p-3 sm:p-4 rounded-lg border-2 border-primary/20 dark:border-primary/30">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div>
-                        <h4 className="font-medium text-green-800 dark:text-green-200 mb-1 flex items-center text-sm sm:text-base">
+                        <h4 className="font-medium text-primary-foreground mb-1 flex items-center text-sm sm:text-base">
                           <img 
                             src={logopixPath} 
                             alt="PIX" 
@@ -1216,7 +1216,7 @@ export default function Pagamentos() {
                           />
                           Pagamento via PIX
                         </h4>
-                        <p className="text-xs sm:text-sm text-green-600 dark:text-green-400">
+                        <p className="text-xs sm:text-sm text-primary">
                           {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
                         </p>
                       </div>
@@ -1224,7 +1224,7 @@ export default function Pagamentos() {
                         type="button"
                         onClick={() => setMostrarModalPix(true)}
                         disabled={!pixConfiguracao || carregandoPix}
-                        className="bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
                       >
                         {carregandoPix ? (
                           <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
@@ -1298,8 +1298,8 @@ export default function Pagamentos() {
                               }
                               return (
                                 <div className="flex items-center space-x-1">
-                                  <span className="text-green-600 dark:text-green-400">•</span>
-                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                  <span className="text-primary">•</span>
+                                  <span className="text-primary font-medium">
                                     Sem taxa adicional
                                   </span>
                                 </div>
@@ -1346,14 +1346,14 @@ export default function Pagamentos() {
 
                 {/* Informações da Transferência Bancária */}
                 {metodoPagamentoUnico === "transferencia" && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-xl border-2 border-green-200 dark:border-green-800 shadow-sm">
+                  <div className="bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-5 rounded-xl border-2 border-primary/20 dark:border-primary/30 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-green-800 dark:text-green-200 mb-1">
+                          <h4 className="font-semibold text-primary-foreground mb-1">
                             Transferência Bancária
                           </h4>
                           <div className="flex items-center space-x-4 text-sm">
@@ -1371,8 +1371,8 @@ export default function Pagamentos() {
                               }
                               return (
                                 <div className="flex items-center space-x-1">
-                                  <span className="text-green-600 dark:text-green-400">•</span>
-                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                  <span className="text-primary">•</span>
+                                  <span className="text-primary font-medium">
                                     Sem taxa adicional
                                   </span>
                                 </div>
@@ -1433,7 +1433,7 @@ export default function Pagamentos() {
                     // Adicionar novo método de pagamento
                     setMetodosPagamento([{ metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                   }}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm"
                   disabled={carregandoMetodos}
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1459,7 +1459,7 @@ export default function Pagamentos() {
                       onClick={() => {
                         setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                       }}
-                      className="bg-green-600 hover:bg-green-700 text-white h-7 sm:h-8 text-xs"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-7 sm:h-8 text-xs"
                       disabled={carregandoMetodos}
                     >
                       <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -1615,7 +1615,7 @@ export default function Pagamentos() {
                           novosMetodos[index].taxaParcela = undefined;
                           setMetodosPagamento(novosMetodos);
                         }}
-                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 h-8 sm:h-10 text-xs sm:text-sm"
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primary h-8 sm:h-10 text-xs sm:text-sm"
                         disabled={carregandoMetodos}
                       >
                         <option value="">
@@ -1674,10 +1674,10 @@ export default function Pagamentos() {
 
                 {/* Botão PIX para múltiplos métodos */}
                 {metodosPagamento.some(m => m.metodo === "pix") && (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
+                  <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-lg border-2 border-primary/20 dark:border-primary/30">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-green-800 dark:text-green-200 mb-1 flex items-center">
+                        <h4 className="font-medium text-primary-foreground mb-1 flex items-center">
                           <img 
                             src={logopixPath} 
                             alt="PIX" 
@@ -1685,7 +1685,7 @@ export default function Pagamentos() {
                           />
                           Dados PIX Disponíveis
                         </h4>
-                        <p className="text-sm text-green-600 dark:text-green-400">
+                        <p className="text-sm text-primary">
                           {pixConfiguracao ? 'Clique para visualizar os dados PIX' : 'Configure as informações PIX nas configurações'}
                         </p>
                       </div>
@@ -1693,7 +1693,7 @@ export default function Pagamentos() {
                         type="button"
                         onClick={() => setMostrarModalPix(true)}
                         disabled={!pixConfiguracao || carregandoPix}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {carregandoPix ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1824,9 +1824,9 @@ export default function Pagamentos() {
                     })}
                     
                     <div className="border-t border-border pt-3">
-                      <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex justify-between items-center p-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 dark:border-primary/30">
                         <span className="font-bold text-lg text-slate-800 dark:text-slate-200">Total Pago:</span>
-                        <span className="font-bold text-xl text-green-600 dark:text-green-400">
+                        <span className="font-bold text-xl text-foreground">
                           {metodosPagamento.reduce((sum, m) => {
                             const valorMetodo = parseValorComVirgula(m.valor);
                             let valorComJuros = valorMetodo;
@@ -2006,7 +2006,7 @@ export default function Pagamentos() {
                     Valor
                   </label>
                   <div className="bg-muted p-2 rounded border">
-                    <span className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">
+                    <span className="text-xs sm:text-sm font-bold text-foreground">
                       {valorDesconto.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -2031,7 +2031,7 @@ export default function Pagamentos() {
                   <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>Resumo da Venda</span>
                 </CardTitle>
-                <Badge variant="secondary" className="bg-green-600 text-white text-xs">
+                <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
                   {carrinho.length} itens
                 </Badge>
               </div>
@@ -2085,7 +2085,7 @@ export default function Pagamentos() {
                           <div className="flex items-center space-x-2">
                             <span className="text-muted-foreground text-xs">Qtd: {item.quantidade}</span>
                           </div>
-                          <span className="text-green-600 font-bold text-xs sm:text-sm">
+                          <span className="text-foreground font-bold text-xs sm:text-sm">
                             {item.precoTotal.toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL"
@@ -2110,7 +2110,7 @@ export default function Pagamentos() {
                   </div>
                   
                   {parseFloat(desconto) > 0 && (
-                    <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <div className="flex justify-between text-primary">
                       <span>Desconto ({desconto}%):</span>
                       <span>-{valorDesconto.toLocaleString("pt-BR", {
                         style: "currency",
@@ -2334,12 +2334,12 @@ export default function Pagamentos() {
 
                     {/* Total a Receber - só aparece se não for apenas pagamento a prazo */}
                     {!usarPagamentoPrazo && (
-                      <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                      <div className="flex justify-between items-center p-2 bg-primary/5 dark:bg-primary/10 rounded border border-primary/20 dark:border-primary/30">
                         <div className="flex items-center space-x-1">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              <span className="text-xs font-medium text-green-800 dark:text-green-200">Total a Receber:</span>
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span className="text-xs font-medium text-primary-foreground">Total a Receber:</span>
                         </div>
-                        <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                        <span className="text-sm font-bold text-foreground">
                           {calcularTotalPago().toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL"
@@ -2403,12 +2403,12 @@ export default function Pagamentos() {
                       
                       if (statusPagamento.pagoCompleto && !usarPagamentoPrazo) {
                         return (
-                          <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                          <div className="flex justify-between items-center p-2 bg-primary/5 dark:bg-primary/10 rounded border border-primary/20 dark:border-primary/30">
                             <div className="flex items-center space-x-1">
-                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              <span className="text-xs font-medium text-green-800 dark:text-green-200">Pagamento Completo:</span>
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span className="text-xs font-medium text-primary-foreground">Pagamento Completo:</span>
                   </div>
-                            <span className="text-sm font-bold text-green-600 dark:text-green-400">✓</span>
+                            <span className="text-sm font-bold text-foreground">✓</span>
                           </div>
                         );
                       }
@@ -2430,8 +2430,8 @@ export default function Pagamentos() {
           <Card className="max-w-md w-full mx-4">
             <CardContent className="pt-4 sm:pt-6">
               <div className="text-center mb-4 sm:mb-6">
-                <div className="mx-auto flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-green-100 mb-3 sm:mb-4">
-                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                <div className="mx-auto flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/10 mb-3 sm:mb-4">
+                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
                 <h3 className="text-base sm:text-lg font-medium mb-2">
                   Venda Realizada com Sucesso!
@@ -2444,7 +2444,7 @@ export default function Pagamentos() {
               <div className="flex flex-col space-y-2 sm:space-y-3">
                 <Button 
                   onClick={imprimirNota} 
-                  className="w-full bg-green-600 hover:bg-green-700 text-white h-8 sm:h-10 text-xs sm:text-sm"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm"
                 >
                   <Printer className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Imprimir Nota
@@ -2494,7 +2494,7 @@ export default function Pagamentos() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center space-y-1 sm:space-y-0 sm:space-x-3 lg:space-x-4 text-xs sm:text-sm">
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <span className="text-muted-foreground">Valor para parcelas:</span>
-                    <span className="font-bold text-xs sm:text-sm lg:text-lg text-green-600 dark:text-green-400">
+                    <span className="font-bold text-xs sm:text-sm lg:text-lg text-primary">
                       {valorParcelaModal.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
@@ -2559,7 +2559,7 @@ export default function Pagamentos() {
                                   {parcela.quantidade}x
                                 </span>
                                 <span className="text-muted-foreground text-xs sm:text-base">de</span>
-                                <span className="font-bold text-green-600 dark:text-green-400 text-xs sm:text-base">
+                                <span className="font-bold text-foreground text-xs sm:text-base">
                                   {valorParcela.toLocaleString("pt-BR", {
                                     style: "currency",
                                     currency: "BRL"
@@ -2582,7 +2582,7 @@ export default function Pagamentos() {
                                 {parcela.taxa === 0 && (
                                   <>
                                     <span>•</span>
-                                    <span className="text-green-600 dark:text-green-400 font-medium">
+                                    <span className="text-primary font-medium">
                                       Sem juros
                                     </span>
                                   </>

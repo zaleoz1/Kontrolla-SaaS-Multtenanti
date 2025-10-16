@@ -318,7 +318,7 @@ export default function CatalogoPublico() {
                               {formatarPreco(produto.preco)}
                             </p>
                           )}
-                          <p className="text-sm sm:text-lg font-bold text-primary">
+                          <p className="text-sm sm:text-lg font-bold text-foreground">
                             {formatarPreco(precoFinal)}
                           </p>
                         </div>
