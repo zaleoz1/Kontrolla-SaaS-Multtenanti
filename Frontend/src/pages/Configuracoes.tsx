@@ -71,7 +71,9 @@ import {
   UserCheck,
   UserCog,
   CheckCircle2,
-  Menu
+  Menu,
+  DollarSign,
+  Package
 } from "lucide-react";
 
 export default function Configuracoes() {
@@ -2283,214 +2285,376 @@ export default function Configuracoes() {
 
         {/* Tema e Personalização */}
         {abaAtiva === "tema" && isTabVisible('tema') && (
-          <div className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Palette className="h-5 w-5 mr-2" />
-                  Tema do Sistema
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Tema</Label>
-                  <Select 
-                    value={theme} 
-                    onValueChange={(value: 'light' | 'dark' | 'dark-light' | 'windows-dark' | 'system') => {
-                      setTheme(value);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">
-                        <div className="flex items-center space-x-2">
-                          <Sun className="h-4 w-4" />
-                          <span>Claro</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="dark">
-                        <div className="flex items-center space-x-2">
-                          <Moon className="h-4 w-4" />
-                          <span>Escuro</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="dark-light">
-                        <div className="flex items-center space-x-2">
-                          <Moon className="h-4 w-4" />
-                          <span>Dark Light</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="windows-dark">
-                        <div className="flex items-center space-x-2">
-                          <Laptop className="h-4 w-4" />
-                          <span>Dark Mode</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="system">
-                        <div className="flex items-center space-x-2">
-                          <Monitor className="h-4 w-4" />
-                          <span>Sistema</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Tema atual: {theme === 'system' ? 'Sistema' : theme === 'dark' ? 'Escuro' : theme === 'dark-light' ? 'Dark Light' : theme === 'windows-dark' ? 'Dark Mode' : 'Claro'}
-                    {theme === 'system' && (
-                      <span className="block mt-1">
-                        (Aplicado: {resolvedTheme === 'dark' ? 'Escuro' : resolvedTheme === 'dark-light' ? 'Dark Light' : resolvedTheme === 'windows-dark' ? 'Dark Mode' : 'Claro'})
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Cor Primária</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setPrimaryColor('#45d77b'); // Verde padrão do sistema
-                        if (configuracoesEditando) {
-                          setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: '#45d77b' } : null);
-                        }
-                      }}
-                      className="text-xs h-8"
-                    >
-                      <Palette className="h-3 w-3 mr-1" />
-                      Cor Padrão
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {PREDEFINED_COLORS.map((cor) => (
-                      <button
-                        key={cor.value}
-                        onClick={() => {
-                          setPrimaryColor(cor.value);
-                          // Atualizar configurações se disponível
-                          if (configuracoesEditando) {
-                            setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: cor.value } : null);
-                          }
-                        }}
-                        className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 ${
-                          primaryColor === cor.value 
-                            ? 'border-primary ring-2 ring-primary/20' 
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        style={{ backgroundColor: cor.value }}
-                        title={cor.name}
-                      />
-                    ))}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-color">Cor Personalizada</Label>
-                    <div className="flex space-x-2">
-                      <input
-                        id="custom-color"
-                        type="color"
-                        value={primaryColor}
-                        onChange={(e) => {
-                          setPrimaryColor(e.target.value);
-                          if (configuracoesEditando) {
-                            setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
-                          }
-                        }}
-                        className="w-12 h-10 rounded border border-border cursor-pointer"
-                      />
-                      <Input
-                        value={primaryColor}
-                        onChange={(e) => {
-                          setPrimaryColor(e.target.value);
-                          if (configuracoesEditando) {
-                            setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
-                          }
-                        }}
-                        placeholder="#45d77b"
-                        className="flex-1 h-10 text-xs sm:text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    As mudanças de tema são aplicadas instantaneamente.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-6 sm:space-y-8">
+            {/* Header da Página */}
+            <div className="w-full">
+              <div className="mb-4 md:mb-0">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Personalização do Sistema</h1>
+                <p className="text-sm sm:text-base text-muted-foreground mt-2">
+                  Personalize a aparência e comportamento do sistema
+                </p>
+              </div>
+            </div>
 
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Globe className="h-5 w-5 mr-2" />
-                  Localização
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Idioma</Label>
-                  <Select 
-                    value={configuracoesEditando?.idioma ?? 'pt-BR'} 
-                    onValueChange={(value) => {
-                      setConfiguracoesEditando(prev => prev ? { ...prev, idioma: value } : null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                      <SelectItem value="en-US">English (US)</SelectItem>
-                      <SelectItem value="es-ES">Español</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Fuso Horário</Label>
-                  <Select 
-                    value={configuracoesEditando?.fuso_horario ?? 'America/Sao_Paulo'} 
-                    onValueChange={(value) => {
-                      setConfiguracoesEditando(prev => prev ? { ...prev, fuso_horario: value } : null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/Sao_Paulo">São Paulo (GMT-3)</SelectItem>
-                      <SelectItem value="America/New_York">New York (GMT-5)</SelectItem>
-                      <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Moeda</Label>
-                  <Select 
-                    value={configuracoesEditando?.moeda ?? 'BRL'} 
-                    onValueChange={(value) => {
-                      setConfiguracoesEditando(prev => prev ? { ...prev, moeda: value } : null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BRL">Real (R$)</SelectItem>
-                      <SelectItem value="USD">Dólar ($)</SelectItem>
-                      <SelectItem value="EUR">Euro (€)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleSalvarConfiguracoes} className="w-full bg-gradient-primary text-white" disabled={salvando}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {salvando ? 'Salvando...' : 'Salvar Localização'}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Configurações de Tema */}
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="bg-gradient-card shadow-card">
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/10 mr-2 sm:mr-3">
+                        <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      Tema do Sistema
+                    </CardTitle>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Escolha o tema visual e a cor primária do sistema
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Seleção de Tema */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Tema Visual</Label>
+                      <Select 
+                        value={theme} 
+                        onValueChange={(value: 'light' | 'dark' | 'dark-light' | 'windows-dark' | 'system') => {
+                          setTheme(value);
+                        }}
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="light">
+                            <div className="flex items-center space-x-2">
+                              <Sun className="h-4 w-4" />
+                              <span>Claro</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="dark">
+                            <div className="flex items-center space-x-2">
+                              <Moon className="h-4 w-4" />
+                              <span>Escuro</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="dark-light">
+                            <div className="flex items-center space-x-2">
+                              <Moon className="h-4 w-4" />
+                              <span>Dark Light</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="windows-dark">
+                            <div className="flex items-center space-x-2">
+                              <Laptop className="h-4 w-4" />
+                              <span>Dark Mode</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="system">
+                            <div className="flex items-center space-x-2">
+                              <Monitor className="h-4 w-4" />
+                              <span>Sistema</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Tema atual: {theme === 'system' ? 'Sistema' : theme === 'dark' ? 'Escuro' : theme === 'dark-light' ? 'Dark Light' : theme === 'windows-dark' ? 'Dark Mode' : 'Claro'}
+                        {theme === 'system' && (
+                          <span className="block mt-1">
+                            (Aplicado: {resolvedTheme === 'dark' ? 'Escuro' : resolvedTheme === 'dark-light' ? 'Dark Light' : resolvedTheme === 'windows-dark' ? 'Dark Mode' : 'Claro'})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Seleção de Cor Primária */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Cor Primária</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPrimaryColor('#45d77b'); // Verde padrão do sistema
+                            if (configuracoesEditando) {
+                              setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: '#45d77b' } : null);
+                            }
+                          }}
+                          className="text-xs h-8"
+                        >
+                          <Palette className="h-3 w-3 mr-1" />
+                          Cor Padrão
+                        </Button>
+                      </div>
+                      
+                      {/* Cores Predefinidas */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Cores Predefinidas</Label>
+                        <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                          {PREDEFINED_COLORS.map((cor) => (
+                            <button
+                              key={cor.value}
+                              onClick={() => {
+                                setPrimaryColor(cor.value);
+                                if (configuracoesEditando) {
+                                  setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: cor.value } : null);
+                                }
+                              }}
+                              className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-105 ${
+                                primaryColor === cor.value 
+                                  ? 'border-primary ring-2 ring-primary/20' 
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                              style={{ backgroundColor: cor.value }}
+                              title={cor.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Cor Personalizada */}
+                      <div className="space-y-2">
+                        <Label htmlFor="custom-color" className="text-xs text-muted-foreground">Cor Personalizada</Label>
+                        <div className="flex space-x-2">
+                          <input
+                            id="custom-color"
+                            type="color"
+                            value={primaryColor}
+                            onChange={(e) => {
+                              setPrimaryColor(e.target.value);
+                              if (configuracoesEditando) {
+                                setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
+                              }
+                            }}
+                            className="w-12 h-10 rounded border border-border cursor-pointer"
+                          />
+                          <Input
+                            value={primaryColor}
+                            onChange={(e) => {
+                              setPrimaryColor(e.target.value);
+                              if (configuracoesEditando) {
+                                setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
+                              }
+                            }}
+                            placeholder="#45d77b"
+                            className="flex-1 h-10 text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">
+                        As mudanças de tema e cor são aplicadas instantaneamente.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Configurações de Localização */}
+                <Card className="bg-gradient-card shadow-card">
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 mr-2 sm:mr-3">
+                        <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      Localização
+                    </CardTitle>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Configure idioma, fuso horário e moeda
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>Idioma</Label>
+                        <Select 
+                          value={configuracoesEditando?.idioma ?? 'pt-BR'} 
+                          onValueChange={(value) => {
+                            setConfiguracoesEditando(prev => prev ? { ...prev, idioma: value } : null);
+                          }}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                            <SelectItem value="en-US">English (US)</SelectItem>
+                            <SelectItem value="es-ES">Español</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fuso Horário</Label>
+                        <Select 
+                          value={configuracoesEditando?.fuso_horario ?? 'America/Sao_Paulo'} 
+                          onValueChange={(value) => {
+                            setConfiguracoesEditando(prev => prev ? { ...prev, fuso_horario: value } : null);
+                          }}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="America/Sao_Paulo">São Paulo (GMT-3)</SelectItem>
+                            <SelectItem value="America/New_York">New York (GMT-5)</SelectItem>
+                            <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Moeda</Label>
+                        <Select 
+                          value={configuracoesEditando?.moeda ?? 'BRL'} 
+                          onValueChange={(value) => {
+                            setConfiguracoesEditando(prev => prev ? { ...prev, moeda: value } : null);
+                          }}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BRL">Real (R$)</SelectItem>
+                            <SelectItem value="USD">Dólar ($)</SelectItem>
+                            <SelectItem value="EUR">Euro (€)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <Button onClick={handleSalvarConfiguracoes} className="w-full bg-gradient-primary text-white" disabled={salvando}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {salvando ? 'Salvando...' : 'Salvar Localização'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Preview do Tema */}
+              <div className="lg:col-span-1">
+                <Card className="bg-gradient-card shadow-card">
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 mr-2 sm:mr-3">
+                        <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      Preview do Tema
+                    </CardTitle>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Visualize como ficará a interface
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Preview do Header */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Header</Label>
+                      <div className="p-3 bg-background border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+                              <span className="text-xs font-bold text-white">K</span>
+                            </div>
+                            <span className="text-sm font-semibold">Kontrolla</span>
+                          </div>
+                          <Button size="sm" className="bg-primary text-white text-xs h-7">
+                            Nova Venda
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preview dos Cards */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Cards</Label>
+                      <div className="space-y-2">
+                        <div className="p-3 bg-card border rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Vendas Hoje</p>
+                              <p className="text-xs text-muted-foreground">R$ 1.250,00</p>
+                            </div>
+                            <div className="p-2 rounded bg-primary/10">
+                              <DollarSign className="h-4 w-4 text-primary" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-card border rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Produtos</p>
+                              <p className="text-xs text-muted-foreground">45 ativos</p>
+                            </div>
+                            <div className="p-2 rounded bg-primary/10">
+                              <Package className="h-4 w-4 text-primary" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preview dos Botões */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Botões</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" className="bg-primary text-white text-xs h-7">
+                          Primário
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs h-7">
+                          Secundário
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-xs h-7">
+                          Ghost
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Preview dos Badges */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Status</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className="bg-primary text-white text-xs">Ativo</Badge>
+                        <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                        <Badge variant="destructive" className="text-xs">Erro</Badge>
+                      </div>
+                    </div>
+
+                    {/* Preview dos Inputs */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Formulários</Label>
+                      <div className="space-y-2">
+                        <Input placeholder="Digite aqui..." className="h-8 text-xs" />
+                        <Select>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Informações do Tema Atual */}
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Tema:</span>
+                          <span className="font-medium capitalize">
+                            {theme === 'system' ? 'Sistema' : theme === 'dark' ? 'Escuro' : theme === 'dark-light' ? 'Dark Light' : theme === 'windows-dark' ? 'Dark Mode' : 'Claro'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Cor:</span>
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded border"
+                              style={{ backgroundColor: primaryColor }}
+                            />
+                            <span className="font-medium">{primaryColor}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
 

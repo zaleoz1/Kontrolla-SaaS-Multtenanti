@@ -53,13 +53,14 @@ const navegacao = [
 interface PropsSidebar {
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed: boolean;
   user: User | null;
   tenant: Tenant | null;
   onLogout: () => void;
 }
 
 // Componente principal da Sidebar
-export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSidebar) {
+export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }: PropsSidebar) {
   const { operadorSelecionado } = useOperador();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
@@ -82,31 +83,49 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
 
       {/* Container principal da sidebar */}
       <div className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 flex h-full w-80 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
+        "fixed lg:static inset-y-0 left-0 z-50 flex h-full flex-col bg-sidebar border-r border-sidebar-border transform transition-all duration-300 ease-in-out flex-shrink-0",
+        // Em telas menores (mobile), sempre usar largura completa
+        "lg:w-80 w-80",
+        // Em desktop, usar largura colapsada se necessário
+        isCollapsed && "lg:w-16",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Logo e nome do sistema */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border bg-gradient-primary px-6 flex-shrink-0">
+        <div className={cn(
+          "flex h-16 items-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0",
+          // Em mobile, sempre mostrar texto completo
+          "lg:justify-between justify-between",
+          isCollapsed ? "lg:justify-center lg:px-2 px-6" : "px-6"
+        )}>
           <div className="flex items-center space-x-2">
             <Store className="h-8 w-8 text-white" />
-            <span className="text-xl font-bold text-white">
-              {tenant?.nome || "KontrollaPro"}
-            </span>
+            {!isCollapsed && (
+              <span className="text-xl font-bold text-white">
+                {tenant?.nome || "KontrollaPro"}
+              </span>
+            )}
           </div>
           {/* Botão de fechar para mobile */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="lg:hidden text-white hover:bg-white/20"
-            aria-label="Fechar menu"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          {!isCollapsed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="lg:hidden text-white hover:bg-white/20"
+              aria-label="Fechar menu"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
         </div>
 
         {/* Navegação principal */}
-        <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+        <nav className={cn(
+          "flex-1 space-y-1 overflow-y-auto",
+          // Em mobile, sempre usar padding completo
+          "lg:p-4 p-4",
+          isCollapsed && "lg:p-2"
+        )}>
           {navegacao
             .filter((item) => hasPermission(item.permissao as any))
             .map((item) => (
@@ -121,23 +140,40 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
                 }}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
+                    "flex items-center text-sm font-medium rounded-lg transition-all duration-200",
+                    // Em mobile, sempre mostrar texto completo
+                    "lg:px-4 px-4 py-3",
+                    isCollapsed && "lg:px-2 lg:justify-center lg:px-2",
                     "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     isActive
                       ? "bg-sidebar-primary text-white shadow-md"
                       : "text-sidebar-foreground"
                   )
                 }
+                title={isCollapsed ? item.nome : undefined}
               >
-                <item.icone className="mr-3 h-5 w-5" />
-                {item.nome}
+                <item.icone className={cn(
+                  "h-5 w-5",
+                  // Em mobile, sempre mostrar margem
+                  "lg:mr-3 mr-3",
+                  isCollapsed && "lg:mr-0"
+                )} />
+                {/* Em mobile, sempre mostrar texto */}
+                <span className="lg:hidden">{item.nome}</span>
+                {!isCollapsed && <span className="hidden lg:inline">{item.nome}</span>}
               </NavLink>
             ))}
         </nav>
 
         {/* Seção do usuário na parte inferior */}
-        <div className="border-t border-sidebar-border p-4 flex-shrink-0">
-          <div className="flex items-center space-x-3 mb-3">
+        <div className={cn(
+          "border-t border-sidebar-border flex-shrink-0",
+          // Em mobile, sempre usar padding completo
+          "lg:p-4 p-4",
+          isCollapsed && "lg:p-2"
+        )}>
+          {/* Em mobile, sempre mostrar layout completo */}
+          <div className="lg:hidden flex items-center space-x-3 mb-3">
             <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center">
               <span className="text-sm font-medium text-white">
                 {user ? (user.nome.charAt(0) + user.sobrenome.charAt(0)).toUpperCase() : "U"}
@@ -153,6 +189,35 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
             </div>
           </div>
 
+          {/* Layout para desktop */}
+          <div className="hidden lg:block">
+            {!isCollapsed ? (
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                  <span className="text-sm font-medium text-white">
+                    {user ? (user.nome.charAt(0) + user.sobrenome.charAt(0)).toUpperCase() : "U"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {user ? `${user.nome} ${user.sobrenome}` : "Usuário"}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">
+                    {user?.email || "email@exemplo.com"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center mb-3">
+                <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                  <span className="text-sm font-medium text-white">
+                    {user ? (user.nome.charAt(0) + user.sobrenome.charAt(0)).toUpperCase() : "U"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {hasPermission('configuracoes') && (
             <NavLink
               to="/dashboard/configuracoes"
@@ -163,26 +228,50 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
               }}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 w-full justify-start",
+                  "flex items-center text-sm font-medium rounded-lg transition-all duration-200 w-full",
+                  // Em mobile, sempre mostrar layout completo
+                  "lg:px-4 px-4 py-3 justify-start",
+                  isCollapsed && "lg:px-2 lg:justify-center",
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   isActive
                     ? "bg-sidebar-primary text-white shadow-md"
                     : "text-sidebar-foreground"
                 )
               }
+              title={isCollapsed ? "Configurações" : undefined}
             >
-              <Settings className="mr-3 h-4 w-4" />
-              Configurações
+              <Settings className={cn(
+                "h-4 w-4",
+                // Em mobile, sempre mostrar margem
+                "lg:mr-3 mr-3",
+                isCollapsed && "lg:mr-0"
+              )} />
+              {/* Em mobile, sempre mostrar texto */}
+              <span className="lg:hidden">Configurações</span>
+              {!isCollapsed && <span className="hidden lg:inline">Configurações</span>}
             </NavLink>
           )}
 
           <Button
             variant="ghost"
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent mt-1"
-            onClick={() => navigate("/")}
+            className={cn(
+              "w-full text-sidebar-foreground hover:bg-sidebar-accent mt-1",
+              // Em mobile, sempre mostrar layout completo
+              "lg:px-4 px-4 py-3 justify-start",
+              isCollapsed && "lg:px-2 lg:justify-center"
+            )}
+            onClick={onLogout}
+            title={isCollapsed ? "Sair" : undefined}
           >
-            <LogOut className="mr-3 h-4 w-4" />
-            Sair
+            <LogOut className={cn(
+              "h-4 w-4",
+              // Em mobile, sempre mostrar margem
+              "lg:mr-3 mr-3",
+              isCollapsed && "lg:mr-0"
+            )} />
+            {/* Em mobile, sempre mostrar texto */}
+            <span className="lg:hidden">Sair</span>
+            {!isCollapsed && <span className="hidden lg:inline">Sair</span>}
           </Button>
         </div>
       </div>

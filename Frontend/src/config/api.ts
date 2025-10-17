@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
     LOGOUT: '/auth/logout',
     ME: '/auth/me',
     VERIFY: '/auth/verify',
+    REFRESH: '/auth/refresh',
     CHANGE_PASSWORD: '/auth/change-password',
     FORGOT_PASSWORD: '/auth/forgot-password',
     VERIFY_RESET_CODE: '/auth/verify-reset-code',
