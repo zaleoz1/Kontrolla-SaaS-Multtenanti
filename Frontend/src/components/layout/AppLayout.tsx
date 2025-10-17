@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar"; 
 import { Header } from "./Header";
 import { OperadorRequired } from "./OperadorRequired";
@@ -12,7 +12,8 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 // Componente principal de layout da aplicação
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const { operadorSelecionado } = useOperador();
   const { tenant } = useTenant();
   const location = useLocation();
@@ -31,6 +32,10 @@ export function AppLayout() {
       if (window.innerWidth >= 1024) {
         setIsSidebarOpen(false);
       }
+      // Em telas menores, sempre expandir o sidebar
+      if (window.innerWidth < 1024) {
+        setIsSidebarCollapsed(false);
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -45,7 +50,28 @@ export function AppLayout() {
     setIsSidebarOpen(false);
   };
 
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   // O tenant agora é carregado pelo hook useTenant com todos os dados, incluindo a logo
+
+  // Mostrar loading enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirecionar para login se não estiver autenticado
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <ThemeProvider>
@@ -62,6 +88,7 @@ export function AppLayout() {
             <Sidebar 
               isOpen={isSidebarOpen} 
               onClose={closeSidebar} 
+              isCollapsed={isSidebarCollapsed}
               user={user}
               tenant={tenant}
               onLogout={logout}
@@ -69,7 +96,11 @@ export function AppLayout() {
             {/* Área principal do layout */}
             <div className={`flex-1 flex flex-col min-w-0 ${!operadorSelecionado ? 'w-full' : ''}`}>
               {/* Cabeçalho fixo no topo */}
-              <Header onMenuClick={toggleSidebar} />
+              <Header 
+                onMenuClick={toggleSidebar} 
+                onToggleSidebar={toggleSidebarCollapse}
+                isSidebarCollapsed={isSidebarCollapsed}
+              />
               {/* Conteúdo principal, com rolagem vertical e espaçamento */}
               <main className="flex-1 overflow-y-auto bg-muted/30 dark:bg-muted/25 dark-light:bg-muted/30 windows-dark:bg-muted/25 p-6">
                 {/* Centraliza o conteúdo e limita a largura máxima */}

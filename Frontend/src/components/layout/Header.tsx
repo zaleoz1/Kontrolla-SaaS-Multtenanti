@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Bell, Plus, Menu, User, ChevronDown, Crown, Shield, ShoppingBag, CheckCircle, X } from "lucide-react";
+import { Bell, Plus, Menu, User, ChevronDown, Crown, Shield, ShoppingBag, CheckCircle, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useOperador } from "@/contexts/OperadorContext";
@@ -28,13 +28,15 @@ import {
 
 interface PropsCabecalho {
   onMenuClick: () => void;
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
 }
 
 /**
  * Componente Header
  * Renderiza o cabeçalho da aplicação com botão de menu e botão de nova venda.
  */
-export function Header({ onMenuClick }: PropsCabecalho) {
+export function Header({ onMenuClick, onToggleSidebar, isSidebarCollapsed }: PropsCabecalho) {
   const navigate = useNavigate();
   const location = useLocation();
   const { administradores, loading } = useAdministradores();
@@ -124,15 +126,35 @@ export function Header({ onMenuClick }: PropsCabecalho) {
     // Header principal com fundo e borda inferior
     <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 dark:bg-background/98 dark:supports-[backdrop-filter]:bg-background/70 dark-light:bg-background/98 dark-light:supports-[backdrop-filter]:bg-background/75 windows-dark:bg-background/98 windows-dark:supports-[backdrop-filter]:bg-background/80 border-border/60 dark:border-border/70 dark-light:border-border/70 windows-dark:border-border/70">
       <div className="flex h-full items-center justify-between px-6">
-        {/* Botão de menu para mobile e telas menores que 1378px */}
+        {/* Botão de menu para mobile e telas menores que 1018px */}
         <Button
           variant="ghost"
           size="sm"
           onClick={onMenuClick}
-          className="min-[1378px]:hidden mr-2"
+          className="min-[1019px]:hidden mr-2"
         >
           <Menu className="h-5 w-5" />
         </Button>
+
+        {/* Botão de toggle do sidebar para desktop */}
+        {onToggleSidebar && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleSidebar}
+            className="hidden min-[1019px]:flex mr-2"
+            title={isSidebarCollapsed ? "Expandir sidebar" : "Colapsar sidebar"}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+            <span className="sr-only">
+              {isSidebarCollapsed ? "Expandir sidebar" : "Colapsar sidebar"}
+            </span>
+          </Button>
+        )}
 
 
         {/* Área de ações - alinhada à direita */}

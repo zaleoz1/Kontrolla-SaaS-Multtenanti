@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   Zap,
   TrendingUp,
   Users,
+  User,
   ShoppingCart,
   Package,
   BarChart3
@@ -29,7 +30,7 @@ import {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAutoLoginAvailable, disableRememberMe } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
@@ -38,6 +39,47 @@ export default function Login() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAutoLogging, setIsAutoLogging] = useState(false);
+
+  // Carregar dados salvos do "lembrar-me" ao inicializar
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    
+    if (rememberedEmail && rememberMe) {
+      setFormData(prev => ({
+        ...prev,
+        email: rememberedEmail,
+        rememberMe: true
+      }));
+    }
+  }, []);
+
+  // Verificar se deve fazer login automático
+  useEffect(() => {
+    const checkAutoLogin = async () => {
+      if (isAutoLoginAvailable()) {
+        setIsAutoLogging(true);
+        // Pequeno delay para mostrar a mensagem de login automático
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      }
+    };
+
+    checkAutoLogin();
+  }, [isAutoLoginAvailable, navigate]);
+
+  // Função para cancelar login automático
+  const handleCancelAutoLogin = () => {
+    disableRememberMe();
+    setIsAutoLogging(false);
+    toast({
+      title: "Login automático cancelado",
+      description: "Você precisará fazer login manualmente.",
+      variant: "default",
+    });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -55,6 +97,15 @@ export default function Login() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        // Salvar preferência de "lembrar-me" se marcada
+        if (formData.rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+          localStorage.setItem('rememberedEmail', formData.email);
+        } else {
+          localStorage.removeItem('rememberMe');
+          localStorage.removeItem('rememberedEmail');
+        }
+        
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta! Digite seu código de acesso.",
@@ -80,6 +131,75 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  // Se estiver fazendo login automático, mostrar tela de loading
+  if (isAutoLogging) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {/* Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1920&h=1080&fit=crop&crop=center')] bg-cover bg-center opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90" />
+          
+          {/* Animated Grid */}
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-md px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="text-center"
+          >
+            <motion.div 
+              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm border border-white/20 shadow-2xl"
+              animate={{ 
+                scale: [1, 1.05, 1],
+                opacity: [0.8, 1, 0.8]
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+            >
+              <User className="h-8 w-8 text-white" />
+            </motion.div>
+            
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Login Automático
+            </h1>
+            
+            <p className="text-slate-300 mb-6">
+              Realizando login automático...
+            </p>
+            
+            <div className="flex items-center justify-center space-x-2 mb-6">
+              <motion.div 
+                className="rounded-full h-4 w-4 border-b-2 border-white"
+                animate={{ rotate: 360 }}
+                transition={{ 
+                  duration: 1, 
+                  repeat: Infinity, 
+                  ease: "linear" 
+                }}
+              />
+              <span className="text-sm text-slate-300">Conectando...</span>
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={handleCancelAutoLogin}
+              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+            >
+              Cancelar Login Automático
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   // Variantes de animação
   const fadeInUp = {

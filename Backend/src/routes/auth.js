@@ -307,6 +307,32 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Rota para renovar token
+router.post('/refresh', authenticateToken, async (req, res) => {
+  try {
+    // Criar nova sessão
+    const sessionToken = await createUserSession(
+      req.user.id, 
+      req.user.tenant_id, 
+      req.ip, 
+      req.get('User-Agent')
+    );
+
+    // Gerar novo JWT
+    const token = generateJWT(req.user.id, sessionToken);
+
+    res.json({
+      message: 'Token renovado com sucesso',
+      token
+    });
+  } catch (error) {
+    console.error('Erro ao renovar token:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Rota para alterar senha
 router.put('/change-password', authenticateToken, async (req, res) => {
   try {
