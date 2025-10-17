@@ -232,7 +232,7 @@ export default function Funcionarios() {
                   </>
                 )}
               </Button>
-              <Button onClick={handleNovoFuncionario} className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none">
+              <Button onClick={handleNovoFuncionario} className="bg-gradient-primary text-white text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none">
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Funcionário</span>
                 <span className="sm:hidden">Novo</span>
@@ -374,7 +374,7 @@ export default function Funcionarios() {
                   }
                 </p>
                 <Button 
-                  className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10"
+                  className="bg-gradient-primary text-white text-xs sm:text-sm h-8 sm:h-10"
                   onClick={handleNovoFuncionario}
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -397,7 +397,7 @@ export default function Funcionarios() {
                         </div>
                       </div>
                       <div className="scale-90 sm:scale-100">
-                        <Badge variant={funcionario.status === "ativo" ? "default" : "secondary"} className="text-xs">
+                        <Badge variant={funcionario.status === "ativo" ? "default" : "secondary"} className={`text-xs ${funcionario.status === "ativo" ? "text-white" : ""}`}>
                           {funcionario.status === "ativo" ? "Ativo" : 
                            funcionario.status === "inativo" ? "Inativo" :
                            funcionario.status === "afastado" ? "Afastado" : "Demitido"}

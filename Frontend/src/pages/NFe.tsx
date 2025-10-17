@@ -327,7 +327,7 @@ export default function NFe() {
                 <p className="text-muted-foreground mb-4">
                   {termoBusca ? "Tente ajustar sua busca" : "Emita sua primeira nota fiscal"}
                 </p>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Emitir NF-e
                 </Button>
@@ -387,7 +387,7 @@ export default function NFe() {
 
               <div className="flex justify-end space-x-2 mt-6">
                 <Button variant="outline">Salvar Rascunho</Button>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary text-white">
                   <Send className="h-4 w-4 mr-2" />
                   Emitir NF-e
                 </Button>

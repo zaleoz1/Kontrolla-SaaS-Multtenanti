@@ -160,7 +160,7 @@ export default function Catalogo() {
             <span className="hidden sm:inline">QR Code</span>
             <span className="sm:hidden">QR</span>
           </Button>
-          <Button className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10">
+          <Button className="bg-gradient-primary text-white text-xs sm:text-sm h-8 sm:h-10">
             <Share2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Compartilhar</span>
             <span className="sm:hidden">Compartilhar</span>
@@ -173,7 +173,7 @@ export default function Catalogo() {
         <CardHeader className="pb-3">
           <CardTitle className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <span className="text-base sm:text-lg">Configurações do Catálogo</span>
-            <Badge variant={isPublico ? "default" : "secondary"} className={`${isPublico ? "bg-success" : ""} text-xs w-fit`}>
+            <Badge variant={isPublico ? "default" : "secondary"} className={`${isPublico ? "bg-success text-white" : ""} text-xs w-fit`}>
               {isPublico ? "Público" : "Privado"}
             </Badge>
           </CardTitle>
@@ -374,7 +374,7 @@ export default function Catalogo() {
                       </div>
                       
                       <Badge variant={emEstoque ? "default" : "secondary"} 
-                             className={`${emEstoque ? "bg-success" : ""} text-xs w-fit`}>
+                             className={`${emEstoque ? "bg-success text-white" : ""} text-xs w-fit`}>
                         <span className="hidden sm:inline">{emEstoque ? "Disponível" : "Indisponível"}</span>
                         <span className="sm:hidden">{emEstoque ? "✓" : "✗"}</span>
                       </Badge>

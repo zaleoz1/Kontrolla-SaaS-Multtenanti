@@ -261,7 +261,7 @@ export default function NovoFornecedor() {
             <span className="sm:hidden">Cancelar</span>
           </Button>
           <Button 
-            className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none" 
+            className="bg-gradient-primary text-white text-xs sm:text-sm h-8 sm:h-10 flex-1 sm:flex-none" 
             onClick={salvarFornecedor}
             disabled={!formularioValido || salvando || carregandoFornecedor}
           >

@@ -17,7 +17,7 @@ export function useBuscaFornecedores() {
     }
     
     try {
-      const response = await makeRequest(API_ENDPOINTS.FORNECEDORES.LIST, {
+      const response = await makeRequest(`${API_ENDPOINTS.FORNECEDORES.LIST}?limit=10000`, {
         method: 'GET',
         body: undefined,
       });

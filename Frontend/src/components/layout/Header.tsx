@@ -139,7 +139,7 @@ export function Header({ onMenuClick }: PropsCabecalho) {
         <div className="flex items-center space-x-4 ml-auto">   
           {/* Botão para criar nova venda - só aparece se tiver permissão */}
           {hasPermission('vendas_criar') && (
-            <Button variant="outline" size="sm" className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground hover:text-primary-foreground border-primary hover:border-primary/80 shadow-sm" onClick={() => navigate("/dashboard/nova-venda")}>
+            <Button variant="outline" size="sm" className="gap-2 bg-primary hover:bg-primary/90 text-white hover:text-white border-primary hover:border-primary/80 shadow-sm" onClick={() => navigate("/dashboard/nova-venda")}>
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Nova Venda</span>
             </Button>

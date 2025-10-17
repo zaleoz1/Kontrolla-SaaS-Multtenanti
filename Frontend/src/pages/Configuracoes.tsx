@@ -1121,7 +1121,7 @@ export default function Configuracoes() {
                     await handleSalvarDadosConta();
                     await handleSalvarDadosTenant();
                   }} 
-                  className="px-6 py-2 text-xs sm:text-sm" 
+                  className="px-6 py-2 text-xs sm:text-sm bg-gradient-primary text-white" 
                   disabled={salvando}
                 >
                   <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1134,7 +1134,7 @@ export default function Configuracoes() {
                     await handleSalvarDadosConta();
                     await handleSalvarDadosTenant();
                   }} 
-                  className="w-full text-xs sm:text-sm" 
+                  className="w-full text-xs sm:text-sm bg-gradient-primary text-white" 
                   disabled={salvando}
                 >
                   <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1606,13 +1606,13 @@ export default function Configuracoes() {
                 </p>
               </div>
               <div className="hidden md:flex items-center space-x-2 justify-end">
-                <Button onClick={handleNovoUsuario} className="px-6 py-2 text-xs sm:text-sm">
+                <Button onClick={handleNovoUsuario} className="px-6 py-2 text-xs sm:text-sm bg-gradient-primary text-white">
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Novo Usuário
                 </Button>
               </div>
               <div className="md:hidden w-full">
-                <Button onClick={handleNovoUsuario} className="w-full text-xs sm:text-sm">
+                <Button onClick={handleNovoUsuario} className="w-full text-xs sm:text-sm bg-gradient-primary text-white">
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Novo Usuário
                 </Button>
@@ -1743,7 +1743,7 @@ export default function Configuracoes() {
                     }
                   </p>
                   <Button 
-                    className="bg-gradient-primary text-xs sm:text-sm"
+                    className="bg-gradient-primary text-white text-xs sm:text-sm"
                     onClick={handleNovoUsuario}
                   >
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1826,7 +1826,7 @@ export default function Configuracoes() {
                       <div className="space-y-1.5 sm:space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs sm:text-sm text-muted-foreground">Status:</span>
-                          <Badge variant={usuario.status === "ativo" ? "default" : "secondary"} className="text-xs">
+                          <Badge variant={usuario.status === "ativo" ? "default" : "secondary"} className={`text-xs ${usuario.status === "ativo" ? "text-white" : ""}`}>
                             {usuario.status === "ativo" ? "Ativo" : "Inativo"}
                           </Badge>
                         </div>
@@ -1986,7 +1986,7 @@ export default function Configuracoes() {
                           }}
                           disabled={operador?.role === 'vendedor' && hasPermission('configuracoes')}
                         />
-                        <Label className="text-xs sm:text-sm text-muted-foreground">
+                        <Label className={`text-xs sm:text-sm ${metodo.ativo ? 'text-white' : 'text-muted-foreground'}`}>
                           {metodo.ativo ? 'Ativo' : 'Inativo'}
                         </Label>
                       </div>
@@ -1995,7 +1995,7 @@ export default function Configuracoes() {
                 ))}
                 {/* Ocultar botão de salvar para vendedores */}
                 {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
-                  <Button onClick={handleSalvarMetodosPagamento} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                  <Button onClick={handleSalvarMetodosPagamento} className="w-full text-xs sm:text-sm h-8 sm:h-10 bg-gradient-primary text-white" disabled={salvando}>
                     <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     {salvando ? 'Salvando...' : 'Salvar Métodos de Pagamento'}
                   </Button>
@@ -2098,7 +2098,7 @@ export default function Configuracoes() {
                 </div>
                 {/* Ocultar botão de salvar para vendedores */}
                 {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
-                  <Button onClick={handleSalvarDadosPix} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                  <Button onClick={handleSalvarDadosPix} className="w-full text-xs sm:text-sm h-8 sm:h-10 bg-gradient-primary text-white" disabled={salvando}>
                     <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     {salvando ? 'Salvando...' : 'Salvar Configuração PIX'}
                   </Button>
@@ -2227,7 +2227,7 @@ export default function Configuracoes() {
                 </div>
                 {/* Ocultar botão de salvar para vendedores */}
                 {!(operador?.role === 'vendedor' && hasPermission('configuracoes')) && (
-                  <Button onClick={handleSalvarDadosBancarios} className="w-full text-xs sm:text-sm h-8 sm:h-10" disabled={salvando}>
+                  <Button onClick={handleSalvarDadosBancarios} className="w-full text-xs sm:text-sm h-8 sm:h-10 bg-gradient-primary text-white" disabled={salvando}>
                     <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     {salvando ? 'Salvando...' : 'Salvar Dados Bancários'}
                   </Button>
@@ -2353,9 +2353,9 @@ export default function Configuracoes() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setPrimaryColor('#31d46d'); // Verde padrão do sistema
+                        setPrimaryColor('#45d77b'); // Verde padrão do sistema
                         if (configuracoesEditando) {
-                          setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: '#31d46d' } : null);
+                          setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: '#45d77b' } : null);
                         }
                       }}
                       className="text-xs h-8"
@@ -2408,7 +2408,7 @@ export default function Configuracoes() {
                             setConfiguracoesEditando(prev => prev ? { ...prev, cor_primaria: e.target.value } : null);
                           }
                         }}
-                        placeholder="#3b82f6"
+                        placeholder="#45d77b"
                         className="flex-1 h-10 text-xs sm:text-sm"
                       />
                     </div>
@@ -2484,7 +2484,7 @@ export default function Configuracoes() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
+                <Button onClick={handleSalvarConfiguracoes} className="w-full bg-gradient-primary text-white" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
                   {salvando ? 'Salvando...' : 'Salvar Localização'}
                 </Button>
@@ -2643,7 +2643,7 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
+              <Button onClick={handleSalvarConfiguracoes} className="w-full bg-gradient-primary text-white" disabled={salvando}>
                 <Save className="h-4 w-4 mr-2" />
                 {salvando ? 'Salvando...' : 'Salvar Notificações'}
               </Button>
@@ -2736,7 +2736,7 @@ export default function Configuracoes() {
                     }}
                   />
                 </div>
-                <Button onClick={handleSalvarConfiguracoes} className="w-full" disabled={salvando}>
+                <Button onClick={handleSalvarConfiguracoes} className="w-full bg-gradient-primary text-white" disabled={salvando}>
                   <Save className="h-4 w-4 mr-2" />
                   {salvando ? 'Salvando...' : 'Salvar Segurança'}
                 </Button>
@@ -2763,7 +2763,7 @@ export default function Configuracoes() {
                         <p className="font-medium text-sm">{atividade.acao}</p>
                         <p className="text-xs text-muted-foreground">{atividade.data} • {atividade.ip}</p>
                       </div>
-                      <Badge variant={atividade.status === "Sucesso" ? "default" : "destructive"}>
+                      <Badge variant={atividade.status === "Sucesso" ? "default" : "destructive"} className={atividade.status === "Sucesso" ? "text-white" : ""}>
                         {atividade.status}
                       </Badge>
                     </div>
@@ -3283,7 +3283,7 @@ export default function Configuracoes() {
                     <Button 
                       onClick={handleSalvarUsuario} 
                       disabled={salvando}
-                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                      className="w-full sm:w-auto px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-10 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white"
                     >
                       <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       {salvando ? 'Salvando...' : 'Salvar Usuário'}

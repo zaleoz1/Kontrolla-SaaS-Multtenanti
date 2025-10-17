@@ -192,7 +192,8 @@ export const useProdutos = () => {
   // Buscar fornecedores
   const buscarFornecedores = async () => {
     try {
-      const response = await makeRequest('/fornecedores', { method: 'GET' });
+      // Passar limite alto para carregar todos os fornecedores
+      const response = await makeRequest('/fornecedores?limit=10000', { method: 'GET' });
       if (response.data) {
         setFornecedores(response.data);
         return response.data;

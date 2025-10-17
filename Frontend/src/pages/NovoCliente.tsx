@@ -337,7 +337,7 @@ export default function NovoCliente() {
             Cancelar
           </Button>
           <Button 
-            className="bg-gradient-primary" 
+            className="bg-gradient-primary text-white" 
             onClick={salvarCliente}
             disabled={!formularioValido || api.loading || carregandoCliente}
           >
@@ -365,7 +365,7 @@ export default function NovoCliente() {
             <span className="sm:hidden">Cancelar</span>
           </Button>
           <Button 
-            className="flex-1 bg-gradient-primary text-xs sm:text-sm" 
+            className="flex-1 bg-gradient-primary text-white text-xs sm:text-sm" 
             onClick={salvarCliente}
             disabled={!formularioValido || api.loading || carregandoCliente}
           >
