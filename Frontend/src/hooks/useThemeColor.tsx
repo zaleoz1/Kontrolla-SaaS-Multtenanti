@@ -31,7 +31,7 @@ export const PREDEFINED_COLORS = [
 ];
 
 export function ThemeColorProvider({ children }: ThemeColorProviderProps) {
-  const [primaryColor, setPrimaryColor] = useState<ThemeColor>('#3b82f6');
+  const [primaryColor, setPrimaryColor] = useState<ThemeColor>('#45d77b');
 
   // Carregar cor salva do localStorage
   useEffect(() => {
@@ -41,7 +41,7 @@ export function ThemeColorProvider({ children }: ThemeColorProviderProps) {
       applyPrimaryColor(savedColor);
     } else {
       // Aplicar cor padrão se não houver cor salva
-      applyPrimaryColor('#3b82f6');
+      applyPrimaryColor('#45d77b');
     }
   }, []);
 

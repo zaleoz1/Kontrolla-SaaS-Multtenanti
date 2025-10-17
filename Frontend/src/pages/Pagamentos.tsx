@@ -961,7 +961,7 @@ export default function Pagamentos() {
           <Button 
             onClick={salvarVenda}
             disabled={!formularioValido || salvandoVenda}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
+            className="bg-primary hover:bg-primary/90 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
           >
             {salvandoVenda ? (
               <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
@@ -1208,7 +1208,7 @@ export default function Pagamentos() {
                   <div className="bg-primary/5 dark:bg-primary/10 p-3 sm:p-4 rounded-lg border-2 border-primary/20 dark:border-primary/30">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div>
-                        <h4 className="font-medium text-primary-foreground mb-1 flex items-center text-sm sm:text-base">
+                        <h4 className="font-medium text-white mb-1 flex items-center text-sm sm:text-base">
                           <img 
                             src={logopixPath} 
                             alt="PIX" 
@@ -1224,7 +1224,7 @@ export default function Pagamentos() {
                         type="button"
                         onClick={() => setMostrarModalPix(true)}
                         disabled={!pixConfiguracao || carregandoPix}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
+                        className="bg-primary hover:bg-primary/90 text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto"
                       >
                         {carregandoPix ? (
                           <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
@@ -1353,7 +1353,7 @@ export default function Pagamentos() {
                           <Building2 className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-primary-foreground mb-1">
+                          <h4 className="font-semibold text-white mb-1">
                             Transferência Bancária
                           </h4>
                           <div className="flex items-center space-x-4 text-sm">
@@ -1433,7 +1433,7 @@ export default function Pagamentos() {
                     // Adicionar novo método de pagamento
                     setMetodosPagamento([{ metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                   }}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm"
+                  className="w-full bg-primary hover:bg-primary/90 text-white h-8 sm:h-10 text-xs sm:text-sm"
                   disabled={carregandoMetodos}
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1459,7 +1459,7 @@ export default function Pagamentos() {
                       onClick={() => {
                         setMetodosPagamento([...metodosPagamento, { metodo: "", valor: "", parcelas: undefined, taxaParcela: undefined }]);
                       }}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-7 sm:h-8 text-xs"
+                      className="bg-primary hover:bg-primary/90 text-white h-7 sm:h-8 text-xs"
                       disabled={carregandoMetodos}
                     >
                       <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -1677,7 +1677,7 @@ export default function Pagamentos() {
                   <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-lg border-2 border-primary/20 dark:border-primary/30">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-primary-foreground mb-1 flex items-center">
+                        <h4 className="font-medium text-white mb-1 flex items-center">
                           <img 
                             src={logopixPath} 
                             alt="PIX" 
@@ -1693,7 +1693,7 @@ export default function Pagamentos() {
                         type="button"
                         onClick={() => setMostrarModalPix(true)}
                         disabled={!pixConfiguracao || carregandoPix}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        className="bg-primary hover:bg-primary/90 text-white"
                       >
                         {carregandoPix ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -2031,7 +2031,7 @@ export default function Pagamentos() {
                   <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>Resumo da Venda</span>
                 </CardTitle>
-                <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
+                <Badge variant="secondary" className="bg-primary text-white text-xs">
                   {carrinho.length} itens
                 </Badge>
               </div>
@@ -2337,7 +2337,7 @@ export default function Pagamentos() {
                       <div className="flex justify-between items-center p-2 bg-primary/5 dark:bg-primary/10 rounded border border-primary/20 dark:border-primary/30">
                         <div className="flex items-center space-x-1">
                           <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                              <span className="text-xs font-medium text-primary-foreground">Total a Receber:</span>
+                              <span className="text-xs font-medium text-white">Total a Receber:</span>
                         </div>
                         <span className="text-sm font-bold text-foreground">
                           {calcularTotalPago().toLocaleString("pt-BR", {
@@ -2406,7 +2406,7 @@ export default function Pagamentos() {
                           <div className="flex justify-between items-center p-2 bg-primary/5 dark:bg-primary/10 rounded border border-primary/20 dark:border-primary/30">
                             <div className="flex items-center space-x-1">
                               <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                              <span className="text-xs font-medium text-primary-foreground">Pagamento Completo:</span>
+                              <span className="text-xs font-medium text-white">Pagamento Completo:</span>
                   </div>
                             <span className="text-sm font-bold text-foreground">✓</span>
                           </div>
@@ -2444,7 +2444,7 @@ export default function Pagamentos() {
               <div className="flex flex-col space-y-2 sm:space-y-3">
                 <Button 
                   onClick={imprimirNota} 
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-8 sm:h-10 text-xs sm:text-sm"
+                  className="w-full bg-primary hover:bg-primary/90 text-white h-8 sm:h-10 text-xs sm:text-sm"
                 >
                   <Printer className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Imprimir Nota

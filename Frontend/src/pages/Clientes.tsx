@@ -211,7 +211,7 @@ export default function Clientes() {
   const obterBadgeStatus = (status: string) => {
     switch (status) {
       case "ativo":
-        return <Badge className="bg-success hover:bg-success/90">Ativo</Badge>;
+        return <Badge className="bg-success hover:bg-success/90 text-white">Ativo</Badge>;
       case "inativo":
         return <Badge variant="secondary">Inativo</Badge>;
       default:
@@ -260,7 +260,7 @@ export default function Clientes() {
         {/* Botão - Desktop */}
         <div className="hidden md:flex items-center justify-end">
           {hasPermission('clientes_criar') && (
-            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-cliente")}>
+            <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-cliente")}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Cliente
             </Button>
@@ -271,7 +271,7 @@ export default function Clientes() {
         <div className="md:hidden w-full">
           {hasPermission('clientes_criar') && (
             <Button 
-              className="w-full bg-gradient-primary text-xs sm:text-sm" 
+              className="w-full bg-gradient-primary text-white text-xs sm:text-sm" 
               onClick={() => navigate("/dashboard/novo-cliente")}
             >
               <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -628,7 +628,7 @@ export default function Clientes() {
             </p>
             {hasPermission('clientes_criar') && (
               <Button 
-                className="bg-gradient-primary text-xs sm:text-sm"
+                className="bg-gradient-primary text-white text-xs sm:text-sm"
                 onClick={() => navigate("/dashboard/novo-cliente")}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />

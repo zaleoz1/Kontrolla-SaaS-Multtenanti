@@ -894,7 +894,7 @@ export default function Financeiro() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
-          <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-transacao")}>
+          <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/nova-transacao")}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Transação
           </Button>
@@ -929,7 +929,7 @@ export default function Financeiro() {
               <span className="sm:hidden">Atualizar</span>
             </Button>
             <Button 
-              className="flex-1 bg-gradient-primary text-xs sm:text-sm" 
+              className="flex-1 bg-gradient-primary text-white text-xs sm:text-sm" 
               onClick={() => navigate("/dashboard/nova-transacao")}
             >
               <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1108,7 +1108,7 @@ export default function Financeiro() {
                         variant={filtroStatus === 'todos' ? "default" : "outline"}
                         onClick={() => setFiltroStatus('todos')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatus === 'todos' ? 'text-white' : ''}`}
                       >
                         Todos
                       </Button>
@@ -1116,7 +1116,7 @@ export default function Financeiro() {
                         variant={filtroStatus === 'pendente' ? "default" : "outline"}
                         onClick={() => setFiltroStatus('pendente')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatus === 'pendente' ? 'text-white' : ''}`}
                       >
                         Pendentes
                       </Button>
@@ -1124,7 +1124,7 @@ export default function Financeiro() {
                         variant={filtroStatus === 'vencido' ? "default" : "outline"}
                         onClick={() => setFiltroStatus('vencido')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatus === 'vencido' ? 'text-white' : ''}`}
                       >
                         Vencidos
                       </Button>
@@ -1172,6 +1172,7 @@ export default function Financeiro() {
                         variant={filtroStatus === 'todos' ? "default" : "outline"}
                         onClick={() => setFiltroStatus('todos')}
                         size="sm"
+                        className={filtroStatus === 'todos' ? 'text-white' : ''}
                       >
                         Todos
                       </Button>
@@ -1179,6 +1180,7 @@ export default function Financeiro() {
                         variant={filtroStatus === 'pendente' ? "default" : "outline"}
                         onClick={() => setFiltroStatus('pendente')}
                         size="sm"
+                        className={filtroStatus === 'pendente' ? 'text-white' : ''}
                       >
                         Pendentes
                       </Button>
@@ -1186,6 +1188,7 @@ export default function Financeiro() {
                         variant={filtroStatus === 'vencido' ? "default" : "outline"}
                         onClick={() => setFiltroStatus('vencido')}
                         size="sm"
+                        className={filtroStatus === 'vencido' ? 'text-white' : ''}
                       >
                         Vencidos
                       </Button>
@@ -1374,7 +1377,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'todos' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('todos')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatusPagar === 'todos' ? 'text-white' : ''}`}
                       >
                         Todos
                       </Button>
@@ -1382,7 +1385,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'pago' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('pago')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatusPagar === 'pago' ? 'text-white' : ''}`}
                       >
                         Pagos
                       </Button>
@@ -1390,7 +1393,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'pendente' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('pendente')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatusPagar === 'pendente' ? 'text-white' : ''}`}
                       >
                         Pendentes
                       </Button>
@@ -1398,7 +1401,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'vencido' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('vencido')}
                         size="sm"
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroStatusPagar === 'vencido' ? 'text-white' : ''}`}
                       >
                         Vencidos
                       </Button>
@@ -1446,6 +1449,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'todos' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('todos')}
                         size="sm"
+                        className={filtroStatusPagar === 'todos' ? 'text-white' : ''}
                       >
                         Todos
                       </Button>
@@ -1453,6 +1457,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'pago' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('pago')}
                         size="sm"
+                        className={filtroStatusPagar === 'pago' ? 'text-white' : ''}
                       >
                         Pagos
                       </Button>
@@ -1460,6 +1465,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'pendente' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('pendente')}
                         size="sm"
+                        className={filtroStatusPagar === 'pendente' ? 'text-white' : ''}
                       >
                         Pendentes
                       </Button>
@@ -1467,6 +1473,7 @@ export default function Financeiro() {
                         variant={filtroStatusPagar === 'vencido' ? "default" : "outline"}
                         onClick={() => setFiltroStatusPagar('vencido')}
                         size="sm"
+                        className={filtroStatusPagar === 'vencido' ? 'text-white' : ''}
                       >
                         Vencidos
                       </Button>
@@ -1641,7 +1648,7 @@ export default function Financeiro() {
                         variant={filtroTipoTransacao === 'todos' ? "default" : "outline"}
                         size="sm"
                         onClick={() => setFiltroTipoTransacao('todos')}
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroTipoTransacao === 'todos' ? 'text-white' : ''}`}
                       >
                         Todas as Transações
                       </Button>
@@ -1649,7 +1656,7 @@ export default function Financeiro() {
                         variant={filtroTipoTransacao === 'entrada' ? "default" : "outline"}
                         size="sm"
                         onClick={() => setFiltroTipoTransacao('entrada')}
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroTipoTransacao === 'entrada' ? 'text-white' : ''}`}
                       >
                         Recebimentos
                       </Button>
@@ -1657,7 +1664,7 @@ export default function Financeiro() {
                         variant={filtroTipoTransacao === 'saida' ? "default" : "outline"}
                         size="sm"
                         onClick={() => setFiltroTipoTransacao('saida')}
-                        className="h-9 text-xs font-medium"
+                        className={`h-9 text-xs font-medium ${filtroTipoTransacao === 'saida' ? 'text-white' : ''}`}
                       >
                         Pagamentos
                       </Button>
@@ -1702,6 +1709,7 @@ export default function Financeiro() {
                         variant={filtroTipoTransacao === 'todos' ? "default" : "outline"}
                         size="sm"
                         onClick={() => setFiltroTipoTransacao('todos')}
+                        className={filtroTipoTransacao === 'todos' ? 'text-white' : ''}
                       >
                         Todos
                       </Button>
@@ -1709,6 +1717,7 @@ export default function Financeiro() {
                         variant={filtroTipoTransacao === 'entrada' ? "default" : "outline"}
                         size="sm"
                         onClick={() => setFiltroTipoTransacao('entrada')}
+                        className={filtroTipoTransacao === 'entrada' ? 'text-white' : ''}
                       >
                         Recebimentos
                       </Button>
@@ -1716,6 +1725,7 @@ export default function Financeiro() {
                         variant={filtroTipoTransacao === 'saida' ? "default" : "outline"}
                         size="sm"
                         onClick={() => setFiltroTipoTransacao('saida')}
+                        className={filtroTipoTransacao === 'saida' ? 'text-white' : ''}
                       >
                         Pagamentos
                       </Button>
@@ -1923,7 +1933,7 @@ export default function Financeiro() {
                 </p>
                 <Button 
                   size="sm" 
-                  className="bg-gradient-primary text-xs sm:text-sm w-full sm:w-auto"
+                  className="bg-gradient-primary text-white text-xs sm:text-sm w-full sm:w-auto"
                   onClick={() => navigate('/relatorios/financeiro')}
                 >
                   Gerar Relatório
@@ -1940,7 +1950,7 @@ export default function Financeiro() {
                 </p>
                 <Button 
                   size="sm" 
-                  className="bg-gradient-primary text-xs sm:text-sm w-full sm:w-auto"
+                  className="bg-gradient-primary text-white text-xs sm:text-sm w-full sm:w-auto"
                   onClick={() => navigate('/relatorios/financeiro?tipo=dre')}
                 >
                   Gerar Relatório
@@ -1957,7 +1967,7 @@ export default function Financeiro() {
                 </p>
                 <Button 
                   size="sm" 
-                  className="bg-gradient-primary text-xs sm:text-sm w-full sm:w-auto"
+                  className="bg-gradient-primary text-white text-xs sm:text-sm w-full sm:w-auto"
                   onClick={() => navigate('/relatorios/financeiro?tipo=balanco')}
                 >
                   Gerar Relatório
@@ -2310,7 +2320,7 @@ export default function Financeiro() {
               </Button>
               <Button 
                 onClick={tipoModalPagamento === 'adiantamento' ? processarAdiantamento : processarPagamento}
-                className="flex-1 h-10 sm:h-11 bg-gradient-primary text-sm font-medium"
+                className="flex-1 h-10 sm:h-11 bg-gradient-primary text-white text-sm font-medium"
               >
                 <Check className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">
@@ -2690,7 +2700,7 @@ export default function Financeiro() {
               </Button>
               <Button 
                 onClick={processarRecebimento}
-                className="flex-1 h-10 bg-gradient-primary text-xs sm:text-sm"
+                className="flex-1 h-10 bg-gradient-primary text-white text-xs sm:text-sm"
               >
                 <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Confirmar Recebimento</span>

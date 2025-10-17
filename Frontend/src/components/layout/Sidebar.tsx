@@ -124,7 +124,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
                     "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200",
                     "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                      ? "bg-sidebar-primary text-white shadow-md"
                       : "text-sidebar-foreground"
                   )
                 }
@@ -166,7 +166,7 @@ export function Sidebar({ isOpen, onClose, user, tenant, onLogout }: PropsSideba
                   "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 w-full justify-start",
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                    ? "bg-sidebar-primary text-white shadow-md"
                     : "text-sidebar-foreground"
                 )
               }

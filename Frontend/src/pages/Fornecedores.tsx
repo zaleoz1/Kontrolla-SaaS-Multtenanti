@@ -128,7 +128,7 @@ export default function Fornecedores() {
                 Gerencie seus fornecedores e parceiros comerciais
               </p>
             </div>
-            <Button onClick={handleNovoFornecedor} className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10">
+            <Button onClick={handleNovoFornecedor} className="bg-gradient-primary text-white text-xs sm:text-sm h-8 sm:h-10">
               <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Novo Fornecedor</span>
               <span className="sm:hidden">Novo</span>
@@ -252,7 +252,7 @@ export default function Fornecedores() {
                   }
                 </p>
                 <Button 
-                  className="bg-gradient-primary text-xs sm:text-sm h-8 sm:h-10"
+                  className="bg-gradient-primary text-white text-xs sm:text-sm h-8 sm:h-10"
                   onClick={handleNovoFornecedor}
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -275,7 +275,7 @@ export default function Fornecedores() {
                         </div>
                       </div>
                       <div className="scale-90 sm:scale-100">
-                        <Badge variant={fornecedor.status === "ativo" ? "default" : "secondary"} className="text-xs">
+                        <Badge variant={fornecedor.status === "ativo" ? "default" : "secondary"} className={`text-xs ${fornecedor.status === "ativo" ? "text-white" : ""}`}>
                           {fornecedor.status === "ativo" ? "Ativo" : "Inativo"}
                         </Badge>
                       </div>
@@ -326,7 +326,7 @@ export default function Fornecedores() {
                     <div className="space-y-1 sm:space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Status:</span>
-                        <Badge variant={fornecedor.status === "ativo" ? "default" : "secondary"} className="text-xs scale-90 sm:scale-100">
+                        <Badge variant={fornecedor.status === "ativo" ? "default" : "secondary"} className={`text-xs scale-90 sm:scale-100 ${fornecedor.status === "ativo" ? "text-white" : ""}`}>
                           {fornecedor.status === "ativo" ? "Ativo" : "Inativo"}
                         </Badge>
                       </div>

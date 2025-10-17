@@ -362,7 +362,7 @@ export default function Vendas() {
             Gerencie suas vendas e transações
           </p>
         </div>
-        <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
+        <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/nova-venda")}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Venda
         </Button>
@@ -490,7 +490,7 @@ export default function Vendas() {
                     variant={filtros.status === '' ? "default" : "outline"}
                     onClick={() => handleStatusFilter('')}
                     size="sm"
-                    className="h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
+                    className={`h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 ${filtros.status === '' ? 'text-white' : ''}`}
                   >
                     Todas
                   </Button>
@@ -498,7 +498,7 @@ export default function Vendas() {
                     variant={filtros.status === 'pago' ? "default" : "outline"}
                     onClick={() => handleStatusFilter('pago')}
                     size="sm"
-                    className="h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
+                    className={`h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 ${filtros.status === 'pago' ? 'text-white' : ''}`}
                   >
                     Pagas
                   </Button>
@@ -506,7 +506,7 @@ export default function Vendas() {
                     variant={filtros.status === 'pendente' ? "default" : "outline"}
                     onClick={() => handleStatusFilter('pendente')}
                     size="sm"
-                    className="h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
+                    className={`h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 ${filtros.status === 'pendente' ? 'text-white' : ''}`}
                   >
                     Pendentes
                   </Button>
@@ -599,7 +599,7 @@ export default function Vendas() {
                   variant={filtros.status === '' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('')}
                   size="sm"
-                      className="whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
+                      className={`whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 ${filtros.status === '' ? 'text-white' : ''}`}
                 >
                   Todas
                 </Button>
@@ -607,7 +607,7 @@ export default function Vendas() {
                   variant={filtros.status === 'pago' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('pago')}
                   size="sm"
-                      className="whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
+                      className={`whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 ${filtros.status === 'pago' ? 'text-white' : ''}`}
                 >
                   Pagas
                 </Button>
@@ -615,7 +615,7 @@ export default function Vendas() {
                   variant={filtros.status === 'pendente' ? "default" : "outline"}
                   onClick={() => handleStatusFilter('pendente')}
                   size="sm"
-                      className="whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100"
+                      className={`whitespace-nowrap dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 ${filtros.status === 'pendente' ? 'text-white' : ''}`}
                 >
                   Pendentes
                 </Button>
@@ -882,7 +882,7 @@ export default function Vendas() {
             <p className="text-muted-foreground mb-4">
               {termoBusca || filtros.status || dataInicio || dataFim ? "Tente ajustar sua busca ou filtros. A busca é automática conforme você digita ou seleciona datas." : "Registre sua primeira venda"}
             </p>
-            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/nova-venda")}>
+            <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/nova-venda")}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Venda
             </Button>

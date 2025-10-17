@@ -205,7 +205,7 @@ export function ConfiguracoesSidebar({
                 "w-full flex items-start space-x-3 p-4 text-left rounded-lg transition-all duration-200",
                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 activeTab === tab.id 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                  ? "bg-sidebar-primary text-white shadow-md" 
                   : "text-sidebar-foreground"
               )}
             >

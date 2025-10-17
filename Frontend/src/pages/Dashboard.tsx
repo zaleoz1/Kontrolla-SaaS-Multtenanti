@@ -209,7 +209,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={() => handlePeriodoChange(p)}
                 disabled={mudandoPeriodo || loading}
-                className="text-xs"
+                className={`text-xs ${periodo === p ? 'text-white' : ''}`}
               >
                 {mudandoPeriodo && periodo === p ? (
                   <>
@@ -239,7 +239,7 @@ export default function Dashboard() {
           </Button>
           {/* Botão Ver Relatórios - só aparece se tiver permissão */}
           {hasPermission('relatorios') && (
-            <Button size="sm" className="bg-gradient-primary text-xs sm:text-sm" onClick={() => navigate("/dashboard/relatorios")}>
+            <Button size="sm" className="bg-gradient-primary text-white text-xs sm:text-sm" onClick={() => navigate("/dashboard/relatorios")}>
               <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Ver Relatórios</span>
               <span className="sm:hidden">Relatórios</span>
@@ -258,7 +258,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={() => handlePeriodoChange(p)}
                 disabled={mudandoPeriodo || loading}
-                className="flex-1 text-xs"
+                className={`flex-1 text-xs ${periodo === p ? 'text-white' : ''}`}
               >
                 {mudandoPeriodo && periodo === p ? (
                   <>
@@ -290,7 +290,7 @@ export default function Dashboard() {
             </Button>
             {/* Botão Relatórios mobile - só aparece se tiver permissão */}
             {hasPermission('relatorios') && (
-              <Button size="sm" className="bg-gradient-primary flex-1 text-xs" onClick={() => navigate("/dashboard/relatorios")}>
+              <Button size="sm" className="bg-gradient-primary text-white flex-1 text-xs" onClick={() => navigate("/dashboard/relatorios")}>
                 <TrendingUp className="h-3 w-3 mr-1" />
                 Relatórios
               </Button>
@@ -385,7 +385,7 @@ export default function Dashboard() {
                         <p className="font-semibold text-sm sm:text-base break-words">{formatCurrency(venda.total)}</p>
                         <Badge 
                           variant={statusInfo.variant as any}
-                          className={`${statusInfo.className} text-xs`}
+                          className={`${statusInfo.className} text-xs ${venda.status === 'pago' ? 'text-white' : ''}`}
                         >
                           {venda.status === 'pago' ? 'Pago' : 
                            venda.status === 'pendente' ? 'Pendente' : 
@@ -424,7 +424,7 @@ export default function Dashboard() {
                         <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                         <Badge 
                           variant={produto.estoque_atual === 0 ? "destructive" : "secondary"}
-                          className={`${produto.estoque_atual === 0 ? "" : "bg-warning/20 text-warning-foreground border-warning/30"} text-xs`}
+                          className={`${produto.estoque_atual === 0 ? "" : "bg-warning/20 text-warning-foreground border-warning/30"} text-xs ${produto.estoque_atual > 0 ? 'text-white' : ''}`}
                         >
                           {formatarEstoque(produto)}
                         </Badge>

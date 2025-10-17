@@ -378,7 +378,7 @@ export default function NovoFuncionario() {
             <span className="sm:hidden">Cancelar</span>
           </Button>
           <Button 
-            className="bg-gradient-primary h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto" 
+            className="bg-gradient-primary text-white h-8 sm:h-10 text-xs sm:text-sm w-full sm:w-auto" 
             onClick={salvarFuncionario}
             disabled={!formularioValido || salvando || carregandoFuncionario}
           >

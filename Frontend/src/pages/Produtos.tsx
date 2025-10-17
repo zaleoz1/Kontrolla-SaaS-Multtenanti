@@ -193,7 +193,7 @@ export default function Produtos() {
       return <Badge className="bg-warning/80 text-warning-foreground border-warning/30">Estoque Baixo</Badge>;
     }
 
-    return <Badge className="bg-success hover:bg-success/90">Em Estoque</Badge>;
+    return <Badge className="bg-success hover:bg-success/90 text-white">Em Estoque</Badge>;
   };
 
   const formatarPreco = (preco: number) => {
@@ -338,7 +338,7 @@ export default function Produtos() {
         {/* Botão - Desktop */}
         <div className="hidden md:flex items-center justify-end">
           {hasPermission('produtos_criar') && (
-            <Button className="bg-gradient-primary" onClick={() => navigate("/dashboard/novo-produto")}>
+            <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-produto")}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Produto
             </Button>
@@ -349,7 +349,7 @@ export default function Produtos() {
         <div className="md:hidden w-full">
           {hasPermission('produtos_criar') && (
             <Button 
-              className="w-full bg-gradient-primary text-xs sm:text-sm" 
+              className="w-full bg-gradient-primary text-white text-xs sm:text-sm" 
               onClick={() => navigate("/dashboard/novo-produto")}
             >
               <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -727,7 +727,7 @@ export default function Produtos() {
             </p>
             {hasPermission('produtos_criar') && (
               <Button 
-                className="bg-gradient-primary text-xs sm:text-sm"
+                className="bg-gradient-primary text-white text-xs sm:text-sm"
                 onClick={() => navigate("/dashboard/novo-produto")}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
