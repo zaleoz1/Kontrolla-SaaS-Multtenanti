@@ -8,6 +8,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { VPSStatus } from "./components/VPSStatus";
 // Removido: sistema duplo de notificações - usar apenas NotificationContext
 import { OperadorProvider } from "./contexts/OperadorContext";
+import { ThemeColorProvider } from "./hooks/useThemeColor";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
@@ -101,9 +102,11 @@ const App = () => {
     <QueryClientProvider client={clienteQuery}>
       <TooltipProvider>
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
-          <OperadorProvider>
-            <AppContent />
-          </OperadorProvider>
+          <ThemeColorProvider>
+            <OperadorProvider>
+              <AppContent />
+            </OperadorProvider>
+          </ThemeColorProvider>
         </GoogleOAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
