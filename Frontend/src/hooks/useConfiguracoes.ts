@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApi } from './useApi';
 
 interface DadosConta {
@@ -140,7 +140,7 @@ export const useConfiguracoes = () => {
   const [metodosPagamentoEditando, setMetodosPagamentoEditando] = useState<MetodoPagamento[]>([]);
 
   // Buscar dados do usuário
-  const buscarDadosUsuario = async () => {
+  const buscarDadosUsuario = useCallback(async () => {
     try {
       const response = await makeRequest('/auth/me', { method: 'GET' });
       if (response.user) {
@@ -154,10 +154,10 @@ export const useConfiguracoes = () => {
       setError('Erro ao carregar dados do usuário');
       throw err;
     }
-  };
+  }, [makeRequest]);
 
   // Buscar dados do tenant
-  const buscarDadosTenant = async (tenantId: number) => {
+  const buscarDadosTenant = useCallback(async (tenantId: number) => {
     try {
       const response = await makeRequest(`/configuracoes/tenant/${tenantId}`, { method: 'GET' });
       if (response.tenant) {
@@ -169,10 +169,10 @@ export const useConfiguracoes = () => {
       setError('Erro ao carregar dados da empresa');
       throw err;
     }
-  };
+  }, [makeRequest]);
 
   // Buscar configurações do sistema
-  const buscarConfiguracoes = async (tenantId: number) => {
+  const buscarConfiguracoes = useCallback(async (tenantId: number) => {
     try {
       const response = await makeRequest(`/configuracoes/sistema/${tenantId}`, { method: 'GET' });
       if (response.configuracoes) {
@@ -184,10 +184,10 @@ export const useConfiguracoes = () => {
       setError('Erro ao carregar configurações');
       throw err;
     }
-  };
+  }, [makeRequest]);
 
   // Buscar métodos de pagamento
-  const buscarMetodosPagamento = async () => {
+  const buscarMetodosPagamento = useCallback(async () => {
     try {
       const response = await makeRequest('/configuracoes/metodos-pagamento', { method: 'GET' });
       if (response) {
@@ -199,10 +199,10 @@ export const useConfiguracoes = () => {
       setError('Erro ao carregar métodos de pagamento');
       throw err;
     }
-  };
+  }, [makeRequest]);
 
   // Buscar configurações PIX
-  const buscarPixConfiguracao = async () => {
+  const buscarPixConfiguracao = useCallback(async () => {
     try {
       const response = await makeRequest('/configuracoes/pix', { method: 'GET' });
       if (response.pix) {
@@ -215,10 +215,10 @@ export const useConfiguracoes = () => {
       setError('Erro ao carregar configurações PIX');
       throw err;
     }
-  };
+  }, [makeRequest]);
 
   // Buscar dados bancários
-  const buscarDadosBancarios = async () => {
+  const buscarDadosBancarios = useCallback(async () => {
     try {
       const response = await makeRequest('/configuracoes/dados-bancarios', { method: 'GET' });
       if (response.dadosBancarios) {
@@ -231,10 +231,10 @@ export const useConfiguracoes = () => {
       setError('Erro ao carregar dados bancários');
       throw err;
     }
-  };
+  }, [makeRequest]);
 
   // Carregar todos os dados
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -271,7 +271,7 @@ export const useConfiguracoes = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [makeRequest]);
 
   // Atualizar dados da conta
   const atualizarDadosConta = async (dados: Partial<DadosConta>) => {
@@ -747,7 +747,7 @@ export const useConfiguracoes = () => {
   // Carregar dados quando o componente for montado
   useEffect(() => {
     carregarDados();
-  }, []);
+  }, [carregarDados]);
 
   return {
     dadosConta,

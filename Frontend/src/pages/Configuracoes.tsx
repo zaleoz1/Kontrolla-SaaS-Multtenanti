@@ -117,7 +117,6 @@ export default function Configuracoes() {
     atualizarUltimoAcesso
   } = useConfiguracoes();
 
-
   const { toast } = useToast();
   const { hasPermission, operador } = usePermissions();
   const { theme, setTheme, resolvedTheme } = useTheme();

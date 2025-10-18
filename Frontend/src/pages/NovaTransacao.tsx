@@ -466,7 +466,7 @@ export default function NovaTransacao() {
                       placeholder="Descreva a transação..."
                       value={transacao.descricao}
                       onChange={(e) => atualizarTransacao("descricao", e.target.value)}
-                      className="mt-1 h-16 sm:h-24 text-xs sm:text-sm w-full p-2 border rounded-md bg-background resize-none"
+                      className="mt-1 h-24 sm:h-32 text-xs sm:text-sm w-full p-2 border rounded-md bg-background resize-none"
                     />
                   </div>
 
