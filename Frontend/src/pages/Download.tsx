@@ -38,11 +38,11 @@ const DownloadPage = () => {
   };
 
   const handleDownload = () => {
-    window.open('https://www.mediafire.com/file/aa0ctovogxff3oa/KontrollaPro-Setup-1.0.0.exe/file', '_blank');
+    window.open('https://www.mediafire.com/file/1ylgn9nxobd2qha/KontrollaPro-Setup-1.0.0.exe/file', '_blank');
   };
 
   const handleManualDownload = () => {
-    window.open('https://www.mediafire.com/file/fqtvdiobas86xia/KontrollaPro-win32-x64.rar/file', '_blank');
+    window.open('https://www.mediafire.com/file/y66dyl4osrfsguz/KontrollaPro-win32-x64.rar/file', '_blank');
   };
 
 
