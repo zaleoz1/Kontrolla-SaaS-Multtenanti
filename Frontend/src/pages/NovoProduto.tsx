@@ -192,16 +192,12 @@ export default function NovoProduto() {
         }
       });
 
-      // A nova categoria será adicionada automaticamente pelo hook useProdutos
-      const novaCategoriaObj = {
-        id: response.categoria.id,
-        nome: response.categoria.nome,
-        descricao: response.categoria.descricao
-      };
+      // Atualizar a lista de categorias localmente
+      await buscarCategorias();
       
       // Selecionar a nova categoria automaticamente
-      atualizarProduto("categoria_id", novaCategoriaObj.id);
-      atualizarProduto("categoria", novaCategoriaObj.nome);
+      atualizarProduto("categoria_id", response.categoria.id);
+      atualizarProduto("categoria", response.categoria.nome);
       
       // Limpar e esconder o input
       setNovaCategoria("");
