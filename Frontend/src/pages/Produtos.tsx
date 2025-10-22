@@ -32,7 +32,11 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 
 interface Produto {
@@ -91,6 +95,14 @@ export default function Produtos() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState<{id: number, nome: string} | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -103,7 +115,7 @@ export default function Produtos() {
   useEffect(() => {
     carregarCategorias();
     carregarProdutos();
-  }, [termoBusca, filtroStatus, filtroCategoria]);
+  }, [termoBusca, filtroStatus, filtroCategoria, pagination.page]);
   // filtroEstoque não precisa recarregar a API pois é filtrado no frontend
 
   const carregarCategorias = async () => {
@@ -119,7 +131,8 @@ export default function Produtos() {
   const carregarProdutos = async () => {
     try {
       const params: Record<string, any> = {
-        limit: 100, // Limite máximo permitido pelo backend
+        page: pagination.page,
+        limit: pagination.limit,
       };
 
       if (termoBusca) params.q = termoBusca;
@@ -127,7 +140,10 @@ export default function Produtos() {
       if (filtroCategoria) params.categoria_id = filtroCategoria;
       // Removido filtroEstoque da API - será filtrado no frontend
 
-      await produtosApi.list(params);
+      const response = await produtosApi.list(params);
+      if (response.pagination) {
+        setPagination(response.pagination);
+      }
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
       toast({
@@ -169,6 +185,22 @@ export default function Produtos() {
   const cancelarExclusao = () => {
     setShowDeleteDialog(false);
     setProdutoParaExcluir(null);
+  };
+
+  const irParaPagina = (pagina: number) => {
+    setPagination(prev => ({ ...prev, page: pagina }));
+  };
+
+  const proximaPagina = () => {
+    if (pagination.hasNext) {
+      setPagination(prev => ({ ...prev, page: prev.page + 1 }));
+    }
+  };
+
+  const paginaAnterior = () => {
+    if (pagination.hasPrev) {
+      setPagination(prev => ({ ...prev, page: prev.page - 1 }));
+    }
   };
 
   const obterBadgeStatus = (produto: Produto) => {
@@ -598,8 +630,9 @@ export default function Produtos() {
 
       {/* Grid de Produtos */}
       {!produtosApi.loading && !produtosApi.error && !categoriasApi.loading && (
-        <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {produtos.map((produto) => (
+        <>
+          <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {produtos.map((produto) => (
             <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
               <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
@@ -710,7 +743,107 @@ export default function Produtos() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+
+          {/* Controles de Paginação */}
+          {pagination.totalPages > 1 && (
+            <Card className="bg-gradient-card shadow-card mt-6">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+                  {/* Informações da página */}
+                  <div className="text-sm text-muted-foreground">
+                    Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} produtos
+                  </div>
+
+                  {/* Controles de navegação */}
+                  <div className="flex items-center space-x-2">
+                    {/* Primeira página */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => irParaPagina(1)}
+                      disabled={!pagination.hasPrev || produtosApi.loading}
+                      className="hidden sm:flex"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+
+                    {/* Página anterior */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={paginaAnterior}
+                      disabled={!pagination.hasPrev || produtosApi.loading}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Anterior</span>
+                    </Button>
+
+                    {/* Números das páginas */}
+                    <div className="flex items-center space-x-1">
+                      {(() => {
+                        const pages = [];
+                        const totalPages = pagination.totalPages;
+                        const currentPage = pagination.page;
+                        
+                        // Mostrar até 5 páginas
+                        let startPage = Math.max(1, currentPage - 2);
+                        let endPage = Math.min(totalPages, currentPage + 2);
+                        
+                        // Ajustar se estiver no início ou fim
+                        if (currentPage <= 3) {
+                          endPage = Math.min(5, totalPages);
+                        }
+                        if (currentPage >= totalPages - 2) {
+                          startPage = Math.max(1, totalPages - 4);
+                        }
+                        
+                        for (let i = startPage; i <= endPage; i++) {
+                          pages.push(
+                            <Button
+                              key={i}
+                              variant={i === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => irParaPagina(i)}
+                              disabled={produtosApi.loading}
+                              className="w-8 h-8 p-0"
+                            >
+                              {i}
+                            </Button>
+                          );
+                        }
+                        
+                        return pages;
+                      })()}
+                    </div>
+
+                    {/* Próxima página */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={proximaPagina}
+                      disabled={!pagination.hasNext || produtosApi.loading}
+                    >
+                      <span className="hidden sm:inline">Próxima</span>
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+
+                    {/* Última página */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => irParaPagina(pagination.totalPages)}
+                      disabled={!pagination.hasNext || produtosApi.loading}
+                      className="hidden sm:flex"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Empty State */}
