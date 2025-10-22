@@ -119,7 +119,7 @@ export default function Produtos() {
   const carregarProdutos = async () => {
     try {
       const params: Record<string, any> = {
-        limit: 1000, // Limite alto para carregar todos os produtos
+        limit: 1000, // Limite máximo permitido pelo backend
       };
 
       if (termoBusca) params.q = termoBusca;
