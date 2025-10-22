@@ -664,8 +664,8 @@ export const validatePagination = [
     .withMessage('Página deve ser um número inteiro positivo'),
   query('limit')
     .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('Limite deve ser entre 1 e 100'),
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Limite deve ser entre 1 e 1000'),
   handleValidationErrors
 ];
 
