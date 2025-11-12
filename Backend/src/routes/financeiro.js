@@ -13,7 +13,7 @@ router.use(authenticateToken);
 // Listar transações financeiras
 router.get('/transacoes', validatePagination, validateSearch, handleValidationErrors, async (req, res) => {
   try {
-    const { page = 1, limit = 10, q = '', tipo = '', status = '', data_inicio = '', data_fim = '' } = req.query;
+    const { page = 1, limit = 1000, q = '', tipo = '', status = '', data_inicio = '', data_fim = '' } = req.query;
     const offset = (page - 1) * limit;
 
     let whereClause = 'WHERE t.tenant_id = ?';
@@ -588,7 +588,7 @@ router.delete('/transacoes/:id', validateId, handleValidationErrors, async (req,
 // Listar contas a receber
 router.get('/contas-receber', validatePagination, handleValidationErrors, async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = '', data_inicio = '', data_fim = '' } = req.query;
+    const { page = 1, limit = 1000, status = '', data_inicio = '', data_fim = '' } = req.query;
     const offset = (page - 1) * limit;
 
     // Construir query para buscar APENAS contas a receber da tabela contas_receber
@@ -737,7 +737,7 @@ router.get('/contas-receber', validatePagination, handleValidationErrors, async 
 // Listar contas a pagar
 router.get('/contas-pagar', validatePagination, handleValidationErrors, async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = '', data_inicio = '', data_fim = '' } = req.query;
+    const { page = 1, limit = 1000, status = '', data_inicio = '', data_fim = '' } = req.query;
     const offset = (page - 1) * limit;
 
     // Construir query para buscar contas a pagar tradicionais
