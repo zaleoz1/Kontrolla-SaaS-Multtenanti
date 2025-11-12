@@ -12,10 +12,10 @@ router.use(authenticateToken);
 // Listar clientes com paginação e busca
 router.get('/', validatePagination, validateSearch, handleValidationErrors, async (req, res) => {
   try {
-    const { page = 1, limit = 10, q = '', status = '' } = req.query;
+    const { page = 1, limit = 1000, q = '', status = '' } = req.query;
     
     // Garantir que limit e page sejam números válidos
-    const limitNum = Math.max(1, Math.min(100, Number(limit) || 10));
+    const limitNum = Math.max(1, Math.min(10000, Number(limit) || 1000));
     const pageNum = Math.max(1, Number(page) || 1);
     const offset = (pageNum - 1) * limitNum;
 
