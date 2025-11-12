@@ -301,9 +301,9 @@ export default function Financeiro() {
       try {
         await Promise.all([
           buscarStats(periodo),
-          buscarTransacoes({ limit: 10 }),
-          buscarContasReceber({ limit: 10 }),
-          buscarContasPagar({ limit: 10 })
+          buscarTransacoes({}),
+          buscarContasReceber({}),
+          buscarContasPagar({})
         ]);
       } catch (error) {
         console.error('Erro ao carregar dados financeiros:', error);
@@ -318,9 +318,9 @@ export default function Financeiro() {
     try {
       await Promise.all([
         buscarStats(periodo),
-        buscarTransacoes({ limit: 10 }),
-        buscarContasReceber({ limit: 10 }),
-        buscarContasPagar({ limit: 10 })
+        buscarTransacoes({}),
+        buscarContasReceber({}),
+        buscarContasPagar({})
       ]);
     } catch (error) {
       console.error('Erro ao recarregar dados:', error);

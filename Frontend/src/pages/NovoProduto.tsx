@@ -21,7 +21,8 @@ import {
   Image as ImageIcon,
   Loader2,
   Eye,
-  Link
+  Link,
+  Receipt
 } from "lucide-react";
 
 interface Produto {
@@ -47,6 +48,19 @@ interface Produto {
   status: "ativo" | "inativo" | "rascunho";
   destaque: boolean;
   imagens: string[];
+  // Campos de impostos
+  ncm?: string;
+  cfop?: string;
+  cst?: string;
+  icms_aliquota?: number | null;
+  icms_origem?: string;
+  icms_situacao_tributaria?: string;
+  ipi_aliquota?: number | null;
+  ipi_codigo_enquadramento?: string;
+  pis_aliquota?: number | null;
+  pis_cst?: string;
+  cofins_aliquota?: number | null;
+  cofins_cst?: string;
 }
 
 interface Categoria {
@@ -109,7 +123,20 @@ export default function NovoProduto() {
     modelo: "",
     status: "ativo",
     destaque: false,
-    imagens: []
+    imagens: [],
+    // Campos de impostos
+    ncm: "",
+    cfop: "",
+    cst: "",
+    icms_aliquota: null,
+    icms_origem: "",
+    icms_situacao_tributaria: "",
+    ipi_aliquota: null,
+    ipi_codigo_enquadramento: "",
+    pis_aliquota: null,
+    pis_cst: "",
+    cofins_aliquota: null,
+    cofins_cst: ""
   });
 
   const [errosValidacao, setErrosValidacao] = useState<Record<string, boolean>>({});
@@ -166,7 +193,20 @@ export default function NovoProduto() {
         modelo: produtoData.modelo || "",
         status: produtoData.status || "ativo",
         destaque: produtoData.destaque || false,
-        imagens: imagens
+        imagens: imagens,
+        // Campos de impostos
+        ncm: produtoData.ncm || "",
+        cfop: produtoData.cfop || "",
+        cst: produtoData.cst || "",
+        icms_aliquota: produtoData.icms_aliquota || null,
+        icms_origem: produtoData.icms_origem || "",
+        icms_situacao_tributaria: produtoData.icms_situacao_tributaria || "",
+        ipi_aliquota: produtoData.ipi_aliquota || null,
+        ipi_codigo_enquadramento: produtoData.ipi_codigo_enquadramento || "",
+        pis_aliquota: produtoData.pis_aliquota || null,
+        pis_cst: produtoData.pis_cst || "",
+        cofins_aliquota: produtoData.cofins_aliquota || null,
+        cofins_cst: produtoData.cofins_cst || ""
       });
     } catch (error) {
       console.error('Erro ao carregar produto:', error);
@@ -486,7 +526,20 @@ export default function NovoProduto() {
         modelo: produto.modelo?.trim() || null,
         status: produto.status || 'ativo',
         destaque: produto.destaque || false,
-        imagens: produto.imagens || []
+        imagens: produto.imagens || [],
+        // Campos de impostos
+        ncm: produto.ncm?.trim() || null,
+        cfop: produto.cfop?.trim() || null,
+        cst: produto.cst?.trim() || null,
+        icms_aliquota: produto.icms_aliquota ? parseFloat(String(produto.icms_aliquota)) : null,
+        icms_origem: produto.icms_origem?.trim() || null,
+        icms_situacao_tributaria: produto.icms_situacao_tributaria?.trim() || null,
+        ipi_aliquota: produto.ipi_aliquota ? parseFloat(String(produto.ipi_aliquota)) : null,
+        ipi_codigo_enquadramento: produto.ipi_codigo_enquadramento?.trim() || null,
+        pis_aliquota: produto.pis_aliquota ? parseFloat(String(produto.pis_aliquota)) : null,
+        pis_cst: produto.pis_cst?.trim() || null,
+        cofins_aliquota: produto.cofins_aliquota ? parseFloat(String(produto.cofins_aliquota)) : null,
+        cofins_cst: produto.cofins_cst?.trim() || null
       };
 
       let response;
@@ -643,7 +696,7 @@ export default function NovoProduto() {
         {/* Coluna Esquerda - Formulário */}
         <div className="lg:col-span-2 order-2 lg:order-1">
           <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsList className="grid w-full grid-cols-4 h-auto">
               <TabsTrigger value="basico" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
                 <Package className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Básico</span>
@@ -658,6 +711,11 @@ export default function NovoProduto() {
                 <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Estoque</span>
                 <span className="sm:hidden">Estoque</span>
+              </TabsTrigger>
+              <TabsTrigger value="impostos" className="flex items-center space-x-1 sm:space-x-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+                <Receipt className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Impostos</span>
+                <span className="sm:hidden">Impostos</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1350,6 +1408,223 @@ export default function NovoProduto() {
                       </div>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Aba Impostos */}
+            <TabsContent value="impostos" className="space-y-4">
+              <Card className="bg-gradient-card shadow-card">
+                <CardHeader>
+                  <CardTitle className="text-sm sm:text-base">Informações Fiscais e Impostos</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* NCM e CFOP */}
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">NCM (Nomenclatura Comum do Mercado)</label>
+                      <Input
+                        placeholder="Ex: 8517.12.10"
+                        value={produto.ncm || ""}
+                        onChange={(e) => atualizarProduto("ncm", e.target.value)}
+                        className="mt-1 text-xs sm:text-sm"
+                        maxLength={8}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Código de 8 dígitos do NCM</p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">CFOP (Código Fiscal de Operações)</label>
+                      <Input
+                        placeholder="Ex: 5102"
+                        value={produto.cfop || ""}
+                        onChange={(e) => atualizarProduto("cfop", e.target.value)}
+                        className="mt-1 text-xs sm:text-sm"
+                        maxLength={4}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Código de 4 dígitos do CFOP</p>
+                    </div>
+                  </div>
+
+                  {/* CST */}
+                  <div>
+                    <label className="text-xs sm:text-sm font-medium">CST (Código de Situação Tributária)</label>
+                    <Input
+                      placeholder="Ex: 00"
+                      value={produto.cst || ""}
+                      onChange={(e) => atualizarProduto("cst", e.target.value)}
+                      className="mt-1 text-xs sm:text-sm"
+                      maxLength={3}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Código de situação tributária (2-3 dígitos)</p>
+                  </div>
+
+                  {/* ICMS */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm sm:text-base font-semibold mb-3">ICMS (Imposto sobre Circulação de Mercadorias e Serviços)</h3>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Alíquota ICMS (%)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="0,00"
+                          value={produto.icms_aliquota || ""}
+                          onChange={(e) => atualizarProduto("icms_aliquota", e.target.value ? parseFloat(e.target.value) : null)}
+                          className="mt-1 text-xs sm:text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Percentual de ICMS</p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Origem</label>
+                        <select
+                          value={produto.icms_origem || ""}
+                          onChange={(e) => atualizarProduto("icms_origem", e.target.value)}
+                          className="w-full mt-1 p-2 border rounded-md bg-background text-xs sm:text-sm"
+                        >
+                          <option value="">Selecione</option>
+                          <option value="0">0 - Nacional</option>
+                          <option value="1">1 - Estrangeira - Importação direta</option>
+                          <option value="2">2 - Estrangeira - Adquirida no mercado interno</option>
+                          <option value="3">3 - Nacional - Conteúdo de importação superior a 40%</option>
+                          <option value="4">4 - Nacional - Produção conforme processo produtivo</option>
+                          <option value="5">5 - Nacional - Conteúdo de importação inferior ou igual a 40%</option>
+                          <option value="6">6 - Estrangeira - Importação direta sem similar nacional</option>
+                          <option value="7">7 - Estrangeira - Adquirida no mercado interno sem similar nacional</option>
+                          <option value="8">8 - Nacional - Conteúdo de importação superior a 70%</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Situação Tributária</label>
+                        <Input
+                          placeholder="Ex: 00, 20, 40, 41"
+                          value={produto.icms_situacao_tributaria || ""}
+                          onChange={(e) => atualizarProduto("icms_situacao_tributaria", e.target.value)}
+                          className="mt-1 text-xs sm:text-sm"
+                          maxLength={3}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">CSOSN ou CST do ICMS</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* IPI */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm sm:text-base font-semibold mb-3">IPI (Imposto sobre Produtos Industrializados)</h3>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Alíquota IPI (%)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="0,00"
+                          value={produto.ipi_aliquota || ""}
+                          onChange={(e) => atualizarProduto("ipi_aliquota", e.target.value ? parseFloat(e.target.value) : null)}
+                          className="mt-1 text-xs sm:text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Percentual de IPI</p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Código de Enquadramento</label>
+                        <Input
+                          placeholder="Ex: 00"
+                          value={produto.ipi_codigo_enquadramento || ""}
+                          onChange={(e) => atualizarProduto("ipi_codigo_enquadramento", e.target.value)}
+                          className="mt-1 text-xs sm:text-sm"
+                          maxLength={3}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Código de enquadramento legal do IPI</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PIS */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm sm:text-base font-semibold mb-3">PIS (Programa de Integração Social)</h3>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Alíquota PIS (%)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="0,00"
+                          value={produto.pis_aliquota || ""}
+                          onChange={(e) => atualizarProduto("pis_aliquota", e.target.value ? parseFloat(e.target.value) : null)}
+                          className="mt-1 text-xs sm:text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Percentual de PIS</p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">CST PIS</label>
+                        <Input
+                          placeholder="Ex: 01, 02, 03"
+                          value={produto.pis_cst || ""}
+                          onChange={(e) => atualizarProduto("pis_cst", e.target.value)}
+                          className="mt-1 text-xs sm:text-sm"
+                          maxLength={2}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Código de situação tributária do PIS</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* COFINS */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm sm:text-base font-semibold mb-3">COFINS (Contribuição para o Financiamento da Seguridade Social)</h3>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">Alíquota COFINS (%)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="0,00"
+                          value={produto.cofins_aliquota || ""}
+                          onChange={(e) => atualizarProduto("cofins_aliquota", e.target.value ? parseFloat(e.target.value) : null)}
+                          className="mt-1 text-xs sm:text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Percentual de COFINS</p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs sm:text-sm font-medium">CST COFINS</label>
+                        <Input
+                          placeholder="Ex: 01, 02, 03"
+                          value={produto.cofins_cst || ""}
+                          onChange={(e) => atualizarProduto("cofins_cst", e.target.value)}
+                          className="mt-1 text-xs sm:text-sm"
+                          maxLength={2}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Código de situação tributária do COFINS</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informação adicional */}
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <div className="flex items-start space-x-2">
+                      <div className="h-2 w-2 bg-blue-500 rounded-full mt-2"></div>
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-900">Informações Fiscais</p>
+                        <p className="text-blue-700 text-xs mt-1">
+                          Essas informações são utilizadas para emissão de notas fiscais e cálculos fiscais. 
+                          Consulte um contador ou especialista fiscal para definir os valores corretos conforme 
+                          a legislação vigente.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

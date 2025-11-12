@@ -154,7 +154,20 @@ router.post('/', validateProduto, async (req, res) => {
       modelo,
       status = 'ativo',
       destaque = false,
-      imagens = []
+      imagens = [],
+      // Campos de impostos
+      ncm,
+      cfop,
+      cst,
+      icms_aliquota,
+      icms_origem,
+      icms_situacao_tributaria,
+      ipi_aliquota,
+      ipi_codigo_enquadramento,
+      pis_aliquota,
+      pis_cst,
+      cofins_aliquota,
+      cofins_cst
     } = req.body;
 
     // Garantir que estoque e estoque_minimo sejam sempre inteiros
@@ -229,13 +242,19 @@ router.post('/', validateProduto, async (req, res) => {
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
         preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
         estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
-        estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens,
+        ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
+        ipi_aliquota, ipi_codigo_enquadramento, pis_aliquota, pis_cst,
+        cofins_aliquota, cofins_cst
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
         preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
         estoqueInt, estoqueMinimoInt, estoqueKgDecimal, estoqueLitrosDecimal,
-        estoqueMinimoKgDecimal, estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([])
+        estoqueMinimoKgDecimal, estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([]),
+        ncm || null, cfop || null, cst || null, icms_aliquota || null, icms_origem || null, icms_situacao_tributaria || null,
+        ipi_aliquota || null, ipi_codigo_enquadramento || null, pis_aliquota || null, pis_cst || null,
+        cofins_aliquota || null, cofins_cst || null
       ]
     );
 
@@ -344,7 +363,20 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       modelo,
       status,
       destaque,
-      imagens
+      imagens,
+      // Campos de impostos
+      ncm,
+      cfop,
+      cst,
+      icms_aliquota,
+      icms_origem,
+      icms_situacao_tributaria,
+      ipi_aliquota,
+      ipi_codigo_enquadramento,
+      pis_aliquota,
+      pis_cst,
+      cofins_aliquota,
+      cofins_cst
     } = req.body;
 
     // Garantir que estoque e estoque_minimo sejam sempre inteiros
@@ -463,13 +495,19 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
         preco = ?, preco_promocional = ?, tipo_preco = ?, preco_por_kg = ?, 
         preco_por_litros = ?, estoque = ?, estoque_minimo = ?, estoque_kg = ?,
         estoque_litros = ?, estoque_minimo_kg = ?, estoque_minimo_litros = ?,
-        fornecedor_id = ?, marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?
+        fornecedor_id = ?, marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?,
+        ncm = ?, cfop = ?, cst = ?, icms_aliquota = ?, icms_origem = ?, icms_situacao_tributaria = ?,
+        ipi_aliquota = ?, ipi_codigo_enquadramento = ?, pis_aliquota = ?, pis_cst = ?,
+        cofins_aliquota = ?, cofins_cst = ?
       WHERE id = ? AND tenant_id = ?`,
       [
         categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
         tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt,
         estoqueKgDecimal, estoqueLitrosDecimal, estoqueMinimoKgDecimal, 
-        estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary), id, req.user.tenant_id
+        estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary),
+        ncm || null, cfop || null, cst || null, icms_aliquota || null, icms_origem || null, icms_situacao_tributaria || null,
+        ipi_aliquota || null, ipi_codigo_enquadramento || null, pis_aliquota || null, pis_cst || null,
+        cofins_aliquota || null, cofins_cst || null, id, req.user.tenant_id
       ]
     );
 
