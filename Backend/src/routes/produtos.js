@@ -236,6 +236,23 @@ router.post('/', validateProduto, async (req, res) => {
       }
     }
 
+    // Função auxiliar para processar campos de impostos
+    const processarCampoImposto = (valor) => {
+      if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+        return null;
+      }
+      // Se for um campo numérico (alíquota), converter para número
+      const numero = parseFloat(valor);
+      return isNaN(numero) ? null : numero;
+    };
+
+    const processarCampoTextoImposto = (valor) => {
+      if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+        return null;
+      }
+      return String(valor).trim() || null;
+    };
+
     // Primeiro, criar o produto sem imagens
     const result = await queryWithResult(
       `INSERT INTO produtos (
@@ -252,9 +269,18 @@ router.post('/', validateProduto, async (req, res) => {
         preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
         estoqueInt, estoqueMinimoInt, estoqueKgDecimal, estoqueLitrosDecimal,
         estoqueMinimoKgDecimal, estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([]),
-        ncm || null, cfop || null, cst || null, icms_aliquota || null, icms_origem || null, icms_situacao_tributaria || null,
-        ipi_aliquota || null, ipi_codigo_enquadramento || null, pis_aliquota || null, pis_cst || null,
-        cofins_aliquota || null, cofins_cst || null
+        processarCampoTextoImposto(ncm), 
+        processarCampoTextoImposto(cfop), 
+        processarCampoTextoImposto(cst), 
+        processarCampoImposto(icms_aliquota), 
+        processarCampoTextoImposto(icms_origem), 
+        processarCampoTextoImposto(icms_situacao_tributaria),
+        processarCampoImposto(ipi_aliquota), 
+        processarCampoTextoImposto(ipi_codigo_enquadramento), 
+        processarCampoImposto(pis_aliquota), 
+        processarCampoTextoImposto(pis_cst),
+        processarCampoImposto(cofins_aliquota), 
+        processarCampoTextoImposto(cofins_cst)
       ]
     );
 
@@ -489,6 +515,53 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       }
     }
 
+    // Processar campos de impostos para garantir NULL ao invés de strings vazias
+    const processarCampoImposto = (valor) => {
+      if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+        return null;
+      }
+      // Se for um campo numérico (alíquota), converter para número
+      const numero = parseFloat(valor);
+      return isNaN(numero) ? null : numero;
+    };
+
+    const processarCampoTextoImposto = (valor) => {
+      if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+        return null;
+      }
+      return String(valor).trim() || null;
+    };
+
+    // Debug: Log dos valores de impostos ANTES do processamento
+    console.log('🔍 DEBUG - Valores recebidos de impostos:');
+    console.log('  ncm:', ncm, 'tipo:', typeof ncm);
+    console.log('  icms_aliquota:', icms_aliquota, 'tipo:', typeof icms_aliquota);
+    console.log('  ipi_aliquota:', ipi_aliquota, 'tipo:', typeof ipi_aliquota);
+    console.log('  pis_aliquota:', pis_aliquota, 'tipo:', typeof pis_aliquota);
+    console.log('  cofins_aliquota:', cofins_aliquota, 'tipo:', typeof cofins_aliquota);
+
+    // Processar campos de impostos
+    const ncmProcessado = processarCampoTextoImposto(ncm);
+    const cfopProcessado = processarCampoTextoImposto(cfop);
+    const cstProcessado = processarCampoTextoImposto(cst);
+    const icmsAliquotaProcessado = processarCampoImposto(icms_aliquota);
+    const icmsOrigemProcessado = processarCampoTextoImposto(icms_origem);
+    const icmsSituacaoProcessado = processarCampoTextoImposto(icms_situacao_tributaria);
+    const ipiAliquotaProcessado = processarCampoImposto(ipi_aliquota);
+    const ipiCodigoProcessado = processarCampoTextoImposto(ipi_codigo_enquadramento);
+    const pisAliquotaProcessado = processarCampoImposto(pis_aliquota);
+    const pisCstProcessado = processarCampoTextoImposto(pis_cst);
+    const cofinsAliquotaProcessado = processarCampoImposto(cofins_aliquota);
+    const cofinsCstProcessado = processarCampoTextoImposto(cofins_cst);
+
+    // Debug: Log dos valores DEPOIS do processamento
+    console.log('🔍 DEBUG - Valores PROCESSADOS de impostos:');
+    console.log('  ncm:', ncmProcessado);
+    console.log('  icms_aliquota:', icmsAliquotaProcessado);
+    console.log('  ipi_aliquota:', ipiAliquotaProcessado);
+    console.log('  pis_aliquota:', pisAliquotaProcessado);
+    console.log('  cofins_aliquota:', cofinsAliquotaProcessado);
+
     await query(
       `UPDATE produtos SET 
         categoria_id = ?, nome = ?, descricao = ?, codigo_barras = ?, sku = ?,
@@ -505,9 +578,19 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
         tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt,
         estoqueKgDecimal, estoqueLitrosDecimal, estoqueMinimoKgDecimal, 
         estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary),
-        ncm || null, cfop || null, cst || null, icms_aliquota || null, icms_origem || null, icms_situacao_tributaria || null,
-        ipi_aliquota || null, ipi_codigo_enquadramento || null, pis_aliquota || null, pis_cst || null,
-        cofins_aliquota || null, cofins_cst || null, id, req.user.tenant_id
+        ncmProcessado, 
+        cfopProcessado, 
+        cstProcessado, 
+        icmsAliquotaProcessado, 
+        icmsOrigemProcessado, 
+        icmsSituacaoProcessado,
+        ipiAliquotaProcessado, 
+        ipiCodigoProcessado, 
+        pisAliquotaProcessado, 
+        pisCstProcessado,
+        cofinsAliquotaProcessado, 
+        cofinsCstProcessado, 
+        id, req.user.tenant_id
       ]
     );
 
