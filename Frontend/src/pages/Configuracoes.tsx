@@ -122,11 +122,11 @@ export default function Configuracoes() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { primaryColor, setPrimaryColor } = useThemeColor();
   
-  // Função para determinar se uma aba deve ser visível
+  // Função para determinar se uma aba deve ser visível 
   const isTabVisible = (tabId: string) => {
-    // Para vendedores com permissão de configurações, permite acesso apenas a métodos de pagamento
+    // Para vendedores com permissão de configurações, permite ace sso apenas a métodos de pagamento
     if (operador?.role === 'vendedor' && hasPermission('configuracoes')) {
-      // Vendedores com configurações podem ver apenas métodos de pagamento
+
       if (tabId === 'metodos-pagamento') {
         return true;
       }

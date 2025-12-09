@@ -74,7 +74,7 @@ services:
     networks:
       - kontrolla-network
 
-  # Redis para cache e sessões (opcional)
+  # Redis para cache e sessões
   redis:
     image: redis:7-alpine
     container_name: kontrolla-redis

@@ -1,8 +1,8 @@
-# 🚀 KontrollaPro - Sistema SaaS Multitenanti
+# 🚀 KontrollaPro - Sistema SaaS Multitenant
 
-Sistema completo de gestão de vendas e estoque para pequenas e médias empresas, desenvolvido com arquitetura multitenanti.
+Sistema completo de gestão de vendas e estoque para pequenas e médias empresas, desenvolvido com arquitetura  multitenanti.
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades 
 
 ### 🏢 **Gestão Multitenanti**
 - Isolamento completo de dados por empresa
