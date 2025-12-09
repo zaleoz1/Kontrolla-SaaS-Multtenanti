@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* KontrollaPro Design System - Gerenciamento Profissional de Lojas SaaS */
-/* Todas as cores DEVEM ser HSL */
-
 @layer base {
   :root {
     /* Core Brand Colors - Professional Green/Blue Palette */
@@ -17,13 +14,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Primary Brand - Professional Green (fallback) */
     --primary: 142 69% 58%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 142 69% 48%;
     --primary-light: 142 50% 85%;
     
-    /* Dynamic Primary Color - Will be overridden by JavaScript */
     --primary-dynamic: var(--primary);
     --primary-dynamic-foreground: var(--primary-foreground);
     

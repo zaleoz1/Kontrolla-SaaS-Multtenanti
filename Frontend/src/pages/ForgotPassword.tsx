@@ -10,18 +10,18 @@ import { API_CONFIG, API_ENDPOINTS } from "@/config/api";
 import { useImagePath } from "@/hooks/useImagePath";
 import { 
   ArrowRight, 
-  Mail, 
+  Mail,   
   ArrowLeft,
   CheckCircle,
   Sparkles,
-  Shield,
+  Shield,  
   Zap,
   TrendingUp,
-  Users,
+  Users,  
   BarChart3,
   ShoppingCart,
   Package,
-  Eye,
+  Eye,  
   EyeOff,
   Lock,
   RefreshCw
