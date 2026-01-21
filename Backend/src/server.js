@@ -79,9 +79,20 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      // Em desenvolvimento, permitir qualquer origin local
-      if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
-        callback(null, true);
+      // Em desenvolvimento, permitir qualquer origin local (localhost ou IPs de rede local)
+      if (process.env.NODE_ENV === 'development') {
+        // Permitir localhost
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+          callback(null, true);
+        }
+        // Permitir IPs de rede local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+        else if (/^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin)) {
+          console.log('✅ CORS permitido para rede local:', origin);
+          callback(null, true);
+        } else {
+          console.log('❌ CORS bloqueado para origin:', origin);
+          callback(new Error('Não permitido pelo CORS'));
+        }
       } else {
         // Em produção, permitir proxy interno do nginx
         if (process.env.NODE_ENV === 'production' && !origin) {

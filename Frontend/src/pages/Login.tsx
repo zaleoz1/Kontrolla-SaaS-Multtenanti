@@ -6,10 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
 import { 
   ArrowRight, 
   Eye, 
@@ -414,43 +412,6 @@ export default function Login() {
                   </Button>
                 </motion.div>
 
-                {/* Divider e Google Login - Apenas para Web (não Electron) */}
-                {(typeof window !== 'undefined' && 
-                  !window.electronAPI && 
-                  !window.require && 
-                  typeof process === 'undefined' || 
-                  (typeof process !== 'undefined' && !process.versions?.electron)) && (
-                  <>
-                    {/* Divider */}
-                    <motion.div 
-                      variants={fadeInUp}
-                      className="relative my-4 sm:my-6"
-                    >
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-white/20" />
-                      </div>
-                      <div className="relative flex justify-center text-xs sm:text-sm">
-                        <span className="px-4 sm:px-6 text-center text-slate-400">ou continue com</span>
-                      </div>
-                    </motion.div>
-
-                    {/* Google Login Button */}
-                    <motion.div 
-                      variants={fadeInUp}
-                      className="w-full"
-                    >
-                      <GoogleLoginButton
-                        onSuccess={() => {
-                          // Login Google realizado com sucesso
-                        }}
-                        onError={(error) => {
-                          console.error('❌ Erro no login Google:', error);
-                        }}
-                        className="w-full"
-                      />
-                    </motion.div>
-                  </>
-                )}
 
 
                 {/* Sign Up Link */}

@@ -1,131 +1,66 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { query, testConnection } from './connection.js';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function runMigrations() {
+  let connection;
   try {
     console.log('🔄 Iniciando migração do banco de dados...');
 
-    // Testar conexão
-    const connected = await testConnection();
-    if (!connected) {
-      console.error('❌ Não foi possível conectar ao banco de dados');
-      process.exit(1);
-    }
+    // Configuração sem database para criar o banco primeiro
+    const dbConfigWithoutDB = {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '12435687',
+      multipleStatements: true,
+      charset: 'utf8mb4'
+    };
+
+    // Conectar sem banco de dados
+    console.log('🔗 Conectando ao MySQL...');
+    connection = await mysql.createConnection(dbConfigWithoutDB);
+    console.log('✅ Conexão com MySQL estabelecida com sucesso');
 
     // Ler arquivo de schema
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
 
-    // Executar schema
+    // Executar schema (inclui CREATE DATABASE e USE)
     console.log('📝 Executando schema do banco de dados...');
-    await query(schema);
-
-    // Verificar se precisa executar migração adicional para funcionários
-    try {
-      console.log('🔍 Verificando se precisa executar migração de funcionários...');
-      const [columns] = await query("SHOW COLUMNS FROM contas_pagar LIKE 'funcionario_id'");
-      
-      if (columns.length === 0) {
-        console.log('📝 Executando migração adicional para funcionários...');
-        const migrationPath = path.join(__dirname, 'migration_funcionarios_contas_pagar.sql');
-        const migration = fs.readFileSync(migrationPath, 'utf8');
-        await query(migration);
-        console.log('✅ Migração de funcionários concluída!');
-      } else {
-        console.log('✅ Migração de funcionários já aplicada!');
-      }
-    } catch (migrationError) {
-      console.log('⚠️ Erro na migração de funcionários (pode ser normal se já aplicada):', migrationError.message);
-    }
-
-    // Verificar se precisa executar migração de pagamentos a prazo para contas a receber
-    try {
-      console.log('🔍 Verificando se precisa executar migração de pagamentos a prazo...');
-      const [tables] = await query("SHOW TABLES LIKE 'venda_pagamentos_prazo'");
-      
-      if (tables.length > 0) {
-        console.log('📝 Executando migração de pagamentos a prazo para contas a receber...');
-        const migrationPath = path.join(__dirname, 'migration_prazo_to_contas_receber.sql');
-        const migration = fs.readFileSync(migrationPath, 'utf8');
-        await query(migration);
-        console.log('✅ Migração de pagamentos a prazo concluída!');
-      } else {
-        console.log('✅ Migração de pagamentos a prazo já aplicada!');
-      }
-    } catch (migrationError) {
-      console.log('⚠️ Erro na migração de pagamentos a prazo (pode ser normal se já aplicada):', migrationError.message);
-    }
-
-    // Verificar se precisa executar migração de venda_id na tabela transacoes
-    try {
-      console.log('🔍 Verificando se precisa executar migração de venda_id em transacoes...');
-      const [columns] = await query("SHOW COLUMNS FROM transacoes LIKE 'venda_id'");
-      
-      if (columns.length === 0) {
-        console.log('📝 Executando migração de venda_id em transacoes...');
-        const { default: migrateVendaIdTransacoes } = await import('./migrate_venda_id_transacoes.js');
-        await migrateVendaIdTransacoes();
-        console.log('✅ Migração de venda_id em transacoes concluída!');
-      } else {
-        console.log('✅ Migração de venda_id em transacoes já aplicada!');
-      }
-    } catch (migrationError) {
-      console.log('⚠️ Erro na migração de venda_id em transacoes (pode ser normal se já aplicada):', migrationError.message);
-    }
-
-    // Verificar se precisa executar migração de estoque decimal para inteiro
-    try {
-      console.log('🔍 Verificando se precisa executar migração de estoque decimal...');
-      const [columns] = await query("SHOW COLUMNS FROM produtos WHERE Field = 'estoque' AND Type LIKE '%decimal%'");
-      
-      if (columns.length > 0) {
-        console.log('📝 Executando migração de estoque decimal para inteiro...');
-        const migrationPath = path.join(__dirname, 'migrate_estoque_decimal.sql');
-        const migration = fs.readFileSync(migrationPath, 'utf8');
-        await query(migration);
-        console.log('✅ Migração de estoque decimal concluída!');
-      } else {
-        console.log('✅ Migração de estoque decimal já aplicada!');
-      }
-    } catch (migrationError) {
-      console.log('⚠️ Erro na migração de estoque decimal (pode ser normal se já aplicada):', migrationError.message);
-    }
-
-    // Verificar se precisa executar migração de estoque decimal por tipo
-    try {
-      console.log('🔍 Verificando se precisa executar migração de estoque decimal por tipo...');
-      const [columns] = await query("SHOW COLUMNS FROM produtos WHERE Field = 'estoque_kg'");
-      
-      if (columns.length === 0) {
-        console.log('📝 Executando migração de estoque decimal por tipo...');
-        const migrationPath = path.join(__dirname, 'migrate_estoque_decimal_por_tipo.sql');
-        const migration = fs.readFileSync(migrationPath, 'utf8');
-        await query(migration);
-        console.log('✅ Migração de estoque decimal por tipo concluída!');
-      } else {
-        console.log('✅ Migração de estoque decimal por tipo já aplicada!');
-      }
-    } catch (migrationError) {
-      console.log('⚠️ Erro na migração de estoque decimal por tipo (pode ser normal se já aplicada):', migrationError.message);
-    }
+    await connection.query(schema);
+    console.log('✅ Schema executado com sucesso!');
 
     console.log('✅ Migração concluída com sucesso!');
     console.log('📊 Banco de dados criado e configurado');
     
   } catch (error) {
-    console.error('❌ Erro durante a migração:', error);
+    console.error('❌ Erro durante a migração:', error.message);
     process.exit(1);
+  } finally {
+    if (connection) {
+      await connection.end();
+      console.log('🔒 Conexão fechada');
+    }
   }
 }
 
 // Executar se chamado diretamente
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runMigrations();
+const isMainModule = import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
+if (isMainModule) {
+  runMigrations().then(() => {
+    process.exit(0);
+  }).catch((err) => {
+    console.error('Erro fatal:', err);
+    process.exit(1);
+  });
 }
 
 export default runMigrations;

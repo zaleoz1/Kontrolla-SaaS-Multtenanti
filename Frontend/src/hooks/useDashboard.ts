@@ -146,7 +146,7 @@ export function useDashboard() {
         resumoFinanceiroResponse
       ] = await Promise.all([
         makeRequest(`${API_ENDPOINTS.DASHBOARD.METRICS}?periodo=${periodo}`),
-        makeRequest(`${API_ENDPOINTS.DASHBOARD.RECENT_SALES}?limit=5`),
+        makeRequest(`${API_ENDPOINTS.DASHBOARD.RECENT_SALES}?limit=500`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.LOW_STOCK}?limit=10`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.SALES_CHART}?tipo=diario&dias=30`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.TOP_PRODUCTS}?limit=10&periodo=30`),
