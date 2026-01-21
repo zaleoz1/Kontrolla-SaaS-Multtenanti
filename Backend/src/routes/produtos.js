@@ -236,7 +236,7 @@ router.post('/', validateProduto, async (req, res) => {
       }
     }
 
-    // Função auxiliar para processar campos de impostos
+    // Função auxiliar para processar campos de impostos (numéricos)
     const processarCampoImposto = (valor) => {
       if (valor === null || valor === undefined || valor === '' || valor === 'null') {
         return null;
@@ -246,12 +246,16 @@ router.post('/', validateProduto, async (req, res) => {
       return isNaN(numero) ? null : numero;
     };
 
+    // Função auxiliar para processar campos de texto
     const processarCampoTextoImposto = (valor) => {
       if (valor === null || valor === undefined || valor === '' || valor === 'null') {
         return null;
       }
       return String(valor).trim() || null;
     };
+
+    // Função auxiliar para converter undefined para null (MySQL não aceita undefined)
+    const toNull = (valor) => valor === undefined ? null : valor;
 
     // Primeiro, criar o produto sem imagens
     const result = await queryWithResult(
@@ -265,10 +269,29 @@ router.post('/', validateProduto, async (req, res) => {
         cofins_aliquota, cofins_cst
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        req.user.tenant_id, categoria_id, nome, descricao, codigo_barras, sku,
-        preco, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, 
-        estoqueInt, estoqueMinimoInt, estoqueKgDecimal, estoqueLitrosDecimal,
-        estoqueMinimoKgDecimal, estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify([]),
+        req.user.tenant_id, 
+        toNull(categoria_id), 
+        nome, 
+        toNull(descricao), 
+        toNull(codigo_barras), 
+        toNull(sku),
+        preco, 
+        toNull(preco_promocional), 
+        tipo_preco, 
+        preco_por_kg, 
+        preco_por_litros, 
+        estoqueInt, 
+        estoqueMinimoInt, 
+        estoqueKgDecimal, 
+        estoqueLitrosDecimal,
+        estoqueMinimoKgDecimal, 
+        estoqueMinimoLitrosDecimal, 
+        toNull(fornecedor_id), 
+        toNull(marca), 
+        toNull(modelo), 
+        status, 
+        destaque, 
+        JSON.stringify([]),
         processarCampoTextoImposto(ncm), 
         processarCampoTextoImposto(cfop), 
         processarCampoTextoImposto(cst), 
@@ -359,6 +382,275 @@ router.post('/', validateProduto, async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao criar produto:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Importar produto (upsert - atualiza se existir, soma estoque)
+router.post('/importar', validateProduto, async (req, res) => {
+  try {
+    const {
+      categoria_id,
+      nome,
+      descricao,
+      codigo_barras,
+      sku,
+      preco,
+      preco_promocional,
+      tipo_preco = 'unidade',
+      estoque = 0,
+      estoque_minimo = 0,
+      estoque_kg = 0,
+      estoque_litros = 0,
+      estoque_minimo_kg = 0,
+      estoque_minimo_litros = 0,
+      fornecedor_id,
+      marca,
+      modelo,
+      status = 'ativo',
+      destaque = false,
+      // Campos de impostos
+      ncm,
+      cfop,
+      cst,
+      icms_aliquota,
+      icms_origem,
+      icms_situacao_tributaria,
+      ipi_aliquota,
+      ipi_codigo_enquadramento,
+      pis_aliquota,
+      pis_cst,
+      cofins_aliquota,
+      cofins_cst
+    } = req.body;
+
+    // Converter undefined para null
+    const toNull = (valor) => valor === undefined ? null : valor;
+
+    // Processar campos de impostos
+    const processarCampoImposto = (valor) => {
+      if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+        return null;
+      }
+      const numero = parseFloat(valor);
+      return isNaN(numero) ? null : numero;
+    };
+
+    const processarCampoTextoImposto = (valor) => {
+      if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+        return null;
+      }
+      return String(valor).trim() || null;
+    };
+
+    // Processar valores de estoque
+    const estoqueInt = Math.round(parseFloat(estoque) || 0);
+    const estoqueMinimoInt = Math.round(parseFloat(estoque_minimo) || 0);
+    const estoqueKgDecimal = parseFloat(estoque_kg) || 0;
+    const estoqueLitrosDecimal = parseFloat(estoque_litros) || 0;
+    const estoqueMinimoKgDecimal = parseFloat(estoque_minimo_kg) || 0;
+    const estoqueMinimoLitrosDecimal = parseFloat(estoque_minimo_litros) || 0;
+
+    // Calcular preco_por_kg e preco_por_litros
+    let preco_por_kg = null;
+    let preco_por_litros = null;
+    if (tipo_preco === 'kg') {
+      preco_por_kg = preco;
+    } else if (tipo_preco === 'litros') {
+      preco_por_litros = preco;
+    }
+
+    // Verificar se já existe produto com mesmo código de barras ou SKU
+    let produtoExistente = null;
+    
+    if (codigo_barras && codigo_barras.trim()) {
+      const [existente] = await query(
+        'SELECT * FROM produtos WHERE codigo_barras = ? AND tenant_id = ?',
+        [codigo_barras.trim(), req.user.tenant_id]
+      );
+      if (existente) produtoExistente = existente;
+    }
+    
+    // Se não encontrou por código de barras, tentar por SKU
+    if (!produtoExistente && sku && sku.trim()) {
+      const [existente] = await query(
+        'SELECT * FROM produtos WHERE sku = ? AND tenant_id = ?',
+        [sku.trim(), req.user.tenant_id]
+      );
+      if (existente) produtoExistente = existente;
+    }
+
+    let resultado;
+    let mensagem;
+    let acao;
+
+    if (produtoExistente) {
+      // ATUALIZAR produto existente e SOMAR estoque
+      console.log(`📦 Produto existente encontrado (ID: ${produtoExistente.id}). Atualizando e somando estoque...`);
+      
+      // Calcular novos valores de estoque (soma)
+      const novoEstoque = (parseInt(produtoExistente.estoque) || 0) + estoqueInt;
+      const novoEstoqueKg = (parseFloat(produtoExistente.estoque_kg) || 0) + estoqueKgDecimal;
+      const novoEstoqueLitros = (parseFloat(produtoExistente.estoque_litros) || 0) + estoqueLitrosDecimal;
+      
+      console.log(`📊 Estoque anterior: ${produtoExistente.estoque} | Adicionando: ${estoqueInt} | Novo: ${novoEstoque}`);
+      console.log(`📊 Estoque KG anterior: ${produtoExistente.estoque_kg} | Adicionando: ${estoqueKgDecimal} | Novo: ${novoEstoqueKg}`);
+      console.log(`📊 Estoque Litros anterior: ${produtoExistente.estoque_litros} | Adicionando: ${estoqueLitrosDecimal} | Novo: ${novoEstoqueLitros}`);
+
+      await query(
+        `UPDATE produtos SET
+          nome = ?,
+          descricao = CONCAT(COALESCE(descricao, ''), '\n', ?),
+          preco = ?,
+          preco_promocional = COALESCE(?, preco_promocional),
+          tipo_preco = ?,
+          preco_por_kg = COALESCE(?, preco_por_kg),
+          preco_por_litros = COALESCE(?, preco_por_litros),
+          estoque = ?,
+          estoque_kg = ?,
+          estoque_litros = ?,
+          ncm = COALESCE(?, ncm),
+          cfop = COALESCE(?, cfop),
+          cst = COALESCE(?, cst),
+          icms_aliquota = COALESCE(?, icms_aliquota),
+          icms_origem = COALESCE(?, icms_origem),
+          icms_situacao_tributaria = COALESCE(?, icms_situacao_tributaria),
+          ipi_aliquota = COALESCE(?, ipi_aliquota),
+          ipi_codigo_enquadramento = COALESCE(?, ipi_codigo_enquadramento),
+          pis_aliquota = COALESCE(?, pis_aliquota),
+          pis_cst = COALESCE(?, pis_cst),
+          cofins_aliquota = COALESCE(?, cofins_aliquota),
+          cofins_cst = COALESCE(?, cofins_cst),
+          data_atualizacao = NOW()
+        WHERE id = ? AND tenant_id = ?`,
+        [
+          nome,
+          toNull(descricao) || '',
+          preco,
+          toNull(preco_promocional),
+          tipo_preco,
+          preco_por_kg,
+          preco_por_litros,
+          novoEstoque,
+          novoEstoqueKg,
+          novoEstoqueLitros,
+          processarCampoTextoImposto(ncm),
+          processarCampoTextoImposto(cfop),
+          processarCampoTextoImposto(cst),
+          processarCampoImposto(icms_aliquota),
+          processarCampoTextoImposto(icms_origem),
+          processarCampoTextoImposto(icms_situacao_tributaria),
+          processarCampoImposto(ipi_aliquota),
+          processarCampoTextoImposto(ipi_codigo_enquadramento),
+          processarCampoImposto(pis_aliquota),
+          processarCampoTextoImposto(pis_cst),
+          processarCampoImposto(cofins_aliquota),
+          processarCampoTextoImposto(cofins_cst),
+          produtoExistente.id,
+          req.user.tenant_id
+        ]
+      );
+
+      // Buscar produto atualizado
+      const [produtoAtualizado] = await query(
+        `SELECT p.*, c.nome as categoria_nome,
+                CASE 
+                  WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                  WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                  ELSE p.estoque
+                END as estoque_atual
+         FROM produtos p 
+         LEFT JOIN categorias c ON p.categoria_id = c.id 
+         WHERE p.id = ?`,
+        [produtoExistente.id]
+      );
+
+      resultado = produtoAtualizado;
+      mensagem = `Produto "${nome}" atualizado. Estoque somado: +${tipo_preco === 'kg' ? estoqueKgDecimal + ' kg' : tipo_preco === 'litros' ? estoqueLitrosDecimal + ' L' : estoqueInt + ' un'}`;
+      acao = 'atualizado';
+
+    } else {
+      // CRIAR novo produto
+      console.log('📦 Criando novo produto...');
+      
+      const insertResult = await queryWithResult(
+        `INSERT INTO produtos (
+          tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
+          preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
+          estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
+          estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens,
+          ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
+          ipi_aliquota, ipi_codigo_enquadramento, pis_aliquota, pis_cst,
+          cofins_aliquota, cofins_cst
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.tenant_id, 
+          toNull(categoria_id), 
+          nome, 
+          toNull(descricao), 
+          toNull(codigo_barras), 
+          toNull(sku),
+          preco, 
+          toNull(preco_promocional), 
+          tipo_preco, 
+          preco_por_kg, 
+          preco_por_litros, 
+          estoqueInt, 
+          estoqueMinimoInt, 
+          estoqueKgDecimal, 
+          estoqueLitrosDecimal,
+          estoqueMinimoKgDecimal, 
+          estoqueMinimoLitrosDecimal, 
+          toNull(fornecedor_id), 
+          toNull(marca), 
+          toNull(modelo), 
+          status, 
+          destaque, 
+          JSON.stringify([]),
+          processarCampoTextoImposto(ncm), 
+          processarCampoTextoImposto(cfop), 
+          processarCampoTextoImposto(cst), 
+          processarCampoImposto(icms_aliquota), 
+          processarCampoTextoImposto(icms_origem), 
+          processarCampoTextoImposto(icms_situacao_tributaria),
+          processarCampoImposto(ipi_aliquota), 
+          processarCampoTextoImposto(ipi_codigo_enquadramento), 
+          processarCampoImposto(pis_aliquota), 
+          processarCampoTextoImposto(pis_cst),
+          processarCampoImposto(cofins_aliquota), 
+          processarCampoTextoImposto(cofins_cst)
+        ]
+      );
+
+      // Buscar produto criado
+      const [produtoCriado] = await query(
+        `SELECT p.*, c.nome as categoria_nome,
+                CASE 
+                  WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
+                  WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
+                  ELSE p.estoque
+                END as estoque_atual
+         FROM produtos p 
+         LEFT JOIN categorias c ON p.categoria_id = c.id 
+         WHERE p.id = ?`,
+        [insertResult.insertId]
+      );
+
+      resultado = produtoCriado;
+      mensagem = `Produto "${nome}" criado com sucesso`;
+      acao = 'criado';
+    }
+
+    res.status(produtoExistente ? 200 : 201).json({
+      message: mensagem,
+      acao: acao,
+      produto: resultado
+    });
+
+  } catch (error) {
+    console.error('Erro ao importar produto:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

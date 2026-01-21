@@ -19,7 +19,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
     // Adicionar filtro de busca
     if (q) {
-      whereClause += ' AND (n.numero LIKE ? OR c.nome LIKE ? OR c.cnpj_cpf LIKE ?)';
+      whereClause += ' AND (n.numero LIKE ? OR c.nome LIKE ? OR c.cpf_cnpj LIKE ?)';
       const searchTerm = `%${q}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
@@ -43,7 +43,7 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
     // Buscar NF-e
     const nfes = await query(
-      `SELECT n.*, c.nome as cliente_nome, c.cnpj_cpf as cliente_cnpj_cpf
+      `SELECT n.*, c.nome as cliente_nome, c.cpf_cnpj as cliente_cnpj_cpf
        FROM nfe n 
        LEFT JOIN clientes c ON n.cliente_id = c.id 
        ${whereClause} 
@@ -54,7 +54,9 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
 
     // Contar total de registros
     const [totalResult] = await query(
-      `SELECT COUNT(*) as total FROM nfe n ${whereClause}`,
+      `SELECT COUNT(*) as total FROM nfe n 
+       LEFT JOIN clientes c ON n.cliente_id = c.id 
+       ${whereClause}`,
       params
     );
 
@@ -80,6 +82,55 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
   }
 });
 
+// Estatísticas das NF-e (deve vir antes da rota /:id)
+router.get('/stats/overview', async (req, res) => {
+  try {
+    const { periodo = 'mes' } = req.query;
+    
+    let whereClause = 'WHERE tenant_id = ?';
+    let params = [req.user.tenant_id];
+
+    // Adicionar filtro de período
+    switch (periodo) {
+      case 'hoje':
+        whereClause += ' AND DATE(data_emissao) = CURDATE()';
+        break;
+      case 'semana':
+        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        break;
+      case 'mes':
+        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        break;
+      case 'ano':
+        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        break;
+    }
+
+    const stats = await query(
+      `SELECT 
+        COUNT(*) as total_nfe,
+        COUNT(CASE WHEN status = 'autorizada' THEN 1 END) as nfe_autorizadas,
+        COUNT(CASE WHEN status = 'pendente' THEN 1 END) as nfe_pendentes,
+        COUNT(CASE WHEN status = 'cancelada' THEN 1 END) as nfe_canceladas,
+        COUNT(CASE WHEN status = 'erro' THEN 1 END) as nfe_erro,
+        COALESCE(SUM(CASE WHEN status = 'autorizada' THEN valor_total ELSE 0 END), 0) as valor_total_autorizado
+      FROM nfe 
+      ${whereClause}`,
+      params
+    );
+
+    res.json({
+      stats: stats[0],
+      periodo
+    });
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas das NF-e:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Buscar NF-e por ID
 router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
   try {
@@ -87,7 +138,7 @@ router.get('/:id', validateId, handleValidationErrors, async (req, res) => {
 
     // Buscar NF-e
     const nfes = await query(
-      `SELECT n.*, c.nome as cliente_nome, c.cnpj_cpf as cliente_cnpj_cpf
+      `SELECT n.*, c.nome as cliente_nome, c.cpf_cnpj as cliente_cnpj_cpf
        FROM nfe n 
        LEFT JOIN clientes c ON n.cliente_id = c.id 
        WHERE n.id = ? AND n.tenant_id = ?`,
@@ -204,7 +255,7 @@ router.post('/', async (req, res) => {
 
     // Buscar NF-e criada
     const [nfe] = await query(
-      `SELECT n.*, c.nome as cliente_nome, c.cnpj_cpf as cliente_cnpj_cpf
+      `SELECT n.*, c.nome as cliente_nome, c.cpf_cnpj as cliente_cnpj_cpf
        FROM nfe n 
        LEFT JOIN clientes c ON n.cliente_id = c.id 
        WHERE n.id = ?`,
@@ -311,55 +362,6 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao deletar NF-e:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor'
-    });
-  }
-});
-
-// Estatísticas das NF-e
-router.get('/stats/overview', async (req, res) => {
-  try {
-    const { periodo = 'mes' } = req.query;
-    
-    let whereClause = 'WHERE tenant_id = ?';
-    let params = [req.user.tenant_id];
-
-    // Adicionar filtro de período
-    switch (periodo) {
-      case 'hoje':
-        whereClause += ' AND DATE(data_emissao) = CURDATE()';
-        break;
-      case 'semana':
-        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        break;
-      case 'mes':
-        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        break;
-      case 'ano':
-        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        break;
-    }
-
-    const stats = await query(
-      `SELECT 
-        COUNT(*) as total_nfe,
-        COUNT(CASE WHEN status = 'autorizada' THEN 1 END) as nfe_autorizadas,
-        COUNT(CASE WHEN status = 'pendente' THEN 1 END) as nfe_pendentes,
-        COUNT(CASE WHEN status = 'cancelada' THEN 1 END) as nfe_canceladas,
-        COUNT(CASE WHEN status = 'erro' THEN 1 END) as nfe_erro,
-        COALESCE(SUM(CASE WHEN status = 'autorizada' THEN valor_total ELSE 0 END), 0) as valor_total_autorizado
-      FROM nfe 
-      ${whereClause}`,
-      params
-    );
-
-    res.json({
-      stats: stats[0],
-      periodo
-    });
-  } catch (error) {
-    console.error('Erro ao buscar estatísticas das NF-e:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
