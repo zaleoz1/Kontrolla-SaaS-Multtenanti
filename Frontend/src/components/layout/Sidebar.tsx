@@ -48,6 +48,7 @@ const navegacao = [
   { nome: "Clientes", href: "/dashboard/clientes", icone: Users, permissao: "clientes" },
   { nome: "Relatórios", href: "/dashboard/relatorios", icone: BarChart3, permissao: "relatorios" },
   { nome: "Financeiro", href: "/dashboard/financeiro", icone: TrendingUp, permissao: "financeiro" },
+  { nome: "NF-e", href: "/dashboard/nfe", icone: Receipt, permissao: "nfe" },
 ];
 
 interface PropsSidebar {

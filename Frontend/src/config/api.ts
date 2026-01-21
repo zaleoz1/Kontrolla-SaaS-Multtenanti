@@ -53,6 +53,7 @@ export const API_ENDPOINTS = {
   PRODUCTS: {
     LIST: '/produtos',
     CREATE: '/produtos',
+    IMPORT: '/produtos/importar', // Rota de importação (upsert - atualiza se existir, soma estoque)
     GET: (id: number) => `/produtos/${id}`,
     UPDATE: (id: number) => `/produtos/${id}`,
     DELETE: (id: number) => `/produtos/${id}`,
@@ -143,6 +144,16 @@ export const API_ENDPOINTS = {
     DELETE: (id: number) => `/funcionarios/${id}`,
     SEARCH_CEP: (cep: string) => `/funcionarios/buscar/cep/${cep}`,
     STATS: '/funcionarios/stats/overview',
+  },
+  
+  // NF-e
+  NFE: {
+    LIST: '/nfe',
+    CREATE: '/nfe',
+    GET: (id: number) => `/nfe/${id}`,
+    UPDATE_STATUS: (id: number) => `/nfe/${id}/status`,
+    DELETE: (id: number) => `/nfe/${id}`,
+    STATS: '/nfe/stats/overview',
   },
 };
 
