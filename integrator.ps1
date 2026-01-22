@@ -304,16 +304,69 @@ function Git-Pull {
     Show-Loading "Atualizando código do repositório (git pull)..."
     Write-Host "  ═══════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
     Write-Host ""
+    
+    # Verificar se é um repositório git
+    try {
+        $null = git rev-parse --git-dir 2>$null
+    } catch {
+        Show-Error "Este diretório não é um repositório Git!"
+        Wait-ForKey
+        return
+    }
+    
+    # Obter branch atual
+    $currentBranch = git branch --show-current 2>$null
+    if (-not $currentBranch) {
+        $currentBranch = "master"
+    }
     Write-Host "  📍 Branch atual: " -NoNewline -ForegroundColor Cyan
-    git branch --show-current
+    Write-Host $currentBranch -ForegroundColor White
+    
+    # Verificar se há remote configurado
+    $remote = git remote | Select-Object -First 1
+    if (-not $remote) {
+        $remote = "origin"
+    }
+    
     Write-Host ""
-    git pull
+    Write-Host "  🔗 Remote: " -NoNewline -ForegroundColor Cyan
+    Write-Host $remote -ForegroundColor White
+    Write-Host ""
+    
+    # Tentar fazer pull
+    $success = $false
+    
+    # Primeiro tenta pull normal
+    git pull 2>$null
     if ($LASTEXITCODE -eq 0) {
+        $success = $true
+    } else {
+        # Se falhar, tenta com origin/branch
+        Write-Host "  ⚠️  Tentando pull com ${remote}/${currentBranch}..." -ForegroundColor Yellow
+        git pull $remote $currentBranch 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $success = $true
+        } else {
+            # Se ainda falhar, tenta configurar upstream e fazer pull
+            Write-Host "  ⚠️  Configurando upstream e tentando novamente..." -ForegroundColor Yellow
+            git branch --set-upstream-to="${remote}/${currentBranch}" $currentBranch 2>$null
+            git pull 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $success = $true
+            }
+        }
+    }
+    
+    if ($success) {
         Show-Success "Código atualizado com sucesso!"
         Write-Host ""
         Write-Host "  💡 Dica: Execute o Deploy (opção 1) para aplicar as mudanças" -ForegroundColor Yellow
     } else {
         Show-Error "Erro ao atualizar o código!"
+        Write-Host ""
+        Write-Host "  💡 Dica: Configure o remote manualmente com:" -ForegroundColor Yellow
+        Write-Host "     git remote add origin <url-do-repositorio>" -ForegroundColor DarkGray
+        Write-Host "     git branch --set-upstream-to=origin/${currentBranch} ${currentBranch}" -ForegroundColor DarkGray
     }
     Wait-ForKey
 }

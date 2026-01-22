@@ -251,16 +251,57 @@ git_pull() {
     show_loading "Atualizando código do repositório (git pull)..."
     echo -e "  ${GRAY}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
-    echo -e "  ${CYAN}📍 Branch atual:${NC}"
-    git branch --show-current
+    
+    # Verificar se é um repositório git
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        show_error "Este diretório não é um repositório Git!"
+        wait_for_key
+        return
+    fi
+    
+    # Obter branch atual
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "master")
+    echo -e "  ${CYAN}📍 Branch atual: ${WHITE}${CURRENT_BRANCH}${NC}"
+    
+    # Verificar se há remote configurado
+    REMOTE=$(git remote | head -n 1)
+    if [ -z "$REMOTE" ]; then
+        REMOTE="origin"
+    fi
+    
     echo ""
-    git pull
-    if [ $? -eq 0 ]; then
+    echo -e "  ${CYAN}🔗 Remote: ${WHITE}${REMOTE}${NC}"
+    echo ""
+    
+    # Tentar fazer pull
+    # Primeiro tenta pull normal
+    if git pull 2>/dev/null; then
         show_success "Código atualizado com sucesso!"
         echo ""
         echo -e "  ${YELLOW}💡 Dica: Execute o Deploy (opção 1) para aplicar as mudanças${NC}"
     else
-        show_error "Erro ao atualizar o código!"
+        # Se falhar, tenta com origin/branch
+        echo -e "  ${YELLOW}⚠️  Tentando pull com ${REMOTE}/${CURRENT_BRANCH}...${NC}"
+        if git pull "${REMOTE}" "${CURRENT_BRANCH}" 2>/dev/null; then
+            show_success "Código atualizado com sucesso!"
+            echo ""
+            echo -e "  ${YELLOW}💡 Dica: Execute o Deploy (opção 1) para aplicar as mudanças${NC}"
+        else
+            # Se ainda falhar, tenta configurar upstream e fazer pull
+            echo -e "  ${YELLOW}⚠️  Configurando upstream e tentando novamente...${NC}"
+            git branch --set-upstream-to="${REMOTE}/${CURRENT_BRANCH}" "${CURRENT_BRANCH}" 2>/dev/null
+            if git pull 2>/dev/null; then
+                show_success "Código atualizado com sucesso!"
+                echo ""
+                echo -e "  ${YELLOW}💡 Dica: Execute o Deploy (opção 1) para aplicar as mudanças${NC}"
+            else
+                show_error "Erro ao atualizar o código!"
+                echo ""
+                echo -e "  ${YELLOW}💡 Dica: Configure o remote manualmente com:${NC}"
+                echo -e "  ${GRAY}     git remote add origin <url-do-repositorio>${NC}"
+                echo -e "  ${GRAY}     git branch --set-upstream-to=origin/${CURRENT_BRANCH} ${CURRENT_BRANCH}${NC}"
+            fi
+        fi
     fi
     wait_for_key
 }
