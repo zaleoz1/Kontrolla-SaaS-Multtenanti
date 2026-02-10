@@ -160,6 +160,32 @@ router.delete('/lidas', async (req, res) => {
   }
 });
 
+// Deletar TODAS as notificações
+router.delete('/todas', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+
+    const deleteQuery = `
+      DELETE FROM notificacoes 
+      WHERE tenant_id = ?
+    `;
+
+    const result = await query(deleteQuery, [tenantId]);
+
+    res.json({
+      success: true,
+      message: `${result.affectedRows} notificações excluídas`
+    });
+  } catch (error) {
+    console.error('Erro ao excluir todas as notificações:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Deletar notificação
 router.delete('/:id', async (req, res) => {
   try {
