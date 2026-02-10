@@ -697,32 +697,56 @@ router.post('/google/verify', async (req, res) => {
 // Rota para enviar código de verificação
 router.post('/send-verification-code', async (req, res) => {
   try {
+    console.log('📧 Iniciando envio de código de verificação...');
     const { email, tipo = 'cadastro', tenant_id, usuario_id } = req.body;
+    console.log('📋 Dados recebidos:', { email, tipo, tenant_id, usuario_id });
     
     if (!email) {
       return res.status(400).json({ error: 'Email é obrigatório' });
     }
 
     // Verificar se email já tem código válido não usado
-    const codigoExistente = await query(
-      'SELECT * FROM codigos_verificacao_email WHERE email = ? AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
-      [email]
-    );
+    console.log('🔍 Verificando códigos existentes para:', email);
+    let codigoExistente;
+    try {
+      codigoExistente = await query(
+        'SELECT * FROM codigos_verificacao_email WHERE email = ? AND usado = FALSE AND data_expiracao > NOW() ORDER BY data_criacao DESC LIMIT 1',
+        [email]
+      );
+      console.log('📊 Códigos encontrados:', codigoExistente?.length || 0);
+    } catch (dbError) {
+      console.error('❌ Erro ao consultar banco de dados:', dbError.message);
+      // Tabela pode não existir, tentar criar
+      if (dbError.message.includes("doesn't exist") || dbError.code === 'ER_NO_SUCH_TABLE') {
+        return res.status(500).json({ 
+          error: 'Tabela de códigos de verificação não existe. Execute as migrações do banco de dados.',
+          details: dbError.message
+        });
+      }
+      throw dbError;
+    }
 
     let codigo;
-    if (codigoExistente.length > 0) {
+    if (codigoExistente && codigoExistente.length > 0) {
       // Reutilizar código existente
       codigo = codigoExistente[0].codigo;
       console.log('🔄 Reutilizando código existente para:', email);
     } else {
       // Gerar novo código
       codigo = gerarCodigoVerificacao();
+      console.log('🆕 Novo código gerado:', codigo);
       
       // Inserir novo código no banco
-      await queryWithResult(
-        'INSERT INTO codigos_verificacao_email (email, codigo, tipo, tenant_id, usuario_id, data_expiracao) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))',
-        [email, codigo, tipo, tenant_id || null, usuario_id || null]
-      );
+      try {
+        await queryWithResult(
+          'INSERT INTO codigos_verificacao_email (email, codigo, tipo, tenant_id, usuario_id, data_expiracao) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))',
+          [email, codigo, tipo, tenant_id || null, usuario_id || null]
+        );
+        console.log('✅ Código inserido no banco de dados');
+      } catch (insertError) {
+        console.error('❌ Erro ao inserir código no banco:', insertError.message);
+        throw insertError;
+      }
     }
 
     // Buscar nome do usuário se disponível
@@ -735,6 +759,7 @@ router.post('/send-verification-code', async (req, res) => {
     }
 
     // Enviar email
+    console.log('📤 Enviando email para:', email);
     const resultado = await enviarEmailVerificacao(email, codigo, nome, tipo);
     
     if (resultado.success) {
@@ -753,8 +778,12 @@ router.post('/send-verification-code', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ Erro ao enviar código de verificação:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('❌ Erro ao enviar código de verificação:', error.message);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Erro interno do servidor. Tente novamente mais tarde.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
