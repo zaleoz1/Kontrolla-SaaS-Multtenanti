@@ -53,7 +53,9 @@ import {
   RefreshCw,
   Upload,
   FileText,
-  X
+  X,
+  Building2,
+  UserPlus
 } from "lucide-react";
 
 interface Produto {
@@ -189,6 +191,8 @@ export default function Produtos() {
   const [xmlError, setXmlError] = useState<string | null>(null);
   const [produtoExpandido, setProdutoExpandido] = useState<string | null>(null);
   const [nfeExpandida, setNfeExpandida] = useState<string | null>(null);
+  const [criarFornecedores, setCriarFornecedores] = useState(true); // Criar fornecedores automaticamente
+  const [fornecedoresCriados, setFornecedoresCriados] = useState<{[documento: string]: number}>({}); // Mapa CNPJ -> ID do fornecedor
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
@@ -199,6 +203,7 @@ export default function Produtos() {
   const deleteApi = useCrudApi(API_ENDPOINTS.PRODUCTS.LIST);
   const categoriasApi = useCrudApi<{categorias: Categoria[]}>(API_ENDPOINTS.CATALOG.CATEGORIES);
   const importApi = useCrudApi(API_ENDPOINTS.PRODUCTS.IMPORT); // Rota de importação com upsert
+  const fornecedoresApi = useCrudApi(API_ENDPOINTS.FORNECEDORES.LIST); // API de fornecedores
 
   // Carregar categorias e produtos
   useEffect(() => {
@@ -656,6 +661,142 @@ export default function Produtos() {
     return 'unidade';
   };
 
+  // Função para buscar fornecedor existente pelo CNPJ
+  const buscarFornecedorPorCnpj = async (cnpj: string): Promise<number | null> => {
+    try {
+      const response = await fornecedoresApi.list({ q: cnpj, limit: 1 });
+      if (response?.data && response.data.length > 0) {
+        return response.data[0].id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao buscar fornecedor:', error);
+      return null;
+    }
+  };
+
+  // Função para criar fornecedor a partir dos dados do emitente do XML
+  // Retorna o ID do fornecedor criado ou existente
+  const criarFornecedorDoXML = async (emitente: EmitenteXML, dadosNFe: DadosNFeXML | null): Promise<number | null> => {
+    // Verificar se tem CNPJ ou CPF
+    const documentoOriginal = emitente.cnpj || emitente.cpf;
+    if (!documentoOriginal) return null;
+
+    // Limpar documento (remover formatação)
+    const documento = documentoOriginal.replace(/\D/g, '');
+
+    // Verificar se já foi criado nesta sessão de importação
+    if (fornecedoresCriados[documento]) {
+      return fornecedoresCriados[documento]; // Retornar ID já conhecido
+    }
+
+    try {
+      // Verificar se tem nome válido (mínimo 2 caracteres)
+      const nomeOriginal = emitente.nomeFantasia || emitente.razaoSocial || '';
+      if (nomeOriginal.trim().length < 2) {
+        console.warn('Fornecedor sem nome válido, pulando criação');
+        return null;
+      }
+
+      // Limpar e validar telefone (deve ter entre 10 e 20 dígitos)
+      let telefone: string | null = null;
+      if (emitente.telefone) {
+        const telLimpo = emitente.telefone.replace(/\D/g, '');
+        if (telLimpo.length >= 10 && telLimpo.length <= 20) {
+          telefone = telLimpo;
+        }
+      }
+
+      // Limpar CEP (deve ter exatamente 8 dígitos)
+      let cep: string | null = null;
+      if (emitente.endereco.cep) {
+        const cepLimpo = emitente.endereco.cep.replace(/\D/g, '');
+        if (cepLimpo.length === 8) {
+          cep = cepLimpo;
+        }
+      }
+
+      // Limpar CNPJ (deve ter exatamente 14 dígitos)
+      let cnpj: string | null = null;
+      if (emitente.cnpj) {
+        const cnpjLimpo = emitente.cnpj.replace(/\D/g, '');
+        if (cnpjLimpo.length === 14) {
+          cnpj = cnpjLimpo;
+        }
+      }
+
+      // Validar estado (deve ter exatamente 2 caracteres)
+      let estado: string | null = null;
+      if (emitente.endereco.uf && emitente.endereco.uf.length === 2) {
+        estado = emitente.endereco.uf.toUpperCase();
+      }
+
+      // Preparar dados do fornecedor
+      const dadosFornecedor: Record<string, any> = {
+        nome: nomeOriginal.trim().substring(0, 255),
+        status: 'ativo'
+      };
+
+      // Adicionar campos opcionais apenas se válidos
+      if (emitente.razaoSocial && emitente.razaoSocial.trim()) {
+        dadosFornecedor.razao_social = emitente.razaoSocial.trim().substring(0, 255);
+      }
+      if (cnpj) {
+        dadosFornecedor.cnpj = cnpj;
+      }
+      if (telefone) {
+        dadosFornecedor.telefone = telefone;
+      }
+      if (cep) {
+        dadosFornecedor.cep = cep;
+      }
+      if (estado) {
+        dadosFornecedor.estado = estado;
+      }
+      if (emitente.endereco.cidade && emitente.endereco.cidade.trim()) {
+        dadosFornecedor.cidade = emitente.endereco.cidade.trim().substring(0, 100);
+      }
+      if (emitente.endereco.logradouro) {
+        const endereco = `${emitente.endereco.logradouro}${emitente.endereco.numero ? `, ${emitente.endereco.numero}` : ''}${emitente.endereco.bairro ? ` - ${emitente.endereco.bairro}` : ''}`;
+        dadosFornecedor.endereco = endereco.substring(0, 500);
+      }
+      
+      dadosFornecedor.observacoes = dadosNFe 
+        ? `Fornecedor cadastrado automaticamente via importação de NF-e ${dadosNFe.numero} em ${formatarDataXML(dadosNFe.dataEmissao)}`
+        : 'Fornecedor cadastrado automaticamente via importação de XML';
+
+      // Tentar criar o fornecedor
+      const response = await fornecedoresApi.create(dadosFornecedor);
+      
+      // Extrair ID do fornecedor criado
+      const fornecedorId = response?.data?.id || response?.id;
+      
+      if (fornecedorId) {
+        // Salvar no mapa de fornecedores criados
+        setFornecedoresCriados(prev => ({ ...prev, [documento]: fornecedorId }));
+        return fornecedorId;
+      }
+      
+      return null;
+    } catch (error: any) {
+      // Se o erro for de CNPJ duplicado, buscar o fornecedor existente
+      if (error.message?.includes('CNPJ já cadastrado') || error.message?.includes('duplicate') || error.message?.includes('409')) {
+        // Buscar o fornecedor existente pelo CNPJ
+        if (emitente.cnpj) {
+          const cnpjLimpo = emitente.cnpj.replace(/\D/g, '');
+          const fornecedorExistenteId = await buscarFornecedorPorCnpj(cnpjLimpo);
+          if (fornecedorExistenteId) {
+            setFornecedoresCriados(prev => ({ ...prev, [documento]: fornecedorExistenteId }));
+            return fornecedorExistenteId;
+          }
+        }
+        return null;
+      }
+      console.error('Erro ao criar fornecedor:', error);
+      return null;
+    }
+  };
+
   // Função para importar os produtos selecionados
   // Usa rota de importação com UPSERT: se produto já existe (por código de barras ou SKU), atualiza e soma estoque
   const importarProdutosSelecionados = async () => {
@@ -674,13 +815,45 @@ export default function Produtos() {
     let criados = 0;
     let atualizados = 0;
     let erros = 0;
+    let fornecedoresCriadosCount = 0;
+    let produtosVinculados = 0; // Produtos vinculados a fornecedores
     const errosDetalhes: string[] = [];
+
+    // Mapa de nfeId -> fornecedor_id para vincular aos produtos
+    const nfeFornecedorMap: {[nfeId: string]: number | null} = {};
+
+    // Criar fornecedores automaticamente se a opção estiver habilitada
+    if (criarFornecedores) {
+      const nfeIdsUnicos = [...new Set(selecionados.map(p => p.nfeId))];
+      
+      for (const nfeId of nfeIdsUnicos) {
+        const emitente = emitentesXML[nfeId];
+        const dadosNFe = dadosNFesXML[nfeId];
+        
+        if (emitente) {
+          const documento = (emitente.cnpj || emitente.cpf)?.replace(/\D/g, '');
+          
+          // Verificar se já temos o ID do fornecedor
+          if (documento && fornecedoresCriados[documento]) {
+            nfeFornecedorMap[nfeId] = fornecedoresCriados[documento];
+          } else if (documento) {
+            // Criar o fornecedor e obter o ID
+            const fornecedorId = await criarFornecedorDoXML(emitente, dadosNFe);
+            nfeFornecedorMap[nfeId] = fornecedorId;
+            if (fornecedorId) {
+              fornecedoresCriadosCount++;
+            }
+          }
+        }
+      }
+    }
 
     for (const produtoXML of selecionados) {
       try {
         const tipoPreco = converterUnidade(produtoXML.unidade);
         const emitenteDoXML = emitentesXML[produtoXML.nfeId];
         const dadosNFeDoXML = dadosNFesXML[produtoXML.nfeId];
+        const fornecedorIdDoProduto = nfeFornecedorMap[produtoXML.nfeId];
         
         // Preparar dados do produto mapeando EXATAMENTE para as colunas da tabela
         // IMPORTANTE: Não enviar campos opcionais como null, apenas omitir
@@ -709,6 +882,11 @@ export default function Produtos() {
           status: 'ativo',
           destaque: false,
         };
+
+        // Vincular fornecedor ao produto se disponível
+        if (fornecedorIdDoProduto) {
+          dadosProduto.fornecedor_id = fornecedorIdDoProduto;
+        }
 
         // Adicionar campos opcionais APENAS se tiverem valor
         
@@ -767,6 +945,11 @@ export default function Produtos() {
         } else {
           criados++;
         }
+        
+        // Contar se foi vinculado a fornecedor
+        if (fornecedorIdDoProduto) {
+          produtosVinculados++;
+        }
       } catch (error) {
         erros++;
         errosDetalhes.push(`${produtoXML.nome}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -778,11 +961,13 @@ export default function Produtos() {
 
     const totalSucessos = criados + atualizados;
     
-    if (totalSucessos > 0) {
+    if (totalSucessos > 0 || fornecedoresCriadosCount > 0) {
       // Montar mensagem detalhada
       const partes: string[] = [];
-      if (criados > 0) partes.push(`${criados} novo(s)`);
-      if (atualizados > 0) partes.push(`${atualizados} atualizado(s) (estoque somado)`);
+      if (fornecedoresCriadosCount > 0) partes.push(`${fornecedoresCriadosCount} fornecedor(es) criado(s)`);
+      if (criados > 0) partes.push(`${criados} produto(s) novo(s)`);
+      if (atualizados > 0) partes.push(`${atualizados} produto(s) atualizado(s)`);
+      if (produtosVinculados > 0) partes.push(`${produtosVinculados} vinculado(s) a fornecedor`);
       if (erros > 0) partes.push(`${erros} erro(s)`);
       
       toast({
@@ -808,20 +993,22 @@ export default function Produtos() {
       setDadosNFesXML({});
       setXmlFileNames([]);
       setNfeExpandida(null);
-    }
-  };
+    setFornecedoresCriados({}); // Resetar mapa de fornecedores criados
+  }
+};
 
-  // Função para fechar o modal de importação
-  const fecharImportDialog = () => {
-    setShowImportDialog(false);
-    setProdutosXML([]);
-    setEmitentesXML({});
-    setDadosNFesXML({});
-    setXmlFileNames([]);
-    setXmlError(null);
-    setProdutoExpandido(null);
-    setNfeExpandida(null);
-  };
+// Função para fechar o modal de importação
+const fecharImportDialog = () => {
+  setShowImportDialog(false);
+  setProdutosXML([]);
+  setEmitentesXML({});
+  setDadosNFesXML({});
+  setXmlFileNames([]);
+  setXmlError(null);
+  setProdutoExpandido(null);
+  setNfeExpandida(null);
+  setFornecedoresCriados({}); // Resetar mapa de fornecedores criados
+};
 
   // Função para expandir/recolher detalhes do produto
   const toggleProdutoExpandido = (id: string) => {
@@ -1496,7 +1683,7 @@ export default function Produtos() {
 
       {/* Modal de Importação de XML */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
@@ -1518,108 +1705,119 @@ export default function Produtos() {
 
           {produtosXML.length > 0 && (
             <>
-              {/* Dados das NF-es e Fornecedores */}
-              <div className="space-y-2 pb-4 border-b max-h-[200px] overflow-y-auto">
-                {Object.entries(dadosNFesXML).map(([nfeId, dadosNFe]) => {
-                  const emitente = emitentesXML[nfeId];
-                  const produtosDaNfe = produtosXML.filter(p => p.nfeId === nfeId);
-                  const isExpanded = nfeExpandida === nfeId;
-                  
-                  return (
-                    <div key={nfeId} className="border rounded-lg">
-                      {/* Cabeçalho da NF-e - sempre visível */}
-                      <div 
-                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => setNfeExpandida(isExpanded ? null : nfeId)}
+              {/* Dados das NF-es e Fornecedores - Cards com rolagem horizontal */}
+              <div className="pb-3 border-b">
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                  {Object.entries(dadosNFesXML).map(([nfeId, dadosNFe]) => {
+                    const emitente = emitentesXML[nfeId];
+                    const produtosDaNfe = produtosXML.filter(p => p.nfeId === nfeId);
+                    
+                    return (
+                      <Card 
+                        key={nfeId} 
+                        className="flex-shrink-0 w-[280px] bg-gradient-card shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => setNfeExpandida(nfeExpandida === nfeId ? null : nfeId)}
                       >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-primary" />
-                          <div>
-                            <span className="font-medium text-sm">NF-e {dadosNFe.numero}</span>
-                            <span className="text-muted-foreground text-xs ml-2">Série {dadosNFe.serie}</span>
-                            <span className="text-muted-foreground text-xs ml-2">• {produtosDaNfe.length} produto(s)</span>
+                        <CardContent className="p-3 space-y-2">
+                          {/* Cabeçalho */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary" />
+                              <span className="font-semibold text-sm">NF-e {dadosNFe.numero}</span>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              Série {dadosNFe.serie}
+                            </Badge>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-primary text-sm">{formatarPreco(dadosNFe.valorTotal)}</span>
-                          <div className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                            <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Detalhes expandidos */}
-                      {isExpanded && (
-                        <div className="px-3 pb-3 pt-0 border-t bg-muted/10">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
-                            {/* Dados da NF-e */}
-                            <div className="space-y-1 text-xs">
-                              <p className="font-semibold text-muted-foreground uppercase text-[10px]">Dados da NF-e</p>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                <div>
-                                  <span className="text-muted-foreground">Emissão:</span>
-                                  <span className="ml-1 font-medium">{formatarDataXML(dadosNFe.dataEmissao)}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Natureza:</span>
-                                  <span className="ml-1 font-medium">{dadosNFe.naturezaOperacao || '-'}</span>
-                                </div>
-                              </div>
-                              {dadosNFe.chaveAcesso && (
-                                <div>
-                                  <span className="text-muted-foreground">Chave:</span>
-                                  <span className="ml-1 font-mono text-[10px] break-all">{dadosNFe.chaveAcesso}</span>
-                                </div>
-                              )}
+                          
+                          {/* Informações */}
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">{produtosDaNfe.length} produto(s)</span>
+                              <span className="font-semibold text-primary">{formatarPreco(dadosNFe.valorTotal)}</span>
                             </div>
                             
-                            {/* Dados do Fornecedor */}
                             {emitente && (
-                              <div className="space-y-1 text-xs">
-                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Fornecedor</p>
-                                <div className="font-medium">{emitente.razaoSocial}</div>
-                                <div>
-                                  <span className="text-muted-foreground">{emitente.cnpj ? 'CNPJ:' : 'CPF:'}</span>
-                                  <span className="ml-1 font-mono">
-                                    {emitente.cnpj ? formatarCNPJ(emitente.cnpj) : formatarCPF(emitente.cpf)}
-                                  </span>
-                                </div>
-                                {emitente.endereco.cidade && (
-                                  <div className="text-muted-foreground">
-                                    {emitente.endereco.cidade}/{emitente.endereco.uf}
-                                  </div>
-                                )}
+                              <div className="text-muted-foreground truncate" title={emitente.razaoSocial}>
+                                <Building2 className="h-3 w-3 inline mr-1" />
+                                {emitente.nomeFantasia || emitente.razaoSocial}
+                              </div>
+                            )}
+                            
+                            {emitente?.cnpj && (
+                              <div className="text-muted-foreground font-mono text-[10px]">
+                                CNPJ: {formatarCNPJ(emitente.cnpj)}
                               </div>
                             )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          
+                          {/* Detalhes expandidos */}
+                          {nfeExpandida === nfeId && (
+                            <div className="pt-2 border-t space-y-1 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">Emissão:</span>
+                                <span className="ml-1">{formatarDataXML(dadosNFe.dataEmissao)}</span>
+                              </div>
+                              {dadosNFe.naturezaOperacao && (
+                                <div>
+                                  <span className="text-muted-foreground">Natureza:</span>
+                                  <span className="ml-1">{dadosNFe.naturezaOperacao}</span>
+                                </div>
+                              )}
+                              {emitente?.endereco.cidade && (
+                                <div>
+                                  <span className="text-muted-foreground">Local:</span>
+                                  <span className="ml-1">{emitente.endereco.cidade}/{emitente.endereco.uf}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Controles de seleção */}
-              <div className="flex items-center justify-between py-2 border-b">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="selectAll"
-                    checked={produtosXML.every(p => p.selecionado)}
-                    onCheckedChange={toggleTodosSelecionados}
-                  />
-                  <Label htmlFor="selectAll" className="text-sm cursor-pointer">
-                    Selecionar todos
-                  </Label>
+              {/* Controles de seleção e opções */}
+              <div className="space-y-2 py-2 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="selectAll"
+                      checked={produtosXML.every(p => p.selecionado)}
+                      onCheckedChange={toggleTodosSelecionados}
+                    />
+                    <Label htmlFor="selectAll" className="text-sm cursor-pointer">
+                      Selecionar todos os produtos
+                    </Label>
+                  </div>
+                  <Badge variant="secondary">
+                    {produtosXML.filter(p => p.selecionado).length} de {produtosXML.length} selecionado(s)
+                  </Badge>
                 </div>
-                <Badge variant="secondary">
-                  {produtosXML.filter(p => p.selecionado).length} de {produtosXML.length} selecionado(s)
-                </Badge>
+                
+                {/* Opção de criar fornecedores */}
+                {Object.keys(emitentesXML).length > 0 && (
+                  <div className="flex items-center gap-2 pl-0.5">
+                    <Checkbox
+                      id="criarFornecedores"
+                      checked={criarFornecedores}
+                      onCheckedChange={(checked) => setCriarFornecedores(!!checked)}
+                    />
+                    <Label htmlFor="criarFornecedores" className="text-sm cursor-pointer flex items-center gap-1.5">
+                      <UserPlus className="h-3.5 w-3.5 text-primary" />
+                      Cadastrar fornecedores automaticamente
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-1">
+                        {Object.keys(emitentesXML).length} fornecedor(es)
+                      </Badge>
+                    </Label>
+                  </div>
+                )}
               </div>
 
               {/* Lista de produtos */}
-              <ScrollArea className="flex-1 min-h-[250px] max-h-[40vh]">
+              <ScrollArea className="flex-1 min-h-[200px] max-h-[50vh] overflow-auto">
                 <div className="space-y-2 pr-4">
                   {produtosXML.map((produto) => (
                     <div 
@@ -1807,57 +2005,58 @@ export default function Produtos() {
                 </div>
               </ScrollArea>
 
-              {/* Resumo */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t gap-2">
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>
-                    <strong>Total selecionado:</strong>{" "}
-                    <span className="text-primary font-semibold">
-                      {formatarPreco(
-                        produtosXML
-                          .filter(p => p.selecionado)
-                          .reduce((acc, p) => acc + p.valorTotal, 0)
-                      )}
-                    </span>
-                  </p>
-                  <p className="text-xs">
-                    Clique em um produto para ver os detalhes fiscais
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  <span>Os produtos serão criados com status "Ativo"</span>
-                </div>
-              </div>
             </>
           )}
 
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={fecharImportDialog}
-              disabled={importando}
-              className="w-full sm:w-auto"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={importarProdutosSelecionados}
-              disabled={importando || produtosXML.filter(p => p.selecionado).length === 0}
-              className="w-full sm:w-auto bg-gradient-primary text-white"
-            >
-              {importando ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Importando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Importar {produtosXML.filter(p => p.selecionado).length} Produto(s)
-                </>
-              )}
-            </Button>
+          <DialogFooter className="flex flex-row items-center justify-between pt-2 border-t gap-2">
+            {/* Resumo - lado esquerdo */}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <span>Total:</span>
+                <span className="text-primary font-semibold">
+                  {formatarPreco(
+                    produtosXML
+                      .filter(p => p.selecionado)
+                      .reduce((acc, p) => acc + p.valorTotal, 0)
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Package className="h-3 w-3" />
+                <span>Status: Ativo</span>
+              </div>
+            </div>
+            
+            {/* Botões - lado direito */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fecharImportDialog}
+                disabled={importando}
+                className="text-xs h-8"
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                onClick={importarProdutosSelecionados}
+                disabled={importando || produtosXML.filter(p => p.selecionado).length === 0}
+                className="bg-gradient-primary text-white text-xs h-8"
+              >
+                {importando ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-3 w-3 mr-1.5" />
+                    Importar {produtosXML.filter(p => p.selecionado).length} Produto(s)
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
