@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar"; 
 import { Header } from "./Header";
@@ -13,6 +13,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const sidebarStateBeforeVenda = useRef<boolean | null>(null); // Armazena estado do sidebar antes de entrar em páginas de venda
   const { user, logout, isAuthenticated, loading } = useAuth();
   const { operadorSelecionado } = useOperador();
   const { tenant } = useTenant();
@@ -25,6 +26,11 @@ export function AppLayout() {
   const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/novo-fornecedor/');
   const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
   const isConfiguracoesLayout = isConfiguracoesPage || isFornecedoresPage || isFuncionariosPage || isNovoFornecedorPage || isNovoFuncionarioPage;
+
+  // Verificar se estamos em páginas de venda (requerem sidebar colapsado para mais espaço)
+  const isNovaVendaPage = location.pathname === '/dashboard/nova-venda';
+  const isPagamentosPage = location.pathname === '/dashboard/pagamentos';
+  const isVendaPages = isNovaVendaPage || isPagamentosPage;
 
   // Fecha o sidebar quando a tela é redimensionada para desktop
   useEffect(() => {
@@ -41,6 +47,26 @@ export function AppLayout() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Colapsar sidebar automaticamente nas páginas de venda (em desktop)
+  // e restaurar o estado anterior ao sair dessas páginas
+  useEffect(() => {
+    if (window.innerWidth >= 1024) {
+      if (isVendaPages) {
+        // Salvar o estado atual do sidebar antes de colapsar (apenas se ainda não salvou)
+        if (sidebarStateBeforeVenda.current === null) {
+          sidebarStateBeforeVenda.current = isSidebarCollapsed;
+        }
+        setIsSidebarCollapsed(true);
+      } else {
+        // Restaurar o estado anterior ao sair das páginas de venda
+        if (sidebarStateBeforeVenda.current !== null) {
+          setIsSidebarCollapsed(sidebarStateBeforeVenda.current);
+          sidebarStateBeforeVenda.current = null; // Limpar o estado salvo
+        }
+      }
+    }
+  }, [isVendaPages]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
