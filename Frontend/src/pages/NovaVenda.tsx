@@ -86,6 +86,7 @@ export default function NovaVenda() {
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(vendaData?.clienteSelecionado || null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>(vendaData?.carrinho || []);
   const [codigoBarras, setCodigoBarras] = useState("");
+  const [buscandoAutomatico, setBuscandoAutomatico] = useState(false);
   const [desconto, setDesconto] = useState(vendaData?.desconto || "");
   const [modalClienteAberto, setModalClienteAberto] = useState(false);
   const [modalPesoVolumeAberto, setModalPesoVolumeAberto] = useState(false);
@@ -121,6 +122,111 @@ export default function NovaVenda() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Auto-focar no campo de código de barras quando não há movimento do mouse
+  useEffect(() => {
+    let mouseIdleTimer: NodeJS.Timeout | null = null;
+    const IDLE_TIME = 200; // 2 segundos sem movimento
+
+    const handleMouseMove = () => {
+      // Limpar timer anterior
+      if (mouseIdleTimer) {
+        clearTimeout(mouseIdleTimer);
+      }
+
+      // Iniciar novo timer
+      mouseIdleTimer = setTimeout(() => {
+        // Verificar se o campo não está focado
+        if (codigoBarrasRef.current && document.activeElement !== codigoBarrasRef.current) {
+          // Verificar se não há modal aberto ou outro input focado
+          const activeElement = document.activeElement;
+          const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+          
+          if (!isInputFocused) {
+            codigoBarrasRef.current.focus();
+          }
+        }
+      }, IDLE_TIME);
+    };
+
+    // Adicionar listener
+    document.addEventListener('mousemove', handleMouseMove);
+
+    // Iniciar timer imediatamente
+    handleMouseMove();
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      if (mouseIdleTimer) {
+        clearTimeout(mouseIdleTimer);
+      }
+    };
+  }, []);
+
+  // Busca automática quando o código de barras é digitado (scanner)
+  // Detecta quando a digitação para (típico de scanner) e busca automaticamente
+  useEffect(() => {
+    // Só buscar automaticamente se tiver código e não estiver buscando
+    if (!codigoBarras.trim() || buscandoAutomatico) return;
+
+    // Timer para detectar fim da digitação (300ms sem digitar = scanner terminou)
+    const searchTimer = setTimeout(() => {
+      // Verificar se parece ser um código de barras (só números e/ou letras, >= 4 caracteres)
+      const codigo = codigoBarras.trim();
+      const pareceCodigoBarras = /^[a-zA-Z0-9]+$/.test(codigo) && codigo.length >= 4;
+      
+      if (pareceCodigoBarras) {
+        setBuscandoAutomatico(true);
+        buscarPorCodigoBarrasAutomatico(codigo);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimer);
+  }, [codigoBarras]);
+
+  // Função de busca automática (separada para evitar loops)
+  const buscarPorCodigoBarrasAutomatico = async (codigo: string) => {
+    try {
+      // Buscar produto pelo código de barras nos produtos filtrados
+      const produto = produtosFiltrados.find(p => 
+        p.codigo_barras?.toLowerCase() === codigo.toLowerCase()
+      );
+      
+      if (produto) {
+        // Verificar se o produto está esgotado antes de adicionar
+        const estoqueAtual = obterEstoqueAtual(produto);
+        if (estoqueAtual === 0) {
+          toast({
+            title: "Produto sem estoque",
+            description: `${produto.nome} não está disponível para venda`,
+            variant: "destructive",
+          });
+          setCodigoBarras("");
+          setBuscandoAutomatico(false);
+          return;
+        }
+        
+        adicionarAoCarrinho(produto, 1);
+        setCodigoBarras("");
+        toast({
+          title: "Produto encontrado",
+          description: `${produto.nome} adicionado ao carrinho`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+        // Focar novamente no campo de código de barras
+        setTimeout(() => {
+          if (codigoBarrasRef.current) {
+            codigoBarrasRef.current.focus();
+          }
+        }, 100);
+      }
+      // Se não encontrar, não mostrar erro - deixar o usuário continuar digitando
+    } catch (error) {
+      console.error('Erro na busca automática:', error);
+    } finally {
+      setBuscandoAutomatico(false);
+    }
+  };
 
   const buscarPorCodigoBarras = async () => {
     if (!codigoBarras.trim()) return;

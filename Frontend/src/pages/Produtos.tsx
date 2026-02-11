@@ -679,9 +679,23 @@ export default function Produtos() {
   // Função para buscar fornecedor existente pelo CNPJ
   const buscarFornecedorPorCnpj = async (cnpj: string): Promise<number | null> => {
     try {
-      const response = await fornecedoresApi.list({ q: cnpj, limit: 1 });
-      if (response?.data && response.data.length > 0) {
-        return response.data[0].id;
+      // Buscar fornecedor pelo CNPJ exato
+      const response = await fornecedoresApi.list({ q: cnpj, limit: 100 });
+      
+      // A resposta pode vir em diferentes formatos
+      const fornecedores = response?.data || response?.fornecedores || response || [];
+      
+      if (Array.isArray(fornecedores) && fornecedores.length > 0) {
+        // Buscar o fornecedor com CNPJ exato (removendo formatação para comparar)
+        const cnpjLimpo = cnpj.replace(/\D/g, '');
+        const fornecedorExato = fornecedores.find((f: any) => {
+          const fornecedorCnpj = (f.cnpj || '').replace(/\D/g, '');
+          return fornecedorCnpj === cnpjLimpo;
+        });
+        
+        if (fornecedorExato) {
+          return fornecedorExato.id;
+        }
       }
       return null;
     } catch (error) {
@@ -706,6 +720,17 @@ export default function Produtos() {
     }
 
     try {
+      // PRIMEIRO: Verificar se o fornecedor já existe pelo CNPJ
+      if (emitente.cnpj) {
+        const cnpjLimpo = emitente.cnpj.replace(/\D/g, '');
+        const fornecedorExistenteId = await buscarFornecedorPorCnpj(cnpjLimpo);
+        if (fornecedorExistenteId) {
+          // Fornecedor já existe, salvar no mapa e retornar o ID
+          setFornecedoresCriados(prev => ({ ...prev, [documento]: fornecedorExistenteId }));
+          return fornecedorExistenteId;
+        }
+      }
+
       // Verificar se tem nome válido (mínimo 2 caracteres)
       const nomeOriginal = emitente.nomeFantasia || emitente.razaoSocial || '';
       if (nomeOriginal.trim().length < 2) {
@@ -780,7 +805,7 @@ export default function Produtos() {
         ? `Fornecedor cadastrado automaticamente via importação de NF-e ${dadosNFe.numero} em ${formatarDataXML(dadosNFe.dataEmissao)}`
         : 'Fornecedor cadastrado automaticamente via importação de XML';
 
-      // Tentar criar o fornecedor
+      // Tentar criar o fornecedor (só chega aqui se não existe)
       const response = await fornecedoresApi.create(dadosFornecedor);
       
       // Extrair ID do fornecedor criado
@@ -794,8 +819,8 @@ export default function Produtos() {
       
       return null;
     } catch (error: any) {
-      // Se o erro for de CNPJ duplicado, buscar o fornecedor existente
-      if (error.message?.includes('CNPJ já cadastrado') || error.message?.includes('duplicate') || error.message?.includes('409')) {
+      // Se ainda assim ocorrer erro 409, tentar buscar novamente
+      if (error.message?.includes('CNPJ já cadastrado') || error.message?.includes('duplicate') || error.message?.includes('409') || error.message?.includes('Conflict')) {
         // Buscar o fornecedor existente pelo CNPJ
         if (emitente.cnpj) {
           const cnpjLimpo = emitente.cnpj.replace(/\D/g, '');
