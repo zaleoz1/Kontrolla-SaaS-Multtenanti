@@ -55,7 +55,8 @@ import {
   FileText,
   X,
   Building2,
-  UserPlus
+  UserPlus,
+  Receipt
 } from "lucide-react";
 
 interface Produto {
@@ -85,6 +86,19 @@ interface Produto {
   destaque: boolean;
   data_criacao: string;
   data_atualizacao: string;
+  // Campos de impostos
+  ncm?: string;
+  cfop?: string;
+  cst?: string;
+  icms_aliquota?: number;
+  icms_origem?: string;
+  icms_situacao_tributaria?: string;
+  ipi_aliquota?: number;
+  ipi_codigo_enquadramento?: string;
+  pis_aliquota?: number;
+  pis_cst?: string;
+  cofins_aliquota?: number;
+  cofins_cst?: string;
 }
 
 interface Categoria {
@@ -177,6 +191,7 @@ export default function Produtos() {
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [filtroEstoque, setFiltroEstoque] = useState("");
+  const [filtroImpostos, setFiltroImpostos] = useState(""); // Filtro de impostos: '', 'com_impostos', 'sem_impostos'
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState<{id: number, nome: string} | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -1090,6 +1105,24 @@ const fecharImportDialog = () => {
     }
   };
 
+  // Verificar se o produto tem impostos cadastrados
+  const temImpostosCadastrados = (produto: Produto): boolean => {
+    return !!(
+      produto.ncm ||
+      produto.cfop ||
+      produto.cst ||
+      produto.icms_aliquota ||
+      produto.icms_origem ||
+      produto.icms_situacao_tributaria ||
+      produto.ipi_aliquota ||
+      produto.ipi_codigo_enquadramento ||
+      produto.pis_aliquota ||
+      produto.pis_cst ||
+      produto.cofins_aliquota ||
+      produto.cofins_cst
+    );
+  };
+
   const obterEstoqueAtual = (produto: Produto) => {
     // Priorizar estoque_atual calculado pelo backend
     if (produto.estoque_atual !== undefined && produto.estoque_atual !== null) {
@@ -1152,7 +1185,23 @@ const fecharImportDialog = () => {
     }
   };
 
-  const produtos = filtrarProdutosPorEstoque(todosProdutos);
+  // Filtrar produtos baseado no filtro de impostos
+  const filtrarProdutosPorImpostos = (produtos: Produto[]) => {
+    if (!filtroImpostos) return produtos;
+
+    switch (filtroImpostos) {
+      case 'com_impostos':
+        return produtos.filter(p => temImpostosCadastrados(p));
+      case 'sem_impostos':
+        return produtos.filter(p => !temImpostosCadastrados(p));
+      default:
+        return produtos;
+    }
+  };
+
+  // Aplicar todos os filtros
+  const produtosFiltradosEstoque = filtrarProdutosPorEstoque(todosProdutos);
+  const produtos = filtrarProdutosPorImpostos(produtosFiltradosEstoque);
 
   // Calcular métricas dos produtos (usando todos os produtos, não apenas os filtrados)
   const calcularMetricas = () => {
@@ -1367,6 +1416,15 @@ const fecharImportDialog = () => {
                 <option value="estoque_baixo">Estoque Baixo</option>
                 <option value="sem_estoque">Sem Estoque</option>
               </select>
+              <select
+                value={filtroImpostos}
+                onChange={(e) => setFiltroImpostos(e.target.value)}
+                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="">Todos os impostos</option>
+                <option value="com_impostos">Com impostos</option>
+                <option value="sem_impostos">Sem impostos</option>
+              </select>
               <Button 
                 variant="outline" 
                 onClick={carregarProdutos}
@@ -1394,7 +1452,7 @@ const fecharImportDialog = () => {
               />
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
               <select
                 value={filtroStatus}
                 onChange={(e) => setFiltroStatus(e.target.value)}
@@ -1427,6 +1485,15 @@ const fecharImportDialog = () => {
                 <option value="disponivel">Disponíveis</option>
                 <option value="estoque_baixo">Baixo</option>
                 <option value="sem_estoque">Sem Estoque</option>
+              </select>
+              <select
+                value={filtroImpostos}
+                onChange={(e) => setFiltroImpostos(e.target.value)}
+                className="px-2 py-2 border border-input bg-background rounded-md text-xs sm:text-sm"
+              >
+                <option value="">Impostos</option>
+                <option value="com_impostos">Com</option>
+                <option value="sem_impostos">Sem</option>
               </select>
             </div>
 
@@ -1499,7 +1566,7 @@ const fecharImportDialog = () => {
         <>
           <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {produtos.map((produto) => (
-            <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
+            <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
               <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
@@ -1509,7 +1576,7 @@ const fecharImportDialog = () => {
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-3 sm:space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 flex-1">
                 <div>
                   <h3 className="font-semibold text-base sm:text-lg line-clamp-2">{produto.nome}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">{produto.categoria_nome || 'Sem categoria'}</p>
@@ -1573,10 +1640,12 @@ const fecharImportDialog = () => {
                     </div>
                   )}
                 </div>
+              </CardContent>
 
-                {/* Ocultar botões de ação para vendedores */}
-                {(hasPermission('produtos_editar') || hasPermission('produtos_excluir')) && (
-                  <div className="flex space-x-2 pt-2">
+              {/* Footer fixo com botões de ação */}
+              {(hasPermission('produtos_editar') || hasPermission('produtos_excluir')) && (
+                <div className="p-4 pt-0 mt-auto">
+                  <div className="flex space-x-2 items-center border-t pt-3">
                     {hasPermission('produtos_editar') && (
                       <Button 
                         variant="outline" 
@@ -1604,9 +1673,18 @@ const fecharImportDialog = () => {
                         )}
                       </Button>
                     )}
+                    {/* Ícone de imposto - exibido se o produto tem impostos cadastrados */}
+                    {temImpostosCadastrados(produto) && (
+                      <div 
+                        className="p-1.5 rounded-md bg-green-500/10 border border-green-500/30"
+                        title="Produto com impostos cadastrados"
+                      >
+                        <Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </CardContent>
+                </div>
+              )}
             </Card>
           ))}
           </div>

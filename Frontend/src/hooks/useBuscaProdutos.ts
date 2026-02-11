@@ -17,7 +17,7 @@ export function useBuscaProdutos() {
     }
     
     try {
-      const response = await makeRequest(`${API_ENDPOINTS.CATALOG.PRODUCTS}?limit=100`, {
+      const response = await makeRequest(`${API_ENDPOINTS.CATALOG.PRODUCTS}?limit=10000`, {
         method: 'GET',
         body: undefined,
       });
