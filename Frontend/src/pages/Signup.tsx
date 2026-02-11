@@ -383,6 +383,8 @@ export default function Signup() {
       acceptMarketing: formData.acceptMarketing
     };
     
+    // TEMPORARIAMENTE DESABILITADO - Verificação de email no submit
+    /* 
     // Verificar se o email foi verificado no primeiro passo
     if (!formData.emailVerified) {
       toast({
@@ -393,6 +395,7 @@ export default function Signup() {
       setCurrentStep(1);
       return;
     }
+    */
 
     // Fazer o cadastro final
     setIsLoading(true);
@@ -521,6 +524,13 @@ export default function Signup() {
         return;
       }
 
+      // TEMPORARIAMENTE DESABILITADO - Verificação de email
+      // Apenas avança para o próximo passo sem verificar email
+      setFormData(prev => ({ ...prev, emailVerified: true }));
+      setCurrentStep(2);
+      return;
+
+      /* CÓDIGO DE VERIFICAÇÃO DE EMAIL COMENTADO TEMPORARIAMENTE
       // Enviar código de verificação
       setIsLoading(true);
       
@@ -553,6 +563,7 @@ export default function Signup() {
         });
         setIsLoading(false);
       }
+      FIM DO CÓDIGO COMENTADO */
     } else if (currentStep === 4) {
       // Validação no passo 4 (senhas)
       if (!formData.password || !formData.confirmPassword) {
@@ -1527,12 +1538,13 @@ export default function Signup() {
                               animate={{ rotate: 360 }}
                               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             />
-                            Enviando código...
+                            Carregando...
                           </div>
                         ) : currentStep === 1 ? (
                           <>
-                            Verificar Email
-                            <Mail className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            {/* TEMPORARIAMENTE: Botão mudado de "Verificar Email" para "Próximo" */}
+                            Próximo
+                            <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                           </>
                         ) : (
                           <>

@@ -136,6 +136,8 @@ interface DadosNFeXML {
 interface ProdutoXML {
   id: string; // ID temporário para controle
   selecionado: boolean;
+  nfeId: string; // ID da NF-e de origem
+  nfeNumero: string; // Número da NF-e para exibição
   codigo: string;
   codigoBarras: string;
   nome: string;
@@ -180,12 +182,13 @@ export default function Produtos() {
   // Estados para importação XML
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [produtosXML, setProdutosXML] = useState<ProdutoXML[]>([]);
-  const [emitenteXML, setEmitenteXML] = useState<EmitenteXML | null>(null);
-  const [dadosNFeXML, setDadosNFeXML] = useState<DadosNFeXML | null>(null);
+  const [emitentesXML, setEmitentesXML] = useState<{[key: string]: EmitenteXML}>({});
+  const [dadosNFesXML, setDadosNFesXML] = useState<{[key: string]: DadosNFeXML}>({});
   const [importando, setImportando] = useState(false);
-  const [xmlFileName, setXmlFileName] = useState("");
+  const [xmlFileNames, setXmlFileNames] = useState<string[]>([]);
   const [xmlError, setXmlError] = useState<string | null>(null);
   const [produtoExpandido, setProdutoExpandido] = useState<string | null>(null);
+  const [nfeExpandida, setNfeExpandida] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
@@ -217,7 +220,7 @@ export default function Produtos() {
   const carregarProdutos = async () => {
     try {
       const params: Record<string, any> = {
-        limit: 1000, // Limite máximo permitido pelo backend
+        limit: 10000, // Listar todos os produtos sem paginação
       };
 
       if (termoBusca) params.q = termoBusca;
@@ -370,8 +373,16 @@ export default function Produtos() {
     };
   };
 
+  // Interface para resultado do parse de XML
+  interface ParseXMLResult {
+    produtos: ProdutoXML[];
+    emitente: EmitenteXML | null;
+    dadosNFe: DadosNFeXML | null;
+    nfeId: string;
+  }
+
   // Função para processar o XML e extrair produtos
-  const parseXMLProdutos = (xmlString: string): ProdutoXML[] => {
+  const parseXMLProdutos = (xmlString: string, fileIndex: number): ParseXMLResult => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
     
@@ -385,8 +396,9 @@ export default function Produtos() {
     const emitente = parseEmitenteXML(xmlDoc);
     const dadosNFe = parseDadosNFeXML(xmlDoc);
     
-    setEmitenteXML(emitente);
-    setDadosNFeXML(dadosNFe);
+    // Criar ID único para esta NF-e
+    const nfeId = `nfe-${fileIndex}-${dadosNFe?.numero || Date.now()}`;
+    const nfeNumero = dadosNFe?.numero || `${fileIndex + 1}`;
 
     const produtos: ProdutoXML[] = [];
     
@@ -488,8 +500,10 @@ export default function Produtos() {
       }
 
       produtos.push({
-        id: `xml-${i}-${Date.now()}`,
+        id: `xml-${fileIndex}-${i}-${Date.now()}`,
         selecionado: true,
+        nfeId,
+        nfeNumero,
         codigo,
         codigoBarras: codigoBarras === "SEM GTIN" ? "" : codigoBarras,
         nome,
@@ -521,42 +535,89 @@ export default function Produtos() {
       });
     }
 
-    return produtos;
+    return { produtos, emitente, dadosNFe, nfeId };
   };
 
-  // Função para lidar com a seleção do arquivo XML
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Função para lidar com a seleção de múltiplos arquivos XML
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    // Verificar extensão
-    if (!file.name.toLowerCase().endsWith(".xml")) {
-      setXmlError("Por favor, selecione um arquivo XML válido.");
-      return;
+    // Verificar extensões
+    const arquivosInvalidos: string[] = [];
+    const arquivosValidos: File[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.name.toLowerCase().endsWith(".xml")) {
+        arquivosInvalidos.push(file.name);
+      } else {
+        arquivosValidos.push(file);
+      }
     }
 
-    setXmlFileName(file.name);
-    setXmlError(null);
+    if (arquivosInvalidos.length > 0) {
+      setXmlError(`Arquivos inválidos (não são XML): ${arquivosInvalidos.join(", ")}`);
+      if (arquivosValidos.length === 0) return;
+    } else {
+      setXmlError(null);
+    }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const xmlString = e.target?.result as string;
-        const produtos = parseXMLProdutos(xmlString);
-        setProdutosXML(produtos);
-        setShowImportDialog(true);
-      } catch (error) {
-        console.error("Erro ao processar XML:", error);
-        setXmlError(error instanceof Error ? error.message : "Erro ao processar o arquivo XML.");
-        setProdutosXML([]);
-      }
-    };
-    reader.onerror = () => {
-      setXmlError("Erro ao ler o arquivo. Tente novamente.");
-    };
-    reader.readAsText(file);
+    // Processar todos os arquivos válidos
+    const nomesArquivos: string[] = [];
+    const todosProdutos: ProdutoXML[] = [];
+    const todosEmitentes: {[key: string]: EmitenteXML} = {};
+    const todosDadosNFes: {[key: string]: DadosNFeXML} = {};
+    const errosProcessamento: string[] = [];
 
-    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    const processarArquivo = (file: File, index: number): Promise<void> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const xmlString = e.target?.result as string;
+            const resultado = parseXMLProdutos(xmlString, index);
+            
+            nomesArquivos.push(file.name);
+            todosProdutos.push(...resultado.produtos);
+            
+            if (resultado.emitente) {
+              todosEmitentes[resultado.nfeId] = resultado.emitente;
+            }
+            if (resultado.dadosNFe) {
+              todosDadosNFes[resultado.nfeId] = resultado.dadosNFe;
+            }
+          } catch (error) {
+            console.error(`Erro ao processar ${file.name}:`, error);
+            errosProcessamento.push(`${file.name}: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+          }
+          resolve();
+        };
+        reader.onerror = () => {
+          errosProcessamento.push(`${file.name}: Erro ao ler o arquivo`);
+          resolve();
+        };
+        reader.readAsText(file);
+      });
+    };
+
+    // Processar todos os arquivos em paralelo
+    await Promise.all(arquivosValidos.map((file, index) => processarArquivo(file, index)));
+
+    // Atualizar estados
+    if (todosProdutos.length > 0) {
+      setXmlFileNames(nomesArquivos);
+      setProdutosXML(todosProdutos);
+      setEmitentesXML(todosEmitentes);
+      setDadosNFesXML(todosDadosNFes);
+      setShowImportDialog(true);
+    }
+
+    if (errosProcessamento.length > 0) {
+      setXmlError(`Erros ao processar: ${errosProcessamento.join("; ")}`);
+    }
+
+    // Limpar input para permitir selecionar os mesmos arquivos novamente
     event.target.value = "";
   };
 
@@ -618,14 +679,16 @@ export default function Produtos() {
     for (const produtoXML of selecionados) {
       try {
         const tipoPreco = converterUnidade(produtoXML.unidade);
+        const emitenteDoXML = emitentesXML[produtoXML.nfeId];
+        const dadosNFeDoXML = dadosNFesXML[produtoXML.nfeId];
         
         // Preparar dados do produto mapeando EXATAMENTE para as colunas da tabela
         // IMPORTANTE: Não enviar campos opcionais como null, apenas omitir
         const dadosProduto: Record<string, any> = {
           // Dados básicos do produto
           nome: produtoXML.nome.substring(0, 255),
-          descricao: emitenteXML 
-            ? `[NF-e ${dadosNFeXML?.numero || ''} - ${formatarDataXML(dadosNFeXML?.dataEmissao || '')}] ${emitenteXML.razaoSocial}`
+          descricao: emitenteDoXML 
+            ? `[NF-e ${dadosNFeDoXML?.numero || ''} - ${formatarDataXML(dadosNFeDoXML?.dataEmissao || '')}] ${emitenteDoXML.razaoSocial}`
             : `Importado de NF-e - Código: ${produtoXML.codigo}`,
           
           // Preços
@@ -741,9 +804,10 @@ export default function Produtos() {
     if (erros === 0) {
       setShowImportDialog(false);
       setProdutosXML([]);
-      setEmitenteXML(null);
-      setDadosNFeXML(null);
-      setXmlFileName("");
+      setEmitentesXML({});
+      setDadosNFesXML({});
+      setXmlFileNames([]);
+      setNfeExpandida(null);
     }
   };
 
@@ -751,11 +815,12 @@ export default function Produtos() {
   const fecharImportDialog = () => {
     setShowImportDialog(false);
     setProdutosXML([]);
-    setEmitenteXML(null);
-    setDadosNFeXML(null);
-    setXmlFileName("");
+    setEmitentesXML({});
+    setDadosNFesXML({});
+    setXmlFileNames([]);
     setXmlError(null);
     setProdutoExpandido(null);
+    setNfeExpandida(null);
   };
 
   // Função para expandir/recolher detalhes do produto
@@ -944,7 +1009,7 @@ export default function Produtos() {
                 className="border-primary/50 hover:bg-primary/10"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar XML
+                Importar XML(s)
               </Button>
               <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-produto")}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -964,7 +1029,7 @@ export default function Produtos() {
                 onClick={abrirSeletorArquivo}
               >
                 <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span>Importar XML</span>
+                <span>Importar XML(s)</span>
               </Button>
               <Button 
                 className="flex-1 bg-gradient-primary text-white text-xs sm:text-sm" 
@@ -978,11 +1043,12 @@ export default function Produtos() {
         </div>
       </div>
 
-      {/* Input hidden para seleção de arquivo XML */}
+      {/* Input hidden para seleção de múltiplos arquivos XML */}
       <input
         ref={fileInputRef}
         type="file"
         accept=".xml"
+        multiple
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -1437,9 +1503,14 @@ export default function Produtos() {
               Importar Produtos do XML
             </DialogTitle>
             <DialogDescription>
-              {xmlFileName && (
+              {xmlFileNames.length > 0 && (
                 <span className="text-sm">
-                  Arquivo: <strong>{xmlFileName}</strong> - {produtosXML.length} produto(s) encontrado(s)
+                  {xmlFileNames.length === 1 ? (
+                    <>Arquivo: <strong>{xmlFileNames[0]}</strong></>
+                  ) : (
+                    <><strong>{xmlFileNames.length}</strong> arquivos selecionados</>
+                  )}
+                  {" - "}{produtosXML.length} produto(s) encontrado(s) em {Object.keys(dadosNFesXML).length} NF-e(s)
                 </span>
               )}
             </DialogDescription>
@@ -1447,104 +1518,87 @@ export default function Produtos() {
 
           {produtosXML.length > 0 && (
             <>
-              {/* Dados da NF-e e Fornecedor */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b">
-                {/* Dados da NF-e */}
-                {dadosNFeXML && (
-                  <Card className="bg-muted/30">
-                    <CardHeader className="pb-2 pt-3 px-4">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        Dados da NF-e
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-3 space-y-1">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Número:</span>
-                          <span className="ml-1 font-medium">{dadosNFeXML.numero || '-'}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Série:</span>
-                          <span className="ml-1 font-medium">{dadosNFeXML.serie || '-'}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Emissão:</span>
-                          <span className="ml-1 font-medium">{formatarDataXML(dadosNFeXML.dataEmissao)}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Natureza:</span>
-                          <span className="ml-1 font-medium">{dadosNFeXML.naturezaOperacao || '-'}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Valor Total:</span>
-                          <span className="ml-1 font-semibold text-primary">{formatarPreco(dadosNFeXML.valorTotal)}</span>
-                        </div>
-                        {dadosNFeXML.chaveAcesso && (
-                          <div className="col-span-2 mt-1">
-                            <span className="text-muted-foreground">Chave:</span>
-                            <span className="ml-1 font-mono text-[10px] break-all">{dadosNFeXML.chaveAcesso}</span>
+              {/* Dados das NF-es e Fornecedores */}
+              <div className="space-y-2 pb-4 border-b max-h-[200px] overflow-y-auto">
+                {Object.entries(dadosNFesXML).map(([nfeId, dadosNFe]) => {
+                  const emitente = emitentesXML[nfeId];
+                  const produtosDaNfe = produtosXML.filter(p => p.nfeId === nfeId);
+                  const isExpanded = nfeExpandida === nfeId;
+                  
+                  return (
+                    <div key={nfeId} className="border rounded-lg">
+                      {/* Cabeçalho da NF-e - sempre visível */}
+                      <div 
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => setNfeExpandida(isExpanded ? null : nfeId)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <div>
+                            <span className="font-medium text-sm">NF-e {dadosNFe.numero}</span>
+                            <span className="text-muted-foreground text-xs ml-2">Série {dadosNFe.serie}</span>
+                            <span className="text-muted-foreground text-xs ml-2">• {produtosDaNfe.length} produto(s)</span>
                           </div>
-                        )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-primary text-sm">{formatarPreco(dadosNFe.valorTotal)}</span>
+                          <div className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                            <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Dados do Fornecedor/Emitente */}
-                {emitenteXML && (
-                  <Card className="bg-muted/30">
-                    <CardHeader className="pb-2 pt-3 px-4">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Package className="h-4 w-4 text-primary" />
-                        Fornecedor / Emitente
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-3 space-y-1">
-                      <div className="space-y-1 text-xs">
-                        <div>
-                          <span className="font-semibold text-sm">{emitenteXML.razaoSocial}</span>
-                          {emitenteXML.nomeFantasia && emitenteXML.nomeFantasia !== emitenteXML.razaoSocial && (
-                            <span className="text-muted-foreground ml-1">({emitenteXML.nomeFantasia})</span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          <div>
-                            <span className="text-muted-foreground">
-                              {emitenteXML.cnpj ? 'CNPJ:' : 'CPF:'}
-                            </span>
-                            <span className="ml-1 font-mono">
-                              {emitenteXML.cnpj ? formatarCNPJ(emitenteXML.cnpj) : formatarCPF(emitenteXML.cpf)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">IE:</span>
-                            <span className="ml-1 font-mono">{emitenteXML.inscricaoEstadual || '-'}</span>
-                          </div>
-                        </div>
-                        {emitenteXML.endereco.logradouro && (
-                          <div className="pt-1">
-                            <span className="text-muted-foreground">Endereço:</span>
-                            <div className="text-xs">
-                              {emitenteXML.endereco.logradouro}, {emitenteXML.endereco.numero}
-                              {emitenteXML.endereco.bairro && ` - ${emitenteXML.endereco.bairro}`}
+                      
+                      {/* Detalhes expandidos */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 pt-0 border-t bg-muted/10">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                            {/* Dados da NF-e */}
+                            <div className="space-y-1 text-xs">
+                              <p className="font-semibold text-muted-foreground uppercase text-[10px]">Dados da NF-e</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                <div>
+                                  <span className="text-muted-foreground">Emissão:</span>
+                                  <span className="ml-1 font-medium">{formatarDataXML(dadosNFe.dataEmissao)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Natureza:</span>
+                                  <span className="ml-1 font-medium">{dadosNFe.naturezaOperacao || '-'}</span>
+                                </div>
+                              </div>
+                              {dadosNFe.chaveAcesso && (
+                                <div>
+                                  <span className="text-muted-foreground">Chave:</span>
+                                  <span className="ml-1 font-mono text-[10px] break-all">{dadosNFe.chaveAcesso}</span>
+                                </div>
+                              )}
                             </div>
-                            <div className="text-xs">
-                              {emitenteXML.endereco.cidade}/{emitenteXML.endereco.uf}
-                              {emitenteXML.endereco.cep && ` - CEP: ${formatarCEP(emitenteXML.endereco.cep)}`}
-                            </div>
+                            
+                            {/* Dados do Fornecedor */}
+                            {emitente && (
+                              <div className="space-y-1 text-xs">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Fornecedor</p>
+                                <div className="font-medium">{emitente.razaoSocial}</div>
+                                <div>
+                                  <span className="text-muted-foreground">{emitente.cnpj ? 'CNPJ:' : 'CPF:'}</span>
+                                  <span className="ml-1 font-mono">
+                                    {emitente.cnpj ? formatarCNPJ(emitente.cnpj) : formatarCPF(emitente.cpf)}
+                                  </span>
+                                </div>
+                                {emitente.endereco.cidade && (
+                                  <div className="text-muted-foreground">
+                                    {emitente.endereco.cidade}/{emitente.endereco.uf}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {emitenteXML.telefone && (
-                          <div>
-                            <span className="text-muted-foreground">Telefone:</span>
-                            <span className="ml-1">{emitenteXML.telefone}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Controles de seleção */}
@@ -1591,6 +1645,11 @@ export default function Produtos() {
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm line-clamp-1">{produto.nome}</p>
                               <div className="flex flex-wrap items-center gap-2 mt-1">
+                                {Object.keys(dadosNFesXML).length > 1 && (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary border-0">
+                                    NF-e {produto.nfeNumero}
+                                  </Badge>
+                                )}
                                 {produto.codigo && (
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                     Cód: {produto.codigo}
