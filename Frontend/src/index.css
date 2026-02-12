@@ -691,3 +691,73 @@
     padding-bottom: 10px;
   }
 }
+
+/* ================================== */
+/* OPTIMIZED CSS ANIMATIONS - GPU ACCELERATED */
+/* ================================== */
+
+/* Animação suave de bounce para elementos decorativos */
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0) translateZ(0);
+  }
+  50% {
+    transform: translateY(-8px) translateZ(0);
+  }
+}
+
+@keyframes bounce-slow-delayed {
+  0%, 100% {
+    transform: translateY(0) translateZ(0);
+  }
+  50% {
+    transform: translateY(8px) translateZ(0);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-bounce-slow-delayed {
+  animation: bounce-slow-delayed 3s ease-in-out infinite;
+  animation-delay: 1s;
+  will-change: transform;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* GPU acceleration hints for animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-bounce-slow,
+  .animate-bounce-slow-delayed,
+  .animate-pulse-slow {
+    animation: none;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

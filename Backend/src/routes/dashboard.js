@@ -85,8 +85,20 @@ router.get('/metricas', async (req, res) => {
       `SELECT 
         COUNT(*) as total_produtos,
         COUNT(CASE WHEN status = 'ativo' THEN 1 END) as produtos_ativos,
-        COUNT(CASE WHEN estoque <= estoque_minimo THEN 1 END) as estoque_baixo,
-        COUNT(CASE WHEN estoque = 0 THEN 1 END) as sem_estoque
+        COUNT(CASE WHEN 
+          status = 'ativo' AND (
+            (tipo_preco = 'unidade' AND estoque <= estoque_minimo AND estoque > 0) OR
+            (tipo_preco = 'kg' AND estoque_kg <= estoque_minimo_kg AND estoque_kg > 0) OR
+            (tipo_preco = 'litros' AND estoque_litros <= estoque_minimo_litros AND estoque_litros > 0)
+          )
+        THEN 1 END) as estoque_baixo,
+        COUNT(CASE WHEN 
+          status = 'ativo' AND (
+            (tipo_preco = 'unidade' AND estoque = 0) OR
+            (tipo_preco = 'kg' AND (estoque_kg = 0 OR estoque_kg IS NULL)) OR
+            (tipo_preco = 'litros' AND (estoque_litros = 0 OR estoque_litros IS NULL))
+          )
+        THEN 1 END) as sem_estoque
       FROM produtos 
       WHERE tenant_id = ?`,
       [req.user.tenant_id]
