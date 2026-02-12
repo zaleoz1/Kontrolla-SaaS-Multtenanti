@@ -28,6 +28,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setFullScreen: (fullscreen) => ipcRenderer.invoke('set-fullscreen', fullscreen),
   toggleFullScreen: () => ipcRenderer.invoke('toggle-fullscreen'),
   
+  // ============ IMPRESSÃO ============
+  // Obter lista de impressoras disponíveis
+  getPrinters: () => ipcRenderer.invoke('get-printers'),
+  
+  // Impressão silenciosa (direto na impressora padrão ou especificada)
+  printSilent: (options) => ipcRenderer.invoke('print-silent', options),
+  
+  // Impressão com diálogo (permite escolher impressora)
+  printDialog: (options) => ipcRenderer.invoke('print-dialog', options),
+  
+  // Gerar PDF da página atual
+  printToPDF: (options) => ipcRenderer.invoke('print-to-pdf', options),
+  
+  // Imprimir conteúdo HTML específico (para notas de venda)
+  printHTML: (html, options) => ipcRenderer.invoke('print-html', { html, options }),
+  
   // Utilitários
   platform: process.platform,
   isElectron: true
