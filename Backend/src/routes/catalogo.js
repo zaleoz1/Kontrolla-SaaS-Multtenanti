@@ -51,6 +51,9 @@ router.get('/produtos', validatePagination, validateSearch, handleValidationErro
         p.tipo_preco, p.estoque_kg, p.estoque_litros, p.estoque_minimo,
         p.estoque_minimo_kg, p.estoque_minimo_litros,
         p.imagens, p.destaque, p.codigo_barras, p.sku,
+        p.ncm, p.cfop, p.cst, p.icms_aliquota, p.icms_origem, p.icms_situacao_tributaria,
+        p.ipi_aliquota, p.ipi_codigo_enquadramento, p.pis_aliquota, p.pis_cst,
+        p.cofins_aliquota, p.cofins_cst,
         c.nome as categoria_nome,
         CASE 
           WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
