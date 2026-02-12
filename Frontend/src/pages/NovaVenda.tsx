@@ -107,7 +107,7 @@ export default function NovaVenda() {
   const [quantidadePesoVolume, setQuantidadePesoVolume] = useState("");
   const [unidadeEntrada, setUnidadeEntrada] = useState<'pequena' | 'grande'>('pequena'); // 'pequena' = g/mL, 'grande' = kg/L
   const [editandoItem, setEditandoItem] = useState<ItemCarrinho | null>(null);
-  const [filtroImpostos, setFiltroImpostos] = useState(""); // '', 'com_impostos', 'sem_impostos'
+  const [filtroImpostos, setFiltroImpostos] = useState("com_impostos"); // '', 'com_impostos', 'sem_impostos'
   
   // Ref para o campo de código de barras
   const codigoBarrasRef = useRef<HTMLInputElement>(null);
@@ -832,6 +832,12 @@ export default function NovaVenda() {
 
             {/* Grid de Produtos com Scroll Interno */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
+              {/* Contador de Produtos */}
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-xs text-muted-foreground">
+                  {produtosDisponiveis.length} {produtosDisponiveis.length === 1 ? 'produto' : 'produtos'}
+                </span>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
                 {produtosDisponiveis.length === 0 ? (
                   <div className="col-span-full text-center py-8 sm:py-12 text-muted-foreground">

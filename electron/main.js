@@ -137,7 +137,7 @@ function createMainWindow() {
     height: windowHeight,
     minWidth: 1024,
     minHeight: 600,
-    fullscreen: true, // Iniciar em tela cheia
+    fullscreen: false, // Não iniciar em tela cheia
     autoHideMenuBar: true, // Ocultar barra de menu por padrão
     webPreferences: {
       nodeIntegration: false,
@@ -187,6 +187,7 @@ function createMainWindow() {
 
   // Mostrar janela quando estiver pronta
   mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize(); // Maximizar a janela (não tela cheia)
     mainWindow.show();
     
     // Garantir que o ícone seja aplicado corretamente
@@ -640,6 +641,164 @@ app.on('web-contents-created', (event, contents) => {
 // IPC handler para status VPS (modo híbrido)
 ipcMain.handle('vps-health-check', async () => {
   return await checkVPSHealth();
+});
+
+// ============ HANDLERS DE IMPRESSÃO ============
+
+// Obter lista de impressoras disponíveis
+ipcMain.handle('get-printers', async () => {
+  try {
+    const printers = await mainWindow.webContents.getPrintersAsync();
+    console.log('🖨️ Impressoras disponíveis:', printers.map(p => p.name));
+    return printers;
+  } catch (error) {
+    console.error('❌ Erro ao obter impressoras:', error);
+    return [];
+  }
+});
+
+// Impressão silenciosa (direto na impressora padrão)
+ipcMain.handle('print-silent', async (event, options = {}) => {
+  try {
+    const printOptions = {
+      silent: true, // Impressão silenciosa (sem diálogo)
+      printBackground: true,
+      deviceName: options.printerName || '', // Impressora específica ou padrão
+      margins: options.margins || { marginType: 'none' },
+      pageSize: options.pageSize || 'A4',
+      landscape: options.landscape || false,
+      scaleFactor: options.scaleFactor || 100,
+      copies: options.copies || 1,
+      ...options
+    };
+
+    console.log('🖨️ Iniciando impressão silenciosa:', printOptions);
+
+    return new Promise((resolve, reject) => {
+      mainWindow.webContents.print(printOptions, (success, failureReason) => {
+        if (success) {
+          console.log('✅ Impressão realizada com sucesso');
+          resolve({ success: true });
+        } else {
+          console.error('❌ Falha na impressão:', failureReason);
+          resolve({ success: false, error: failureReason });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Erro na impressão:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Impressão com diálogo (permite escolher impressora)
+ipcMain.handle('print-dialog', async (event, options = {}) => {
+  try {
+    const printOptions = {
+      silent: false, // Mostrar diálogo de impressão
+      printBackground: true,
+      margins: options.margins || { marginType: 'none' },
+      pageSize: options.pageSize || 'A4',
+      landscape: options.landscape || false,
+      ...options
+    };
+
+    console.log('🖨️ Abrindo diálogo de impressão:', printOptions);
+
+    return new Promise((resolve, reject) => {
+      mainWindow.webContents.print(printOptions, (success, failureReason) => {
+        if (success) {
+          console.log('✅ Impressão realizada com sucesso');
+          resolve({ success: true });
+        } else {
+          console.error('❌ Falha na impressão:', failureReason);
+          resolve({ success: false, error: failureReason });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Erro na impressão:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Gerar PDF da página atual
+ipcMain.handle('print-to-pdf', async (event, options = {}) => {
+  try {
+    const pdfOptions = {
+      printBackground: true,
+      pageSize: options.pageSize || 'A4',
+      landscape: options.landscape || false,
+      margins: options.margins || { top: 0, bottom: 0, left: 0, right: 0 },
+      ...options
+    };
+
+    console.log('📄 Gerando PDF:', pdfOptions);
+
+    const pdfData = await mainWindow.webContents.printToPDF(pdfOptions);
+    
+    // Se um caminho foi fornecido, salvar o arquivo
+    if (options.savePath) {
+      fs.writeFileSync(options.savePath, pdfData);
+      console.log('✅ PDF salvo em:', options.savePath);
+      return { success: true, path: options.savePath };
+    }
+    
+    // Retornar o buffer em base64
+    return { success: true, data: pdfData.toString('base64') };
+  } catch (error) {
+    console.error('❌ Erro ao gerar PDF:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Imprimir conteúdo HTML específico (para notas de venda)
+ipcMain.handle('print-html', async (event, { html, options = {} }) => {
+  try {
+    // Criar uma janela oculta para impressão
+    const printWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    // Carregar o HTML
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+    const printOptions = {
+      silent: options.silent !== false, // Silencioso por padrão
+      printBackground: true,
+      deviceName: options.printerName || '',
+      margins: options.margins || { marginType: 'none' },
+      pageSize: options.pageSize || { width: 80000, height: 297000 }, // 80mm x 297mm para impressora térmica
+      landscape: false,
+      scaleFactor: options.scaleFactor || 100,
+      copies: options.copies || 1
+    };
+
+    console.log('🖨️ Imprimindo HTML:', printOptions);
+
+    return new Promise((resolve) => {
+      printWindow.webContents.print(printOptions, (success, failureReason) => {
+        printWindow.close();
+        
+        if (success) {
+          console.log('✅ Impressão de nota realizada com sucesso');
+          resolve({ success: true });
+        } else {
+          console.error('❌ Falha na impressão de nota:', failureReason);
+          resolve({ success: false, error: failureReason });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Erro ao imprimir HTML:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // Monitoramento periódico do VPS
