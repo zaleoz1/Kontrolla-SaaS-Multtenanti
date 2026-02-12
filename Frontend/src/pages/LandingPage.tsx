@@ -27,7 +27,6 @@ import {
   Award,
   ChevronRight,
   Play,
-  Quote,
   Menu,
   X,
   Building2,
@@ -65,13 +64,11 @@ export default function LandingPage() {
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
   const pricingRef = useRef(null);
-  const testimonialsRef = useRef(null);
   
   // Hooks de animação
   const heroInView = useInView(heroRef, { once: true, margin: "-100px" });
   const featuresInView = useInView(featuresRef, { once: true, margin: "-100px" });
   const pricingInView = useInView(pricingRef, { once: true, margin: "-100px" });
-  const testimonialsInView = useInView(testimonialsRef, { once: true, margin: "-100px" });
   
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
@@ -212,35 +209,6 @@ export default function LandingPage() {
     }
   ];
 
-  const testimonials = [
-    {
-      name: "João Silva",
-      company: "TechStore SP",
-      role: "CEO",
-      content: "O KontrollaPro revolucionou nossa gestão. Aumentamos significativamente nossas vendas! A IA para previsão de vendas é incrível.",
-      rating: 5,
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-      results: "Crescimento expressivo"
-    },
-    {
-      name: "Maria Santos",
-      company: "Eletrônicos Plus",
-      role: "Diretora Comercial",
-      content: "Interface intuitiva e relatórios que realmente ajudam na tomada de decisão. O tempo de setup foi surpreendentemente rápido.",
-      rating: 5,
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
-      results: "Setup rápido"
-    },
-    {
-      name: "Carlos Lima",
-      company: "Gadgets & Co",
-      role: "Fundador",
-      content: "O melhor investimento que fizemos. ROI rápido e eficiente! A integração com NF-e economizou horas de trabalho.",
-      rating: 5,
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-      results: "ROI rápido"
-    }
-  ];
 
   const stats = [
     { number: "100%", label: "Foco na Qualidade", icon: Building2 },
@@ -460,23 +428,9 @@ export default function LandingPage() {
           {/* Animated Grid */}
           <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
           
-          {/* Floating Elements */}
-          <motion.div
-            className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, 100, 0],
-              y: [0, -50, 0],
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-10 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, -100, 0],
-              y: [0, 50, 0],
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          />
+          {/* Floating Elements - Static for performance */}
+          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse-slow" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
@@ -500,16 +454,9 @@ export default function LandingPage() {
                 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight"
               >
                 A plataforma completa para
-                <motion.span 
-                  className="bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent block"
-                  animate={{ 
-                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] 
-                  }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  style={{ backgroundSize: "200% 200%" }}
-                >
+                <span className="bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent block">
                   gestão empresarial
-                </motion.span>
+                </span>
               </motion.h1>
               
               <motion.p 
@@ -597,22 +544,14 @@ export default function LandingPage() {
                 </div>
               </div>
               
-              {/* Floating Cards */}
-              <motion.div
-                className="absolute -top-4 -right-4 bg-green-500 text-white p-3 rounded-lg shadow-lg"
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
+              {/* Floating Cards - CSS animations for better performance */}
+              <div className="absolute -top-4 -right-4 bg-green-500 text-white p-3 rounded-lg shadow-lg animate-bounce-slow">
                 <TrendingUp className="h-6 w-6" />
-              </motion.div>
+              </div>
               
-              <motion.div
-                className="absolute -bottom-4 -left-4 bg-blue-500 text-white p-3 rounded-lg shadow-lg"
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-              >
+              <div className="absolute -bottom-4 -left-4 bg-blue-500 text-white p-3 rounded-lg shadow-lg animate-bounce-slow-delayed">
                 <Users className="h-6 w-6" />
-              </motion.div>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -659,13 +598,9 @@ export default function LandingPage() {
               >
                 <Card className="bg-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 h-full group-hover:border-green-200">
                   <CardContent className="p-6 text-center">
-                    <motion.div 
-                      className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-green-600 group-hover:to-green-700 transition-all duration-300"
-                      whileHover={{ rotate: 180 }}
-                      transition={{ duration: 0.8, ease: "easeInOut" }}
-                    >
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-green-600 group-hover:to-green-700 transition-all duration-300 group-hover:scale-110">
                       <stat.icon className="h-8 w-8 text-white" />
-                    </motion.div>
+                    </div>
                     
                     <motion.div 
                       className="text-3xl md:text-4xl font-bold text-slate-900 mb-2 group-hover:text-green-600 transition-colors duration-300"
@@ -768,13 +703,9 @@ export default function LandingPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                     </div>
                     
-                    <motion.div 
-                      className={`absolute top-4 right-4 w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center shadow-lg`}
-                      whileHover={{ rotate: 180, scale: 1.1 }}
-                      transition={{ duration: 0.8, ease: "easeInOut" }}
-                    >
+                    <div className={`absolute top-4 right-4 w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110`}>
                       <feature.icon className="h-6 w-6 text-white" />
-                    </motion.div>
+                    </div>
                   </div>
                   
                   <CardContent className="p-6">
@@ -826,13 +757,9 @@ export default function LandingPage() {
                     viewport={{ once: true }}
                     className="text-center group"
                   >
-                    <motion.div 
-                      className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-green-600 group-hover:to-green-700 transition-all duration-300"
-                      whileHover={{ rotate: 180, scale: 1.1 }}
-                      transition={{ duration: 0.8, ease: "easeInOut" }}
-                    >
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-green-600 group-hover:to-green-700 transition-all duration-300 group-hover:scale-110">
                       <benefit.icon className="h-8 w-8 text-white" />
-                    </motion.div>
+                    </div>
                     <h4 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-green-600 transition-colors duration-300">
                       {benefit.title}
                     </h4>
@@ -923,14 +850,14 @@ export default function LandingPage() {
                 {/* Popular Badge - Outside the card */}
                 {plan.popular && (
                   <motion.div 
-                    className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-20"
+                    className="absolute top-4 right-4 z-20"
                     initial={{ scale: 0, rotate: -90 }}
                     whileInView={{ scale: 1, rotate: 0 }}
                     transition={{ delay: index * 0.2 + 0.5, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
                     viewport={{ once: true }}
                   >
-                    <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 text-sm font-semibold shadow-lg">
-                      <Sparkles className="w-4 h-4 mr-1" />
+                    <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-1.5 text-xs font-semibold shadow-lg">
+                      <Sparkles className="w-3 h-3 mr-1" />
                       Mais Popular
                     </Badge>
                   </motion.div>
@@ -1108,167 +1035,6 @@ export default function LandingPage() {
         </div>
       </motion.section>
 
-      {/* Testimonials Section */}
-      <motion.section 
-        id="testimonials" 
-        ref={testimonialsRef}
-        className="py-24 bg-gradient-to-br from-slate-50 to-white relative overflow-hidden"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-20"
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <motion.div
-              className="inline-flex items-center px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-6"
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              <Star className="w-4 h-4 mr-2" />
-              Depoimentos Reais
-            </motion.div>
-            
-            <motion.h2 
-              className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              viewport={{ once: true }}
-            >
-              O que nossos clientes
-              <span className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent block">dizem</span>
-            </motion.h2>
-            <motion.p 
-              className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              viewport={{ once: true }}
-            >
-              Empresas de todos os tamanhos confiam no KontrollaPro para crescer seus negócios
-            </motion.p>
-          </motion.div>
-
-          <motion.div 
-            className="grid md:grid-cols-3 gap-8"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                whileHover={{ y: -8, scale: 1.02 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="group"
-              >
-                <Card className="bg-white border-0 shadow-xl hover:shadow-2xl transition-all duration-500 h-full overflow-hidden group-hover:border-green-200">
-                  <CardContent className="p-8 h-full flex flex-col">
-                    {/* Rating */}
-                    <motion.div 
-                      className="flex items-center mb-6"
-                      initial={{ opacity: 0, scale: 0 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 + 0.3, type: "spring", stiffness: 200 }}
-                      viewport={{ once: true }}
-                    >
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, scale: 0 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: index * 0.1 + i * 0.1 + 0.5, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-                          viewport={{ once: true }}
-                        >
-                          <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                    
-                    {/* Quote */}
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 + 0.4, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-                      viewport={{ once: true }}
-                    >
-                      <Quote className="h-8 w-8 text-green-500 mb-6" />
-                    </motion.div>
-                    
-                    {/* Content */}
-                    <motion.p 
-                      className="text-slate-600 mb-8 italic flex-grow text-lg leading-relaxed"
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 + 0.6 }}
-                      viewport={{ once: true }}
-                    >
-                      "{testimonial.content}"
-                    </motion.p>
-                    
-                    {/* Results Badge */}
-                    <motion.div 
-                      className="mb-6"
-                      initial={{ opacity: 0, scale: 0 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 + 0.7 }}
-                      viewport={{ once: true }}
-                    >
-                      <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 text-sm font-semibold">
-                        <TrendingUp className="w-4 h-4 mr-1" />
-                        {testimonial.results}
-                      </Badge>
-                    </motion.div>
-                    
-                    {/* Author */}
-                    <motion.div 
-                      className="flex items-center"
-                      initial={{ opacity: 0, x: -20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 + 0.8 }}
-                      viewport={{ once: true }}
-                    >
-                      <motion.div 
-                        className="h-14 w-14 rounded-full overflow-hidden mr-4 shadow-lg"
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <img 
-                          src={testimonial.avatar} 
-                          alt={testimonial.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </motion.div>
-                      <div>
-                        <div className="font-bold text-slate-900 group-hover:text-green-600 transition-colors duration-300 text-lg">
-                          {testimonial.name}
-                        </div>
-                        <div className="text-slate-600 font-medium">
-                          {testimonial.role}
-                        </div>
-                        <div className="text-sm text-slate-500">
-                          {testimonial.company}
-                        </div>
-                      </div>
-                    </motion.div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </motion.section>
 
       {/* CTA Section */}
       <motion.section 
@@ -1284,23 +1050,9 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&h=1080&fit=crop&crop=center')] bg-cover bg-center opacity-10" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90" />
           
-          {/* Floating Elements */}
-          <motion.div
-            className="absolute top-20 left-10 w-72 h-72 bg-green-500/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, 100, 0],
-              y: [0, -50, 0],
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, -100, 0],
-              y: [0, 50, 0],
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          />
+          {/* Floating Elements - Static for performance */}
+          <div className="absolute top-20 left-10 w-72 h-72 bg-green-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         </div>
         
         <div className="relative z-10 max-w-6xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -1426,17 +1178,14 @@ export default function LandingPage() {
                   { icon: Smartphone, href: "#", label: "Mobile" },
                   { icon: Headphones, href: "#", label: "Suporte" }
                 ].map((social, index) => (
-                  <motion.a 
+                  <a 
                     key={index}
                     href={social.href} 
-                    className="text-slate-400 hover:text-green-400 transition-colors p-2 rounded-lg hover:bg-white/5"
-                    whileHover={{ scale: 1.1, rotate: 2 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="text-slate-400 hover:text-green-400 transition-all duration-200 p-2 rounded-lg hover:bg-white/5 hover:scale-110 active:scale-95"
                     title={social.label}
                   >
                     <social.icon className="h-5 w-5" />
-                  </motion.a>
+                  </a>
                 ))}
               </div>
             </motion.div>
@@ -1537,25 +1286,12 @@ export default function LandingPage() {
       </motion.footer>
       
       {/* Botão Voltar ao Topo */}
-      <motion.button
-        className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-4 rounded-full shadow-2xl hover:shadow-green-500/25 transition-all duration-300 backdrop-blur-sm border border-green-400/20"
+      <button
+        className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-4 rounded-full shadow-2xl hover:shadow-green-500/25 transition-all duration-300 backdrop-blur-sm border border-green-400/20 hover:scale-110 active:scale-95"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ 
-          opacity: scrollYProgress.get() > 0.1 ? 1 : 0,
-          scale: scrollYProgress.get() > 0.1 ? 1 : 0
-        }}
-        whileHover={{ scale: 1.1, y: -2 }}
-        whileTap={{ scale: 0.9 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
       >
-        <motion.div
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <ArrowRight className="h-6 w-6 rotate-[-90deg]" />
-        </motion.div>
-      </motion.button>
+        <ArrowRight className="h-6 w-6 rotate-[-90deg]" />
+      </button>
     </div>
   );
 }
