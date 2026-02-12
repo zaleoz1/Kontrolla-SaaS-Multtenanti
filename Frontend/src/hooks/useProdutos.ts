@@ -30,6 +30,19 @@ export interface Produto {
   imagens: string[];
   data_criacao?: string;
   data_atualizacao?: string;
+  // Campos de impostos
+  ncm?: string;
+  cfop?: string;
+  cst?: string;
+  icms_aliquota?: number;
+  icms_origem?: string;
+  icms_situacao_tributaria?: string;
+  ipi_aliquota?: number;
+  ipi_codigo_enquadramento?: string;
+  pis_aliquota?: number;
+  pis_cst?: string;
+  cofins_aliquota?: number;
+  cofins_cst?: string;
 }
 
 interface Categoria {
