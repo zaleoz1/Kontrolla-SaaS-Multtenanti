@@ -260,18 +260,29 @@ router.get('/vendas-recentes', async (req, res) => {
             valor_original,
             valor_com_juros,
             data_vencimento, 
-            status
+            status,
+            CAST(valor AS DECIMAL(10,2)) as valor
            FROM contas_receber
            WHERE venda_id = ? AND descricao LIKE 'Pagamento a prazo%'
            ORDER BY id`,
           [venda.id]
         );
         
+        // Calcular saldo pendente para vendas a prazo
+        let saldoPendente = 0;
+        if (venda.status === 'pendente' && pagamentoPrazo.length > 0) {
+          // Somar valor de todas as parcelas pendentes
+          saldoPendente = pagamentoPrazo
+            .filter(p => p.status === 'pendente')
+            .reduce((sum, p) => sum + parseFloat(p.valor || 0), 0);
+        }
+        
         return {
           ...venda,
           itens,
           metodos_pagamento: metodosPagamento,
-          pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null
+          pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null,
+          saldo_pendente: saldoPendente
         };
       })
     );

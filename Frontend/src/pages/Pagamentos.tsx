@@ -652,271 +652,271 @@ export default function Pagamentos() {
     
     // Gerar o HTML da nota
     const htmlNota = `
-      <html>
-        <head>
-          <title>Nota de Venda #${vendaFinalizada?.numero_venda || ''}</title>
-          <style>
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
-          body { 
-            font-family: 'Courier New', monospace; 
-            margin: 0; 
-            padding: 5mm;
-            font-size: 12px;
-            line-height: 1.2;
-            width: 70mm;
-          }
-          .header { 
-            text-align: center; 
-            border-bottom: 1px solid #000; 
-            padding-bottom: 5px; 
-            margin-bottom: 10px; 
-          }
-          .loja-nome { 
-            font-size: 14px; 
-            font-weight: bold; 
-            margin-bottom: 3px;
-          }
-          .loja-info { 
-            font-size: 10px; 
-            margin-bottom: 5px; 
-          }
-          .venda-info { 
-            margin-bottom: 8px; 
-            font-size: 10px;
-          }
-          .cliente-info { 
-            margin-bottom: 8px; 
-            font-size: 10px;
-            border: 1px solid #000;
-            padding: 3px;
-          }
-          .itens { 
-            margin-bottom: 8px; 
-          }
-          .itens table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            font-size: 10px;
-          }
-          .itens th, .itens td { 
-            border: 1px solid #000; 
-            padding: 2px; 
-            text-align: left; 
-          }
-          .itens th { 
-            background-color: #f0f0f0; 
-            font-weight: bold;
-          }
-          .produto-nome { 
-            max-width: 30mm; 
-            word-wrap: break-word; 
-          }
-          .produto-qtd { 
-            width: 8mm; 
-            text-align: center; 
-          }
-          .produto-preco { 
-            width: 15mm; 
-            text-align: right; 
-          }
-          .produto-total { 
-            width: 15mm; 
-            text-align: right; 
-            font-weight: bold;
-          }
-          .totais { 
-            margin-top: 8px; 
-            font-size: 11px;
-          }
-          .totais table { 
-            width: 100%; 
-          }
-          .totais td { 
-            padding: 1px; 
-          }
-          .total-final { 
-            font-weight: bold; 
-            font-size: 13px; 
-            border-top: 1px solid #000; 
-            padding-top: 3px;
-          }
-          .footer { 
-            margin-top: 10px; 
-            text-align: center; 
-            font-size: 10px; 
-            border-top: 1px solid #000;
-            padding-top: 5px;
-          }
-          .separator { 
-            border-top: 1px dashed #000; 
-            margin: 5px 0; 
-          }
-          @media print { 
-            body { margin: 0; padding: 2mm; }
-            .no-print { display: none; }
-          }
-          </style>
-        </head>
-        <body>
-        <div class="header">
-          <div class="loja-nome">
-            ${tenant?.nome_fantasia || tenant?.nome || 'Kontrolla'}
-          </div>
-          <div class="loja-info">
-            ${tenant?.endereco ? `
-              <div>
-                ${tenant.endereco}
-                ${tenant.cidade ? ` - ${tenant.cidade}` : ''}
-                ${tenant.estado ? `/${tenant.estado}` : ''}
-                ${tenant.cep ? ` - ${tenant.cep}` : ''}
-              </div>
-            ` : ''}
-            ${tenant?.telefone ? `<div>Tel: ${tenant.telefone}</div>` : ''}
-            ${tenant?.email ? `<div>${tenant.email}</div>` : ''}
-            ${(tenant?.cnpj || tenant?.cpf) ? `
-              <div>
-                ${tenant.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}: ${tenant.cnpj || tenant.cpf}
-              </div>
-            ` : ''}
-            ${tenant?.inscricao_estadual ? `<div>IE: ${tenant.inscricao_estadual}</div>` : ''}
-          </div>
-        </div>
-
-        <div class="venda-info">
-          <div>Data: ${vendaFinalizada?.data_hora?.toLocaleDateString('pt-BR') || ''} ${vendaFinalizada?.data_hora?.toLocaleTimeString('pt-BR') || ''}</div>
-          <div>Venda: #${vendaFinalizada?.numero_venda || ''}</div>
-        </div>
-
-        ${vendaFinalizada?.cliente ? `
-          <div class="cliente-info">
-            <div><strong>CLIENTE:</strong></div>
-            <div>Nome: ${vendaFinalizada.cliente.nome}</div>
-            <div>CPF/CNPJ: ${vendaFinalizada.cliente.cpf_cnpj}</div>
-            ${vendaFinalizada.cliente.telefone ? `<div>Tel: ${vendaFinalizada.cliente.telefone}</div>` : ''}
-            ${vendaFinalizada.cliente.email ? `<div>Email: ${vendaFinalizada.cliente.email}</div>` : ''}
-          </div>
-        ` : ''}
-
-        <div class="itens">
-          <div><strong>ITENS:</strong></div>
-          <table>
-            <thead>
-              <tr>
-                <th class="produto-nome">Produto</th>
-                <th class="produto-qtd">Qtd</th>
-                <th class="produto-preco">Unit.</th>
-                <th class="produto-total">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${vendaFinalizada?.itens?.map((item: ItemCarrinho) => `
-                <tr>
-                  <td class="produto-nome">${item.produto.nome}</td>
-                  <td class="produto-qtd">${item.quantidade}</td>
-                  <td class="produto-preco">
-                    ${item.precoUnitario.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    })}
-                  </td>
-                  <td class="produto-total">
-                    ${item.precoTotal.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    })}
-                  </td>
-                </tr>
-              `).join('') || ''}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="totais">
-          <div class="separator"></div>
-          <div>Subtotal: ${vendaFinalizada?.subtotal?.toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-          }) || 'R$ 0,00'}</div>
-          
-          ${vendaFinalizada?.desconto > 0 ? `
-            <div>Desconto: -${vendaFinalizada.desconto.toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL'
-            })}</div>
-          ` : ''}
-
-          ${vendaFinalizada?.metodos_pagamento?.map((metodo: any) => {
-            const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
-            const valorMetodo = parseFloat(metodo.valor || 0);
-            const parcelas = metodo.parcelas || 1;
-            const taxaParcela = metodo.taxaParcela || 0;
-            
-            // Calcular valor com juros se houver taxa
-            const valorComJuros = taxaParcela > 0 ? valorMetodo * (1 + taxaParcela / 100) : valorMetodo;
-            const valorParcela = valorComJuros / parcelas;
-            
-            let metodoInfo = `
-              <div>
-                ${metodoDisponivel?.nome || metodo.metodo?.replace('_', ' ').toUpperCase()}: ${valorComJuros.toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                })}
-            `;
-            
-            // Se for cartão de crédito com parcelas, mostrar detalhes
-            if (metodo.metodo === 'cartao_credito' && parcelas > 1) {
-              metodoInfo += `
-                <div style="margin-left: 10px; font-size: 10px;">
-                  ${parcelas}x de ${valorParcela.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                  })}
-                </div>
-              `;
+        <html>
+          <head>
+            <title>Nota de Venda #${vendaFinalizada?.numero_venda || ''}</title>
+            <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
             }
-            
-            metodoInfo += `</div>`;
-            return metodoInfo;
-          }).join('') || ''}
+            body { 
+              font-family: 'Courier New', monospace; 
+              margin: 0; 
+              padding: 5mm;
+              font-size: 12px;
+              line-height: 1.2;
+              width: 70mm;
+            }
+            .header { 
+              text-align: center; 
+              border-bottom: 1px solid #000; 
+              padding-bottom: 5px; 
+              margin-bottom: 10px; 
+            }
+            .loja-nome { 
+              font-size: 14px; 
+              font-weight: bold; 
+              margin-bottom: 3px;
+            }
+            .loja-info { 
+              font-size: 10px; 
+              margin-bottom: 5px; 
+            }
+            .venda-info { 
+              margin-bottom: 8px; 
+              font-size: 10px;
+            }
+            .cliente-info { 
+              margin-bottom: 8px; 
+              font-size: 10px;
+              border: 1px solid #000;
+              padding: 3px;
+            }
+            .itens { 
+              margin-bottom: 8px; 
+            }
+            .itens table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              font-size: 10px;
+            }
+            .itens th, .itens td { 
+              border: 1px solid #000; 
+              padding: 2px; 
+              text-align: left; 
+            }
+            .itens th { 
+              background-color: #f0f0f0; 
+              font-weight: bold;
+            }
+            .produto-nome { 
+              max-width: 30mm; 
+              word-wrap: break-word; 
+            }
+            .produto-qtd { 
+              width: 8mm; 
+              text-align: center; 
+            }
+            .produto-preco { 
+              width: 15mm; 
+              text-align: right; 
+            }
+            .produto-total { 
+              width: 15mm; 
+              text-align: right; 
+              font-weight: bold;
+            }
+            .totais { 
+              margin-top: 8px; 
+              font-size: 11px;
+            }
+            .totais table { 
+              width: 100%; 
+            }
+            .totais td { 
+              padding: 1px; 
+            }
+            .total-final { 
+              font-weight: bold; 
+              font-size: 13px; 
+              border-top: 1px solid #000; 
+              padding-top: 3px;
+            }
+            .footer { 
+              margin-top: 10px; 
+              text-align: center; 
+              font-size: 10px; 
+              border-top: 1px solid #000;
+              padding-top: 5px;
+            }
+            .separator { 
+              border-top: 1px dashed #000; 
+              margin: 5px 0; 
+            }
+            @media print { 
+              body { margin: 0; padding: 2mm; }
+              .no-print { display: none; }
+            }
+            </style>
+          </head>
+          <body>
+          <div class="header">
+            <div class="loja-nome">
+              ${tenant?.nome_fantasia || tenant?.nome || 'Kontrolla'}
+            </div>
+            <div class="loja-info">
+              ${tenant?.endereco ? `
+                <div>
+                  ${tenant.endereco}
+                  ${tenant.cidade ? ` - ${tenant.cidade}` : ''}
+                  ${tenant.estado ? `/${tenant.estado}` : ''}
+                  ${tenant.cep ? ` - ${tenant.cep}` : ''}
+                </div>
+              ` : ''}
+              ${tenant?.telefone ? `<div>Tel: ${tenant.telefone}</div>` : ''}
+              ${tenant?.email ? `<div>${tenant.email}</div>` : ''}
+              ${(tenant?.cnpj || tenant?.cpf) ? `
+                <div>
+                  ${tenant.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}: ${tenant.cnpj || tenant.cpf}
+                </div>
+              ` : ''}
+              ${tenant?.inscricao_estadual ? `<div>IE: ${tenant.inscricao_estadual}</div>` : ''}
+            </div>
+          </div>
 
-          ${vendaFinalizada?.pagamento_prazo ? `
-            <div>
-              <div><strong>Valor a Prazo: ${vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              })}</strong></div>
-              <div>Juros (${vendaFinalizada.pagamento_prazo.juros}%): +${(vendaFinalizada.pagamento_prazo.valorComJuros - (vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total)).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              })}</div>
-              <div>Vencimento: ${new Date(vendaFinalizada.pagamento_prazo.dataVencimento).toLocaleDateString('pt-BR')}</div>
+          <div class="venda-info">
+            <div>Data: ${vendaFinalizada?.data_hora?.toLocaleDateString('pt-BR') || ''} ${vendaFinalizada?.data_hora?.toLocaleTimeString('pt-BR') || ''}</div>
+            <div>Venda: #${vendaFinalizada?.numero_venda || ''}</div>
+          </div>
+
+          ${vendaFinalizada?.cliente ? `
+            <div class="cliente-info">
+              <div><strong>CLIENTE:</strong></div>
+              <div>Nome: ${vendaFinalizada.cliente.nome}</div>
+              <div>CPF/CNPJ: ${vendaFinalizada.cliente.cpf_cnpj}</div>
+              ${vendaFinalizada.cliente.telefone ? `<div>Tel: ${vendaFinalizada.cliente.telefone}</div>` : ''}
+              ${vendaFinalizada.cliente.email ? `<div>Email: ${vendaFinalizada.cliente.email}</div>` : ''}
             </div>
           ` : ''}
 
-          <div class="separator"></div>
-          <div class="total-final">
-            TOTAL: ${vendaFinalizada?.pagamento_prazo ? 
-              vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }) : 
-              vendaFinalizada?.total?.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }) || 'R$ 0,00'
-            }
+          <div class="itens">
+            <div><strong>ITENS:</strong></div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="produto-nome">Produto</th>
+                  <th class="produto-qtd">Qtd</th>
+                  <th class="produto-preco">Unit.</th>
+                  <th class="produto-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vendaFinalizada?.itens?.map((item: ItemCarrinho) => `
+                  <tr>
+                    <td class="produto-nome">${item.produto.nome}</td>
+                    <td class="produto-qtd">${item.quantidade}</td>
+                    <td class="produto-preco">
+                      ${item.precoUnitario.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </td>
+                    <td class="produto-total">
+                      ${item.precoTotal.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </td>
+                  </tr>
+                `).join('') || ''}
+              </tbody>
+            </table>
           </div>
-        </div>
 
-        <div class="footer">
-          <div>Obrigado pela sua compra!</div>
-          <div>Volte sempre!</div>
-        </div>
-        </body>
-      </html>
+          <div class="totais">
+            <div class="separator"></div>
+            <div>Subtotal: ${vendaFinalizada?.subtotal?.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL'
+            }) || 'R$ 0,00'}</div>
+            
+            ${vendaFinalizada?.desconto > 0 ? `
+              <div>Desconto: -${vendaFinalizada.desconto.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              })}</div>
+            ` : ''}
+
+            ${vendaFinalizada?.metodos_pagamento?.map((metodo: any) => {
+              const metodoDisponivel = metodosDisponiveis.find(m => m.tipo === metodo.metodo);
+              const valorMetodo = parseFloat(metodo.valor || 0);
+              const parcelas = metodo.parcelas || 1;
+              const taxaParcela = metodo.taxaParcela || 0;
+              
+              // Calcular valor com juros se houver taxa
+              const valorComJuros = taxaParcela > 0 ? valorMetodo * (1 + taxaParcela / 100) : valorMetodo;
+              const valorParcela = valorComJuros / parcelas;
+              
+              let metodoInfo = `
+                <div>
+                  ${metodoDisponivel?.nome || metodo.metodo?.replace('_', ' ').toUpperCase()}: ${valorComJuros.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}
+              `;
+              
+              // Se for cartão de crédito com parcelas, mostrar detalhes
+              if (metodo.metodo === 'cartao_credito' && parcelas > 1) {
+                metodoInfo += `
+                  <div style="margin-left: 10px; font-size: 10px;">
+                    ${parcelas}x de ${valorParcela.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}
+                  </div>
+                `;
+              }
+              
+              metodoInfo += `</div>`;
+              return metodoInfo;
+            }).join('') || ''}
+
+            ${vendaFinalizada?.pagamento_prazo ? `
+              <div>
+                <div><strong>Valor a Prazo: ${vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                })}</strong></div>
+                <div>Juros (${vendaFinalizada.pagamento_prazo.juros}%): +${(vendaFinalizada.pagamento_prazo.valorComJuros - (vendaFinalizada.pagamento_prazo.valorOriginal || vendaFinalizada.total)).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                })}</div>
+                <div>Vencimento: ${new Date(vendaFinalizada.pagamento_prazo.dataVencimento).toLocaleDateString('pt-BR')}</div>
+              </div>
+            ` : ''}
+
+            <div class="separator"></div>
+            <div class="total-final">
+              TOTAL: ${vendaFinalizada?.pagamento_prazo ? 
+                vendaFinalizada.pagamento_prazo.valorComJuros.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }) : 
+                vendaFinalizada?.total?.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }) || 'R$ 0,00'
+              }
+            </div>
+          </div>
+
+          <div class="footer">
+            <div>Obrigado pela sua compra!</div>
+            <div>Volte sempre!</div>
+          </div>
+          </body>
+        </html>
     `;
 
     // Verificar se está no Electron e usar API de impressão nativa

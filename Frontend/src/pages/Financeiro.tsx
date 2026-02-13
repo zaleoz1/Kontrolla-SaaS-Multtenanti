@@ -937,35 +937,37 @@ export default function Financeiro() {
     <div className="space-y-6 w-full max-w-full overflow-x-hidden prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
       <div className="w-full">
-        {/* Título e Descrição - Sempre no topo */}
-        <div className="mb-4 md:mb-0">
-          <h1 className="text-2xl sm:text-3xl font-bold">Financeiro</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Controle financeiro e fluxo de caixa
-          </p>
-        </div>
+        {/* Título, Descrição e Ações - Layout responsivo */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Financeiro</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Controle financeiro e fluxo de caixa
+            </p>
+          </div>
 
-        {/* Filtros e Ações - Desktop */}
-        <div className="hidden md:flex items-center space-x-2 justify-end">
-          <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hoje">Hoje</SelectItem>
-              <SelectItem value="semana">Esta Semana</SelectItem>
-              <SelectItem value="mes">Este Mês</SelectItem>
-              <SelectItem value="ano">Este Ano</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={recarregarDados} disabled={loadingStats}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/nova-transacao")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Transação
-          </Button>
+          {/* Filtros e Ações - Desktop */}
+          <div className="hidden md:flex items-center space-x-2">
+            <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hoje">Hoje</SelectItem>
+                <SelectItem value="semana">Esta Semana</SelectItem>
+                <SelectItem value="mes">Este Mês</SelectItem>
+                <SelectItem value="ano">Este Ano</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={recarregarDados} disabled={loadingStats}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/nova-transacao")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Transação
+            </Button>
+          </div>
         </div>
 
         {/* Filtros e Ações - Mobile */}
@@ -2915,17 +2917,19 @@ export default function Financeiro() {
                 onChange={(e) => setDadosEdicao(prev => ({ ...prev, data_vencimento: e.target.value }))}
                 className="text-sm"
               />
-            </div>
-
-            {/* Observações */}
-            <div className="space-y-2">
-              <Label className="text-xs sm:text-sm">Observações</Label>
-              <Textarea 
-                value={dadosEdicao.observacoes || ''}
-                onChange={(e) => setDadosEdicao(prev => ({ ...prev, observacoes: e.target.value }))}
-                placeholder="Observações adicionais..."
-                className="text-sm min-h-[60px]"
-              />
+              {dadosEdicao.data_vencimento && (() => {
+                const dias = calcularDiasVencimento(dadosEdicao.data_vencimento);
+                return (
+                  <p className={`text-xs font-medium ${
+                    dias > 7 ? 'text-blue-600' : 
+                    dias > 0 ? 'text-orange-600' : 
+                    dias === 0 ? 'text-orange-600' : 
+                    'text-destructive'
+                  }`}>
+                    {obterTextoDias(dias)}
+                  </p>
+                );
+              })()}
             </div>
 
             {/* Botões de ação */}
