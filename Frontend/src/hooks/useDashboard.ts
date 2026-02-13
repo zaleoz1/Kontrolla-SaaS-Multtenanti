@@ -62,6 +62,7 @@ export interface VendaRecente {
   vendedor_nome?: string;
   metodos_pagamento?: MetodoPagamento[];
   pagamento_prazo?: PagamentoPrazo;
+  saldo_pendente?: number;
 }
 
 export interface ProdutoEstoqueBaixo {

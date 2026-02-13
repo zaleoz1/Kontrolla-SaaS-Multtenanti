@@ -470,7 +470,11 @@ export default function Dashboard() {
                                venda.status === 'pendente' ? 'Pendente' : 
                                venda.status.charAt(0).toUpperCase() + venda.status.slice(1)}
                             </Badge>
-                            <p className="font-semibold text-xs whitespace-nowrap">{formatCurrency(venda.total)}</p>
+                            <p className="font-semibold text-xs whitespace-nowrap">
+                              {venda.status === 'pendente' && venda.saldo_pendente && venda.saldo_pendente > 0
+                                ? formatCurrency(venda.saldo_pendente)
+                                : formatCurrency(venda.total)}
+                            </p>
                           </div>
                         </div>
                         {index < arr.length - 1 && (
