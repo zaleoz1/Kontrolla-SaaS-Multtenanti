@@ -264,7 +264,7 @@ export default function Fornecedores() {
           ) : (
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {fornecedoresFiltrados.map((fornecedor) => (
-                <Card key={fornecedor.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
+                <Card key={fornecedor.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
                   <CardHeader className="pb-2 sm:pb-3">
                     <div className="flex items-center justify-between">
                       <div className="p-1 sm:p-1.5 rounded-lg bg-primary/10">
@@ -282,7 +282,7 @@ export default function Fornecedores() {
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="space-y-2 sm:space-y-3">
+                  <CardContent className="space-y-2 sm:space-y-3 flex-1">
                     <div>
                       <h3 className="font-semibold text-sm sm:text-base lg:text-lg line-clamp-2 flex items-center space-x-2">
                         <span className="truncate">{fornecedor.nome}</span>
@@ -348,29 +348,30 @@ export default function Fornecedores() {
                         </p>
                       </div>
                     )}
-
-                    <div className="flex space-x-1 sm:space-x-1.5 pt-1 sm:pt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 text-xs h-7 sm:h-8"
-                        onClick={() => handleEditarFornecedor(fornecedor)}
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">Editar</span>
-                        <span className="sm:hidden">Ed.</span>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="px-2 h-7 sm:h-8"
-                        onClick={() => handleExcluirFornecedor(fornecedor.id!)}
-                        disabled={carregandoFornecedores}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
                   </CardContent>
+
+                  {/* Botões de ação fixos no footer */}
+                  <div className="flex space-x-1 sm:space-x-1.5 px-6 pb-6 pt-2 mt-auto border-t border-border/50">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 text-xs h-7 sm:h-8"
+                      onClick={() => handleEditarFornecedor(fornecedor)}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Editar</span>
+                      <span className="sm:hidden">Ed.</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="px-2 h-7 sm:h-8"
+                      onClick={() => handleExcluirFornecedor(fornecedor.id!)}
+                      disabled={carregandoFornecedores}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>

@@ -43,7 +43,8 @@ import {
   File,
   Image,
   Trash2,
-  Loader2
+  Loader2,
+  Edit
 } from "lucide-react";
 import { useTransacoes } from "@/hooks/useTransacoes";
 import { useContasReceber } from "@/hooks/useContasReceber";
@@ -118,6 +119,18 @@ export default function Financeiro() {
   const [tipoOperacao, setTipoOperacao] = useState<'pagar' | 'receber'>('pagar');
   const [tipoModalPagamento, setTipoModalPagamento] = useState<'pagamento' | 'adiantamento'>('pagamento');
   const [editandoValorRecebimento, setEditandoValorRecebimento] = useState(false);
+  
+  // Estados para modal de edição de contas
+  const [modalEdicao, setModalEdicao] = useState(false);
+  const [contaEmEdicao, setContaEmEdicao] = useState<any>(null);
+  const [tipoEdicao, setTipoEdicao] = useState<'receber' | 'pagar'>('receber');
+  const [dadosEdicao, setDadosEdicao] = useState({
+    descricao: '',
+    valor: '',
+    data_vencimento: '',
+    observacoes: ''
+  });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [valorEditadoRecebimento, setValorEditadoRecebimento] = useState(0);
   const [valorOriginalRecebimento, setValorOriginalRecebimento] = useState(0);
   const [uploadingAnexos, setUploadingAnexos] = useState(false);
@@ -488,6 +501,61 @@ export default function Financeiro() {
   // Função para formatar data
   const formatarData = (data: string) => {
     return new Date(data).toLocaleDateString("pt-BR");
+  };
+
+  // Função para abrir modal de edição
+  const abrirModalEdicao = (conta: any, tipo: 'receber' | 'pagar') => {
+    setContaEmEdicao(conta);
+    setTipoEdicao(tipo);
+    
+    // Extrair data de vencimento de forma segura
+    let dataVencimento = '';
+    if (conta.data_vencimento) {
+      const data = String(conta.data_vencimento);
+      dataVencimento = data.includes('T') ? data.split('T')[0] : data.substring(0, 10);
+    }
+    
+    setDadosEdicao({
+      descricao: conta.descricao ?? '',
+      valor: conta.valor != null ? String(conta.valor) : '',
+      data_vencimento: dataVencimento,
+      observacoes: conta.observacoes ?? ''
+    });
+    setModalEdicao(true);
+  };
+
+  // Função para salvar edição da conta
+  const salvarEdicaoConta = async () => {
+    if (!contaEmEdicao) return;
+    
+    setSalvandoEdicao(true);
+    try {
+      const endpoint = tipoEdicao === 'receber' 
+        ? `/financeiro/contas-receber/${contaEmEdicao.id}`
+        : `/financeiro/contas-pagar/${contaEmEdicao.id}`;
+      
+      await api.put(endpoint, {
+        descricao: dadosEdicao.descricao,
+        valor: parseFloat(dadosEdicao.valor) || contaEmEdicao.valor,
+        data_vencimento: dadosEdicao.data_vencimento,
+        observacoes: dadosEdicao.observacoes,
+        tipo_origem: contaEmEdicao.tipo_origem || 'conta_receber'
+      });
+      
+      // Recarregar dados
+      if (tipoEdicao === 'receber') {
+        buscarContasReceber();
+      } else {
+        buscarContasPagar();
+      }
+      
+      setModalEdicao(false);
+      setContaEmEdicao(null);
+    } catch (error) {
+      console.error('Erro ao salvar edição:', error);
+    } finally {
+      setSalvandoEdicao(false);
+    }
   };
 
   // Função para abrir modal de pagamento
@@ -1263,41 +1331,76 @@ export default function Financeiro() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {contasReceberFiltradas.map((item) => {
                     const dias = calcularDiasVencimento(item.data_vencimento);
                     return (
-                      <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-sm sm:text-base truncate">{item.cliente_nome || 'Cliente não informado'}</p>
-                            {obterBadgeStatus(item.status, dias)}
-                            {item.tipo_origem === 'venda' && (
-                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                                Venda
-                              </Badge>
-                            )}
-                            {item.tipo_origem === 'transacao_entrada' && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                                Transação
-                              </Badge>
-                            )}
+                      <Card key={item.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+                        <CardHeader className="pb-2 sm:pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="p-1.5 sm:p-2 rounded-lg bg-green-100">
+                              <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {obterBadgeStatus(item.status, dias)}
+                              {item.tipo_origem === 'venda' && (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                  Venda
+                                </Badge>
+                              )}
+                              {item.tipo_origem === 'transacao_entrada' && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                  Transação
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.descricao}</p>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
-                            <span>Vencimento: {formatarData(item.data_vencimento)}</span>
-                            {item.parcela && <span>Parcela: {item.parcela}</span>}
-                            <span className={`font-medium ${
-                              dias > 0 ? 'text-blue-600' : 
-                              dias === 0 ? 'text-orange-600' : 
-                              'text-destructive'
-                            }`}>
-                              {obterTextoDias(dias)}
-                            </span>
+                        </CardHeader>
+                        
+                        <CardContent className="space-y-2 sm:space-y-3 flex-1">
+                          <div>
+                            <h3 className="font-semibold text-sm sm:text-base line-clamp-1">
+                              {item.cliente_nome || 'Cliente não informado'}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">
+                              {item.descricao}
+                            </p>
                           </div>
+
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Vencimento:</span>
+                              <span className="font-medium">{formatarData(item.data_vencimento)}</span>
+                            </div>
+                            {item.parcela && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Parcela:</span>
+                                <span className="font-medium">{item.parcela}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Status:</span>
+                              <span className={`font-medium ${
+                                dias > 0 ? 'text-blue-600' : 
+                                dias === 0 ? 'text-orange-600' : 
+                                'text-destructive'
+                              }`}>
+                                {obterTextoDias(dias)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Valor */}
+                          <div className="pt-2 border-t border-border/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Valor:</span>
+                              <p className="text-base sm:text-lg font-bold text-success">{formatarValor(Number(item.valor) || 0)}</p>
+                            </div>
+                          </div>
+
                           {/* Exibir anexos se existirem */}
                           {item.anexos && item.anexos.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2 items-center">
+                            <div className="flex flex-wrap gap-2 items-center">
                               <span className="text-xs font-medium">Anexos:</span>
                               {item.anexos.map((anexoUrl: string, idx: number) => (
                                 <Button
@@ -1313,24 +1416,35 @@ export default function Financeiro() {
                               ))}
                             </div>
                           )}
-                        </div>
-                        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
-                          {/* Valor principal */}
-                          <p className="text-sm sm:text-lg font-bold text-success break-words">{formatarValor(Number(item.valor) || 0)}</p>
-                          {item.status === 'pendente' && (
+                        </CardContent>
+
+                        {/* Footer fixo com botões */}
+                        <div className="px-6 pb-6 pt-2 mt-auto border-t border-border/50">
+                          <div className="flex gap-2">
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => abrirModalPagamento(item, 'receber')}
-                              className="text-xs sm:text-sm"
+                              onClick={() => abrirModalEdicao(item, 'receber')}
+                              className="flex-1 text-xs sm:text-sm"
                             >
-                              <Receipt className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">Receber</span>
-                              <span className="sm:hidden">Receber</span>
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Editar</span>
+                              <span className="sm:hidden">Ed.</span>
                             </Button>
-                          )}
+                            {item.status === 'pendente' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => abrirModalPagamento(item, 'receber')}
+                                className="flex-1 text-xs sm:text-sm"
+                              >
+                                <Receipt className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                Receber
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      </Card>
                     );
                   })}
                 </div>
@@ -1553,69 +1667,113 @@ export default function Financeiro() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {contasPagarFiltradas.map((item) => {
                     const dias = calcularDiasVencimento(item.data_vencimento);
                     return (
-                      <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border bg-muted/30 space-y-3 sm:space-y-0">
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-sm sm:text-base truncate">{item.fornecedor}</p>
-                            {obterBadgeStatus(item.status, dias)}
-                            {item.tipo_origem === 'transacao' && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                                Transação
-                              </Badge>
-                            )}
-                            {item.tipo_conta === 'funcionario' && (
-                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                                Funcionário
-                              </Badge>
-                            )}
-                            {item.tipo_conta === 'fornecedor' && (
-                              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700">
-                                Fornecedor
-                              </Badge>
-                            )}
+                      <Card key={item.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+                        <CardHeader className="pb-2 sm:pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="p-1.5 sm:p-2 rounded-lg bg-red-100">
+                              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                              {obterBadgeStatus(item.status, dias)}
+                              {item.tipo_origem === 'transacao' && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                  Transação
+                                </Badge>
+                              )}
+                              {item.tipo_conta === 'funcionario' && (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                  Funcionário
+                                </Badge>
+                              )}
+                              {item.tipo_conta === 'fornecedor' && (
+                                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700">
+                                  Fornecedor
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.descricao}</p>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
-                            <span>Vencimento: {formatarData(item.data_vencimento)}</span>
+                        </CardHeader>
+                        
+                        <CardContent className="space-y-2 sm:space-y-3 flex-1">
+                          <div>
+                            <h3 className="font-semibold text-sm sm:text-base line-clamp-1">
+                              {item.fornecedor}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">
+                              {item.descricao}
+                            </p>
+                          </div>
+
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Vencimento:</span>
+                              <span className="font-medium">{formatarData(item.data_vencimento)}</span>
+                            </div>
                             {item.categoria && (
-                              <Badge variant="outline" className="text-xs">{item.categoria}</Badge>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Categoria:</span>
+                                <Badge variant="outline" className="text-xs">{item.categoria}</Badge>
+                              </div>
                             )}
                             {item.status === "vencido" && (
-                              <span className="text-destructive font-medium">
-                                {Math.abs(dias)} dias em atraso
-                              </span>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Status:</span>
+                                <span className="text-destructive font-medium">
+                                  {Math.abs(dias)} dias em atraso
+                                </span>
+                              </div>
                             )}
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className={`text-sm sm:text-lg font-bold break-words ${
-                              item.status === 'pago' ? 'text-success' : 'text-destructive'
-                            }`}>
-                              {formatarValor(Number(item.valor) || 0)}
-                            </p>
-                            {item.status === 'pago' && (
-                              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
-                            )}
+
+                          {/* Valor */}
+                          <div className="pt-2 border-t border-border/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Valor:</span>
+                              <div className="flex items-center gap-2">
+                                <p className={`text-base sm:text-lg font-bold ${
+                                  item.status === 'pago' ? 'text-success' : 'text-destructive'
+                                }`}>
+                                  {formatarValor(Number(item.valor) || 0)}
+                                </p>
+                                {item.status === 'pago' && (
+                                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {item.status === 'pendente' && (
+                        </CardContent>
+
+                        {/* Footer fixo com botões */}
+                        <div className="px-6 pb-6 pt-2 mt-auto border-t border-border/50">
+                          <div className="flex gap-2">
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => abrirModalPagamento(item, 'pagar')}
-                              className="text-xs sm:text-sm"
+                              onClick={() => abrirModalEdicao(item, 'pagar')}
+                              className="flex-1 text-xs sm:text-sm"
                             >
-                              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">Pagar</span>
-                              <span className="sm:hidden">Pagar</span>
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Editar</span>
+                              <span className="sm:hidden">Ed.</span>
                             </Button>
-                          )}
+                            {item.status === 'pendente' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => abrirModalPagamento(item, 'pagar')}
+                                className="flex-1 text-xs sm:text-sm"
+                              >
+                                <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                Pagar
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      </Card>
                     );
                   })}
                 </div>
@@ -2705,6 +2863,93 @@ export default function Financeiro() {
                 <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Confirmar Recebimento</span>
                 <span className="sm:hidden">Confirmar</span>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição de Conta */}
+      <Dialog open={modalEdicao} onOpenChange={setModalEdicao}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
+              <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">
+                Editar {tipoEdicao === 'receber' ? 'Conta a Receber' : 'Conta a Pagar'}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Informações da conta (somente leitura) */}
+            <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {tipoEdicao === 'receber' ? 'Cliente' : 'Fornecedor'}
+                </span>
+                <span className="text-sm font-medium">
+                  {(tipoEdicao === 'receber' ? contaEmEdicao?.cliente_nome : contaEmEdicao?.fornecedor) || '-'}
+                </span>
+              </div>
+              
+              <div className="border-t border-border/50 pt-3">
+                <span className="text-xs text-muted-foreground block mb-1">Descrição</span>
+                <p className="text-sm">{dadosEdicao.descricao || '-'}</p>
+              </div>
+              
+              <div className="flex items-center justify-between border-t border-border/50 pt-3">
+                <span className="text-xs text-muted-foreground">Valor</span>
+                <span className="text-lg font-bold text-primary">
+                  {dadosEdicao.valor ? `R$ ${Number(dadosEdicao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* Data de Vencimento */}
+            <div className="space-y-2">
+              <Label className="text-xs sm:text-sm">Data de Vencimento</Label>
+              <Input 
+                type="date"
+                value={dadosEdicao.data_vencimento || ''}
+                onChange={(e) => setDadosEdicao(prev => ({ ...prev, data_vencimento: e.target.value }))}
+                className="text-sm"
+              />
+            </div>
+
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label className="text-xs sm:text-sm">Observações</Label>
+              <Textarea 
+                value={dadosEdicao.observacoes || ''}
+                onChange={(e) => setDadosEdicao(prev => ({ ...prev, observacoes: e.target.value }))}
+                placeholder="Observações adicionais..."
+                className="text-sm min-h-[60px]"
+              />
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex gap-2 pt-4">
+              <Button 
+                variant="outline"
+                onClick={() => setModalEdicao(false)}
+                className="flex-1 h-10 text-xs sm:text-sm"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Cancelar
+              </Button>
+              <Button 
+                onClick={salvarEdicaoConta}
+                disabled={salvandoEdicao}
+                className="flex-1 h-10 bg-gradient-primary text-white text-xs sm:text-sm"
+              >
+                {salvandoEdicao ? (
+                  <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                )}
+                <span className="hidden sm:inline">Salvar Alterações</span>
+                <span className="sm:hidden">Salvar</span>
               </Button>
             </div>
           </div>

@@ -507,7 +507,7 @@ export default function Clientes() {
       ) : (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {clientes.map((cliente) => (
-            <Card key={cliente.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300">
+            <Card key={cliente.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
               <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
@@ -523,7 +523,7 @@ export default function Clientes() {
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-3 sm:space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 flex-1">
                 <div>
                   <h3 className="font-semibold text-base sm:text-lg line-clamp-2 flex items-center space-x-2">
                     <span>{cliente.nome}</span>
@@ -582,36 +582,36 @@ export default function Clientes() {
                     {cliente.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}: {cliente.cpf_cnpj}
                   </div>
                 )}
-
-                {/* Ocultar botões de ação para vendedores */}
-                {(hasPermission('clientes_editar') || hasPermission('clientes_excluir')) && (
-                  <div className="flex space-x-1.5 sm:space-x-2 pt-2">
-                    {hasPermission('clientes_editar') && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 text-xs sm:text-sm"
-                        onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
-                      >
-                        <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        <span className="hidden sm:inline">Editar</span>
-                        <span className="sm:hidden">Ed.</span>
-                      </Button>
-                    )}
-                    {hasPermission('clientes_excluir') && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="px-2 sm:px-3"
-                        onClick={() => deletarCliente(cliente.id)}
-                        disabled={clientesApi.loading}
-                      >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
               </CardContent>
+
+              {/* Botões de ação fixos no footer */}
+              {(hasPermission('clientes_editar') || hasPermission('clientes_excluir')) && (
+                <div className="flex space-x-1.5 sm:space-x-2 px-6 pb-6 pt-2 mt-auto border-t border-border/50">
+                  {hasPermission('clientes_editar') && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 text-xs sm:text-sm"
+                      onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
+                    >
+                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Editar</span>
+                      <span className="sm:hidden">Ed.</span>
+                    </Button>
+                  )}
+                  {hasPermission('clientes_excluir') && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="px-2 sm:px-3"
+                      onClick={() => deletarCliente(cliente.id)}
+                      disabled={clientesApi.loading}
+                    >
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>
