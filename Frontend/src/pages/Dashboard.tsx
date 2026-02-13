@@ -215,15 +215,16 @@ export default function Dashboard() {
   
   // Filtrar produtos com base no filtro selecionado
   const produtosEstoqueBaixo = produtosEstoqueBaixoOriginal.filter((produto: any) => {
+    const estoqueAtual = Number(produto.estoque_atual) || 0;
     if (filtroEstoque === 'todos') return true;
-    if (filtroEstoque === 'zerado') return produto.estoque_atual === 0;
-    if (filtroEstoque === 'baixo') return produto.estoque_atual > 0;
+    if (filtroEstoque === 'zerado') return estoqueAtual === 0;
+    if (filtroEstoque === 'baixo') return estoqueAtual > 0;
     return true;
   });
   
   // Contadores para os badges
-  const countZerado = produtosEstoqueBaixoOriginal.filter((p: any) => p.estoque_atual === 0).length;
-  const countBaixo = produtosEstoqueBaixoOriginal.filter((p: any) => p.estoque_atual > 0).length;
+  const countZerado = produtosEstoqueBaixoOriginal.filter((p: any) => (Number(p.estoque_atual) || 0) === 0).length;
+  const countBaixo = produtosEstoqueBaixoOriginal.filter((p: any) => (Number(p.estoque_atual) || 0) > 0).length;
 
   // Loading state
   if (loading) {
