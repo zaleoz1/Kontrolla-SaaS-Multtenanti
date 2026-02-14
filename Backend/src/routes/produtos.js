@@ -141,6 +141,7 @@ router.post('/', validateProduto, async (req, res) => {
       codigo_barras,
       sku,
       preco,
+      preco_compra,
       preco_promocional,
       tipo_preco = 'unidade',
       estoque = 0,
@@ -261,7 +262,7 @@ router.post('/', validateProduto, async (req, res) => {
     const result = await queryWithResult(
       `INSERT INTO produtos (
         tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
-        preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
+        preco_compra, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
         estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
         estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens,
         ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
@@ -276,6 +277,7 @@ router.post('/', validateProduto, async (req, res) => {
         toNull(codigo_barras), 
         toNull(sku),
         preco, 
+        toNull(preco_compra),
         toNull(preco_promocional), 
         tipo_preco, 
         preco_por_kg, 
@@ -398,6 +400,7 @@ router.post('/importar', validateProduto, async (req, res) => {
       codigo_barras,
       sku,
       preco,
+      preco_compra,
       preco_promocional,
       tipo_preco = 'unidade',
       estoque = 0,
@@ -504,6 +507,7 @@ router.post('/importar', validateProduto, async (req, res) => {
           nome = ?,
           descricao = CONCAT(COALESCE(descricao, ''), '\n', ?),
           preco = ?,
+          preco_compra = COALESCE(?, preco_compra),
           preco_promocional = COALESCE(?, preco_promocional),
           tipo_preco = ?,
           preco_por_kg = COALESCE(?, preco_por_kg),
@@ -529,6 +533,7 @@ router.post('/importar', validateProduto, async (req, res) => {
           nome,
           toNull(descricao) || '',
           preco,
+          toNull(preco_compra),
           toNull(preco_promocional),
           tipo_preco,
           preco_por_kg,
@@ -578,7 +583,7 @@ router.post('/importar', validateProduto, async (req, res) => {
       const insertResult = await queryWithResult(
         `INSERT INTO produtos (
           tenant_id, categoria_id, nome, descricao, codigo_barras, sku, preco,
-          preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
+          preco_compra, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
           estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
           estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens,
           ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
@@ -857,7 +862,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
     await query(
       `UPDATE produtos SET 
         categoria_id = ?, nome = ?, descricao = ?, codigo_barras = ?, sku = ?,
-        preco = ?, preco_promocional = ?, tipo_preco = ?, preco_por_kg = ?, 
+        preco = ?, preco_compra = ?, preco_promocional = ?, tipo_preco = ?, preco_por_kg = ?, 
         preco_por_litros = ?, estoque = ?, estoque_minimo = ?, estoque_kg = ?,
         estoque_litros = ?, estoque_minimo_kg = ?, estoque_minimo_litros = ?,
         fornecedor_id = ?, marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?,
@@ -866,7 +871,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
         cofins_aliquota = ?, cofins_cst = ?
       WHERE id = ? AND tenant_id = ?`,
       [
-        categoria_id, nome, descricao, codigo_barras, sku, preco, preco_promocional,
+        categoria_id, nome, descricao, codigo_barras, sku, preco, preco_compra, preco_promocional,
         tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt,
         estoqueKgDecimal, estoqueLitrosDecimal, estoqueMinimoKgDecimal, 
         estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary),

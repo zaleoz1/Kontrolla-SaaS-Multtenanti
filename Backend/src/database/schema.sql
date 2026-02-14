@@ -211,6 +211,7 @@ CREATE TABLE IF NOT EXISTS produtos (
     codigo_barras VARCHAR(50),
     sku VARCHAR(100),
     preco DECIMAL(10,2) NOT NULL,
+    preco_compra DECIMAL(10,2) COMMENT 'Preço de compra/custo do produto',
     preco_promocional DECIMAL(10,2),
     tipo_preco ENUM('unidade', 'kg', 'litros') DEFAULT 'unidade',
     preco_por_kg DECIMAL(10,2),
