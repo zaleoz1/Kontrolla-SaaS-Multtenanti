@@ -31,6 +31,7 @@ interface Produto {
   categoria: string;
   categoria_id?: number;
   preco: number | null;
+  preco_compra?: number | null;
   preco_promocional?: number | null;
   tipo_preco: "unidade" | "kg" | "litros";
   codigo_barras: string;
@@ -108,6 +109,7 @@ export default function NovoProduto() {
     categoria: "",
     categoria_id: undefined,
     preco: null,
+    preco_compra: null,
     preco_promocional: null,
     tipo_preco: "unidade",
     codigo_barras: "",
@@ -177,6 +179,7 @@ export default function NovoProduto() {
         categoria: produtoData.categoria_nome || "",
         categoria_id: produtoData.categoria_id || undefined,
         preco: produtoData.preco || null,
+        preco_compra: produtoData.preco_compra || null,
         preco_promocional: produtoData.preco_promocional || null,
         tipo_preco: produtoData.tipo_preco || "unidade",
         codigo_barras: produtoData.codigo_barras || "",
@@ -511,6 +514,7 @@ export default function NovoProduto() {
         codigo_barras: produto.codigo_barras?.trim() || null,
         sku: produto.sku?.trim() || null,
         preco: parseFloat(String(produto.preco)),
+        preco_compra: produto.preco_compra ? parseFloat(String(produto.preco_compra)) : null,
         preco_promocional: produto.preco_promocional ? parseFloat(String(produto.preco_promocional)) : null,
         tipo_preco: produto.tipo_preco || 'unidade',
         // Campos de estoque baseados no tipo
@@ -1036,7 +1040,7 @@ export default function NovoProduto() {
                   </div>
 
                   {/* Preços baseados no tipo selecionado */}
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                       <label className="text-xs sm:text-sm font-medium">
                         Preço de Venda * 
@@ -1062,6 +1066,25 @@ export default function NovoProduto() {
                       {errosValidacao.preco && (
                         <p className="text-xs text-red-500 mt-1">Preço de venda é obrigatório</p>
                       )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">
+                        Preço de Compra
+                        {produto.tipo_preco === "unidade" && " (por unidade)"}
+                        {produto.tipo_preco === "kg" && " (por KG)"}
+                        {produto.tipo_preco === "litros" && " (por litro)"}
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={produto.preco_compra || ""}
+                        onChange={(e) => atualizarProduto("preco_compra", e.target.value ? parseFloat(e.target.value) : null)}
+                        className="mt-1 text-xs sm:text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Custo de aquisição do produto</p>
                     </div>
 
                     <div>

@@ -8,6 +8,7 @@ export interface Produto {
   categoria_id?: number;
   categoria_nome?: string;
   preco: number;
+  preco_compra?: number;
   preco_promocional?: number;
   tipo_preco: 'unidade' | 'kg' | 'litros';
   codigo_barras?: string;
