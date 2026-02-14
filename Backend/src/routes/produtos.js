@@ -589,7 +589,7 @@ router.post('/importar', validateProduto, async (req, res) => {
           ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
           ipi_aliquota, ipi_codigo_enquadramento, pis_aliquota, pis_cst,
           cofins_aliquota, cofins_cst
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.tenant_id, 
           toNull(categoria_id), 
@@ -597,7 +597,8 @@ router.post('/importar', validateProduto, async (req, res) => {
           toNull(descricao), 
           toNull(codigo_barras), 
           toNull(sku),
-          preco, 
+          preco,
+          toNull(preco_compra),
           toNull(preco_promocional), 
           tipo_preco, 
           preco_por_kg, 

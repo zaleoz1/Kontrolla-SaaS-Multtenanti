@@ -56,7 +56,12 @@ import {
   X,
   Building2,
   UserPlus,
-  Receipt
+  Receipt,
+  Download,
+  CheckSquare,
+  Square,
+  Copy,
+  Eye
 } from "lucide-react";
 
 interface Produto {
@@ -64,6 +69,7 @@ interface Produto {
   nome: string;
   descricao?: string;
   preco: number;
+  preco_compra?: number;
   preco_promocional?: number;
   tipo_preco: 'unidade' | 'kg' | 'litros';
   estoque: number;
@@ -79,7 +85,9 @@ interface Produto {
   codigo_barras?: string;
   sku?: string;
   status: 'ativo' | 'inativo' | 'rascunho';
+  categoria_id?: number;
   categoria_nome?: string;
+  fornecedor_id?: number;
   marca?: string;
   modelo?: string;
   imagens?: string[];
@@ -99,6 +107,25 @@ interface Produto {
   pis_cst?: string;
   cofins_aliquota?: number;
   cofins_cst?: string;
+}
+
+// Interface para fornecedor no export
+interface FornecedorExport {
+  id: number;
+  nome: string;
+  razao_social?: string;
+  cnpj?: string;
+  email?: string;
+  telefone?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  contato?: string;
+  observacoes?: string;
+  status: string;
+  data_criacao?: string;
+  data_atualizacao?: string;
 }
 
 interface Categoria {
@@ -210,6 +237,19 @@ export default function Produtos() {
   const [fornecedoresCriados, setFornecedoresCriados] = useState<{[documento: string]: number}>({}); // Mapa CNPJ -> ID do fornecedor
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Estados para exportação XML
+  const [modoSelecao, setModoSelecao] = useState(false);
+  const [produtosSelecionados, setProdutosSelecionados] = useState<Set<number>>(new Set());
+  const [exportando, setExportando] = useState(false);
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [xmlPreview, setXmlPreview] = useState("");
+  const [exportInfo, setExportInfo] = useState<{totalProdutos: number, totalFornecedores: number}>({totalProdutos: 0, totalFornecedores: 0});
+  const [produtosExport, setProdutosExport] = useState<Produto[]>([]);
+  const [fornecedoresExport, setFornecedoresExport] = useState<FornecedorExport[]>([]);
+  const [produtoExportExpandido, setProdutoExportExpandido] = useState<number | null>(null);
+  const [fornecedorExpandido, setFornecedorExpandido] = useState<number | null>(null);
+  const [visualizacaoXML, setVisualizacaoXML] = useState<'formatado' | 'xml'>('formatado');
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -290,6 +330,438 @@ export default function Produtos() {
   const cancelarExclusao = () => {
     setShowDeleteDialog(false);
     setProdutoParaExcluir(null);
+  };
+
+  // ============ FUNÇÕES PARA EXPORTAÇÃO XML ============
+  
+  // Função para alternar seleção de produto
+  const toggleSelecaoProduto = (id: number) => {
+    const novaSelecao = new Set(produtosSelecionados);
+    if (novaSelecao.has(id)) {
+      novaSelecao.delete(id);
+    } else {
+      novaSelecao.add(id);
+    }
+    setProdutosSelecionados(novaSelecao);
+  };
+
+  // Função para selecionar/desselecionar todos os produtos
+  const toggleSelecionarTodos = () => {
+    if (produtosSelecionados.size === produtos.length) {
+      setProdutosSelecionados(new Set());
+    } else {
+      setProdutosSelecionados(new Set(produtos.map(p => p.id)));
+    }
+  };
+
+  // Função para cancelar modo de seleção
+  const cancelarModoSelecao = () => {
+    setModoSelecao(false);
+    setProdutosSelecionados(new Set());
+  };
+
+  // Função para buscar dados do fornecedor
+  const buscarFornecedor = async (fornecedorId: number): Promise<FornecedorExport | null> => {
+    try {
+      const response = await fornecedoresApi.get(fornecedorId);
+      // O backend retorna { success: true, data: fornecedor }
+      if (response && response.data) {
+        return response.data as FornecedorExport;
+      }
+      // Se o response for o fornecedor diretamente
+      if (response && response.id) {
+        return response as unknown as FornecedorExport;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao buscar fornecedor:', error);
+      return null;
+    }
+  };
+
+  // Função para escapar caracteres especiais XML
+  const escapeXML = (text: string | undefined | null): string => {
+    if (!text) return '';
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  };
+
+  // Função para gerar XML dos produtos
+  const gerarXMLProdutos = async (): Promise<string> => {
+    // Buscar dados completos dos produtos selecionados com fornecedores
+    const produtosParaExportar = produtos.filter(p => produtosSelecionados.has(p.id));
+    
+    // Buscar fornecedores únicos
+    const fornecedorIds = [...new Set(produtosParaExportar.map(p => p.fornecedor_id).filter(Boolean))] as number[];
+    const fornecedoresMap: {[id: number]: FornecedorExport} = {};
+    
+    for (const fornecedorId of fornecedorIds) {
+      const fornecedor = await buscarFornecedor(fornecedorId);
+      if (fornecedor) {
+        fornecedoresMap[fornecedorId] = fornecedor;
+      }
+    }
+
+    // Atualizar info de exportação
+    setExportInfo({
+      totalProdutos: produtosParaExportar.length,
+      totalFornecedores: Object.keys(fornecedoresMap).length
+    });
+
+    // Gerar XML no formato compatível com NF-e para reimportação
+    const dataExportacao = new Date().toISOString();
+    const dataFormatada = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    
+    // Agrupar produtos por fornecedor para criar estrutura similar à NF-e
+    const produtosPorFornecedor: {[key: string]: Produto[]} = {};
+    
+    for (const produto of produtosParaExportar) {
+      const fornecedorKey = produto.fornecedor_id ? String(produto.fornecedor_id) : 'sem_fornecedor';
+      if (!produtosPorFornecedor[fornecedorKey]) {
+        produtosPorFornecedor[fornecedorKey] = [];
+      }
+      produtosPorFornecedor[fornecedorKey].push(produto);
+    }
+    
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infNFe versao="4.00" Id="NFe_EXPORT_${Date.now()}">
+      <ide>
+        <cUF>00</cUF>
+        <cNF>00000000</cNF>
+        <natOp>EXPORTACAO DE PRODUTOS</natOp>
+        <mod>55</mod>
+        <serie>001</serie>
+        <nNF>${Date.now()}</nNF>
+        <dhEmi>${dataFormatada}</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>0000000</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>0</cDV>
+        <tpAmb>1</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>KONTROLLA_EXPORT_1.0</verProc>
+      </ide>
+`;
+    
+    // Adicionar emitente (primeiro fornecedor ou dados genéricos)
+    const primeiroFornecedor = Object.values(fornecedoresMap)[0];
+    if (primeiroFornecedor) {
+      xml += `      <emit>
+        <CNPJ>${escapeXML((primeiroFornecedor.cnpj || '').replace(/\D/g, ''))}</CNPJ>
+        <xNome>${escapeXML(primeiroFornecedor.razao_social || primeiroFornecedor.nome)}</xNome>
+        <xFant>${escapeXML(primeiroFornecedor.nome)}</xFant>
+        <enderEmit>
+          <xLgr>${escapeXML(primeiroFornecedor.endereco || '')}</xLgr>
+          <nro>S/N</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>0000000</cMun>
+          <xMun>${escapeXML(primeiroFornecedor.cidade || '')}</xMun>
+          <UF>${escapeXML(primeiroFornecedor.estado || '')}</UF>
+          <CEP>${escapeXML((primeiroFornecedor.cep || '').replace(/\D/g, ''))}</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+          <fone>${escapeXML((primeiroFornecedor.telefone || '').replace(/\D/g, ''))}</fone>
+        </enderEmit>
+        <IE></IE>
+        <CRT>3</CRT>
+      </emit>
+`;
+    } else {
+      xml += `      <emit>
+        <CNPJ>00000000000000</CNPJ>
+        <xNome>EXPORTACAO KONTROLLA</xNome>
+        <xFant>KONTROLLA</xFant>
+        <enderEmit>
+          <xLgr>ENDERECO</xLgr>
+          <nro>S/N</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>0000000</cMun>
+          <xMun>CIDADE</xMun>
+          <UF>UF</UF>
+          <CEP>00000000</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+        </enderEmit>
+        <IE></IE>
+        <CRT>3</CRT>
+      </emit>
+`;
+    }
+    
+    // Adicionar produtos no formato NF-e
+    let itemNum = 1;
+    for (const produto of produtosParaExportar) {
+      const estoqueAtual = obterEstoqueAtual(produto);
+      const unidade = produto.tipo_preco === 'kg' ? 'KG' : produto.tipo_preco === 'litros' ? 'LT' : 'UN';
+      const precoNum = Number(produto.preco) || 0;
+      const valorTotal = precoNum * (estoqueAtual || 1);
+      
+      // Extrair valores de impostos REAIS (null/undefined se não cadastrado)
+      const icmsOrigem = produto.icms_origem?.trim() || null;
+      const icmsCST = produto.icms_situacao_tributaria?.trim() || produto.cst?.trim() || null;
+      const icmsAliquota = produto.icms_aliquota != null ? Number(produto.icms_aliquota) : null;
+      const ipiCodEnq = produto.ipi_codigo_enquadramento?.trim() || null;
+      const ipiAliquota = produto.ipi_aliquota != null ? Number(produto.ipi_aliquota) : null;
+      const pisCST = produto.pis_cst?.trim() || null;
+      const pisAliquota = produto.pis_aliquota != null ? Number(produto.pis_aliquota) : null;
+      const cofinsCST = produto.cofins_cst?.trim() || null;
+      const cofinsAliquota = produto.cofins_aliquota != null ? Number(produto.cofins_aliquota) : null;
+      const ncmValor = (produto.ncm || '').replace(/\D/g, '').trim() || null;
+      const cfopValor = (produto.cfop || '').replace(/\D/g, '').trim() || null;
+      
+      // Verificar se tem algum imposto cadastrado
+      const temICMS = icmsOrigem || icmsCST || (icmsAliquota != null && icmsAliquota > 0);
+      const temIPI = ipiCodEnq || (ipiAliquota != null && ipiAliquota > 0);
+      const temPIS = pisCST || (pisAliquota != null && pisAliquota > 0);
+      const temCOFINS = cofinsCST || (cofinsAliquota != null && cofinsAliquota > 0);
+      const temImpostos = temICMS || temIPI || temPIS || temCOFINS || ncmValor || cfopValor;
+      
+      xml += `      <det nItem="${itemNum}">
+        <prod>
+          <cProd>${escapeXML(produto.sku || String(produto.id))}</cProd>
+          <cEAN>${escapeXML(produto.codigo_barras || '')}</cEAN>
+          <xProd>${escapeXML(produto.nome)}</xProd>
+          <NCM>${ncmValor || ''}</NCM>
+          <CEST></CEST>
+          <CFOP>${cfopValor || ''}</CFOP>
+          <uCom>${unidade}</uCom>
+          <qCom>${estoqueAtual.toFixed(4)}</qCom>
+          <vUnCom>${precoNum.toFixed(4)}</vUnCom>
+          <vProd>${valorTotal.toFixed(2)}</vProd>
+          <cEANTrib>${escapeXML(produto.codigo_barras || '')}</cEANTrib>
+          <uTrib>${unidade}</uTrib>
+          <qTrib>${estoqueAtual.toFixed(4)}</qTrib>
+          <vUnTrib>${precoNum.toFixed(4)}</vUnTrib>
+          <indTot>1</indTot>
+        </prod>`;
+      
+      // Adicionar impostos apenas se houver algum cadastrado
+      if (temImpostos) {
+        xml += `
+        <imposto>`;
+        
+        // ICMS - apenas se tiver dados cadastrados
+        if (temICMS) {
+          const icmsAliqNum = icmsAliquota || 0;
+          const icmsValor = (valorTotal * icmsAliqNum) / 100;
+          xml += `
+          <ICMS>
+            <ICMS00>
+              <orig>${icmsOrigem || ''}</orig>
+              <CST>${icmsCST || ''}</CST>
+              <modBC>3</modBC>
+              <vBC>${valorTotal.toFixed(2)}</vBC>
+              <pICMS>${icmsAliqNum.toFixed(2)}</pICMS>
+              <vICMS>${icmsValor.toFixed(2)}</vICMS>
+            </ICMS00>
+          </ICMS>`;
+        }
+        
+        // IPI - apenas se tiver dados cadastrados
+        if (temIPI) {
+          const ipiAliqNum = ipiAliquota || 0;
+          xml += `
+          <IPI>
+            <cEnq>${ipiCodEnq || ''}</cEnq>
+            <IPITrib>
+              <CST>50</CST>
+              <vBC>${valorTotal.toFixed(2)}</vBC>
+              <pIPI>${ipiAliqNum.toFixed(2)}</pIPI>
+              <vIPI>${((valorTotal * ipiAliqNum) / 100).toFixed(2)}</vIPI>
+            </IPITrib>
+          </IPI>`;
+        }
+        
+        // PIS - apenas se tiver dados cadastrados
+        if (temPIS) {
+          const pisAliqNum = pisAliquota || 0;
+          xml += `
+          <PIS>
+            <PISAliq>
+              <CST>${pisCST || ''}</CST>
+              <vBC>${valorTotal.toFixed(2)}</vBC>
+              <pPIS>${pisAliqNum.toFixed(2)}</pPIS>
+              <vPIS>${((valorTotal * pisAliqNum) / 100).toFixed(2)}</vPIS>
+            </PISAliq>
+          </PIS>`;
+        }
+        
+        // COFINS - apenas se tiver dados cadastrados
+        if (temCOFINS) {
+          const cofinsAliqNum = cofinsAliquota || 0;
+          xml += `
+          <COFINS>
+            <COFINSAliq>
+              <CST>${cofinsCST || ''}</CST>
+              <vBC>${valorTotal.toFixed(2)}</vBC>
+              <pCOFINS>${cofinsAliqNum.toFixed(2)}</pCOFINS>
+              <vCOFINS>${((valorTotal * cofinsAliqNum) / 100).toFixed(2)}</vCOFINS>
+            </COFINSAliq>
+          </COFINS>`;
+        }
+        
+        xml += `
+        </imposto>`;
+      }
+      
+      xml += `
+      </det>
+`;
+      itemNum++;
+    }
+    
+    // Calcular totais
+    const totalProdutos = produtosParaExportar.reduce((acc, p) => acc + (Number(p.preco) || 0) * (obterEstoqueAtual(p) || 1), 0);
+    
+    xml += `      <total>
+        <ICMSTot>
+          <vBC>${totalProdutos.toFixed(2)}</vBC>
+          <vICMS>0.00</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>${totalProdutos.toFixed(2)}</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>${totalProdutos.toFixed(2)}</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <infAdic>
+        <infCpl>EXPORTACAO DE PRODUTOS KONTROLLA - ${dataFormatada} - Total de ${produtosParaExportar.length} produto(s)</infCpl>
+      </infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>1</tpAmb>
+      <verAplic>KONTROLLA_EXPORT_1.0</verAplic>
+      <chNFe>00000000000000000000000000000000000000000000</chNFe>
+      <dhRecbto>${dataFormatada}</dhRecbto>
+      <nProt>000000000000000</nProt>
+      <digVal></digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>`;
+
+    return xml;
+  };
+
+  // Função para pré-visualizar XML antes de exportar
+  const preVisualizarXML = async () => {
+    if (produtosSelecionados.size === 0) {
+      toast({
+        title: "Aviso",
+        description: "Selecione pelo menos um produto para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExportando(true);
+
+    try {
+      // Buscar dados completos dos produtos selecionados com fornecedores
+      const produtosParaExportar = produtos.filter(p => produtosSelecionados.has(p.id));
+      
+      // Buscar fornecedores únicos
+      const fornecedorIds = [...new Set(produtosParaExportar.map(p => p.fornecedor_id).filter(Boolean))] as number[];
+      const fornecedoresMap: {[id: number]: FornecedorExport} = {};
+      
+      for (const fornecedorId of fornecedorIds) {
+        const fornecedor = await buscarFornecedor(fornecedorId);
+        if (fornecedor) {
+          fornecedoresMap[fornecedorId] = fornecedor;
+        }
+      }
+
+      // Salvar dados para visualização formatada
+      setProdutosExport(produtosParaExportar);
+      setFornecedoresExport(Object.values(fornecedoresMap));
+      
+      const xml = await gerarXMLProdutos();
+      setXmlPreview(xml);
+      setVisualizacaoXML('formatado');
+      setShowExportPreview(true);
+    } catch (error) {
+      console.error('Erro ao gerar pré-visualização:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar a pré-visualização. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  // Função para baixar o XML
+  const baixarXML = () => {
+    if (!xmlPreview) return;
+
+    const blob = new Blob([xmlPreview], { type: 'application/xml' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `produtos_export_${new Date().toISOString().split('T')[0]}.xml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Sucesso",
+      description: `${exportInfo.totalProdutos} produto(s) exportado(s) com sucesso!`,
+    });
+
+    // Fechar modal e limpar seleção
+    setShowExportPreview(false);
+    setXmlPreview("");
+    cancelarModoSelecao();
+  };
+
+  // Função para copiar XML para clipboard
+  const copiarXML = async () => {
+    if (!xmlPreview) return;
+
+    try {
+      await navigator.clipboard.writeText(xmlPreview);
+      toast({
+        title: "Copiado!",
+        description: "XML copiado para a área de transferência.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o XML.",
+        variant: "destructive",
+      });
+    }
   };
 
   // ============ FUNÇÕES PARA IMPORTAÇÃO XML ============
@@ -1033,22 +1505,22 @@ export default function Produtos() {
       setDadosNFesXML({});
       setXmlFileNames([]);
       setNfeExpandida(null);
-    setFornecedoresCriados({}); // Resetar mapa de fornecedores criados
-  }
-};
+      setFornecedoresCriados({}); // Resetar mapa de fornecedores criados
+    }
+  };
 
-// Função para fechar o modal de importação
-const fecharImportDialog = () => {
-  setShowImportDialog(false);
-  setProdutosXML([]);
-  setEmitentesXML({});
-  setDadosNFesXML({});
-  setXmlFileNames([]);
-  setXmlError(null);
-  setProdutoExpandido(null);
-  setNfeExpandida(null);
-  setFornecedoresCriados({}); // Resetar mapa de fornecedores criados
-};
+  // Função para fechar o modal de importação
+  const fecharImportDialog = () => {
+    setShowImportDialog(false);
+    setProdutosXML([]);
+    setEmitentesXML({});
+    setDadosNFesXML({});
+    setXmlFileNames([]);
+    setXmlError(null);
+    setProdutoExpandido(null);
+    setNfeExpandida(null);
+    setFornecedoresCriados({}); // Resetar mapa de fornecedores criados
+  };
 
   // Função para expandir/recolher detalhes do produto
   const toggleProdutoExpandido = (id: string) => {
@@ -1264,18 +1736,63 @@ const fecharImportDialog = () => {
         <div className="hidden md:flex items-center justify-end gap-2">
           {hasPermission('produtos_criar') && (
             <>
-              <Button 
-                variant="outline" 
-                onClick={abrirSeletorArquivo}
-                className="border-primary/50 hover:bg-primary/10"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Importar XML(s)
-              </Button>
-              <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-produto")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Produto
-              </Button>
+              {modoSelecao ? (
+                <>
+                  <Button 
+                    variant="outline" 
+                    onClick={cancelarModoSelecao}
+                    className="border-muted-foreground/50"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={toggleSelecionarTodos}
+                    className="border-primary/50 hover:bg-primary/10"
+                  >
+                    {produtosSelecionados.size === produtos.length ? (
+                      <><Square className="h-4 w-4 mr-2" />Desselecionar Todos</>
+                    ) : (
+                      <><CheckSquare className="h-4 w-4 mr-2" />Selecionar Todos</>
+                    )}
+                  </Button>
+                  <Button 
+                    className="bg-gradient-primary text-white"
+                    onClick={preVisualizarXML}
+                    disabled={produtosSelecionados.size === 0 || exportando}
+                  >
+                    {exportando ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Exportando...</>
+                    ) : (
+                      <><Download className="h-4 w-4 mr-2" />Exportar {produtosSelecionados.size} XML</>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setModoSelecao(true)}
+                    className="border-green-500/50 hover:bg-green-500/10 text-green-600 dark:text-green-400"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar XML
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={abrirSeletorArquivo}
+                    className="border-primary/50 hover:bg-primary/10"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar XML(s)
+                  </Button>
+                  <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-produto")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Produto
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -1283,23 +1800,72 @@ const fecharImportDialog = () => {
         {/* Botões - Mobile */}
         <div className="md:hidden w-full space-y-2">
           {hasPermission('produtos_criar') && (
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                className="flex-1 text-xs sm:text-sm border-primary/50 hover:bg-primary/10" 
-                onClick={abrirSeletorArquivo}
-              >
-                <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span>Importar XML(s)</span>
-              </Button>
-              <Button 
-                className="flex-1 bg-gradient-primary text-white text-xs sm:text-sm" 
-                onClick={() => navigate("/dashboard/novo-produto")}
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span>Novo Produto</span>
-              </Button>
-            </div>
+            <>
+              {modoSelecao ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      className="flex-1 text-xs sm:text-sm"
+                      onClick={cancelarModoSelecao}
+                    >
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span>Cancelar</span>
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="flex-1 text-xs sm:text-sm border-primary/50 hover:bg-primary/10"
+                      onClick={toggleSelecionarTodos}
+                    >
+                      {produtosSelecionados.size === produtos.length ? (
+                        <><Square className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /><span>Desselecionar</span></>
+                      ) : (
+                        <><CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /><span>Selecionar Todos</span></>
+                      )}
+                    </Button>
+                  </div>
+                  <Button 
+                    className="w-full bg-gradient-primary text-white text-xs sm:text-sm"
+                    onClick={preVisualizarXML}
+                    disabled={produtosSelecionados.size === 0 || exportando}
+                  >
+                    {exportando ? (
+                      <><Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" /><span>Exportando...</span></>
+                    ) : (
+                      <><Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /><span>Exportar {produtosSelecionados.size} XML</span></>
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant="outline"
+                    className="w-full text-xs sm:text-sm border-green-500/50 hover:bg-green-500/10 text-green-600 dark:text-green-400"
+                    onClick={() => setModoSelecao(true)}
+                  >
+                    <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span>Exportar XML</span>
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      className="flex-1 text-xs sm:text-sm border-primary/50 hover:bg-primary/10" 
+                      onClick={abrirSeletorArquivo}
+                    >
+                      <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span>Importar XML(s)</span>
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-gradient-primary text-white text-xs sm:text-sm" 
+                      onClick={() => navigate("/dashboard/novo-produto")}
+                    >
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span>Novo Produto</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -1591,11 +2157,34 @@ const fecharImportDialog = () => {
         <>
           <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {produtos.map((produto) => (
-            <Card key={produto.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+            <Card 
+              key={produto.id} 
+              className={`bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full ${modoSelecao ? 'cursor-pointer' : ''} ${modoSelecao && produtosSelecionados.has(produto.id) ? 'ring-2 ring-primary border-primary' : ''}`}
+              onClick={modoSelecao ? () => toggleSelecaoProduto(produto.id) : undefined}
+            >
               <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex items-center justify-between">
-                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
-                    <Package className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
+                  <div className="flex items-center gap-2">
+                    {modoSelecao && (
+                      <div 
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          produtosSelecionados.has(produto.id) 
+                            ? 'bg-primary border-primary' 
+                            : 'border-muted-foreground/50'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelecaoProduto(produto.id);
+                        }}
+                      >
+                        {produtosSelecionados.has(produto.id) && (
+                          <CheckCircle className="h-4 w-4 text-white" />
+                        )}
+                      </div>
+                    )}
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                      <Package className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
+                    </div>
                   </div>
                   {obterBadgeStatus(produto)}
                 </div>
@@ -1783,6 +2372,378 @@ const fecharImportDialog = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Pré-visualização do XML */}
+      <Dialog open={showExportPreview} onOpenChange={setShowExportPreview}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              Pré-visualização da Exportação
+            </DialogTitle>
+            <DialogDescription>
+              <div className="flex flex-wrap items-center gap-4 mt-2">
+                <span className="flex items-center gap-1">
+                  <Package className="h-4 w-4 text-primary" />
+                  <strong>{exportInfo.totalProdutos}</strong> produto(s)
+                </span>
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <strong>{exportInfo.totalFornecedores}</strong> fornecedor(es)
+                </span>
+                
+                {/* Toggle de visualização */}
+                <div className="flex items-center gap-1 ml-auto">
+                  <Button
+                    variant={visualizacaoXML === 'formatado' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setVisualizacaoXML('formatado')}
+                    className={visualizacaoXML === 'formatado' ? 'bg-primary text-white' : ''}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Formatado
+                  </Button>
+                  <Button
+                    variant={visualizacaoXML === 'xml' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setVisualizacaoXML('xml')}
+                    className={visualizacaoXML === 'xml' ? 'bg-primary text-white' : ''}
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    XML
+                  </Button>
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          {visualizacaoXML === 'formatado' ? (
+            <>
+              {/* Fornecedores - Cards com rolagem horizontal */}
+              {fornecedoresExport.length > 0 && (
+                <div className="pb-3 border-b">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Fornecedores</p>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                    {fornecedoresExport.map((fornecedor) => (
+                      <Card 
+                        key={fornecedor.id} 
+                        className="flex-shrink-0 w-[280px] bg-gradient-card shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => setFornecedorExpandido(fornecedorExpandido === fornecedor.id ? null : fornecedor.id)}
+                      >
+                        <CardContent className="p-3 space-y-2">
+                          {/* Cabeçalho */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-primary" />
+                              <span className="font-semibold text-sm truncate">{fornecedor.nome}</span>
+                            </div>
+                            <Badge variant={fornecedor.status === 'ativo' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                              {fornecedor.status}
+                            </Badge>
+                          </div>
+                          
+                          {/* Informações */}
+                          <div className="space-y-1 text-xs">
+                            {fornecedor.cnpj && (
+                              <div className="text-muted-foreground font-mono text-[10px]">
+                                CNPJ: {formatarCNPJ(fornecedor.cnpj)}
+                              </div>
+                            )}
+                            {fornecedor.razao_social && (
+                              <div className="text-muted-foreground truncate" title={fornecedor.razao_social}>
+                                {fornecedor.razao_social}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Detalhes expandidos */}
+                          {fornecedorExpandido === fornecedor.id && (
+                            <div className="pt-2 border-t space-y-1 text-xs">
+                              {fornecedor.email && (
+                                <div>
+                                  <span className="text-muted-foreground">Email:</span>
+                                  <span className="ml-1">{fornecedor.email}</span>
+                                </div>
+                              )}
+                              {fornecedor.telefone && (
+                                <div>
+                                  <span className="text-muted-foreground">Telefone:</span>
+                                  <span className="ml-1">{fornecedor.telefone}</span>
+                                </div>
+                              )}
+                              {fornecedor.cidade && (
+                                <div>
+                                  <span className="text-muted-foreground">Local:</span>
+                                  <span className="ml-1">{fornecedor.cidade}{fornecedor.estado ? `/${fornecedor.estado}` : ''}</span>
+                                </div>
+                              )}
+                              {fornecedor.endereco && (
+                                <div>
+                                  <span className="text-muted-foreground">Endereço:</span>
+                                  <span className="ml-1">{fornecedor.endereco}</span>
+                                </div>
+                              )}
+                              {fornecedor.contato && (
+                                <div>
+                                  <span className="text-muted-foreground">Contato:</span>
+                                  <span className="ml-1">{fornecedor.contato}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de produtos */}
+              <div className="py-2 border-b">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Produtos ({produtosExport.length})</p>
+              </div>
+              
+              <ScrollArea className="flex-1 min-h-[200px] max-h-[45vh] overflow-auto">
+                <div className="space-y-2 pr-4">
+                  {produtosExport.map((produto) => {
+                    const fornecedorDoProduto = produto.fornecedor_id 
+                      ? fornecedoresExport.find(f => f.id === produto.fornecedor_id) 
+                      : null;
+                    
+                    return (
+                      <div 
+                        key={produto.id}
+                        className="border rounded-lg transition-colors bg-primary/5 border-primary/30"
+                      >
+                        {/* Linha principal do produto */}
+                        <div 
+                          className="flex items-center gap-3 p-3 cursor-pointer"
+                          onClick={() => setProdutoExportExpandido(produtoExportExpandido === produto.id ? null : produto.id)}
+                        >
+                          <div className="p-1.5 rounded-lg bg-primary/10">
+                            <Package className="h-4 w-4 text-primary" />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm line-clamp-1">{produto.nome}</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                  {produto.categoria_nome && (
+                                    <Badge className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary border-0">
+                                      {produto.categoria_nome}
+                                    </Badge>
+                                  )}
+                                  {produto.codigo_barras && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      EAN: {produto.codigo_barras}
+                                    </Badge>
+                                  )}
+                                  {produto.sku && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      SKU: {produto.sku}
+                                    </Badge>
+                                  )}
+                                  {produto.ncm && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                                      NCM: {produto.ncm}
+                                    </Badge>
+                                  )}
+                                  {produto.cfop && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                                      CFOP: {produto.cfop}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-semibold text-primary">{formatarPreco(produto.preco)}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Estoque: {obterEstoqueAtual(produto)} {produto.tipo_preco === 'kg' ? 'kg' : produto.tipo_preco === 'litros' ? 'L' : 'un'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={`transition-transform ${produtoExportExpandido === produto.id ? 'rotate-180' : ''}`}>
+                            <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Detalhes expandidos */}
+                        {produtoExportExpandido === produto.id && (
+                          <div className="px-3 pb-3 pt-0 border-t bg-muted/20">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 text-xs">
+                              {/* Informações Gerais */}
+                              <div className="space-y-1">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Informações</p>
+                                <div>
+                                  <span className="text-muted-foreground">Status:</span>
+                                  <span className="ml-1 font-medium">{produto.status}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Tipo:</span>
+                                  <span className="ml-1">{produto.tipo_preco === 'unidade' ? 'Por Unidade' : produto.tipo_preco === 'kg' ? 'Por KG' : 'Por Litro'}</span>
+                                </div>
+                                {produto.marca && (
+                                  <div>
+                                    <span className="text-muted-foreground">Marca:</span>
+                                    <span className="ml-1">{produto.marca}</span>
+                                  </div>
+                                )}
+                                {produto.modelo && (
+                                  <div>
+                                    <span className="text-muted-foreground">Modelo:</span>
+                                    <span className="ml-1">{produto.modelo}</span>
+                                  </div>
+                                )}
+                                {produto.preco_compra && (
+                                  <div>
+                                    <span className="text-muted-foreground">Preço Compra:</span>
+                                    <span className="ml-1">{formatarPreco(produto.preco_compra)}</span>
+                                  </div>
+                                )}
+                                {produto.preco_promocional && (
+                                  <div>
+                                    <span className="text-muted-foreground">Preço Promo:</span>
+                                    <span className="ml-1 text-green-600">{formatarPreco(produto.preco_promocional)}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* ICMS */}
+                              <div className="space-y-1">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">ICMS</p>
+                                <div>
+                                  <span className="text-muted-foreground">Origem:</span>
+                                  <span className="ml-1 font-medium">{produto.icms_origem || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">CST:</span>
+                                  <span className="ml-1 font-mono">{produto.icms_situacao_tributaria || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Alíquota:</span>
+                                  <span className="ml-1">{produto.icms_aliquota ? `${produto.icms_aliquota}%` : '-'}</span>
+                                </div>
+                              </div>
+
+                              {/* IPI */}
+                              <div className="space-y-1">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">IPI</p>
+                                {produto.ipi_codigo_enquadramento && (
+                                  <div>
+                                    <span className="text-muted-foreground">Código:</span>
+                                    <span className="ml-1 font-mono">{produto.ipi_codigo_enquadramento}</span>
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-muted-foreground">Alíquota:</span>
+                                  <span className="ml-1">{produto.ipi_aliquota ? `${produto.ipi_aliquota}%` : '-'}</span>
+                                </div>
+                              </div>
+
+                              {/* PIS/COFINS */}
+                              <div className="space-y-1">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">PIS/COFINS</p>
+                                <div>
+                                  <span className="text-muted-foreground">PIS CST:</span>
+                                  <span className="ml-1 font-mono">{produto.pis_cst || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">PIS Alíq:</span>
+                                  <span className="ml-1">{produto.pis_aliquota ? `${produto.pis_aliquota}%` : '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">COFINS CST:</span>
+                                  <span className="ml-1 font-mono">{produto.cofins_cst || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">COFINS Alíq:</span>
+                                  <span className="ml-1">{produto.cofins_aliquota ? `${produto.cofins_aliquota}%` : '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Fornecedor do produto */}
+                            {fornecedorDoProduto && (
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px] mb-2">Fornecedor</p>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <Building2 className="h-3 w-3 text-primary" />
+                                  <span className="font-medium">{fornecedorDoProduto.nome}</span>
+                                  {fornecedorDoProduto.cnpj && (
+                                    <span className="text-muted-foreground font-mono">
+                                      CNPJ: {formatarCNPJ(fornecedorDoProduto.cnpj)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </>
+          ) : (
+            /* Visualização XML bruto */
+            <div className="flex-1 overflow-hidden border rounded-lg bg-muted/30">
+              <ScrollArea className="h-[50vh]">
+                <pre className="p-4 text-xs sm:text-sm font-mono whitespace-pre-wrap break-all">
+                  <code className="text-foreground">
+                    {xmlPreview.split('\n').map((line, index) => (
+                      <div key={index} className="flex">
+                        <span className="text-muted-foreground w-8 sm:w-12 text-right pr-2 sm:pr-4 select-none border-r mr-2 sm:mr-4">
+                          {index + 1}
+                        </span>
+                        <span className={
+                          line.includes('<?xml') ? 'text-purple-500 dark:text-purple-400' :
+                          line.includes('</') ? 'text-blue-500 dark:text-blue-400' :
+                          line.includes('<') && line.includes('>') ? 'text-green-600 dark:text-green-400' :
+                          'text-foreground'
+                        }>
+                          {line || ' '}
+                        </span>
+                      </div>
+                    ))}
+                  </code>
+                </pre>
+              </ScrollArea>
+            </div>
+          )}
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowExportPreview(false)}
+              className="w-full sm:w-auto"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={copiarXML}
+              className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar XML
+            </Button>
+            <Button 
+              onClick={baixarXML}
+              className="w-full sm:w-auto bg-gradient-primary text-white"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Baixar XML
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Importação de XML */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
