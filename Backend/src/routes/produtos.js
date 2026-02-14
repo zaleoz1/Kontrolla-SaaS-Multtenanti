@@ -673,6 +673,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       codigo_barras,
       sku,
       preco,
+      preco_compra,
       preco_promocional,
       tipo_preco,
       estoque,
