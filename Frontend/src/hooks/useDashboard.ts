@@ -300,12 +300,13 @@ export function useDashboard() {
 
   const formatarEstoque = (produto: ProdutoEstoqueBaixo) => {
     const unidade = obterUnidadeEstoque(produto.tipo_preco);
+    const estoqueAtual = Number(produto.estoque_atual) || 0;
     
     if (produto.tipo_preco === 'unidade') {
-      return `${Math.round(produto.estoque_atual)} ${unidade}`;
+      return `${Math.round(estoqueAtual)} ${unidade}`;
     } else {
       // Para kg e litros, manter casas decimais mas limitar a 3 casas
-      return `${Number(produto.estoque_atual).toFixed(3).replace(/\.?0+$/, '')} ${unidade}`;
+      return `${estoqueAtual.toFixed(3).replace(/\.?0+$/, '')} ${unidade}`;
     }
   };
 

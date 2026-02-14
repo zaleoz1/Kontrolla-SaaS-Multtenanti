@@ -585,33 +585,33 @@ export default function Clientes() {
               </CardContent>
 
               {/* Botões de ação fixos no footer */}
-              {(hasPermission('clientes_editar') || hasPermission('clientes_excluir')) && (
+                {(hasPermission('clientes_editar') || hasPermission('clientes_excluir')) && (
                 <div className="flex space-x-1.5 sm:space-x-2 px-6 pb-6 pt-2 mt-auto border-t border-border/50">
-                  {hasPermission('clientes_editar') && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 text-xs sm:text-sm"
-                      onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
-                    >
-                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Editar</span>
-                      <span className="sm:hidden">Ed.</span>
-                    </Button>
-                  )}
-                  {hasPermission('clientes_excluir') && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="px-2 sm:px-3"
-                      onClick={() => deletarCliente(cliente.id)}
-                      disabled={clientesApi.loading}
-                    >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  )}
-                </div>
-              )}
+                    {hasPermission('clientes_editar') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-xs sm:text-sm"
+                        onClick={() => navigate(`/dashboard/novo-cliente/${cliente.id}`)}
+                      >
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Editar</span>
+                        <span className="sm:hidden">Ed.</span>
+                      </Button>
+                    )}
+                    {hasPermission('clientes_excluir') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="px-2 sm:px-3"
+                        onClick={() => deletarCliente(cliente.id)}
+                        disabled={clientesApi.loading}
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
             </Card>
           ))}
         </div>

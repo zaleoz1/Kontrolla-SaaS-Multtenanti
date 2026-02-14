@@ -305,25 +305,32 @@ router.get('/estoque-baixo', async (req, res) => {
     const limitValue = parseInt(limit);
 
     const produtos = await query(
-      `SELECT p.id, p.nome, p.estoque, p.estoque_minimo, p.preco, p.tipo_preco,
-              p.estoque_kg, p.estoque_litros, p.estoque_minimo_kg, p.estoque_minimo_litros,
+      `SELECT p.id, p.nome, 
+              COALESCE(p.estoque, 0) as estoque, 
+              COALESCE(p.estoque_minimo, 0) as estoque_minimo, 
+              CAST(p.preco AS DECIMAL(10,2)) as preco, 
+              p.tipo_preco,
+              COALESCE(p.estoque_kg, 0) as estoque_kg, 
+              COALESCE(p.estoque_litros, 0) as estoque_litros, 
+              COALESCE(p.estoque_minimo_kg, 0) as estoque_minimo_kg, 
+              COALESCE(p.estoque_minimo_litros, 0) as estoque_minimo_litros,
               c.nome as categoria_nome,
-              CASE 
-                WHEN p.tipo_preco = 'kg' THEN p.estoque_kg
-                WHEN p.tipo_preco = 'litros' THEN p.estoque_litros
-                ELSE p.estoque
-              END as estoque_atual,
-              CASE 
-                WHEN p.tipo_preco = 'kg' THEN p.estoque_minimo_kg
-                WHEN p.tipo_preco = 'litros' THEN p.estoque_minimo_litros
-                ELSE p.estoque_minimo
-              END as estoque_minimo_atual
+              CAST(CASE 
+                WHEN p.tipo_preco = 'kg' THEN COALESCE(p.estoque_kg, 0)
+                WHEN p.tipo_preco = 'litros' THEN COALESCE(p.estoque_litros, 0)
+                ELSE COALESCE(p.estoque, 0)
+              END AS DECIMAL(10,3)) as estoque_atual,
+              CAST(CASE 
+                WHEN p.tipo_preco = 'kg' THEN COALESCE(p.estoque_minimo_kg, 0)
+                WHEN p.tipo_preco = 'litros' THEN COALESCE(p.estoque_minimo_litros, 0)
+                ELSE COALESCE(p.estoque_minimo, 0)
+              END AS DECIMAL(10,3)) as estoque_minimo_atual
        FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
        WHERE p.tenant_id = ? AND (
-         (p.tipo_preco = 'unidade' AND p.estoque <= p.estoque_minimo) OR
-         (p.tipo_preco = 'kg' AND p.estoque_kg <= p.estoque_minimo_kg) OR
-         (p.tipo_preco = 'litros' AND p.estoque_litros <= p.estoque_minimo_litros)
+         (p.tipo_preco = 'unidade' AND COALESCE(p.estoque, 0) <= COALESCE(p.estoque_minimo, 0)) OR
+         (p.tipo_preco = 'kg' AND COALESCE(p.estoque_kg, 0) <= COALESCE(p.estoque_minimo_kg, 0)) OR
+         (p.tipo_preco = 'litros' AND COALESCE(p.estoque_litros, 0) <= COALESCE(p.estoque_minimo_litros, 0))
        ) AND p.status = 'ativo'
        ORDER BY estoque_atual ASC 
        LIMIT ${limitValue}`,
@@ -403,15 +410,17 @@ router.get('/top-produtos', async (req, res) => {
 
     const produtos = await query(
       `SELECT 
-        p.id, p.nome, p.preco, c.nome as categoria_nome,
-        SUM(vi.quantidade) as total_vendido,
+        p.id, p.nome, 
+        CAST(p.preco AS DECIMAL(10,2)) as preco, 
+        c.nome as categoria_nome,
+        CAST(SUM(vi.quantidade) AS SIGNED) as total_vendido,
         COUNT(DISTINCT vi.venda_id) as total_vendas,
-        SUM(vi.preco_total) as receita_total
+        CAST(SUM(vi.preco_total) AS DECIMAL(10,2)) as receita_total
        FROM venda_itens vi
        JOIN produtos p ON vi.produto_id = p.id
        LEFT JOIN categorias c ON p.categoria_id = c.id
        JOIN vendas v ON vi.venda_id = v.id
-       WHERE v.tenant_id = ? AND v.status = 'pago' 
+       WHERE v.tenant_id = ? AND v.status IN ('pago', 'pendente')
          AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL ${periodoValue} DAY)
        GROUP BY p.id, p.nome, p.preco, c.nome
        ORDER BY total_vendido DESC
