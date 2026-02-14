@@ -126,7 +126,7 @@ export default function Dashboard() {
           items.push({ texto: `${semEstoque} sem estoque`, tipo: "negativa" });
         }
         if (estoqueBaixo > 0) {
-          items.push({ texto: `${estoqueBaixo} estoque baixo`, tipo: "aviso" });
+          items.push({ texto: `${estoqueBaixo} estoque baixo`, tipo: "neutra" });
         }
         if (items.length === 0) {
           items.push({ texto: "Estoque OK", tipo: "positiva" });
@@ -567,8 +567,8 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                         <Badge 
-                          variant={produto.estoque_atual === 0 ? "destructive" : "secondary"}
-                          className={`${produto.estoque_atual === 0 ? "" : "bg-warning/20 border-warning/30 text-black dark:text-black"} text-xs`}
+                          variant={Number(produto.estoque_atual) === 0 ? "destructive" : "secondary"}
+                          className={`${Number(produto.estoque_atual) === 0 ? "" : "bg-warning/20 border-warning/30 text-black dark:text-black"} text-xs`}
                         >
                           {formatarEstoque(produto)}
                         </Badge>
@@ -807,6 +807,7 @@ export default function Dashboard() {
                     tickLine={false}
                     tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     tickFormatter={(value) => `${value}`}
+                    domain={[0, 'dataMax']}
                   />
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted)/0.3)' }}

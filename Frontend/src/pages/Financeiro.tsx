@@ -2497,15 +2497,15 @@ export default function Financeiro() {
 
       {/* Modal de Recebimento */}
       <Dialog open={modalRecebimento} onOpenChange={setModalRecebimento}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-[95vw] sm:max-w-2xl">
-          <DialogHeader className="pb-2">
+        <DialogContent className="h-[90vh] max-h-[90vh] w-[95vw] sm:w-full max-w-[95vw] sm:max-w-3xl flex flex-col p-0">
+          <DialogHeader className="pb-2 px-6 pt-6">
             <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
               <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="truncate">Receber Pagamento</span>
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1 px-6">
             {/* Informações da conta */}
             <div className="p-4 bg-muted/30 rounded-lg">
               <h4 className="font-semibold mb-2 text-base">Conta a Receber</h4>
@@ -2533,16 +2533,7 @@ export default function Financeiro() {
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Valor a receber:</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditandoValorRecebimento(!editandoValorRecebimento)}
-                    >
-                      {editandoValorRecebimento ? 'Cancelar' : 'Editar'}
-                    </Button>
-                  </div>
+                  <p className="text-sm font-medium">Valor a receber:</p>
                   
                   {editandoValorRecebimento ? (
                     <div className="space-y-2">
@@ -2550,8 +2541,15 @@ export default function Financeiro() {
                         type="number"
                         step="0.01"
                         placeholder="Digite o valor a receber"
-                        value={valorEditadoRecebimento}
-                        onChange={(e) => setValorEditadoRecebimento(parseFloat(e.target.value) || 0)}
+                        value={valorEditadoRecebimento || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || value === null) {
+                            setValorEditadoRecebimento(0);
+                          } else {
+                            setValorEditadoRecebimento(parseFloat(value));
+                          }
+                        }}
                         className="h-10"
                       />
                       
@@ -2603,52 +2601,73 @@ export default function Financeiro() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-lg font-bold text-success">
-                      {formatarValor(valorEditadoRecebimento)}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-2xl sm:text-3xl font-bold text-success">
+                        {formatarValor(valorEditadoRecebimento)}
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => setEditandoValorRecebimento(true)}
+                      >
+                        Receber outro valor
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Método de recebimento e Data */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">Método de Recebimento</Label>
-                <Select 
-                  value={dadosRecebimento.metodoPagamento} 
-                  onValueChange={(value: any) => setDadosRecebimento({...dadosRecebimento, metodoPagamento: value})}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Selecione o método de pagamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {metodosPagamento.map((metodo) => (
-                      <SelectItem key={metodo.id} value={metodo.tipo}>
-                        <div className="flex items-center gap-2">
+            {/* Método de recebimento */}
+            <div className="space-y-2">
+              <Label className="text-sm">Método de Recebimento</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+                {metodosPagamento.map((metodo) => {
+                  const isSelected = dadosRecebimento.metodoPagamento === metodo.tipo;
+                  return (
+                    <div
+                      key={metodo.id}
+                      onClick={() => setDadosRecebimento({...dadosRecebimento, metodoPagamento: metodo.tipo})}
+                      className={`
+                        p-1.5 sm:p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md
+                        ${isSelected 
+                          ? 'border-primary bg-primary/5 dark:bg-primary/10 dark:border-primary/50 shadow-md' 
+                          : 'border-border hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10'
+                        }
+                      `}
+                    >
+                      <div className="text-center">
+                        <div className={`
+                          w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 rounded-full flex items-center justify-center
+                          ${isSelected ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}
+                        `}>
                           {obterIconeMetodoPagamento(metodo.tipo)}
-                          <span>{metodo.nome}</span>
-                          {metodo.taxa > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              ({metodo.taxa}% taxa)
-                            </span>
-                          )}
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        <span className={`text-[10px] sm:text-xs font-medium block ${
+                          isSelected ? 'text-primary' : 'text-foreground'
+                        }`}>
+                          {metodo.nome}
+                        </span>
+                        {metodo.taxa > 0 && (
+                          <span className="text-[8px] sm:text-[10px] text-muted-foreground block">
+                            ({metodo.taxa}% taxa)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm">Data do Recebimento</Label>
-                <Input
-                  type="date"
-                  className="h-10"
-                  value={dadosRecebimento.dataRecebimento}
-                  onChange={(e) => setDadosRecebimento({...dadosRecebimento, dataRecebimento: e.target.value})}
-                />
-              </div>
+            {/* Data do Recebimento */}
+            <div className="space-y-2">
+              <Label className="text-sm">Data do Recebimento</Label>
+              <Input
+                type="date"
+                className="h-10"
+                value={dadosRecebimento.dataRecebimento}
+                onChange={(e) => setDadosRecebimento({...dadosRecebimento, dataRecebimento: e.target.value})}
+              />
             </div>
 
 
@@ -2849,24 +2868,25 @@ export default function Financeiro() {
               </div>
             </div>
 
-            {/* Botões */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setModalRecebimento(false)}
-                className="flex-1 h-10 text-xs sm:text-sm"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={processarRecebimento}
-                className="flex-1 h-10 bg-gradient-primary text-white text-xs sm:text-sm"
-              >
-                <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Confirmar Recebimento</span>
-                <span className="sm:hidden">Confirmar</span>
-              </Button>
-            </div>
+          </div>
+          
+          {/* Footer fixo com botões */}
+          <div className="flex flex-col sm:flex-row gap-3 px-6 py-4 border-t bg-background mt-auto shrink-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setModalRecebimento(false)}
+              className="flex-1 h-10 text-xs sm:text-sm"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={processarRecebimento}
+              className="flex-1 h-10 bg-gradient-primary text-white text-xs sm:text-sm"
+            >
+              <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Confirmar Recebimento</span>
+              <span className="sm:hidden">Confirmar</span>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -2895,17 +2915,24 @@ export default function Financeiro() {
                 </span>
               </div>
               
-              <div className="border-t border-border/50 pt-3">
-                <span className="text-xs text-muted-foreground block mb-1">Descrição</span>
-                <p className="text-sm">{dadosEdicao.descricao || '-'}</p>
-              </div>
-              
               <div className="flex items-center justify-between border-t border-border/50 pt-3">
                 <span className="text-xs text-muted-foreground">Valor</span>
                 <span className="text-lg font-bold text-primary">
                   {dadosEdicao.valor ? `R$ ${Number(dadosEdicao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
                 </span>
               </div>
+            </div>
+
+            {/* Descrição (editável) */}
+            <div className="space-y-2">
+              <Label className="text-xs sm:text-sm">Descrição</Label>
+              <Textarea 
+                value={dadosEdicao.descricao || ''}
+                onChange={(e) => setDadosEdicao(prev => ({ ...prev, descricao: e.target.value }))}
+                className="text-sm min-h-[120px] resize-none"
+                placeholder="Digite a descrição"
+                rows={3}
+              />
             </div>
 
             {/* Data de Vencimento */}
