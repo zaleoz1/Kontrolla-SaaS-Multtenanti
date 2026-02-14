@@ -1043,6 +1043,25 @@ export default function NovoProduto() {
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                       <label className="text-xs sm:text-sm font-medium">
+                        Preço de Compra
+                        {produto.tipo_preco === "unidade" && " (por unidade)"}
+                        {produto.tipo_preco === "kg" && " (por KG)"}
+                        {produto.tipo_preco === "litros" && " (por litro)"}
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={produto.preco_compra || ""}
+                        onChange={(e) => atualizarProduto("preco_compra", e.target.value ? parseFloat(e.target.value) : null)}
+                        className="mt-1 text-xs sm:text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Custo de aquisição do produto</p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">
                         Preço de Venda * 
                         {produto.tipo_preco === "unidade" && " (por unidade)"}
                         {produto.tipo_preco === "kg" && " (por KG)"}
@@ -1066,25 +1085,6 @@ export default function NovoProduto() {
                       {errosValidacao.preco && (
                         <p className="text-xs text-red-500 mt-1">Preço de venda é obrigatório</p>
                       )}
-                    </div>
-
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium">
-                        Preço de Compra
-                        {produto.tipo_preco === "unidade" && " (por unidade)"}
-                        {produto.tipo_preco === "kg" && " (por KG)"}
-                        {produto.tipo_preco === "litros" && " (por litro)"}
-                      </label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        value={produto.preco_compra || ""}
-                        onChange={(e) => atualizarProduto("preco_compra", e.target.value ? parseFloat(e.target.value) : null)}
-                        className="mt-1 text-xs sm:text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Custo de aquisição do produto</p>
                     </div>
 
                     <div>
