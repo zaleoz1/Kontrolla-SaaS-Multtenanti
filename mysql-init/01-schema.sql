@@ -211,6 +211,7 @@ CREATE TABLE IF NOT EXISTS produtos (
     codigo_barras VARCHAR(50),
     sku VARCHAR(100),
     preco DECIMAL(10,2) NOT NULL,
+    preco_compra DECIMAL(10,2),
     preco_promocional DECIMAL(10,2),
     tipo_preco ENUM('unidade', 'kg', 'litros') DEFAULT 'unidade',
     preco_por_kg DECIMAL(10,2),
@@ -225,6 +226,7 @@ CREATE TABLE IF NOT EXISTS produtos (
     imagens JSON,
     -- Campos de impostos fiscais
     ncm VARCHAR(10),
+    cest VARCHAR(7),
     cfop VARCHAR(4),
     cst VARCHAR(3),
     icms_aliquota DECIMAL(10,2),
