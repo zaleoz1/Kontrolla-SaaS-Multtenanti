@@ -33,6 +33,7 @@ export interface Produto {
   data_atualizacao?: string;
   // Campos de impostos
   ncm?: string;
+  cest?: string;
   cfop?: string;
   cst?: string;
   icms_aliquota?: number;

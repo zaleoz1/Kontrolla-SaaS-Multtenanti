@@ -51,6 +51,7 @@ interface Produto {
   imagens: string[];
   // Campos de impostos
   ncm?: string;
+  cest?: string;
   cfop?: string;
   cst?: string;
   icms_aliquota?: number | null;
@@ -128,6 +129,7 @@ export default function NovoProduto() {
     imagens: [],
     // Campos de impostos
     ncm: "",
+    cest: "",
     cfop: "",
     cst: "",
     icms_aliquota: null,
@@ -199,6 +201,7 @@ export default function NovoProduto() {
         imagens: imagens,
         // Campos de impostos
         ncm: produtoData.ncm || "",
+        cest: produtoData.cest || "",
         cfop: produtoData.cfop || "",
         cst: produtoData.cst || "",
         icms_aliquota: produtoData.icms_aliquota || null,
@@ -533,6 +536,7 @@ export default function NovoProduto() {
         imagens: produto.imagens || [],
         // Campos de impostos
         ncm: produto.ncm?.trim() || null,
+        cest: produto.cest?.trim() || null,
         cfop: produto.cfop?.trim() || null,
         cst: produto.cst?.trim() || null,
         icms_aliquota: produto.icms_aliquota ? parseFloat(String(produto.icms_aliquota)) : null,
@@ -1442,18 +1446,30 @@ export default function NovoProduto() {
                   <CardTitle className="text-sm sm:text-base">Informações Fiscais e Impostos</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* NCM e CFOP */}
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                  {/* NCM, CEST e CFOP */}
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                     <div>
                       <label className="text-xs sm:text-sm font-medium">NCM (Nomenclatura Comum do Mercado)</label>
                       <Input
-                        placeholder="Ex: 8517.12.10"
+                        placeholder="Ex: 85171210"
                         value={produto.ncm || ""}
                         onChange={(e) => atualizarProduto("ncm", e.target.value)}
                         className="mt-1 text-xs sm:text-sm"
                         maxLength={8}
                       />
                       <p className="text-xs text-muted-foreground mt-1">Código de 8 dígitos do NCM</p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium">CEST (Substituição Tributária)</label>
+                      <Input
+                        placeholder="Ex: 2106500"
+                        value={produto.cest || ""}
+                        onChange={(e) => atualizarProduto("cest", e.target.value)}
+                        className="mt-1 text-xs sm:text-sm"
+                        maxLength={7}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Código de 7 dígitos do CEST</p>
                     </div>
 
                     <div>
