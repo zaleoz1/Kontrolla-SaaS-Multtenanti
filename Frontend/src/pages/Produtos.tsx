@@ -37,7 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { useCrudApi } from "@/hooks/useApi";
+import { useCrudApi, useApi } from "@/hooks/useApi";
 import { API_ENDPOINTS } from "@/config/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNotificationContext } from "@/contexts/NotificationContext";
@@ -96,6 +96,7 @@ interface Produto {
   data_atualizacao: string;
   // Campos de impostos
   ncm?: string;
+  cest?: string;
   cfop?: string;
   cst?: string;
   icms_aliquota?: number;
@@ -175,6 +176,26 @@ interface DadosNFeXML {
   valorTotal: number;
 }
 
+// Interface para informações de produto existente no sistema
+interface ProdutoExistenteInfo {
+  id: number;
+  nome: string;
+  codigo_barras?: string;
+  sku?: string;
+  preco: number;
+  preco_compra?: number;
+  estoque: number;
+  estoque_kg?: number;
+  estoque_litros?: number;
+  tipo_preco: string;
+  ncm?: string;
+  cest?: string;
+  cfop?: string;
+  cst?: string;
+  icms_aliquota?: number;
+  icms_origem?: string;
+}
+
 // Interface para produtos extraídos do XML
 interface ProdutoXML {
   id: string; // ID temporário para controle
@@ -211,6 +232,11 @@ interface ProdutoXML {
   cofinsAliquota?: number;
   cofinsBase?: number;
   cofinsValor?: number;
+  // Status de existência
+  jaExiste?: boolean;
+  motivoMatch?: 'codigo_barras' | 'sku' | null;
+  produtoExistente?: ProdutoExistenteInfo | null;
+  acao?: 'criar' | 'atualizar' | 'ignorar';
 }
 
 export default function Produtos() {
@@ -235,6 +261,9 @@ export default function Produtos() {
   const [nfeExpandida, setNfeExpandida] = useState<string | null>(null);
   const [criarFornecedores, setCriarFornecedores] = useState(true); // Criar fornecedores automaticamente
   const [fornecedoresCriados, setFornecedoresCriados] = useState<{[documento: string]: number}>({}); // Mapa CNPJ -> ID do fornecedor
+  const [verificandoExistentes, setVerificandoExistentes] = useState(false);
+  const [filtroImportacao, setFiltroImportacao] = useState<'todos' | 'novos' | 'existentes'>('todos');
+  const [statsImportacao, setStatsImportacao] = useState<{total: number, novos: number, existentes: number}>({total: 0, novos: 0, existentes: 0});
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Estados para exportação XML
@@ -261,6 +290,7 @@ export default function Produtos() {
   const categoriasApi = useCrudApi<{categorias: Categoria[]}>(API_ENDPOINTS.CATALOG.CATEGORIES);
   const importApi = useCrudApi(API_ENDPOINTS.PRODUCTS.IMPORT); // Rota de importação com upsert
   const fornecedoresApi = useCrudApi(API_ENDPOINTS.FORNECEDORES.LIST); // API de fornecedores
+  const api = useApi(); // API genérica para verificações
 
   // Carregar categorias e produtos
   useEffect(() => {
@@ -473,7 +503,10 @@ export default function Produtos() {
     for (const produto of produtosFornecedor) {
       const estoqueAtual = obterEstoqueAtual(produto);
       const unidade = produto.tipo_preco === 'kg' ? 'KG' : produto.tipo_preco === 'litros' ? 'LT' : 'UN';
-      const precoNum = Number(produto.preco) || 0;
+      // Usar preco_compra (valor de compra) ou preco (venda) como valor unitário
+      const precoCompra = Number(produto.preco_compra) || 0;
+      const precoVenda = Number(produto.preco) || 0;
+      const precoNum = precoCompra > 0 ? precoCompra : precoVenda;
       const valorTotal = precoNum * (estoqueAtual || 1);
       
       // Extrair valores de impostos REAIS
@@ -488,6 +521,7 @@ export default function Produtos() {
       const cofinsAliquota = produto.cofins_aliquota != null ? Number(produto.cofins_aliquota) : null;
       const ncmValor = (produto.ncm || '').replace(/\D/g, '').trim() || null;
       const cfopValor = (produto.cfop || '').replace(/\D/g, '').trim() || null;
+      const cestValor = (produto.cest || '').replace(/\D/g, '').trim() || null;
       
       const temICMS = icmsOrigem || icmsCST || (icmsAliquota != null && icmsAliquota > 0);
       const temIPI = ipiCodEnq || (ipiAliquota != null && ipiAliquota > 0);
@@ -495,22 +529,27 @@ export default function Produtos() {
       const temCOFINS = cofinsCST || (cofinsAliquota != null && cofinsAliquota > 0);
       const temImpostos = temICMS || temIPI || temPIS || temCOFINS || ncmValor || cfopValor;
       
+      // Código de barras - usar "SEM GTIN" se vazio (padrão NF-e)
+      const codigoBarras = produto.codigo_barras?.trim() || 'SEM GTIN';
+      
       xml += `      <det nItem="${itemNum}">
         <prod>
           <cProd>${escapeXML(produto.sku || String(produto.id))}</cProd>
-          <cEAN>${escapeXML(produto.codigo_barras || '')}</cEAN>
-          <xProd>${escapeXML(produto.nome)}</xProd>
-          <NCM>${ncmValor || ''}</NCM>
-          <CEST></CEST>
+          <cEAN>${escapeXML(codigoBarras)}</cEAN>
+          <xProd>${escapeXML(produto.nome)}</xProd>${produto.descricao ? `
+          <xDesc>${escapeXML(produto.descricao)}</xDesc>` : ''}
+          <NCM>${ncmValor || ''}</NCM>${cestValor ? `
+          <CEST>${cestValor}</CEST>` : ''}
           <CFOP>${cfopValor || ''}</CFOP>
           <uCom>${unidade}</uCom>
           <qCom>${estoqueAtual.toFixed(4)}</qCom>
           <vUnCom>${precoNum.toFixed(4)}</vUnCom>
           <vProd>${valorTotal.toFixed(2)}</vProd>
-          <cEANTrib>${escapeXML(produto.codigo_barras || '')}</cEANTrib>
+          <cEANTrib>${escapeXML(codigoBarras)}</cEANTrib>
           <uTrib>${unidade}</uTrib>
           <qTrib>${estoqueAtual.toFixed(4)}</qTrib>
           <vUnTrib>${precoNum.toFixed(4)}</vUnTrib>
+          <vDesc>0.00</vDesc>
           <indTot>1</indTot>
         </prod>`;
       
@@ -1076,6 +1115,113 @@ export default function Produtos() {
     return { produtos, emitente, dadosNFe, nfeId };
   };
 
+  // Função para verificar quais produtos já existem no sistema
+  const verificarProdutosExistentes = async (produtosParaVerificar: ProdutoXML[]): Promise<ProdutoXML[]> => {
+    try {
+      setVerificandoExistentes(true);
+      
+      // Preparar dados para verificação
+      const dadosVerificacao = produtosParaVerificar.map(p => ({
+        id: p.id,
+        codigo_barras: p.codigoBarras,
+        sku: p.codigo,
+        nome: p.nome
+      }));
+
+      const response = await api.makeRequest('/produtos/verificar-existentes', { 
+        method: 'POST',
+        body: { produtos: dadosVerificacao }
+      });
+      
+      // Verificar duplicados dentro do próprio XML (mesmo código de barras)
+      const codigosBarrasVistos: { [key: string]: { primeiro: string; info: ProdutoExistenteInfo } } = {};
+      
+      // Primeiro passo: identificar o primeiro produto de cada código de barras
+      produtosParaVerificar.forEach(produto => {
+        const codigoBarras = produto.codigoBarras?.trim();
+        if (codigoBarras && codigoBarras !== 'SEM GTIN' && codigoBarras !== '') {
+          if (!codigosBarrasVistos[codigoBarras]) {
+            codigosBarrasVistos[codigoBarras] = {
+              primeiro: produto.id,
+              info: {
+                id: 0, // Produto do XML, não tem ID ainda
+                nome: produto.nome,
+                codigo_barras: produto.codigoBarras,
+                sku: produto.codigo,
+                preco: produto.valorUnitario,
+                preco_compra: produto.valorUnitario,
+                estoque: produto.quantidade,
+                tipo_preco: 'unidade'
+              }
+            };
+          }
+        }
+      });
+      
+      // Mapear resultados de volta para os produtos
+      const produtosAtualizados = produtosParaVerificar.map(produto => {
+        const resultado = response.resultados?.find((r: { id_xml: string; existe: boolean; motivo_match: 'codigo_barras' | 'sku' | null; produto_existente: ProdutoExistenteInfo | null }) => r.id_xml === produto.id);
+        
+        // Verificar se existe no banco de dados
+        if (resultado && resultado.existe) {
+          return {
+            ...produto,
+            jaExiste: true,
+            motivoMatch: resultado.motivo_match,
+            produtoExistente: resultado.produto_existente,
+            acao: 'atualizar' as const // Por padrão, atualizar produtos existentes
+          };
+        }
+        
+        // Verificar se é duplicado dentro do próprio XML (não é o primeiro com esse código de barras)
+        const codigoBarras = produto.codigoBarras?.trim();
+        if (codigoBarras && codigoBarras !== 'SEM GTIN' && codigoBarras !== '') {
+          const visto = codigosBarrasVistos[codigoBarras];
+          if (visto && visto.primeiro !== produto.id) {
+            return {
+              ...produto,
+              jaExiste: true,
+              motivoMatch: 'codigo_barras' as const,
+              produtoExistente: visto.info,
+              acao: 'atualizar' as const // Duplicado no XML - por padrão, atualizar (somar estoque)
+            };
+          }
+        }
+        
+        return {
+          ...produto,
+          jaExiste: false,
+          motivoMatch: null,
+          produtoExistente: null,
+          acao: 'criar' as const
+        };
+      });
+
+      // Atualizar estatísticas
+      const novos = produtosAtualizados.filter(p => !p.jaExiste).length;
+      const existentes = produtosAtualizados.filter(p => p.jaExiste).length;
+      setStatsImportacao({
+        total: produtosAtualizados.length,
+        novos,
+        existentes
+      });
+
+      return produtosAtualizados;
+    } catch (error) {
+      console.error('Erro ao verificar produtos existentes:', error);
+      // Em caso de erro, retornar produtos sem verificação
+      return produtosParaVerificar.map(p => ({
+        ...p,
+        jaExiste: false,
+        motivoMatch: null,
+        produtoExistente: null,
+        acao: 'criar' as const
+      }));
+    } finally {
+      setVerificandoExistentes(false);
+    }
+  };
+
   // Função para lidar com a seleção de múltiplos arquivos XML
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -1145,10 +1291,14 @@ export default function Produtos() {
     // Atualizar estados
     if (todosProdutos.length > 0) {
       setXmlFileNames(nomesArquivos);
-      setProdutosXML(todosProdutos);
       setEmitentesXML(todosEmitentes);
       setDadosNFesXML(todosDadosNFes);
+      setFiltroImportacao('todos');
       setShowImportDialog(true);
+      
+      // Verificar quais produtos já existem no sistema
+      const produtosVerificados = await verificarProdutosExistentes(todosProdutos);
+      setProdutosXML(produtosVerificados);
     }
 
     if (errosProcessamento.length > 0) {
@@ -1358,7 +1508,8 @@ export default function Produtos() {
   // Função para importar os produtos selecionados
   // Usa rota de importação com UPSERT: se produto já existe (por código de barras ou SKU), atualiza e soma estoque
   const importarProdutosSelecionados = async () => {
-    const selecionados = produtosXML.filter(p => p.selecionado);
+    // Filtrar produtos selecionados e que não estão marcados para ignorar
+    const selecionados = produtosXML.filter(p => p.selecionado && p.acao !== 'ignorar');
     
     if (selecionados.length === 0) {
       toast({
@@ -1372,10 +1523,14 @@ export default function Produtos() {
     setImportando(true);
     let criados = 0;
     let atualizados = 0;
+    let ignorados = 0;
     let erros = 0;
     let fornecedoresCriadosCount = 0;
     let produtosVinculados = 0; // Produtos vinculados a fornecedores
     const errosDetalhes: string[] = [];
+    
+    // Contar produtos ignorados
+    ignorados = produtosXML.filter(p => p.acao === 'ignorar').length;
 
     // Mapa de nfeId -> fornecedor_id para vincular aos produtos
     const nfeFornecedorMap: {[nfeId: string]: number | null} = {};
@@ -1422,8 +1577,10 @@ export default function Produtos() {
             ? `[NF-e ${dadosNFeDoXML?.numero || ''} - ${formatarDataXML(dadosNFeDoXML?.dataEmissao || '')}] ${emitenteDoXML.razaoSocial}`
             : `Importado de NF-e - Código: ${produtoXML.codigo}`,
           
-          // Preços
+          // Preços - O valor unitário do XML é o preço de COMPRA (NF-e de entrada)
+          // O preço de venda é configurado como o mesmo valor por padrão (pode ser ajustado depois)
           preco: Number(produtoXML.valorUnitario.toFixed(2)),
+          preco_compra: Number(produtoXML.valorUnitario.toFixed(2)), // Preço de compra do fornecedor
           
           // Tipo de preço
           tipo_preco: tipoPreco,
@@ -1461,6 +1618,9 @@ export default function Produtos() {
         // ====== CAMPOS FISCAIS ======
         if (produtoXML.ncm && produtoXML.ncm.trim()) {
           dadosProduto.ncm = produtoXML.ncm.replace(/\D/g, '').substring(0, 10);
+        }
+        if (produtoXML.cest && produtoXML.cest.trim()) {
+          dadosProduto.cest = produtoXML.cest.replace(/\D/g, '').substring(0, 7);
         }
         if (produtoXML.cfop && produtoXML.cfop.trim()) {
           dadosProduto.cfop = produtoXML.cfop.replace(/\D/g, '').substring(0, 4);
@@ -1526,6 +1686,7 @@ export default function Produtos() {
       if (criados > 0) partes.push(`${criados} produto(s) novo(s)`);
       if (atualizados > 0) partes.push(`${atualizados} produto(s) atualizado(s)`);
       if (produtosVinculados > 0) partes.push(`${produtosVinculados} vinculado(s) a fornecedor`);
+      if (ignorados > 0) partes.push(`${ignorados} ignorado(s)`);
       if (erros > 0) partes.push(`${erros} erro(s)`);
       
       toast({
@@ -2904,6 +3065,49 @@ export default function Produtos() {
 
               {/* Controles de seleção e opções */}
               <div className="space-y-2 py-2 border-b">
+                {/* Indicador de verificação */}
+                {verificandoExistentes && (
+                  <div className="flex items-center gap-2 p-2 bg-primary/10 rounded-md">
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                    <span className="text-sm text-primary">Verificando produtos existentes no sistema...</span>
+                  </div>
+                )}
+
+                {/* Estatísticas e Filtros de importação */}
+                {!verificandoExistentes && statsImportacao.existentes > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Filtrar:</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant={filtroImportacao === 'todos' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setFiltroImportacao('todos')}
+                      >
+                        Todos ({statsImportacao.total})
+                      </Button>
+                      <Button
+                        variant={filtroImportacao === 'novos' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setFiltroImportacao('novos')}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Novos ({statsImportacao.novos})
+                      </Button>
+                      <Button
+                        variant={filtroImportacao === 'existentes' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setFiltroImportacao('existentes')}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Já cadastrados ({statsImportacao.existentes})
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Checkbox
@@ -2942,11 +3146,21 @@ export default function Produtos() {
               {/* Lista de produtos */}
               <ScrollArea className="flex-1 min-h-[200px] max-h-[50vh] overflow-auto">
                 <div className="space-y-2 pr-4">
-                  {produtosXML.map((produto) => (
+                  {produtosXML
+                    .filter(p => {
+                      if (filtroImportacao === 'novos') return !p.jaExiste;
+                      if (filtroImportacao === 'existentes') return p.jaExiste;
+                      return true;
+                    })
+                    .map((produto) => (
                     <div 
                       key={produto.id}
                       className={`border rounded-lg transition-colors ${
-                        produto.selecionado ? "bg-primary/5 border-primary/30" : "opacity-60 border-border"
+                        produto.selecionado 
+                          ? produto.jaExiste 
+                            ? "bg-amber-500/10 border-amber-500/50" 
+                            : "bg-primary/5 border-primary/30" 
+                          : "opacity-60 border-border"
                       }`}
                     >
                       {/* Linha principal do produto */}
@@ -2964,7 +3178,21 @@ export default function Produtos() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm line-clamp-1">{produto.nome}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm line-clamp-1">{produto.nome}</p>
+                                {/* Badge de status (novo ou existente) */}
+                                {produto.jaExiste ? (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 flex-shrink-0">
+                                    <RefreshCw className="h-2.5 w-2.5 mr-1" />
+                                    Já cadastrado
+                                  </Badge>
+                                ) : (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 flex-shrink-0">
+                                    <Plus className="h-2.5 w-2.5 mr-1" />
+                                    Novo
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="flex flex-wrap items-center gap-2 mt-1">
                                 {Object.keys(dadosNFesXML).length > 1 && (
                                   <Badge className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary border-0">
@@ -2989,6 +3217,12 @@ export default function Produtos() {
                                 {produto.cfop && (
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
                                     CFOP: {produto.cfop}
+                                  </Badge>
+                                )}
+                                {/* Mostrar motivo do match */}
+                                {produto.jaExiste && produto.motivoMatch && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                                    Encontrado por: {produto.motivoMatch === 'codigo_barras' ? 'Código de barras' : 'SKU'}
                                   </Badge>
                                 )}
                               </div>
@@ -3121,6 +3355,101 @@ export default function Produtos() {
                               )}
                             </div>
                           </div>
+                          
+                          {/* Informações do produto existente e ação */}
+                          {produto.jaExiste && produto.produtoExistente && (
+                            <div className="mt-3 pt-3 border-t border-amber-500/30">
+                              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                {/* Informações do produto no sistema */}
+                                <div className="flex-1 bg-amber-500/10 rounded-lg p-3">
+                                  <p className="font-semibold text-amber-700 dark:text-amber-400 text-xs mb-2 flex items-center gap-1">
+                                    <RefreshCw className="h-3 w-3" />
+                                    Produto já cadastrado no sistema
+                                  </p>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-muted-foreground">Nome atual:</span>
+                                      <p className="font-medium truncate" title={produto.produtoExistente.nome}>
+                                        {produto.produtoExistente.nome}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Preço venda:</span>
+                                      <p className="font-medium">{formatarPreco(produto.produtoExistente.preco)}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Preço compra:</span>
+                                      <p className="font-medium">
+                                        {produto.produtoExistente.preco_compra 
+                                          ? formatarPreco(produto.produtoExistente.preco_compra)
+                                          : '-'}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Estoque atual:</span>
+                                      <p className="font-medium">
+                                        {produto.produtoExistente.tipo_preco === 'kg' 
+                                          ? `${(produto.produtoExistente.estoque_kg || 0).toLocaleString('pt-BR', {maximumFractionDigits: 3})} kg`
+                                          : produto.produtoExistente.tipo_preco === 'litros'
+                                          ? `${(produto.produtoExistente.estoque_litros || 0).toLocaleString('pt-BR', {maximumFractionDigits: 3})} L`
+                                          : `${produto.produtoExistente.estoque || 0} un`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                                    <strong>Ao importar:</strong> O estoque será <span className="font-semibold">somado</span> (+{produto.quantidade.toLocaleString('pt-BR', {maximumFractionDigits: 3})} {produto.unidade}) 
+                                    e o preço de compra será atualizado para {formatarPreco(produto.valorUnitario)}
+                                  </div>
+                                </div>
+
+                                {/* Seletor de ação */}
+                                <div className="flex flex-col gap-1.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                                  <p className="font-semibold text-muted-foreground uppercase text-[10px]">Ação</p>
+                                  <div className="flex flex-col gap-1">
+                                    <Button
+                                      variant={produto.acao === 'atualizar' ? 'default' : 'outline'}
+                                      size="sm"
+                                      className={`h-7 text-xs justify-start ${produto.acao === 'atualizar' ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
+                                      onClick={() => {
+                                        setProdutosXML(prev => prev.map(p => 
+                                          p.id === produto.id ? {...p, acao: 'atualizar', selecionado: true} : p
+                                        ));
+                                      }}
+                                    >
+                                      <RefreshCw className="h-3 w-3 mr-1.5" />
+                                      Atualizar produto
+                                    </Button>
+                                    <Button
+                                      variant={produto.acao === 'criar' ? 'default' : 'outline'}
+                                      size="sm"
+                                      className="h-7 text-xs justify-start"
+                                      onClick={() => {
+                                        setProdutosXML(prev => prev.map(p => 
+                                          p.id === produto.id ? {...p, acao: 'criar', selecionado: true} : p
+                                        ));
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1.5" />
+                                      Criar novo
+                                    </Button>
+                                    <Button
+                                      variant={produto.acao === 'ignorar' ? 'destructive' : 'outline'}
+                                      size="sm"
+                                      className="h-7 text-xs justify-start"
+                                      onClick={() => {
+                                        setProdutosXML(prev => prev.map(p => 
+                                          p.id === produto.id ? {...p, acao: 'ignorar', selecionado: false} : p
+                                        ));
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 mr-1.5" />
+                                      Ignorar
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

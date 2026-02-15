@@ -158,6 +158,7 @@ router.post('/', validateProduto, async (req, res) => {
       imagens = [],
       // Campos de impostos
       ncm,
+      cest,
       cfop,
       cst,
       icms_aliquota,
@@ -265,10 +266,10 @@ router.post('/', validateProduto, async (req, res) => {
         preco_compra, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
         estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
         estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens,
-        ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
+        ncm, cest, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
         ipi_aliquota, ipi_codigo_enquadramento, pis_aliquota, pis_cst,
         cofins_aliquota, cofins_cst
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.tenant_id, 
         toNull(categoria_id), 
@@ -294,7 +295,8 @@ router.post('/', validateProduto, async (req, res) => {
         status, 
         destaque, 
         JSON.stringify([]),
-        processarCampoTextoImposto(ncm), 
+        processarCampoTextoImposto(ncm),
+        processarCampoTextoImposto(cest),
         processarCampoTextoImposto(cfop), 
         processarCampoTextoImposto(cst), 
         processarCampoImposto(icms_aliquota), 
@@ -390,6 +392,80 @@ router.post('/', validateProduto, async (req, res) => {
   }
 });
 
+// Verificar quais produtos já existem no sistema (por código de barras ou SKU)
+router.post('/verificar-existentes', async (req, res) => {
+  try {
+    const { produtos } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    if (!produtos || !Array.isArray(produtos)) {
+      return res.status(400).json({ 
+        error: 'Lista de produtos inválida',
+        resultados: []
+      });
+    }
+
+    const resultados = [];
+
+    for (const produto of produtos) {
+      const { id, codigo_barras, sku, nome } = produto;
+      let produtoExistente = null;
+      let motivoMatch = null;
+
+      // Buscar por código de barras primeiro (mais confiável)
+      if (codigo_barras && codigo_barras.trim() && codigo_barras.trim() !== 'SEM GTIN') {
+        const [existente] = await query(
+          `SELECT id, nome, codigo_barras, sku, preco, preco_compra, 
+                  estoque, estoque_kg, estoque_litros, tipo_preco,
+                  ncm, cest, cfop, cst, icms_aliquota, icms_origem
+           FROM produtos 
+           WHERE tenant_id = ? AND codigo_barras = ?
+           LIMIT 1`,
+          [tenantId, codigo_barras.trim()]
+        );
+        
+        if (existente) {
+          produtoExistente = existente;
+          motivoMatch = 'codigo_barras';
+        }
+      }
+
+      // Se não encontrou por código de barras, buscar por SKU
+      if (!produtoExistente && sku && sku.trim()) {
+        const [existente] = await query(
+          `SELECT id, nome, codigo_barras, sku, preco, preco_compra, 
+                  estoque, estoque_kg, estoque_litros, tipo_preco,
+                  ncm, cest, cfop, cst, icms_aliquota, icms_origem
+           FROM produtos 
+           WHERE tenant_id = ? AND sku = ?
+           LIMIT 1`,
+          [tenantId, sku.trim()]
+        );
+        
+        if (existente) {
+          produtoExistente = existente;
+          motivoMatch = 'sku';
+        }
+      }
+
+      resultados.push({
+        id_xml: id,
+        existe: !!produtoExistente,
+        motivo_match: motivoMatch,
+        produto_existente: produtoExistente
+      });
+    }
+
+    res.json({ resultados });
+  } catch (error) {
+    console.error('Erro ao verificar produtos existentes:', error);
+    res.status(500).json({ 
+      error: 'Erro ao verificar produtos existentes',
+      resultados: []
+    });
+  }
+});
+
 // Importar produto (upsert - atualiza se existir, soma estoque)
 router.post('/importar', validateProduto, async (req, res) => {
   try {
@@ -416,6 +492,7 @@ router.post('/importar', validateProduto, async (req, res) => {
       destaque = false,
       // Campos de impostos
       ncm,
+      cest,
       cfop,
       cst,
       icms_aliquota,
@@ -516,6 +593,7 @@ router.post('/importar', validateProduto, async (req, res) => {
           estoque_kg = ?,
           estoque_litros = ?,
           ncm = COALESCE(?, ncm),
+          cest = COALESCE(?, cest),
           cfop = COALESCE(?, cfop),
           cst = COALESCE(?, cst),
           icms_aliquota = COALESCE(?, icms_aliquota),
@@ -542,6 +620,7 @@ router.post('/importar', validateProduto, async (req, res) => {
           novoEstoqueKg,
           novoEstoqueLitros,
           processarCampoTextoImposto(ncm),
+          processarCampoTextoImposto(cest),
           processarCampoTextoImposto(cfop),
           processarCampoTextoImposto(cst),
           processarCampoImposto(icms_aliquota),
@@ -586,10 +665,10 @@ router.post('/importar', validateProduto, async (req, res) => {
           preco_compra, preco_promocional, tipo_preco, preco_por_kg, preco_por_litros, estoque, 
           estoque_minimo, estoque_kg, estoque_litros, estoque_minimo_kg, 
           estoque_minimo_litros, fornecedor_id, marca, modelo, status, destaque, imagens,
-          ncm, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
+          ncm, cest, cfop, cst, icms_aliquota, icms_origem, icms_situacao_tributaria,
           ipi_aliquota, ipi_codigo_enquadramento, pis_aliquota, pis_cst,
           cofins_aliquota, cofins_cst
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.tenant_id, 
           toNull(categoria_id), 
@@ -615,7 +694,8 @@ router.post('/importar', validateProduto, async (req, res) => {
           status, 
           destaque, 
           JSON.stringify([]),
-          processarCampoTextoImposto(ncm), 
+          processarCampoTextoImposto(ncm),
+          processarCampoTextoImposto(cest),
           processarCampoTextoImposto(cfop), 
           processarCampoTextoImposto(cst), 
           processarCampoImposto(icms_aliquota), 
@@ -691,6 +771,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
       imagens,
       // Campos de impostos
       ncm,
+      cest,
       cfop,
       cst,
       icms_aliquota,
@@ -841,6 +922,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
 
     // Processar campos de impostos
     const ncmProcessado = processarCampoTextoImposto(ncm);
+    const cestProcessado = processarCampoTextoImposto(cest);
     const cfopProcessado = processarCampoTextoImposto(cfop);
     const cstProcessado = processarCampoTextoImposto(cst);
     const icmsAliquotaProcessado = processarCampoImposto(icms_aliquota);
@@ -868,7 +950,7 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
         preco_por_litros = ?, estoque = ?, estoque_minimo = ?, estoque_kg = ?,
         estoque_litros = ?, estoque_minimo_kg = ?, estoque_minimo_litros = ?,
         fornecedor_id = ?, marca = ?, modelo = ?, status = ?, destaque = ?, imagens = ?,
-        ncm = ?, cfop = ?, cst = ?, icms_aliquota = ?, icms_origem = ?, icms_situacao_tributaria = ?,
+        ncm = ?, cest = ?, cfop = ?, cst = ?, icms_aliquota = ?, icms_origem = ?, icms_situacao_tributaria = ?,
         ipi_aliquota = ?, ipi_codigo_enquadramento = ?, pis_aliquota = ?, pis_cst = ?,
         cofins_aliquota = ?, cofins_cst = ?
       WHERE id = ? AND tenant_id = ?`,
@@ -877,7 +959,8 @@ router.put('/:id', validateId, validateProduto, handleValidationErrors, async (r
         tipo_preco, preco_por_kg, preco_por_litros, estoqueInt, estoqueMinimoInt,
         estoqueKgDecimal, estoqueLitrosDecimal, estoqueMinimoKgDecimal, 
         estoqueMinimoLitrosDecimal, fornecedor_id, marca, modelo, status, destaque, JSON.stringify(imagensCloudinary),
-        ncmProcessado, 
+        ncmProcessado,
+        cestProcessado,
         cfopProcessado, 
         cstProcessado, 
         icmsAliquotaProcessado, 

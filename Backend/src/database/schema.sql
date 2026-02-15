@@ -231,6 +231,7 @@ CREATE TABLE IF NOT EXISTS produtos (
     imagens JSON,
     -- Campos de impostos fiscais
     ncm VARCHAR(10),
+    cest VARCHAR(7) COMMENT 'Código Especificador da Substituição Tributária',
     cfop VARCHAR(4),
     cst VARCHAR(3),
     icms_aliquota DECIMAL(10,2),
