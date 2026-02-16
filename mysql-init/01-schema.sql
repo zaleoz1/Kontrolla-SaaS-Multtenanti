@@ -387,8 +387,15 @@ CREATE TABLE IF NOT EXISTS nfe (
     cnpj_cpf VARCHAR(18),
     data_emissao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     valor_total DECIMAL(10,2) NOT NULL,
-    status ENUM('pendente', 'autorizada', 'cancelada', 'erro') DEFAULT 'pendente',
+    status ENUM('pendente', 'autorizada', 'cancelada', 'erro', 'processando') DEFAULT 'pendente',
     ambiente ENUM('homologacao', 'producao') DEFAULT 'homologacao',
+    -- Campos para integração Focus NFe
+    focus_nfe_ref VARCHAR(100) COMMENT 'Referência única da NF-e na API Focus NFe',
+    protocolo VARCHAR(50) COMMENT 'Número do protocolo de autorização',
+    motivo_status TEXT COMMENT 'Mensagem de retorno da SEFAZ ou erro',
+    data_autorizacao TIMESTAMP NULL COMMENT 'Data e hora da autorização',
+    protocolo_cancelamento VARCHAR(50) COMMENT 'Protocolo de cancelamento',
+    data_cancelamento TIMESTAMP NULL COMMENT 'Data e hora do cancelamento',
     xml_path VARCHAR(255),
     pdf_path VARCHAR(255),
     observacoes TEXT,
@@ -536,6 +543,9 @@ CREATE INDEX idx_transacoes_fornecedor ON transacoes(fornecedor_id);
 CREATE INDEX idx_contas_pagar_tenant ON contas_pagar(tenant_id);
 CREATE INDEX idx_contas_pagar_fornecedor ON contas_pagar(fornecedor_id);
 CREATE INDEX idx_nfe_tenant ON nfe(tenant_id);
+CREATE INDEX idx_nfe_focus_ref ON nfe(focus_nfe_ref);
+CREATE INDEX idx_nfe_protocolo ON nfe(protocolo);
+CREATE INDEX idx_nfe_chave_acesso ON nfe(chave_acesso);
 CREATE INDEX idx_metodos_pagamento_tenant ON metodos_pagamento(tenant_id);
 CREATE INDEX idx_metodos_pagamento_tipo ON metodos_pagamento(tipo);
 CREATE INDEX idx_metodos_pagamento_parcelas_metodo ON metodos_pagamento_parcelas(metodo_pagamento_id);
