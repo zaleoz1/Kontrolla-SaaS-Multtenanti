@@ -27,14 +27,49 @@ export interface Nfe {
   venda_id?: number;
   data_emissao: string;
   valor_total: number;
-  status: 'pendente' | 'autorizada' | 'cancelada' | 'erro';
+  status: 'pendente' | 'autorizada' | 'cancelada' | 'erro' | 'processando';
   ambiente: 'homologacao' | 'producao';
+  // Campos de integração Focus NFe
+  focus_nfe_ref?: string;
+  protocolo?: string;
+  motivo_status?: string;
+  data_autorizacao?: string;
+  protocolo_cancelamento?: string;
+  data_cancelamento?: string;
   xml_path?: string;
   pdf_path?: string;
   observacoes?: string;
   itens?: NfeItem[];
   data_criacao: string;
   data_atualizacao: string;
+}
+
+// Interface para configurações da Focus NFe
+export interface FocusNfeConfig {
+  token_configurado: boolean;
+  token_masked?: string;
+  ambiente: 'homologacao' | 'producao';
+  serie_padrao: string;
+  natureza_operacao: string;
+  regime_tributario: string;
+  cnpj_emitente: string;
+  inscricao_estadual: string;
+  informacoes_complementares?: string;
+}
+
+// Interface para resultado de validação de configurações
+export interface FocusNfeValidacao {
+  valid: boolean;
+  errors: string[];
+  config: {
+    token_configurado: boolean;
+    ambiente: string;
+    cnpj_emitente: string;
+    inscricao_estadual: string;
+    serie_padrao: string;
+    natureza_operacao: string;
+    regime_tributario: string;
+  };
 }
 
 // Interface para estatísticas de NF-e
@@ -252,6 +287,7 @@ export function useNfe() {
   const getStatusLabel = (status: Nfe['status']): string => {
     const labels: Record<Nfe['status'], string> = {
       pendente: 'Pendente',
+      processando: 'Processando',
       autorizada: 'Autorizada',
       cancelada: 'Cancelada',
       erro: 'Erro'
@@ -264,6 +300,7 @@ export function useNfe() {
     const classes: Record<Nfe['status'], string> = {
       autorizada: 'bg-success hover:bg-success/90',
       pendente: 'bg-warning/80 text-warning-foreground',
+      processando: 'bg-blue-500/80 text-white',
       cancelada: 'bg-secondary',
       erro: 'bg-destructive'
     };
@@ -275,23 +312,46 @@ export function useNfe() {
     const classes: Record<Nfe['status'], string> = {
       autorizada: 'text-success',
       pendente: 'text-warning',
+      processando: 'text-blue-500',
       cancelada: 'text-muted-foreground',
       erro: 'text-destructive'
     };
     return classes[status] || 'text-muted-foreground';
   };
 
-  // Transmitir NF-e (simulado - gera chave de acesso)
-  const transmitirNfe = useCallback(async (id: number): Promise<void> => {
+  // Transmitir NF-e para SEFAZ via Focus NFe
+  const transmitirNfe = useCallback(async (id: number): Promise<{
+    success: boolean;
+    status: string;
+    protocolo?: string;
+    chave_acesso?: string;
+    mensagem?: string;
+  }> => {
     try {
       setLoading(true);
       setError(null);
 
-      // Gerar chave de acesso simulada
-      const timestamp = Date.now().toString();
-      const chaveAcesso = `35${timestamp}${'0'.repeat(44 - timestamp.length - 2)}`;
+      const response = await makeRequest(`/nfe/${id}/emitir`, {
+        method: 'POST'
+      }) as {
+        success: boolean;
+        status: string;
+        protocolo?: string;
+        chave_acesso?: string;
+        mensagem?: string;
+        message?: string;
+      };
 
-      await updateNfeStatus(id, 'autorizada', chaveAcesso);
+      // Atualizar lista
+      await fetchNfes({ page: pagination.page, limit: pagination.limit });
+
+      return {
+        success: response.success,
+        status: response.status,
+        protocolo: response.protocolo,
+        chave_acesso: response.chave_acesso,
+        mensagem: response.mensagem || response.message
+      };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao transmitir NF-e');
       console.error('Erro ao transmitir NF-e:', err);
@@ -299,31 +359,258 @@ export function useNfe() {
     } finally {
       setLoading(false);
     }
-  }, [updateNfeStatus]);
+  }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
 
-  // Cancelar NF-e
-  const cancelarNfe = useCallback(async (id: number): Promise<void> => {
+  // Consultar status da NF-e na SEFAZ
+  const consultarNfeSefaz = useCallback(async (id: number): Promise<{
+    status: string;
+    status_sefaz?: string;
+    mensagem_sefaz?: string;
+    protocolo?: string;
+    chave_acesso?: string;
+    caminho_xml?: string;
+    caminho_danfe?: string;
+  }> => {
     try {
-      await updateNfeStatus(id, 'cancelada');
+      setLoading(true);
+      setError(null);
+
+      const response = await makeRequest(`/nfe/${id}/consultar`) as {
+        status: string;
+        status_sefaz?: string;
+        mensagem_sefaz?: string;
+        protocolo?: string;
+        chave_acesso?: string;
+        caminho_xml?: string;
+        caminho_danfe?: string;
+      };
+
+      // Atualizar lista
+      await fetchNfes({ page: pagination.page, limit: pagination.limit });
+
+      return response;
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao consultar NF-e');
+      console.error('Erro ao consultar NF-e:', err);
       throw err;
+    } finally {
+      setLoading(false);
     }
-  }, [updateNfeStatus]);
+  }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
+
+  // Cancelar NF-e na SEFAZ
+  const cancelarNfe = useCallback(async (id: number, justificativa: string): Promise<{
+    success: boolean;
+    status: string;
+    protocolo?: string;
+    mensagem?: string;
+  }> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await makeRequest(`/nfe/${id}/cancelar`, {
+        method: 'POST',
+        body: { justificativa }
+      }) as {
+        success: boolean;
+        status: string;
+        protocolo?: string;
+        mensagem?: string;
+      };
+
+      // Atualizar lista
+      await fetchNfes({ page: pagination.page, limit: pagination.limit });
+
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao cancelar NF-e');
+      console.error('Erro ao cancelar NF-e:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
+
+  // Reprocessar NF-e com erro
+  const reprocessarNfe = useCallback(async (id: number): Promise<{
+    success: boolean;
+    status: string;
+    protocolo?: string;
+    chave_acesso?: string;
+    mensagem?: string;
+  }> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await makeRequest(`/nfe/${id}/reprocessar`, {
+        method: 'POST'
+      }) as {
+        success: boolean;
+        status: string;
+        protocolo?: string;
+        chave_acesso?: string;
+        mensagem?: string;
+      };
+
+      // Atualizar lista
+      await fetchNfes({ page: pagination.page, limit: pagination.limit });
+
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao reprocessar NF-e');
+      console.error('Erro ao reprocessar NF-e:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
+
+  // Download XML da NF-e
+  const downloadXml = useCallback(async (id: number, numero: string): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fazer requisição para obter o XML
+      const response = await makeRequest(`/nfe/${id}/xml`, {
+        responseType: 'blob'
+      });
+
+      // Criar blob e fazer download
+      const blob = new Blob([response as unknown as BlobPart], { type: 'application/xml' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nfe_${numero}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao baixar XML');
+      console.error('Erro ao baixar XML:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest]);
+
+  // Download DANFE (PDF) da NF-e
+  const downloadDanfe = useCallback(async (id: number): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await makeRequest(`/nfe/${id}/danfe`) as {
+        url: string;
+        filename: string;
+      };
+
+      // Abrir a URL do DANFE em uma nova aba
+      window.open(response.url, '_blank');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao baixar DANFE');
+      console.error('Erro ao baixar DANFE:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest]);
+
+  // Buscar configurações da Focus NFe
+  const fetchFocusNfeConfig = useCallback(async (): Promise<FocusNfeConfig | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await makeRequest('/nfe/config/focus-nfe') as { config: FocusNfeConfig };
+      return response.config;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar configurações');
+      console.error('Erro ao buscar configurações Focus NFe:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest]);
+
+  // Salvar configurações da Focus NFe
+  const saveFocusNfeConfig = useCallback(async (config: Partial<{
+    token: string;
+    ambiente: 'homologacao' | 'producao';
+    serie_padrao: string;
+    natureza_operacao: string;
+    regime_tributario: string;
+    cnpj_emitente: string;
+    inscricao_estadual: string;
+    informacoes_complementares: string;
+  }>): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await makeRequest('/nfe/config/focus-nfe', {
+        method: 'POST',
+        body: config
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar configurações');
+      console.error('Erro ao salvar configurações Focus NFe:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest]);
+
+  // Validar configurações da Focus NFe
+  const validarFocusNfeConfig = useCallback(async (): Promise<FocusNfeValidacao | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await makeRequest('/nfe/config/focus-nfe/validar') as FocusNfeValidacao;
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao validar configurações');
+      console.error('Erro ao validar configurações Focus NFe:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest]);
 
   return {
+    // Estado
     nfes,
     loading,
     error,
     stats,
     pagination,
+    
+    // CRUD básico
     fetchNfes,
     fetchNfe,
     createNfe,
     updateNfeStatus,
     deleteNfe,
     fetchStats,
+    
+    // Integração Focus NFe
     transmitirNfe,
+    consultarNfeSefaz,
     cancelarNfe,
+    reprocessarNfe,
+    downloadXml,
+    downloadDanfe,
+    
+    // Configurações Focus NFe
+    fetchFocusNfeConfig,
+    saveFocusNfeConfig,
+    validarFocusNfeConfig,
+    
+    // Utilitários
     formatCurrency,
     formatDate,
     formatDateTime,

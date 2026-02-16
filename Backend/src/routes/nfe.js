@@ -2,6 +2,16 @@ import express from 'express';
 import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
+import {
+  emitirNfe as focusEmitirNfe,
+  consultarNfe as focusConsultarNfe,
+  cancelarNfe as focusCancelarNfe,
+  obterXmlNfe,
+  obterDanfeNfe,
+  getFocusNfeConfig,
+  saveFocusNfeConfig,
+  validarConfiguracoes
+} from '../services/focusNfeService.js';
 
 const router = express.Router();
 
@@ -380,5 +390,318 @@ async function gerarNumeroNfe(tenantId) {
   
   return proximoNumero.toString().padStart(9, '0');
 }
+
+// ==========================================
+// ROTAS DE INTEGRAÇÃO COM FOCUS NFE
+// ==========================================
+
+// Obter configurações da Focus NFe
+router.get('/config/focus-nfe', async (req, res) => {
+  try {
+    const config = await getFocusNfeConfig(req.user.tenant_id);
+    
+    // Ocultar o token completo por segurança (mostrar apenas os últimos 4 caracteres)
+    if (config.token) {
+      config.token_masked = '****' + config.token.slice(-4);
+      config.token_configurado = true;
+    } else {
+      config.token_configurado = false;
+    }
+    delete config.token; // Não enviar o token completo
+    
+    res.json({ config });
+  } catch (error) {
+    console.error('Erro ao buscar configurações Focus NFe:', error);
+    res.status(500).json({
+      error: 'Erro ao buscar configurações'
+    });
+  }
+});
+
+// Salvar configurações da Focus NFe
+router.post('/config/focus-nfe', async (req, res) => {
+  try {
+    const {
+      token,
+      ambiente,
+      serie_padrao,
+      natureza_operacao,
+      regime_tributario,
+      cnpj_emitente,
+      inscricao_estadual,
+      informacoes_complementares
+    } = req.body;
+    
+    // Construir objeto de configuração apenas com campos fornecidos
+    const config = {};
+    if (token !== undefined) config.token = token;
+    if (ambiente !== undefined) config.ambiente = ambiente;
+    if (serie_padrao !== undefined) config.serie_padrao = serie_padrao;
+    if (natureza_operacao !== undefined) config.natureza_operacao = natureza_operacao;
+    if (regime_tributario !== undefined) config.regime_tributario = regime_tributario;
+    if (cnpj_emitente !== undefined) config.cnpj_emitente = cnpj_emitente;
+    if (inscricao_estadual !== undefined) config.inscricao_estadual = inscricao_estadual;
+    if (informacoes_complementares !== undefined) config.informacoes_complementares = informacoes_complementares;
+    
+    await saveFocusNfeConfig(req.user.tenant_id, config);
+    
+    res.json({
+      message: 'Configurações salvas com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao salvar configurações Focus NFe:', error);
+    res.status(500).json({
+      error: 'Erro ao salvar configurações'
+    });
+  }
+});
+
+// Validar configurações da Focus NFe
+router.get('/config/focus-nfe/validar', async (req, res) => {
+  try {
+    const resultado = await validarConfiguracoes(req.user.tenant_id);
+    res.json(resultado);
+  } catch (error) {
+    console.error('Erro ao validar configurações Focus NFe:', error);
+    res.status(500).json({
+      error: 'Erro ao validar configurações'
+    });
+  }
+});
+
+// Emitir NF-e (transmitir para SEFAZ via Focus NFe)
+router.post('/:id/emitir', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se NF-e existe e pertence ao tenant
+    const existingNfes = await query(
+      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    
+    if (existingNfes.length === 0) {
+      return res.status(404).json({
+        error: 'NF-e não encontrada'
+      });
+    }
+    
+    const nfe = existingNfes[0];
+    
+    if (nfe.status === 'autorizada') {
+      return res.status(400).json({
+        error: 'NF-e já está autorizada'
+      });
+    }
+    
+    if (nfe.status === 'cancelada') {
+      return res.status(400).json({
+        error: 'NF-e está cancelada e não pode ser emitida'
+      });
+    }
+    
+    // Emitir via Focus NFe
+    const resultado = await focusEmitirNfe(req.user.tenant_id, id);
+    
+    res.json({
+      message: resultado.success ? 'NF-e emitida com sucesso!' : 'NF-e enviada para processamento',
+      ...resultado
+    });
+  } catch (error) {
+    console.error('Erro ao emitir NF-e:', error);
+    res.status(500).json({
+      error: error.message || 'Erro ao emitir NF-e'
+    });
+  }
+});
+
+// Consultar status da NF-e na SEFAZ
+router.get('/:id/consultar', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se NF-e existe e pertence ao tenant
+    const existingNfes = await query(
+      'SELECT id FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    
+    if (existingNfes.length === 0) {
+      return res.status(404).json({
+        error: 'NF-e não encontrada'
+      });
+    }
+    
+    // Consultar via Focus NFe
+    const resultado = await focusConsultarNfe(req.user.tenant_id, id);
+    
+    res.json({
+      message: 'Consulta realizada com sucesso',
+      ...resultado
+    });
+  } catch (error) {
+    console.error('Erro ao consultar NF-e:', error);
+    res.status(500).json({
+      error: error.message || 'Erro ao consultar NF-e'
+    });
+  }
+});
+
+// Cancelar NF-e
+router.post('/:id/cancelar', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { justificativa } = req.body;
+    
+    if (!justificativa || justificativa.length < 15) {
+      return res.status(400).json({
+        error: 'Justificativa deve ter no mínimo 15 caracteres'
+      });
+    }
+    
+    // Verificar se NF-e existe e pertence ao tenant
+    const existingNfes = await query(
+      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    
+    if (existingNfes.length === 0) {
+      return res.status(404).json({
+        error: 'NF-e não encontrada'
+      });
+    }
+    
+    const nfe = existingNfes[0];
+    
+    if (nfe.status !== 'autorizada') {
+      return res.status(400).json({
+        error: 'Apenas NF-e autorizadas podem ser canceladas'
+      });
+    }
+    
+    // Cancelar via Focus NFe
+    const resultado = await focusCancelarNfe(req.user.tenant_id, id, justificativa);
+    
+    res.json({
+      message: resultado.success ? 'NF-e cancelada com sucesso!' : 'Erro ao cancelar NF-e',
+      ...resultado
+    });
+  } catch (error) {
+    console.error('Erro ao cancelar NF-e:', error);
+    res.status(500).json({
+      error: error.message || 'Erro ao cancelar NF-e'
+    });
+  }
+});
+
+// Download do XML da NF-e
+router.get('/:id/xml', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se NF-e existe e pertence ao tenant
+    const existingNfes = await query(
+      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    
+    if (existingNfes.length === 0) {
+      return res.status(404).json({
+        error: 'NF-e não encontrada'
+      });
+    }
+    
+    // Obter XML via Focus NFe
+    const resultado = await obterXmlNfe(req.user.tenant_id, id);
+    
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${resultado.filename}"`);
+    res.send(resultado.xml);
+  } catch (error) {
+    console.error('Erro ao obter XML da NF-e:', error);
+    res.status(500).json({
+      error: error.message || 'Erro ao obter XML da NF-e'
+    });
+  }
+});
+
+// Download do DANFE (PDF) da NF-e
+router.get('/:id/danfe', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se NF-e existe e pertence ao tenant
+    const existingNfes = await query(
+      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    
+    if (existingNfes.length === 0) {
+      return res.status(404).json({
+        error: 'NF-e não encontrada'
+      });
+    }
+    
+    // Obter URL do DANFE via Focus NFe
+    const resultado = await obterDanfeNfe(req.user.tenant_id, id);
+    
+    // Retornar a URL do DANFE para o frontend fazer o download
+    res.json({
+      url: resultado.url,
+      filename: resultado.filename
+    });
+  } catch (error) {
+    console.error('Erro ao obter DANFE da NF-e:', error);
+    res.status(500).json({
+      error: error.message || 'Erro ao obter DANFE da NF-e'
+    });
+  }
+});
+
+// Reprocessar NF-e com erro (tentar emitir novamente)
+router.post('/:id/reprocessar', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se NF-e existe e pertence ao tenant
+    const existingNfes = await query(
+      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    
+    if (existingNfes.length === 0) {
+      return res.status(404).json({
+        error: 'NF-e não encontrada'
+      });
+    }
+    
+    const nfe = existingNfes[0];
+    
+    if (nfe.status !== 'erro' && nfe.status !== 'processando') {
+      return res.status(400).json({
+        error: 'Apenas NF-e com erro ou em processamento podem ser reprocessadas'
+      });
+    }
+    
+    // Resetar status para pendente e tentar emitir novamente
+    await query(
+      `UPDATE nfe SET status = 'pendente', motivo_status = NULL, focus_nfe_ref = NULL WHERE id = ? AND tenant_id = ?`,
+      [id, req.user.tenant_id]
+    );
+    
+    // Emitir novamente via Focus NFe
+    const resultado = await focusEmitirNfe(req.user.tenant_id, id);
+    
+    res.json({
+      message: resultado.success ? 'NF-e reprocessada com sucesso!' : 'NF-e enviada para processamento',
+      ...resultado
+    });
+  } catch (error) {
+    console.error('Erro ao reprocessar NF-e:', error);
+    res.status(500).json({
+      error: error.message || 'Erro ao reprocessar NF-e'
+    });
+  }
+});
 
 export default router;

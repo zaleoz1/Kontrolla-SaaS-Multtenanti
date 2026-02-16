@@ -53,7 +53,7 @@ import {
   RefreshCw,
   Loader2
 } from "lucide-react";
-import { useNfe, Nfe, NfeItem, NfeCreate } from "@/hooks/useNfe";
+import { useNfe, Nfe, NfeCreate, FocusNfeConfig } from "@/hooks/useNfe";
 import { useClientes, Cliente } from "@/hooks/useClientes";
 import { useProdutos, Produto } from "@/hooks/useProdutos";
 import { useToast } from "@/hooks/use-toast";
@@ -72,9 +72,16 @@ export default function NFe() {
     fetchNfe,
     createNfe,
     transmitirNfe,
+    consultarNfeSefaz,
     cancelarNfe,
+    reprocessarNfe,
+    downloadXml,
+    downloadDanfe,
     deleteNfe,
     fetchStats,
+    fetchFocusNfeConfig,
+    saveFocusNfeConfig,
+    validarFocusNfeConfig,
     formatCurrency,
     formatDate,
     getStatusLabel,
@@ -112,7 +119,21 @@ export default function NFe() {
   // Estados de confirmação
   const [nfeParaTransmitir, setNfeParaTransmitir] = useState<Nfe | null>(null);
   const [nfeParaCancelar, setNfeParaCancelar] = useState<Nfe | null>(null);
+  const [justificativaCancelamento, setJustificativaCancelamento] = useState("");
   const [nfeParaDeletar, setNfeParaDeletar] = useState<Nfe | null>(null);
+  const [nfeParaReprocessar, setNfeParaReprocessar] = useState<Nfe | null>(null);
+  
+  // Estados de configurações Focus NFe
+  const [focusNfeConfig, setFocusNfeConfig] = useState<FocusNfeConfig | null>(null);
+  const [configToken, setConfigToken] = useState("");
+  const [configAmbiente, setConfigAmbiente] = useState<"homologacao" | "producao">("homologacao");
+  const [configSeriePadrao, setConfigSeriePadrao] = useState("001");
+  const [configNaturezaOperacao, setConfigNaturezaOperacao] = useState("Venda de mercadoria");
+  const [configRegimeTributario, setConfigRegimeTributario] = useState("1");
+  const [configCnpjEmitente, setConfigCnpjEmitente] = useState("");
+  const [configInscricaoEstadual, setConfigInscricaoEstadual] = useState("");
+  const [configSalvando, setConfigSalvando] = useState(false);
+  const [validacaoConfig, setValidacaoConfig] = useState<{ valid: boolean; errors: string[] } | null>(null);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -120,7 +141,22 @@ export default function NFe() {
     fetchStats();
     buscarClientes({ limit: 100 });
     buscarProdutos({ limit: 100, status: 'ativo' });
+    carregarConfigFocusNfe();
   }, []);
+
+  // Carregar configurações da Focus NFe
+  const carregarConfigFocusNfe = async () => {
+    const config = await fetchFocusNfeConfig();
+    if (config) {
+      setFocusNfeConfig(config);
+      setConfigAmbiente(config.ambiente || "homologacao");
+      setConfigSeriePadrao(config.serie_padrao || "001");
+      setConfigNaturezaOperacao(config.natureza_operacao || "Venda de mercadoria");
+      setConfigRegimeTributario(config.regime_tributario || "1");
+      setConfigCnpjEmitente(config.cnpj_emitente || "");
+      setConfigInscricaoEstadual(config.inscricao_estadual || "");
+    }
+  };
 
   // Função de busca com debounce
   const handleBusca = useCallback(() => {
@@ -149,6 +185,8 @@ export default function NFe() {
         return <CheckCircle className={`h-4 w-4 ${getStatusIconClass(status)}`} />;
       case "pendente":
         return <Clock className={`h-4 w-4 ${getStatusIconClass(status)}`} />;
+      case "processando":
+        return <Loader2 className={`h-4 w-4 ${getStatusIconClass(status)} animate-spin`} />;
       case "cancelada":
         return <XCircle className={`h-4 w-4 ${getStatusIconClass(status)}`} />;
       case "erro":
@@ -264,20 +302,28 @@ export default function NFe() {
     }
   };
 
-  // Transmitir NF-e
+  // Transmitir NF-e via Focus NFe
   const handleConfirmarTransmissao = async () => {
     if (!nfeParaTransmitir) return;
 
     try {
-      await transmitirNfe(nfeParaTransmitir.id);
-      toast({
-        title: "Sucesso",
-        description: "NF-e transmitida e autorizada com sucesso!"
-      });
+      const resultado = await transmitirNfe(nfeParaTransmitir.id);
+      
+      if (resultado.success) {
+        toast({
+          title: "NF-e Autorizada!",
+          description: `Protocolo: ${resultado.protocolo || 'Processando...'}`
+        });
+      } else {
+        toast({
+          title: "NF-e em Processamento",
+          description: resultado.mensagem || "Aguarde a confirmação da SEFAZ"
+        });
+      }
       fetchStats();
     } catch (err) {
       toast({
-        title: "Erro",
+        title: "Erro ao transmitir NF-e",
         description: err instanceof Error ? err.message : "Erro ao transmitir NF-e",
         variant: "destructive"
       });
@@ -286,25 +332,151 @@ export default function NFe() {
     }
   };
 
-  // Cancelar NF-e
+  // Cancelar NF-e via Focus NFe
   const handleConfirmarCancelamento = async () => {
     if (!nfeParaCancelar) return;
 
-    try {
-      await cancelarNfe(nfeParaCancelar.id);
+    if (justificativaCancelamento.length < 15) {
       toast({
-        title: "Sucesso",
-        description: "NF-e cancelada com sucesso!"
+        title: "Erro",
+        description: "A justificativa deve ter no mínimo 15 caracteres",
+        variant: "destructive"
       });
+      return;
+    }
+
+    try {
+      const resultado = await cancelarNfe(nfeParaCancelar.id, justificativaCancelamento);
+      
+      if (resultado.success) {
+        toast({
+          title: "NF-e Cancelada!",
+          description: `Protocolo de cancelamento: ${resultado.protocolo || 'Processando...'}`
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: resultado.mensagem || "Erro ao cancelar NF-e",
+          variant: "destructive"
+        });
+      }
       fetchStats();
     } catch (err) {
       toast({
-        title: "Erro",
+        title: "Erro ao cancelar NF-e",
         description: err instanceof Error ? err.message : "Erro ao cancelar NF-e",
         variant: "destructive"
       });
     } finally {
       setNfeParaCancelar(null);
+      setJustificativaCancelamento("");
+    }
+  };
+
+  // Consultar status da NF-e na SEFAZ
+  const handleConsultarSefaz = async (nfe: Nfe) => {
+    try {
+      const resultado = await consultarNfeSefaz(nfe.id);
+      toast({
+        title: `Status: ${resultado.status}`,
+        description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || 'N/A'}`
+      });
+      fetchStats();
+    } catch (err) {
+      toast({
+        title: "Erro ao consultar",
+        description: err instanceof Error ? err.message : "Erro ao consultar NF-e",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Reprocessar NF-e com erro
+  const handleConfirmarReprocessamento = async () => {
+    if (!nfeParaReprocessar) return;
+
+    try {
+      const resultado = await reprocessarNfe(nfeParaReprocessar.id);
+      
+      if (resultado.success) {
+        toast({
+          title: "NF-e Reprocessada!",
+          description: `Protocolo: ${resultado.protocolo || 'Processando...'}`
+        });
+      } else {
+        toast({
+          title: "NF-e enviada para processamento",
+          description: resultado.mensagem || "Aguarde a confirmação da SEFAZ"
+        });
+      }
+      fetchStats();
+    } catch (err) {
+      toast({
+        title: "Erro ao reprocessar NF-e",
+        description: err instanceof Error ? err.message : "Erro ao reprocessar NF-e",
+        variant: "destructive"
+      });
+    } finally {
+      setNfeParaReprocessar(null);
+    }
+  };
+
+  // Salvar configurações Focus NFe
+  const handleSalvarConfigFocusNfe = async () => {
+    try {
+      setConfigSalvando(true);
+      
+      const configToSave: Record<string, string> = {
+        ambiente: configAmbiente,
+        serie_padrao: configSeriePadrao,
+        natureza_operacao: configNaturezaOperacao,
+        regime_tributario: configRegimeTributario,
+        cnpj_emitente: configCnpjEmitente,
+        inscricao_estadual: configInscricaoEstadual
+      };
+
+      // Só salvar o token se foi informado
+      if (configToken) {
+        configToSave.token = configToken;
+      }
+
+      await saveFocusNfeConfig(configToSave);
+      
+      toast({
+        title: "Configurações salvas!",
+        description: "As configurações da API Focus NFe foram salvas com sucesso"
+      });
+
+      // Recarregar configurações
+      await carregarConfigFocusNfe();
+      setConfigToken(""); // Limpar campo do token
+    } catch (err) {
+      toast({
+        title: "Erro ao salvar",
+        description: err instanceof Error ? err.message : "Erro ao salvar configurações",
+        variant: "destructive"
+      });
+    } finally {
+      setConfigSalvando(false);
+    }
+  };
+
+  // Validar configurações
+  const handleValidarConfig = async () => {
+    const resultado = await validarFocusNfeConfig();
+    setValidacaoConfig(resultado);
+    
+    if (resultado?.valid) {
+      toast({
+        title: "Configurações válidas!",
+        description: "Todas as configurações estão corretas para emissão de NF-e"
+      });
+    } else {
+      toast({
+        title: "Problemas encontrados",
+        description: `${resultado?.errors.length} problema(s) encontrado(s)`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -552,19 +724,34 @@ export default function NFe() {
                           </p>
                         </div>
 
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 flex-wrap gap-1">
                           {nfe.status === "autorizada" && (
                             <>
-                              <Button variant="outline" size="sm" title="Download PDF">
-                                <Download className="h-4 w-4 mr-2" />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                title="Download DANFE (PDF)"
+                                onClick={() => downloadDanfe(nfe.id)}
+                              >
+                                <Download className="h-4 w-4 mr-1" />
                                 PDF
                               </Button>
-                              <Button variant="outline" size="sm" title="Download XML">
-                                <Download className="h-4 w-4 mr-2" />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                title="Download XML"
+                                onClick={() => downloadXml(nfe.id, nfe.numero)}
+                              >
+                                <Download className="h-4 w-4 mr-1" />
                                 XML
                               </Button>
-                              <Button variant="outline" size="sm" title="Imprimir">
-                                <Printer className="h-4 w-4" />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                title="Consultar na SEFAZ"
+                                onClick={() => handleConsultarSefaz(nfe)}
+                              >
+                                <RefreshCw className="h-4 w-4" />
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -583,9 +770,47 @@ export default function NFe() {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => setNfeParaTransmitir(nfe)}
+                                className="bg-primary/10 hover:bg-primary/20"
                               >
                                 <Send className="h-4 w-4 mr-2" />
                                 Transmitir
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setNfeParaDeletar(nfe)}
+                                title="Excluir NF-e"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
+
+                          {nfe.status === "processando" && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleConsultarSefaz(nfe)}
+                                title="Consultar status na SEFAZ"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Verificar
+                              </Button>
+                            </>
+                          )}
+
+                          {nfe.status === "erro" && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setNfeParaReprocessar(nfe)}
+                                className="bg-warning/10 hover:bg-warning/20"
+                                title="Tentar emitir novamente"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Reprocessar
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -603,7 +828,7 @@ export default function NFe() {
                             size="sm"
                             onClick={() => handleVerDetalhes(nfe)}
                           >
-                            <Eye className="h-4 w-4 mr-2" />
+                            <Eye className="h-4 w-4 mr-1" />
                             Ver
                           </Button>
                         </div>
@@ -908,75 +1133,190 @@ export default function NFe() {
         </TabsContent>
 
         <TabsContent value="configuracoes" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Building className="h-5 w-5 mr-2" />
-                  Dados da Empresa
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Razão Social</Label>
-                  <Input placeholder="Razão Social" defaultValue="Minha Loja Ltda" />
+          {/* Alerta de validação */}
+          {validacaoConfig && !validacaoConfig.valid && (
+            <Card className="border-destructive bg-destructive/10">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-destructive">Problemas nas configurações:</h4>
+                    <ul className="text-sm text-destructive/80 mt-1 space-y-1">
+                      {validacaoConfig.errors.map((error, i) => (
+                        <li key={i}>• {error}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div>
-                  <Label>CNPJ</Label>
-                  <Input placeholder="CNPJ" defaultValue="12.345.678/0001-90" />
-                </div>
-                <div>
-                  <Label>Inscrição Estadual</Label>
-                  <Input placeholder="Inscrição Estadual" defaultValue="123456789" />
-                </div>
-                <div>
-                  <Label>Endereço</Label>
-                  <Input placeholder="Endereço" defaultValue="Rua das Flores, 123" />
-                </div>
-                <div>
-                  <Label>Regime Tributário</Label>
-                  <Input placeholder="Regime Tributário" defaultValue="Simples Nacional" />
-                </div>
-                <Button className="w-full">Salvar Configurações</Button>
               </CardContent>
             </Card>
+          )}
 
+          {validacaoConfig && validacaoConfig.valid && (
+            <Card className="border-success bg-success/10">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                  <p className="font-medium text-success">Todas as configurações estão corretas!</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Configurações da API Focus NFe */}
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Settings className="h-5 w-5 mr-2" />
-                  Configurações da NF-e
+                  API Focus NFe
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Série Padrão</Label>
-                  <Input placeholder="Série Padrão" defaultValue="001" />
+                  <Label>Token da API *</Label>
+                  <Input 
+                    type="password"
+                    placeholder={focusNfeConfig?.token_configurado ? "Token já configurado (deixe vazio para manter)" : "Cole seu token aqui"}
+                    value={configToken}
+                    onChange={(e) => setConfigToken(e.target.value)}
+                  />
+                  {focusNfeConfig?.token_configurado && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Token atual: {focusNfeConfig.token_masked}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Obtenha seu token em <a href="https://focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary underline">focusnfe.com.br</a>
+                  </p>
                 </div>
                 <div>
                   <Label>Ambiente</Label>
-                  <Select defaultValue="homologacao">
+                  <Select value={configAmbiente} onValueChange={(v: "homologacao" | "producao") => setConfigAmbiente(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="homologacao">Homologação</SelectItem>
-                      <SelectItem value="producao">Produção</SelectItem>
+                      <SelectItem value="homologacao">Homologação (Testes)</SelectItem>
+                      <SelectItem value="producao">Produção (Real)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {configAmbiente === "homologacao" 
+                      ? "⚠️ Notas emitidas em homologação não têm validade fiscal"
+                      : "✅ Notas emitidas em produção têm validade fiscal"
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label>Série Padrão</Label>
+                  <Input 
+                    placeholder="001"
+                    value={configSeriePadrao}
+                    onChange={(e) => setConfigSeriePadrao(e.target.value)}
+                    maxLength={3}
+                  />
+                </div>
+                <div>
+                  <Label>Natureza da Operação</Label>
+                  <Input 
+                    placeholder="Venda de mercadoria"
+                    value={configNaturezaOperacao}
+                    onChange={(e) => setConfigNaturezaOperacao(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Dados do Emitente */}
+            <Card className="bg-gradient-card shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Building className="h-5 w-5 mr-2" />
+                  Dados do Emitente
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>CNPJ do Emitente *</Label>
+                  <Input 
+                    placeholder="00.000.000/0000-00"
+                    value={configCnpjEmitente}
+                    onChange={(e) => setConfigCnpjEmitente(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    CNPJ da empresa que emite as notas
+                  </p>
+                </div>
+                <div>
+                  <Label>Inscrição Estadual</Label>
+                  <Input 
+                    placeholder="000000000"
+                    value={configInscricaoEstadual}
+                    onChange={(e) => setConfigInscricaoEstadual(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Regime Tributário</Label>
+                  <Select value={configRegimeTributario} onValueChange={setConfigRegimeTributario}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Simples Nacional</SelectItem>
+                      <SelectItem value="2">Simples Nacional - Excesso de sublimite</SelectItem>
+                      <SelectItem value="3">Regime Normal</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Certificado Digital</Label>
-                  <Input placeholder="Certificado Digital" defaultValue="Não configurado" disabled />
+                <div className="pt-2 space-y-2">
+                  <Button 
+                    className="w-full bg-gradient-primary text-white"
+                    onClick={handleSalvarConfigFocusNfe}
+                    disabled={configSalvando}
+                  >
+                    {configSalvando ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Settings className="h-4 w-4 mr-2" />
+                    )}
+                    Salvar Configurações
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleValidarConfig}
+                    disabled={loading}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Validar Configurações
+                  </Button>
                 </div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>• Ambiente atual: Homologação (testes)</p>
-                  <p>• Para emissão em produção, configure o certificado digital A1</p>
-                </div>
-                <Button className="w-full">Atualizar Configurações</Button>
               </CardContent>
             </Card>
           </div>
+
+          {/* Informações sobre a Focus NFe */}
+          <Card className="bg-muted/30">
+            <CardContent className="p-6">
+              <h3 className="font-semibold mb-3 flex items-center">
+                <FileText className="h-5 w-5 mr-2" />
+                Sobre a Integração Focus NFe
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div className="space-y-2">
+                  <p>• <strong>Emissão de NF-e:</strong> Emita notas fiscais diretamente para a SEFAZ</p>
+                  <p>• <strong>Consulta:</strong> Consulte o status das notas na SEFAZ</p>
+                  <p>• <strong>Cancelamento:</strong> Cancele notas autorizadas (até 24h)</p>
+                </div>
+                <div className="space-y-2">
+                  <p>• <strong>Download XML:</strong> Baixe o XML oficial da nota</p>
+                  <p>• <strong>DANFE:</strong> Acesse o PDF do DANFE para impressão</p>
+                  <p>• <strong>Documentação:</strong> <a href="https://doc.focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary underline">doc.focusnfe.com.br</a></p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -1031,12 +1371,51 @@ export default function NFe() {
                 </div>
               </div>
 
+              {/* Protocolo e Chave de Acesso */}
+              {nfeSelecionada.protocolo && (
+                <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
+                  <Label className="text-muted-foreground text-xs">Protocolo de Autorização</Label>
+                  <p className="font-mono text-sm">{nfeSelecionada.protocolo}</p>
+                  {nfeSelecionada.data_autorizacao && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Autorizada em: {formatDate(nfeSelecionada.data_autorizacao)}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {nfeSelecionada.chave_acesso && (
                 <div>
                   <Label className="text-muted-foreground">Chave de Acesso</Label>
                   <p className="font-mono text-xs bg-muted p-2 rounded break-all">
                     {nfeSelecionada.chave_acesso}
                   </p>
+                </div>
+              )}
+
+              {/* Mensagem de erro ou status */}
+              {nfeSelecionada.motivo_status && nfeSelecionada.status === 'erro' && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <Label className="text-destructive text-xs">Motivo do Erro</Label>
+                  <p className="text-sm text-destructive">{nfeSelecionada.motivo_status}</p>
+                </div>
+              )}
+
+              {/* Cancelamento */}
+              {nfeSelecionada.status === 'cancelada' && (
+                <div className="p-3 bg-muted border rounded-lg">
+                  <Label className="text-muted-foreground text-xs">Cancelamento</Label>
+                  {nfeSelecionada.protocolo_cancelamento && (
+                    <p className="text-sm">Protocolo: {nfeSelecionada.protocolo_cancelamento}</p>
+                  )}
+                  {nfeSelecionada.data_cancelamento && (
+                    <p className="text-xs text-muted-foreground">
+                      Cancelada em: {formatDate(nfeSelecionada.data_cancelamento)}
+                    </p>
+                  )}
+                  {nfeSelecionada.motivo_status && (
+                    <p className="text-sm mt-1">Motivo: {nfeSelecionada.motivo_status}</p>
+                  )}
                 </div>
               )}
 
@@ -1105,26 +1484,66 @@ export default function NFe() {
       </AlertDialog>
 
       {/* Dialog de confirmação - Cancelar */}
-      <AlertDialog open={!!nfeParaCancelar} onOpenChange={() => setNfeParaCancelar(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar NF-e</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja cancelar a NF-e #{nfeParaCancelar?.numero}?
+      <Dialog open={!!nfeParaCancelar} onOpenChange={() => {
+        setNfeParaCancelar(null);
+        setJustificativaCancelamento("");
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar NF-e #{nfeParaCancelar?.numero}</DialogTitle>
+            <DialogDescription>
+              Informe a justificativa para o cancelamento da nota fiscal.
               Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction 
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Justificativa (mínimo 15 caracteres) *</Label>
+              <Textarea
+                placeholder="Informe o motivo do cancelamento..."
+                value={justificativaCancelamento}
+                onChange={(e) => setJustificativaCancelamento(e.target.value)}
+                rows={3}
+              />
+              <p className={`text-xs mt-1 ${justificativaCancelamento.length < 15 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {justificativaCancelamento.length}/15 caracteres mínimos
+              </p>
+            </div>
+
+            {nfeParaCancelar?.chave_acesso && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Chave de acesso:</p>
+                <p className="text-xs font-mono">{nfeParaCancelar.chave_acesso}</p>
+              </div>
+            )}
+
+            <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                O cancelamento deve ser feito em até 24 horas após a autorização
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setNfeParaCancelar(null);
+              setJustificativaCancelamento("");
+            }}>
+              Voltar
+            </Button>
+            <Button 
               onClick={handleConfirmarCancelamento}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
+              disabled={justificativaCancelamento.length < 15 || loading}
             >
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
               Cancelar NF-e
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmação - Deletar */}
       <AlertDialog open={!!nfeParaDeletar} onOpenChange={() => setNfeParaDeletar(null)}>
@@ -1133,7 +1552,7 @@ export default function NFe() {
             <AlertDialogTitle>Excluir NF-e</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir a NF-e #{nfeParaDeletar?.numero}?
-              Esta ação não pode ser desfeita. Só é possível excluir NF-e pendentes.
+              Esta ação não pode ser desfeita. Só é possível excluir NF-e pendentes ou com erro.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1143,6 +1562,33 @@ export default function NFe() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de confirmação - Reprocessar */}
+      <AlertDialog open={!!nfeParaReprocessar} onOpenChange={() => setNfeParaReprocessar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reprocessar NF-e</AlertDialogTitle>
+            <AlertDialogDescription>
+              A NF-e #{nfeParaReprocessar?.numero} teve um erro na emissão.
+              Deseja tentar emitir novamente?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {nfeParaReprocessar?.motivo_status && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">
+                <strong>Erro anterior:</strong> {nfeParaReprocessar.motivo_status}
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmarReprocessamento}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reprocessar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
