@@ -305,6 +305,13 @@ export default function NovaVenda() {
           description: "Nenhum produto encontrado com este código de barras",
           variant: "destructive",
         });
+        setCodigoBarras("");
+        // Focar novamente no campo de código de barras
+        setTimeout(() => {
+          if (codigoBarrasRef.current) {
+            codigoBarrasRef.current.focus();
+          }
+        }, 100);
       }
     } catch (error) {
       toast({
@@ -312,6 +319,7 @@ export default function NovaVenda() {
         description: "Erro ao buscar produto por código de barras",
         variant: "destructive",
       });
+      setCodigoBarras("");
     }
   };
 
@@ -930,8 +938,7 @@ export default function NovaVenda() {
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="h-7 sm:h-8 text-xs"
+                      className="h-7 sm:h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
                     >
                       <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       {clienteSelecionado ? 'Alterar' : 'Selecionar'}
@@ -1041,7 +1048,7 @@ export default function NovaVenda() {
                 </div>
               ) : (
                 <div className="space-y-1 sm:space-y-2">
-                  {carrinho.map((item) => (
+                  {[...carrinho].reverse().map((item) => (
                     <div key={item.produto.id} className="bg-muted rounded-lg p-1.5 sm:p-2">
                       <div className="flex items-start justify-between mb-1 sm:mb-2">
                         <div className="flex-1 min-w-0">

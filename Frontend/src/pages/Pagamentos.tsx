@@ -2118,7 +2118,7 @@ export default function Pagamentos() {
                   </div>
                 ) : (
                   <div className="space-y-1 sm:space-y-2">
-                    {carrinho.map((item) => (
+                    {[...carrinho].reverse().map((item) => (
                       <div key={item.produto.id} className="bg-muted rounded-lg p-2 sm:p-3">
                         <div className="flex items-start justify-between mb-1 sm:mb-2">
                           <div className="flex-1">
