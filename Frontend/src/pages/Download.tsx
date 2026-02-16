@@ -38,7 +38,7 @@ const DownloadPage = () => {
   };
 
   const handleDownload = () => {
-    window.open('https://www.mediafire.com/file/1yo55skavcs1x63/KontrollaPro-Setup-1.0.0.exe/file', '_blank');
+    window.open('https://www.mediafire.com/file/1amu8ig8hl6ui2g/KontrollaPro-Setup-1.0.0.exe/file', '_blank');
   };
 
   const handleManualDownload = () => {
