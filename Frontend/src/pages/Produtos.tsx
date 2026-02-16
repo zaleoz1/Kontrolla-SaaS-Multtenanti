@@ -1568,6 +1568,9 @@ export default function Produtos() {
         const dadosNFeDoXML = dadosNFesXML[produtoXML.nfeId];
         const fornecedorIdDoProduto = nfeFornecedorMap[produtoXML.nfeId];
         
+        // Verificar se é atualização de produto existente
+        const isAtualizacao = produtoXML.jaExiste && produtoXML.acao === 'atualizar';
+        
         // Preparar dados do produto mapeando EXATAMENTE para as colunas da tabela
         // IMPORTANTE: Não enviar campos opcionais como null, apenas omitir
         const dadosProduto: Record<string, any> = {
@@ -1578,8 +1581,8 @@ export default function Produtos() {
             : `Importado de NF-e - Código: ${produtoXML.codigo}`,
           
           // Preços - O valor unitário do XML é o preço de COMPRA (NF-e de entrada)
-          // O preço de venda é configurado como o mesmo valor por padrão (pode ser ajustado depois)
-          preco: Number(produtoXML.valorUnitario.toFixed(2)),
+          // Na ATUALIZAÇÃO: NÃO alterar o preço de venda, apenas o preço de compra
+          // Na CRIAÇÃO: usar o valor do XML para ambos os preços
           preco_compra: Number(produtoXML.valorUnitario.toFixed(2)), // Preço de compra do fornecedor
           
           // Tipo de preço
@@ -1597,6 +1600,11 @@ export default function Produtos() {
           status: 'ativo',
           destaque: false,
         };
+        
+        // Só incluir preço de venda para NOVOS produtos (não sobrescrever na atualização)
+        if (!isAtualizacao) {
+          dadosProduto.preco = Number(produtoXML.valorUnitario.toFixed(2));
+        }
 
         // Vincular fornecedor ao produto se disponível
         if (fornecedorIdDoProduto) {
@@ -3397,8 +3405,8 @@ export default function Produtos() {
                                     </div>
                                   </div>
                                   <div className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-                                    <strong>Ao importar:</strong> O estoque será <span className="font-semibold">somado</span> (+{produto.quantidade.toLocaleString('pt-BR', {maximumFractionDigits: 3})} {produto.unidade}) 
-                                    e o preço de compra será atualizado para {formatarPreco(produto.valorUnitario)}
+                                    <strong>Ao importar:</strong> O estoque será <span className="font-semibold">somado</span> (+{produto.quantidade.toLocaleString('pt-BR', {maximumFractionDigits: 3})} {produto.unidade}), 
+                                    o preço de compra será atualizado para {formatarPreco(produto.valorUnitario)} e o <span className="font-semibold">preço de venda será mantido</span>
                                   </div>
                                 </div>
 
