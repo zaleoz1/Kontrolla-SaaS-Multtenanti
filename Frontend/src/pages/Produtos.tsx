@@ -61,7 +61,8 @@ import {
   CheckSquare,
   Square,
   Copy,
-  Eye
+  Eye,
+  Archive
 } from "lucide-react";
 
 interface Produto {
@@ -248,6 +249,7 @@ export default function Produtos() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState<{id: number, nome: string} | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showInativarDialog, setShowInativarDialog] = useState(false);
   
   // Estados para importação XML
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -346,15 +348,50 @@ export default function Produtos() {
         description: "Produto excluído com sucesso!",
       });
       carregarProdutos();
-    } catch (error) {
+      setShowDeleteDialog(false);
+      setProdutoParaExcluir(null);
+    } catch (error: any) {
       console.error('Erro ao excluir produto:', error);
+      const errorMessage = error?.message || '';
+      
+      // Se o erro for por causa de vendas associadas, oferecer inativação
+      if (errorMessage.includes('vendas associadas')) {
+        setShowDeleteDialog(false);
+        setShowInativarDialog(true);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir o produto. Tente novamente.",
+          variant: "destructive",
+        });
+        setShowDeleteDialog(false);
+        setProdutoParaExcluir(null);
+      }
+    }
+  };
+
+  const confirmarInativacao = async () => {
+    if (!produtoParaExcluir) return;
+
+    try {
+      await makeRequest(API_ENDPOINTS.PRODUCTS.UPDATE(produtoParaExcluir.id), {
+        method: 'PUT',
+        body: { status: 'inativo' }
+      });
+      toast({
+        title: "Sucesso",
+        description: `Produto "${produtoParaExcluir.nome}" foi inativado com sucesso!`,
+      });
+      carregarProdutos();
+    } catch (error) {
+      console.error('Erro ao inativar produto:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir o produto. Tente novamente.",
+        description: "Não foi possível inativar o produto. Tente novamente.",
         variant: "destructive",
       });
     } finally {
-      setShowDeleteDialog(false);
+      setShowInativarDialog(false);
       setProdutoParaExcluir(null);
     }
   };
@@ -2583,6 +2620,37 @@ export default function Produtos() {
                   Excluir
                 </>
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Confirmação de Inativação */}
+      <AlertDialog open={showInativarDialog} onOpenChange={setShowInativarDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Produto com Vendas Associadas
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              O produto <strong>"{produtoParaExcluir?.nome}"</strong> possui vendas associadas e não pode ser excluído.
+              <br /><br />
+              <span className="text-sm text-muted-foreground">
+                Deseja <strong>inativar</strong> este produto? Ele não aparecerá mais para venda, mas o histórico de vendas será mantido.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowInativarDialog(false); setProdutoParaExcluir(null); }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarInativacao}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Inativar Produto
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

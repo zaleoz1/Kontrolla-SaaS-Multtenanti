@@ -1197,10 +1197,10 @@ export default function NovoProduto() {
                           step="1"
                           min="0"
                           placeholder="0"
-                          value={produto.estoque || ""}
+                          value={produto.estoque ?? ""}
                           onChange={(e) => {
                             const value = e.target.value;
-                            const intValue = value ? Math.round(parseFloat(value)) : null;
+                            const intValue = value !== "" ? Math.round(parseFloat(value)) : null;
                             atualizarProduto("estoque", intValue);
                             if (errosValidacao.estoque) {
                               setErrosValidacao(prev => ({ ...prev, estoque: false }));
@@ -1222,10 +1222,10 @@ export default function NovoProduto() {
                           step="1"
                           min="0"
                           placeholder="0"
-                          value={produto.estoque_minimo || ""}
+                          value={produto.estoque_minimo ?? ""}
                           onChange={(e) => {
                             const value = e.target.value;
-                            const intValue = value ? Math.round(parseFloat(value)) : null;
+                            const intValue = value !== "" ? Math.round(parseFloat(value)) : null;
                             atualizarProduto("estoque_minimo", intValue);
                             if (errosValidacao.estoque_minimo) {
                               setErrosValidacao(prev => ({ ...prev, estoque_minimo: false }));
@@ -1252,10 +1252,10 @@ export default function NovoProduto() {
                             step="0.001"
                             min="0"
                             placeholder="0.000"
-                            value={produto.estoque_kg || ""}
+                            value={produto.estoque_kg ?? ""}
                             onChange={(e) => {
                               const value = e.target.value;
-                              const floatValue = value ? parseFloat(value) : null;
+                              const floatValue = value !== "" ? parseFloat(value) : null;
                               atualizarProduto("estoque_kg", floatValue);
                               if (errosValidacao.estoque_kg) {
                                 setErrosValidacao(prev => ({ ...prev, estoque_kg: false }));
@@ -1277,10 +1277,10 @@ export default function NovoProduto() {
                             step="0.001"
                             min="0"
                             placeholder="0.000"
-                            value={produto.estoque_minimo_kg || ""}
+                            value={produto.estoque_minimo_kg ?? ""}
                             onChange={(e) => {
                               const value = e.target.value;
-                              const floatValue = value ? parseFloat(value) : null;
+                              const floatValue = value !== "" ? parseFloat(value) : null;
                               atualizarProduto("estoque_minimo_kg", floatValue);
                               if (errosValidacao.estoque_minimo_kg) {
                                 setErrosValidacao(prev => ({ ...prev, estoque_minimo_kg: false }));
@@ -1309,10 +1309,10 @@ export default function NovoProduto() {
                             step="0.001"
                             min="0"
                             placeholder="0.000"
-                            value={produto.estoque_litros || ""}
+                            value={produto.estoque_litros ?? ""}
                             onChange={(e) => {
                               const value = e.target.value;
-                              const floatValue = value ? parseFloat(value) : null;
+                              const floatValue = value !== "" ? parseFloat(value) : null;
                               atualizarProduto("estoque_litros", floatValue);
                               if (errosValidacao.estoque_litros) {
                                 setErrosValidacao(prev => ({ ...prev, estoque_litros: false }));
@@ -1334,10 +1334,10 @@ export default function NovoProduto() {
                             step="0.001"
                             min="0"
                             placeholder="0.000"
-                            value={produto.estoque_minimo_litros || ""}
+                            value={produto.estoque_minimo_litros ?? ""}
                             onChange={(e) => {
                               const value = e.target.value;
-                              const floatValue = value ? parseFloat(value) : null;
+                              const floatValue = value !== "" ? parseFloat(value) : null;
                               atualizarProduto("estoque_minimo_litros", floatValue);
                               if (errosValidacao.estoque_minimo_litros) {
                                 setErrosValidacao(prev => ({ ...prev, estoque_minimo_litros: false }));
@@ -1381,27 +1381,6 @@ export default function NovoProduto() {
                       <span className="text-sm text-warning-foreground">
                         Estoque baixo! Volume atual ({produto.estoque_litros}L) está no limite mínimo ({produto.estoque_minimo_litros}L)
                       </span>
-                    </div>
-                  )}
-
-                  {produto.tipo_preco === "unidade" && produto.estoque !== null && produto.estoque === 0 && (
-                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
-                      <span className="text-sm text-destructive-foreground">Produto sem estoque! Quantidade zerada.</span>
-                    </div>
-                  )}
-
-                  {produto.tipo_preco === "kg" && produto.estoque_kg !== null && produto.estoque_kg === 0 && (
-                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
-                      <span className="text-sm text-destructive-foreground">Produto sem estoque! Peso zerado.</span>
-                    </div>
-                  )}
-
-                  {produto.tipo_preco === "litros" && produto.estoque_litros !== null && produto.estoque_litros === 0 && (
-                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
-                      <span className="text-sm text-destructive-foreground">Produto sem estoque! Volume zerado.</span>
                     </div>
                   )}
 
