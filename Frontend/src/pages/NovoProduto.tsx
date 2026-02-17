@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,6 +92,8 @@ export default function NovoProduto() {
   const [carregandoProduto, setCarregandoProduto] = useState(false);
   const [urlImagem, setUrlImagem] = useState("");
   const [mostrarInputUrl, setMostrarInputUrl] = useState(false);
+  const codigoBarrasRef = useRef<HTMLInputElement>(null);
+  const ultimoScanRef = useRef<number>(0);
   const { makeRequest, loading, error } = useApi();
   const { 
     categorias, 
@@ -896,14 +898,36 @@ export default function NovoProduto() {
                       <label className="text-xs sm:text-sm font-medium">Código de Barras *</label>
                       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-1">
                       <Input
-                        placeholder="7891234567890"
+                        ref={codigoBarrasRef}
+                        placeholder="Código de Barras:"
                         value={produto.codigo_barras}
                           onChange={(e) => {
-                            atualizarProduto("codigo_barras", e.target.value);
+                            const novoValor = e.target.value;
+                            const agora = Date.now();
+                            
+                            // Detectar scan rápido (menos de 100ms entre caracteres indica scanner)
+                            const isScan = agora - ultimoScanRef.current < 100 && novoValor.length > 3;
+                            ultimoScanRef.current = agora;
+                            
+                            atualizarProduto("codigo_barras", novoValor);
+                            
                             // Limpar erro quando o usuário começar a digitar
                             if (errosValidacao.codigo_barras) {
                               setErrosValidacao(prev => ({ ...prev, codigo_barras: false }));
                             }
+                            
+                            // Se foi um scan e o código parece completo, selecionar tudo para próximo scan
+                            if (isScan && novoValor.length >= 8) {
+                              setTimeout(() => {
+                                if (codigoBarrasRef.current) {
+                                  codigoBarrasRef.current.select();
+                                }
+                              }, 50);
+                            }
+                          }}
+                          onFocus={(e) => {
+                            // Selecionar todo o texto ao focar (facilita novo scan)
+                            e.target.select();
                           }}
                           className={`flex-1 text-xs sm:text-sm ${errosValidacao.codigo_barras ? 'border-red-500 focus:border-red-500' : ''}`}
                         />

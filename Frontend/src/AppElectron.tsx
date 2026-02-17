@@ -20,6 +20,7 @@ import Clientes from "./pages/Clientes";
 import Relatorios from "./pages/Relatorios";
 import Financeiro from "./pages/Financeiro";
 import NFe from "./pages/NFe";
+import ConsultaNfe from "./pages/ConsultaNfe";
 import Configuracoes from "./pages/Configuracoes";
 import NovoProduto from "./pages/NovoProduto";
 import NovoCliente from "./pages/NovoCliente";
@@ -72,6 +73,7 @@ function AppContent() {
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="nova-transacao" element={<NovaTransacao />} />
             <Route path="nfe" element={<NFe />} />
+            <Route path="consulta-nfe" element={<ConsultaNfe />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="fornecedores" element={<Fornecedores />} />
             <Route path="novo-fornecedor" element={<NovoFornecedor />} />
