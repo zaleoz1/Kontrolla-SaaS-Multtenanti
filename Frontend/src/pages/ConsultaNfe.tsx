@@ -28,7 +28,6 @@ import {
   FileText,
   Download,
   Eye,
-  Settings,
   RefreshCw,
   Loader2,
   AlertTriangle,
@@ -36,8 +35,6 @@ import {
   FileDown,
   Import,
   DollarSign,
-  ExternalLink,
-  Info,
   Building,
   Calendar,
   Hash
@@ -120,10 +117,9 @@ export default function ConsultaNfe() {
     if (!config?.api_key_configurada) {
       toast({
         title: "API não configurada",
-        description: "Configure sua API Key do MeuDanfe antes de consultar",
+        description: "A API Key do MeuDanfe não está configurada no servidor. Entre em contato com o administrador.",
         variant: "destructive"
       });
-      setTabAtual("configuracoes");
       return;
     }
 
@@ -156,15 +152,10 @@ export default function ConsultaNfe() {
       toast({
         title: isEndpointError ? "API não configurada" : "Erro na consulta",
         description: isEndpointError 
-          ? "A integração com MeuDanfe precisa ser configurada. Veja as instruções na aba Configurações."
+          ? "A integração com MeuDanfe precisa ser configurada no servidor. Entre em contato com o administrador."
           : errorMessage,
         variant: "destructive"
       });
-      
-      // Se for erro de configuração, mudar para aba de configurações
-      if (isEndpointError) {
-        setTabAtual("configuracoes");
-      }
     }
   };
 
@@ -266,32 +257,6 @@ export default function ConsultaNfe() {
         </Card>
       )}
 
-      {/* Aviso sobre URL da API - mostrar quando API está configurada mas há erro */}
-      {config && config.api_key_configurada && (
-        <Card className="border-blue-500 bg-blue-500/10">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-500 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-blue-500">Integração MeuDanfe</h4>
-                <p className="text-sm text-muted-foreground">
-                  API Key configurada ({config.api_key_masked}). Se houver erros de consulta, verifique a{" "}
-                  <a 
-                    href="https://meudanfe.com.br/cliente" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    documentação da API
-                  </a>{" "}
-                  na área do cliente MeuDanfe e configure <code className="px-1 py-0.5 bg-muted rounded text-xs">MEUDANFE_API_URL</code> no backend.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Cards de Resumo */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-gradient-card shadow-card">
@@ -339,10 +304,9 @@ export default function ConsultaNfe() {
 
       {/* Abas */}
       <Tabs value={tabAtual} onValueChange={setTabAtual} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="consultar">Consultar NF-e</TabsTrigger>
           <TabsTrigger value="importadas">NF-e Importadas</TabsTrigger>
-          <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
         </TabsList>
 
         {/* Aba Consultar */}
@@ -481,33 +445,6 @@ export default function ConsultaNfe() {
                 </Card>
               )}
 
-              {/* Informações sobre a API */}
-              <Card className="bg-muted/30">
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <Info className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p><strong>Sobre o MeuDanfe:</strong></p>
-                      <ul className="list-disc list-inside space-y-1 ml-2">
-                        <li>Consulta de NF-e por chave de acesso: <span className="text-warning font-medium">R$ 0,03</span></li>
-                        <li>Download de XML e DANFE: <span className="text-success font-medium">Gratuito</span> (após consulta)</li>
-                        <li>Conversão de XML para PDF: <span className="text-success font-medium">Gratuito</span></li>
-                      </ul>
-                      <p className="pt-2">
-                        <a 
-                          href="https://meudanfe.com.br/api" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline inline-flex items-center"
-                        >
-                          Documentação da API
-                          <ExternalLink className="h-3 w-3 ml-1" />
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </CardContent>
           </Card>
         </TabsContent>
@@ -653,123 +590,6 @@ export default function ConsultaNfe() {
           )}
         </TabsContent>
 
-        {/* Aba Configurações */}
-        <TabsContent value="configuracoes" className="space-y-4">
-          {/* Status da Configuração */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Status da API MeuDanfe
-              </CardTitle>
-              <CardDescription>
-                A API Key é configurada no servidor pelo administrador
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                {config?.api_key_configurada ? (
-                  <Badge variant="outline" className="text-success border-success">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    API Configurada no Servidor
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-warning border-warning">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    API Não Configurada
-                  </Badge>
-                )}
-              </div>
-
-              {config?.api_key_configurada && config.api_key_masked && (
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>API Key:</strong> {config.api_key_masked}
-                  </p>
-                </div>
-              )}
-
-              {!config?.api_key_configurada && (
-                <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
-                  <p className="text-sm text-warning flex items-start">
-                    <AlertTriangle className="h-4 w-4 mr-2 mt-0.5" />
-                    <span>
-                      A API MeuDanfe não está configurada. Entre em contato com o administrador do sistema 
-                      para configurar a variável de ambiente <code className="bg-muted px-1 rounded">MEUDANFE_API_KEY</code> no servidor.
-                    </span>
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Instruções de Configuração */}
-          <Card className="bg-blue-500/5 border-blue-500/30">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-3 flex items-center text-blue-600">
-                <Settings className="h-5 w-5 mr-2" />
-                Como Configurar
-              </h3>
-              <div className="text-sm space-y-3">
-                <p className="text-muted-foreground">
-                  Para usar a integração MeuDanfe, configure as variáveis de ambiente no backend:
-                </p>
-                
-                <div className="bg-muted rounded-lg p-3 font-mono text-xs">
-                  <div className="mb-1"># Arquivo: Backend/.env</div>
-                  <div className="text-primary">MEUDANFE_API_KEY=sua_api_key_aqui</div>
-                  <div className="text-muted-foreground mt-2"># Obtenha em: https://meudanfe.com.br/cliente</div>
-                </div>
-                
-                <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-2">
-                  <li>Crie uma conta em <a href="https://meudanfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">meudanfe.com.br</a></li>
-                  <li>Acesse a "Área do Cliente" → "API / Integração"</li>
-                  <li>Crie ou copie sua API Key</li>
-                  <li>Configure no arquivo <code className="bg-muted px-1 rounded">Backend/.env</code></li>
-                  <li>Reinicie o servidor backend</li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Informações sobre a API */}
-          <Card className="bg-muted/30">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-3 flex items-center">
-                <Info className="h-5 w-5 mr-2" />
-                Sobre a API MeuDanfe
-              </h3>
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>
-                  A integração com o{" "}
-                  <a 
-                    href="https://meudanfe.com.br/api" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    MeuDanfe
-                  </a>{" "}
-                  permite consultar NF-e e importar o XML para o sistema.
-                </p>
-                
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li><strong>Consulta por chave de acesso:</strong> <span className="text-warning">R$ 0,03</span> por consulta</li>
-                  <li><strong>Download de XML:</strong> <span className="text-success">Gratuito</span> (após consulta)</li>
-                  <li><strong>Download de DANFE:</strong> <span className="text-success">Gratuito</span> (após consulta)</li>
-                  <li><strong>Conversão XML → PDF:</strong> <span className="text-success">Gratuito</span></li>
-                </ul>
-              </div>
-
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-xs text-muted-foreground">
-                  <ExternalLink className="h-3 w-3 inline mr-1" />
-                  Documentação: <a href="https://meudanfe.com.br/api" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">meudanfe.com.br/api</a>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Modal de Detalhes */}
@@ -875,11 +695,13 @@ export default function ConsultaNfe() {
               <DollarSign className="h-5 w-5 mr-2 text-warning" />
               Confirmar Consulta
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Esta consulta tem um custo de <strong className="text-warning">R$ 0,03</strong>.</p>
-              <p>Deseja continuar com a consulta da NF-e?</p>
-              <div className="mt-3 p-2 bg-muted rounded text-xs font-mono">
-                {formatarChaveAcesso(chaveAcesso)}
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Esta consulta tem um custo de <strong className="text-warning">R$ 0,03</strong>.</p>
+                <p>Deseja continuar com a consulta da NF-e?</p>
+                <div className="mt-3 p-2 bg-muted rounded text-xs font-mono">
+                  {formatarChaveAcesso(chaveAcesso)}
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

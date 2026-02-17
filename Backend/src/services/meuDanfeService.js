@@ -136,6 +136,12 @@ export async function consultarNfePorChave(tenantId, chaveAcesso) {
 
     const responseText = await response.text();
 
+    // Log para debug (remover em produção se necessário)
+    if (!response.ok) {
+      console.error(`MeuDanfe API Error - Status: ${response.status}, URL: ${url}`);
+      console.error(`MeuDanfe API Response: ${responseText.substring(0, 500)}`);
+    }
+
     // Parsear resposta JSON
     let data;
     try {
@@ -144,11 +150,77 @@ export async function consultarNfePorChave(tenantId, chaveAcesso) {
       if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
         throw new Error(`API MeuDanfe retornou HTML. Verifique a URL da API.`);
       }
-      throw new Error(`Resposta inválida da API MeuDanfe`);
+      throw new Error(`Resposta inválida da API MeuDanfe: ${responseText.substring(0, 200)}`);
     }
 
     if (!response.ok) {
       // Tratar erros específicos da API
+      if (response.status === 400) {
+        // Bad Request - pode ser nota já na área do cliente, ou erro de validação
+        const errorMsg = data.message || data.error || data.msg || data.erro;
+        
+        // Tentar buscar o XML diretamente - pode ser que a nota já esteja na área do cliente
+        try {
+          const xmlUrl = `${MEUDANFE_API_BASE}/get/xml/${validacao.chave}`;
+          const xmlResponse = await fetch(xmlUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Api-Key': getApiKey()
+            }
+          });
+
+          if (xmlResponse.ok) {
+            const xmlData = await xmlResponse.json();
+            const xmlContent = xmlData.data || xmlData.xml || xmlData.XML || xmlData.content || xmlData.file;
+            
+            if (xmlContent && typeof xmlContent === 'string' && xmlContent.length > 100) {
+              // XML encontrado! A nota já estava na área do cliente
+              const nfeDetalhes = {
+                status: 'OK',
+                xml_disponivel: true,
+                numero: extrairDoXml(xmlContent, 'nNF'),
+                serie: extrairDoXml(xmlContent, 'serie'),
+                data_emissao: extrairDoXml(xmlContent, 'dhEmi'),
+                valor_total: extrairDoXml(xmlContent, 'vNF'),
+                emitente: {
+                  cnpj: extrairDoXmlBloco(xmlContent, 'emit', 'CNPJ'),
+                  nome: extrairDoXmlBloco(xmlContent, 'emit', 'xNome'),
+                  fantasia: extrairDoXmlBloco(xmlContent, 'emit', 'xFant'),
+                  uf: extrairDoXmlBloco(xmlContent, 'emit', 'UF')
+                },
+                destinatario: {
+                  cnpj: extrairDoXmlBloco(xmlContent, 'dest', 'CNPJ'),
+                  cpf: extrairDoXmlBloco(xmlContent, 'dest', 'CPF'),
+                  nome: extrairDoXmlBloco(xmlContent, 'dest', 'xNome')
+                }
+              };
+
+              await registrarConsulta(tenantId, validacao.chave, 'nfe', nfeDetalhes);
+
+              return {
+                success: true,
+                status: 'OK',
+                nfe: nfeDetalhes,
+                xml: xmlContent,
+                chave_acesso: validacao.chave,
+                tipo: 'NFE',
+                aguardando: false,
+                mensagem: 'NF-e recuperada da área do cliente!'
+              };
+            }
+          }
+        } catch (xmlError) {
+          // Não conseguiu buscar o XML - continua com o erro original
+        }
+
+        // Se chegou aqui, realmente é um erro
+        if (errorMsg && errorMsg !== 'Bad Request') {
+          throw new Error(errorMsg);
+        }
+        // Erro genérico "Bad Request" - NF-e não encontrada ou não disponível
+        throw new Error('NF-e não encontrada ou não disponível. Possíveis causas:\n• A chave de acesso está incorreta\n• A NF-e ainda não foi autorizada na SEFAZ\n• A NF-e é muito antiga e não está mais disponível para consulta\n• Problemas temporários na API');
+      }
       if (response.status === 404) {
         // Verificar se é um 404 da API (endpoint não encontrado) ou da NF-e
         if (data.path) {
@@ -158,6 +230,9 @@ export async function consultarNfePorChave(tenantId, chaveAcesso) {
       }
       if (response.status === 401 || response.status === 403) {
         throw new Error('API Key inválida ou sem permissão. Verifique a configuração no backend.');
+      }
+      if (response.status === 429) {
+        throw new Error('Muitas requisições. Aguarde alguns segundos antes de tentar novamente.');
       }
       throw new Error(data.message || data.error || `Erro na consulta: ${response.status} ${response.statusText}`);
     }

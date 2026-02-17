@@ -43,16 +43,23 @@ export interface MeuDanfeConfig {
 // Interface para resultado de consulta
 export interface ConsultaNfeResult {
   success: boolean;
+  status?: string;
+  mensagem?: string;
+  aguardando?: boolean;
+  tipo?: string;
+  xml?: string; // XML pode estar no nível raiz da resposta
   nfe?: {
-    chave_acesso: string;
+    chave_acesso?: string;
     numero?: string;
     serie?: string;
     data_emissao?: string;
-    valor_total?: number;
+    valor_total?: number | string;
+    xml_disponivel?: boolean;
     emitente?: {
       cnpj?: string;
       nome?: string;
       razao_social?: string;
+      fantasia?: string;
       uf?: string;
     };
     destinatario?: {

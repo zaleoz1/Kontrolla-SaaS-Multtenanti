@@ -41,6 +41,7 @@ import { useCrudApi, useApi } from "@/hooks/useApi";
 import { API_ENDPOINTS } from "@/config/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useMeuDanfe } from "@/hooks/useMeuDanfe";
 import { 
   Plus, 
   Search, 
@@ -283,6 +284,15 @@ export default function Produtos() {
   const [fornecedorExpandido, setFornecedorExpandido] = useState<number | null>(null);
   const [visualizacaoXML, setVisualizacaoXML] = useState<'formatado' | 'xml'>('formatado');
   
+  // Estados para consulta de NF-e via MeuDanfe
+  const [showConsultaNfeDialog, setShowConsultaNfeDialog] = useState(false);
+  const [chaveAcessoConsulta, setChaveAcessoConsulta] = useState("");
+  const [consultandoNfe, setConsultandoNfe] = useState(false);
+  
+  // Estados para paginação infinita
+  const [produtosVisiveis, setProdutosVisiveis] = useState(50);
+  const PRODUTOS_POR_PAGINA = 50;
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -293,6 +303,14 @@ export default function Produtos() {
   const importApi = useCrudApi(API_ENDPOINTS.PRODUCTS.IMPORT); // Rota de importação com upsert
   const fornecedoresApi = useCrudApi(API_ENDPOINTS.FORNECEDORES.LIST); // API de fornecedores
   const api = useApi(); // API genérica para verificações
+  
+  // Hook do MeuDanfe para consulta de NF-e
+  const { 
+    consultarNfe, 
+    fetchConfig: fetchMeuDanfeConfig,
+    validarChaveAcesso,
+    formatarChaveAcesso
+  } = useMeuDanfe();
 
   // Carregar categorias e produtos
   useEffect(() => {
@@ -374,7 +392,7 @@ export default function Produtos() {
     if (!produtoParaExcluir) return;
 
     try {
-      await makeRequest(API_ENDPOINTS.PRODUCTS.UPDATE(produtoParaExcluir.id), {
+      await api.makeRequest(API_ENDPOINTS.PRODUCTS.UPDATE(produtoParaExcluir.id), {
         method: 'PUT',
         body: { status: 'inativo' }
       });
@@ -414,12 +432,12 @@ export default function Produtos() {
     setProdutosSelecionados(novaSelecao);
   };
 
-  // Função para selecionar/desselecionar todos os produtos
+  // Função para selecionar/desselecionar todos os produtos (usa todos os filtrados, não apenas visíveis)
   const toggleSelecionarTodos = () => {
-    if (produtosSelecionados.size === produtos.length) {
+    if (produtosSelecionados.size === produtosFiltrados.length) {
       setProdutosSelecionados(new Set());
     } else {
-      setProdutosSelecionados(new Set(produtos.map(p => p.id)));
+      setProdutosSelecionados(new Set(produtosFiltrados.map(p => p.id)));
     }
   };
 
@@ -883,6 +901,101 @@ export default function Produtos() {
         description: "Não foi possível copiar o XML.",
         variant: "destructive",
       });
+    }
+  };
+
+  // ============ FUNÇÕES PARA CONSULTA NF-e (MEUDANFE) ============
+
+  // Função para consultar NF-e via MeuDanfe e processar o XML
+  const handleConsultarNfe = async () => {
+    // Validar chave de acesso
+    const validacao = validarChaveAcesso(chaveAcessoConsulta);
+    if (!validacao.valid) {
+      toast({
+        title: "Chave inválida",
+        description: validacao.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setConsultandoNfe(true);
+
+    try {
+      // Consultar NF-e via MeuDanfe API
+      const resultado = await consultarNfe(chaveAcessoConsulta);
+      
+      // O XML pode estar em resultado.xml ou resultado.nfe.xml dependendo da resposta da API
+      const xmlString = resultado?.xml || resultado?.nfe?.xml;
+      
+      if (!xmlString) {
+        toast({
+          title: "XML não encontrado",
+          description: "A NF-e foi encontrada mas o XML não está disponível para importação.",
+          variant: "destructive"
+        });
+        setConsultandoNfe(false);
+        return;
+      }
+
+      // Processar o XML recebido como se fosse um arquivo
+      
+      try {
+        const parseResult = parseXMLProdutos(xmlString, 0);
+        
+        if (parseResult.produtos.length === 0) {
+          toast({
+            title: "Nenhum produto encontrado",
+            description: "O XML da NF-e não contém produtos para importar.",
+            variant: "destructive"
+          });
+          setConsultandoNfe(false);
+          return;
+        }
+
+        // Fechar modal de consulta
+        setShowConsultaNfeDialog(false);
+        setChaveAcessoConsulta("");
+
+        // Definir dados para o modal de importação
+        const nfeNumero = resultado?.nfe?.numero || parseResult.dadosNFe?.numero || chaveAcessoConsulta.substring(25, 34);
+        setXmlFileNames([`NF-e ${nfeNumero}`]);
+        setEmitentesXML({ [parseResult.nfeId]: parseResult.emitente! });
+        if (parseResult.dadosNFe) {
+          setDadosNFesXML({ [parseResult.nfeId]: parseResult.dadosNFe });
+        }
+        setFiltroImportacao('todos');
+        
+        // Verificar produtos existentes e abrir modal
+        const produtosVerificados = await verificarProdutosExistentes(parseResult.produtos);
+        setProdutosXML(produtosVerificados);
+        setShowImportDialog(true);
+
+        toast({
+          title: "NF-e carregada!",
+          description: `${parseResult.produtos.length} produto(s) encontrado(s) na NF-e ${resultado.nfe.numero || ''}`,
+        });
+
+      } catch (parseError) {
+        console.error('Erro ao processar XML:', parseError);
+        toast({
+          title: "Erro ao processar XML",
+          description: parseError instanceof Error ? parseError.message : "Erro ao processar o XML da NF-e",
+          variant: "destructive"
+        });
+      }
+
+    } catch (error) {
+      console.error('Erro ao consultar NF-e:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao consultar NF-e";
+      
+      toast({
+        title: "Erro na consulta",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setConsultandoNfe(false);
     }
   };
 
@@ -1950,18 +2063,33 @@ export default function Produtos() {
 
   // Aplicar todos os filtros
   const produtosFiltradosEstoque = filtrarProdutosPorEstoque(todosProdutos);
-  const produtos = filtrarProdutosPorImpostos(produtosFiltradosEstoque);
+  const produtosFiltrados = filtrarProdutosPorImpostos(produtosFiltradosEstoque);
+  
+  // Aplicar paginação - mostrar apenas os produtos visíveis
+  const produtos = produtosFiltrados.slice(0, produtosVisiveis);
+  const temMaisProdutos = produtosFiltrados.length > produtosVisiveis;
+  const produtosRestantes = produtosFiltrados.length - produtosVisiveis;
+  
+  // Função para carregar mais produtos
+  const carregarMaisProdutos = () => {
+    setProdutosVisiveis(prev => prev + PRODUTOS_POR_PAGINA);
+  };
+  
+  // Resetar paginação quando filtros mudarem
+  useEffect(() => {
+    setProdutosVisiveis(PRODUTOS_POR_PAGINA);
+  }, [termoBusca, filtroStatus, filtroCategoria, filtroEstoque, filtroImpostos]);
 
-  // Calcular métricas dos produtos (usando todos os produtos, não apenas os filtrados)
+  // Calcular métricas dos produtos (usando todos os produtos filtrados, não apenas os visíveis)
   const calcularMetricas = () => {
-    const total = todosProdutos.length;
-    const semEstoque = todosProdutos.filter(p => obterEstoqueAtual(p) === 0).length;
-    const estoqueBaixo = todosProdutos.filter(p => {
+    const total = produtosFiltrados.length;
+    const semEstoque = produtosFiltrados.filter(p => obterEstoqueAtual(p) === 0).length;
+    const estoqueBaixo = produtosFiltrados.filter(p => {
       const estoqueAtual = obterEstoqueAtual(p);
       const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
       return estoqueAtual > 0 && estoqueMinimoAtual > 0 && estoqueAtual <= estoqueMinimoAtual;
     }).length;
-    const disponiveis = todosProdutos.filter(p => {
+    const disponiveis = produtosFiltrados.filter(p => {
       const estoqueAtual = obterEstoqueAtual(p);
       const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
       return estoqueAtual > 0 && (!estoqueMinimoAtual || estoqueMinimoAtual <= 0 || estoqueAtual > estoqueMinimoAtual);
@@ -2003,7 +2131,7 @@ export default function Produtos() {
                     onClick={toggleSelecionarTodos}
                     className="border-primary/50 hover:bg-primary/10"
                   >
-                    {produtosSelecionados.size === produtos.length ? (
+                    {produtosSelecionados.size === produtosFiltrados.length ? (
                       <><Square className="h-4 w-4 mr-2" />Desselecionar Todos</>
                     ) : (
                       <><CheckSquare className="h-4 w-4 mr-2" />Selecionar Todos</>
@@ -2039,6 +2167,14 @@ export default function Produtos() {
                     <Upload className="h-4 w-4 mr-2" />
                     Importar XML(s)
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowConsultaNfeDialog(true)}
+                    className="border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Consultar NF-e
+                  </Button>
                   <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-produto")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Novo Produto
@@ -2069,7 +2205,7 @@ export default function Produtos() {
                       className="flex-1 text-xs sm:text-sm border-primary/50 hover:bg-primary/10"
                       onClick={toggleSelecionarTodos}
                     >
-                      {produtosSelecionados.size === produtos.length ? (
+                      {produtosSelecionados.size === produtosFiltrados.length ? (
                         <><Square className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /><span>Desselecionar</span></>
                       ) : (
                         <><CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /><span>Selecionar Todos</span></>
@@ -2090,14 +2226,24 @@ export default function Produtos() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <Button 
-                    variant="outline"
-                    className="w-full text-xs sm:text-sm border-green-500/50 hover:bg-green-500/10 text-green-600 dark:text-green-400"
-                    onClick={() => setModoSelecao(true)}
-                  >
-                    <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span>Exportar XML</span>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      className="flex-1 text-xs sm:text-sm border-green-500/50 hover:bg-green-500/10 text-green-600 dark:text-green-400"
+                      onClick={() => setModoSelecao(true)}
+                    >
+                      <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span>Exportar</span>
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="flex-1 text-xs sm:text-sm border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      onClick={() => setShowConsultaNfeDialog(true)}
+                    >
+                      <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span>Consultar NF-e</span>
+                    </Button>
+                  </div>
                   <div className="flex gap-2">
                     <Button 
                       variant="outline"
@@ -2555,6 +2701,19 @@ export default function Produtos() {
           ))}
           </div>
 
+          {/* Botão Ver Mais */}
+          {temMaisProdutos && (
+            <button
+              onClick={carregarMaisProdutos}
+              className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/50 rounded-lg mt-4 hover:bg-muted/50"
+            >
+              <Package className="h-4 w-4" />
+              Ver mais {Math.min(produtosRestantes, PRODUTOS_POR_PAGINA)} produto{produtosRestantes !== 1 ? 's' : ''}
+              <span className="text-xs text-muted-foreground">
+                ({produtosVisiveis} de {produtosFiltrados.length})
+              </span>
+            </button>
+          )}
         </>
       )}
 
@@ -3036,6 +3195,81 @@ export default function Produtos() {
             >
               <Download className="h-4 w-4 mr-2" />
               {xmlsPorFornecedor.length > 1 ? `Baixar Todos (${xmlsPorFornecedor.length} XMLs)` : 'Baixar XML'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Consulta de NF-e */}
+      <Dialog open={showConsultaNfeDialog} onOpenChange={setShowConsultaNfeDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-blue-500" />
+              Consultar NF-e para Importação
+            </DialogTitle>
+            <DialogDescription>
+              Digite a chave de acesso da NF-e para buscar e importar os produtos automaticamente
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="chaveAcessoConsulta">Chave de Acesso (44 dígitos)</Label>
+              <Input
+                id="chaveAcessoConsulta"
+                placeholder="00000000000000000000000000000000000000000000"
+                value={chaveAcessoConsulta}
+                onChange={(e) => setChaveAcessoConsulta(e.target.value.replace(/\D/g, '').substring(0, 44))}
+                className="font-mono text-sm"
+                maxLength={44}
+                disabled={consultandoNfe}
+              />
+              <p className="text-xs text-muted-foreground">
+                {chaveAcessoConsulta.length}/44 dígitos
+                {chaveAcessoConsulta.length === 44 && (
+                  <span className="text-success ml-2">✓ Chave completa</span>
+                )}
+              </p>
+            </div>
+
+            {chaveAcessoConsulta.length === 44 && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground font-mono break-all">
+                  {formatarChaveAcesso(chaveAcessoConsulta)}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConsultaNfeDialog(false);
+                setChaveAcessoConsulta("");
+              }}
+              disabled={consultandoNfe}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConsultarNfe}
+              disabled={consultandoNfe || chaveAcessoConsulta.length !== 44}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {consultandoNfe ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Consultando...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Consultar NF-e
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
