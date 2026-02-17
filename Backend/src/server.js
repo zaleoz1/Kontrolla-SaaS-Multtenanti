@@ -23,6 +23,7 @@ import configuracoesRoutes from './routes/configuracoes.js';
 import fornecedoresRoutes from './routes/fornecedores.js';
 import funcionariosRoutes from './routes/funcionarios.js';
 import notificationsRoutes from './routes/notifications.js';
+import meudanfeRoutes from './routes/meudanfe.js';
 
 // Importar middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -216,6 +217,7 @@ app.use('/api/configuracoes', configuracoesRoutes);
 app.use('/api/fornecedores', fornecedoresRoutes);
 app.use('/api/funcionarios', funcionariosRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/meudanfe', meudanfeRoutes);
 
 // Health check também no prefixo da API (para compatibilidade com frontend)
 app.get('/api/health', (req, res) => {
