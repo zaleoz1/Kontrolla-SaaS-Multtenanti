@@ -359,12 +359,12 @@ export default function Produtos() {
         setShowDeleteDialog(false);
         setShowInativarDialog(true);
       } else {
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir o produto. Tente novamente.",
-          variant: "destructive",
-        });
-        setShowDeleteDialog(false);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o produto. Tente novamente.",
+        variant: "destructive",
+      });
+      setShowDeleteDialog(false);
         setProdutoParaExcluir(null);
       }
     }

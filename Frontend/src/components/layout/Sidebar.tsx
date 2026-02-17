@@ -12,7 +12,8 @@ import {
   Receipt,
   TrendingUp,
   LogOut,
-  X
+  X,
+  Search
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useOperador } from "@/contexts/OperadorContext";
@@ -49,6 +50,7 @@ const navegacao = [
   { nome: "Relatórios", href: "/dashboard/relatorios", icone: BarChart3, permissao: "relatorios" },
   { nome: "Financeiro", href: "/dashboard/financeiro", icone: TrendingUp, permissao: "financeiro" },
   { nome: "NF-e", href: "/dashboard/nfe", icone: Receipt, permissao: "nfe" },
+  { nome: "Consulta NF-e", href: "/dashboard/consulta-nfe", icone: Search, permissao: "nfe" },
 ];
 
 interface PropsSidebar {

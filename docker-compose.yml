@@ -45,6 +45,8 @@ services:
       EMAIL_PORT: 587
       EMAIL_USER: kontrollapro@gmail.com
       EMAIL_PASS: kbuz yhdu hdku htaq
+      MEUDANFE_API_KEY: 518f8e2a-351c-4bd3-9f60-e0b04f79b8c9
+      MEUDANFE_API_URL: https://api.meudanfe.com.br/v2/fd
     ports:
       - "3000:3000"
     volumes:

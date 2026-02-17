@@ -12,6 +12,7 @@ interface ApiOptions {
   headers?: Record<string, string>;
   body?: any;
   timeout?: number;
+  responseType?: 'json' | 'text' | 'blob';
 }
 
 export function useApi<T = any>() {
@@ -33,6 +34,7 @@ export function useApi<T = any>() {
         headers = {},
         body,
         timeout = API_CONFIG.TIMEOUT,
+        responseType = 'json',
       } = options;
 
       const token = localStorage.getItem('token');
@@ -106,7 +108,21 @@ export function useApi<T = any>() {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      // Processar resposta de acordo com o tipo
+      let data: any;
+      switch (responseType) {
+        case 'text':
+          data = await response.text();
+          break;
+        case 'blob':
+          data = await response.blob();
+          break;
+        case 'json':
+        default:
+          data = await response.json();
+          break;
+      }
+      
       setState({ data, loading: false, error: null });
       return data;
 
