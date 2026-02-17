@@ -20,6 +20,7 @@ import Clientes from "./pages/Clientes";
 import Relatorios from "./pages/Relatorios";
 import Financeiro from "./pages/Financeiro";
 import NFe from "./pages/NFe";
+import ConsultaNfe from "./pages/ConsultaNfe";
 import Configuracoes from "./pages/Configuracoes";
 import NovoProduto from "./pages/NovoProduto";
 import NovoCliente from "./pages/NovoCliente";
@@ -116,6 +117,11 @@ function AppContent() {
           {/* NFe */}
           <Route path="/dashboard/nfe" element={<AppLayout />}>
             <Route index element={<NFe />} />
+          </Route>
+          
+          {/* Consulta NF-e (MeuDanfe) */}
+          <Route path="/dashboard/consulta-nfe" element={<AppLayout />}>
+            <Route index element={<ConsultaNfe />} />
           </Route>
           
           {/* Configurações */}

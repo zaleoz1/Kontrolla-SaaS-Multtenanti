@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -37,13 +37,16 @@ import {
   DollarSign,
   Building,
   Calendar,
-  Hash
+  Hash,
+  ExternalLink
 } from "lucide-react";
 import { useMeuDanfe, ConsultaNfeResult, NfeImportada, MeuDanfeConfig, MeuDanfeStats } from "@/hooks/useMeuDanfe";
 import { useToast } from "@/hooks/use-toast";
+import { useElectron } from "@/hooks/useElectron";
 
 export default function ConsultaNfe() {
   const { toast } = useToast();
+  const isElectron = useElectron();
   
   const {
     loading,
@@ -65,6 +68,17 @@ export default function ConsultaNfe() {
     formatDate
   } = useMeuDanfe();
 
+  // Função para abrir links externos (compatível com Electron)
+  const openExternalLink = useCallback((url: string) => {
+    if (isElectron && window.electronAPI) {
+      // No Electron, usar shell.openExternal via IPC (se disponível)
+      // Por enquanto, usa window.open que funciona em ambos
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }, [isElectron]);
+
   // Estados
   const [tabAtual, setTabAtual] = useState("consultar");
   const [chaveAcesso, setChaveAcesso] = useState("");
@@ -85,13 +99,18 @@ export default function ConsultaNfe() {
   }, []);
 
   const carregarDados = async () => {
-    const [configData, statsData] = await Promise.all([
-      fetchConfig(),
-      fetchEstatisticas('mes'),
-      fetchNfesImportadas()
-    ]);
-    if (configData) setConfig(configData);
-    if (statsData) setStats(statsData);
+    try {
+      const [configData, statsData] = await Promise.all([
+        fetchConfig().catch(() => null),
+        fetchEstatisticas('mes').catch(() => null),
+        fetchNfesImportadas().catch(() => null)
+      ]);
+      if (configData) setConfig(configData);
+      if (statsData) setStats(statsData);
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+      // Não mostrar toast para evitar múltiplas notificações
+    }
   };
 
   // Buscar NF-e importadas quando termo mudar
@@ -218,14 +237,14 @@ export default function ConsultaNfe() {
           <h1 className="text-3xl font-bold">Consulta NF-e</h1>
           <p className="text-muted-foreground">
             Consulte e importe notas fiscais via{" "}
-            <a 
-              href="https://meudanfe.com.br" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
+            <button 
+              onClick={() => openExternalLink("https://meudanfe.com.br")}
+              className="text-primary hover:underline inline-flex items-center gap-1"
+              type="button"
             >
               MeuDanfe
-            </a>
+              {isElectron && <ExternalLink className="h-3 w-3" />}
+            </button>
           </p>
         </div>
         <Button 
@@ -381,7 +400,7 @@ export default function ConsultaNfe() {
                         <div>
                           <Label className="text-muted-foreground text-xs">Valor Total</Label>
                           <p className="font-medium text-lg text-primary">
-                            {formatCurrency(nfeConsultada.nfe.valor_total || 0)}
+                            {formatCurrency(Number(nfeConsultada.nfe.valor_total) || 0)}
                           </p>
                         </div>
                       </div>
@@ -417,17 +436,41 @@ export default function ConsultaNfe() {
 
                     <div className="flex flex-wrap gap-2 pt-2">
                       <Button
-                        onClick={() => downloadXml(nfeConsultada.chave_acesso)}
+                        onClick={async () => {
+                          try {
+                            await downloadXml(nfeConsultada.chave_acesso);
+                            toast({ title: "XML baixado com sucesso!" });
+                          } catch (err) {
+                            toast({
+                              title: "Erro ao baixar XML",
+                              description: err instanceof Error ? err.message : "Erro desconhecido",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
                         variant="outline"
                         size="sm"
+                        disabled={loading}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download XML
                       </Button>
                       <Button
-                        onClick={() => downloadDanfe(nfeConsultada.chave_acesso)}
+                        onClick={async () => {
+                          try {
+                            await downloadDanfe(nfeConsultada.chave_acesso);
+                            toast({ title: "DANFE baixado com sucesso!" });
+                          } catch (err) {
+                            toast({
+                              title: "Erro ao baixar DANFE",
+                              description: err instanceof Error ? err.message : "Erro desconhecido",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
                         variant="outline"
                         size="sm"
+                        disabled={loading}
                       >
                         <FileDown className="h-4 w-4 mr-2" />
                         Download DANFE
@@ -535,7 +578,19 @@ export default function ConsultaNfe() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => downloadXml(nfe.chave_acesso)}
+                            disabled={loading}
+                            onClick={async () => {
+                              try {
+                                await downloadXml(nfe.chave_acesso);
+                                toast({ title: "XML baixado com sucesso!" });
+                              } catch (err) {
+                                toast({
+                                  title: "Erro ao baixar XML",
+                                  description: err instanceof Error ? err.message : "Erro desconhecido",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
                           >
                             <Download className="h-4 w-4 mr-1" />
                             XML
@@ -674,8 +729,21 @@ export default function ConsultaNfe() {
 
           <DialogFooter>
             <Button 
-              variant="outline" 
-              onClick={() => nfeDetalhes && downloadXml(nfeDetalhes.chave_acesso)}
+              variant="outline"
+              disabled={loading}
+              onClick={async () => {
+                if (!nfeDetalhes) return;
+                try {
+                  await downloadXml(nfeDetalhes.chave_acesso);
+                  toast({ title: "XML baixado com sucesso!" });
+                } catch (err) {
+                  toast({
+                    title: "Erro ao baixar XML",
+                    description: err instanceof Error ? err.message : "Erro desconhecido",
+                    variant: "destructive"
+                  });
+                }
+              }}
             >
               <Download className="h-4 w-4 mr-2" />
               Download XML
