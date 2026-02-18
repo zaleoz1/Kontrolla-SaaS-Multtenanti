@@ -3,6 +3,11 @@ import { query, queryWithResult } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateVenda, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import NotificationService from '../services/notificationService.js';
+import { 
+  getFocusNfeConfig, 
+  emitirNfe as focusEmitirNfe,
+  validarConfiguracoes as validarConfigNfe
+} from '../services/focusNfeService.js';
 
 const router = express.Router();
 
@@ -288,7 +293,8 @@ router.post('/', validateVenda, async (req, res) => {
       pagamento_prazo,
       parcelas = 1,
       observacoes,
-      status = 'pendente'
+      status = 'pendente',
+      emitir_nfe = false // Opção para emitir NF-e automaticamente
     } = req.body;
 
     // Debug: verificar dados recebidos
@@ -641,13 +647,129 @@ router.post('/', validateVenda, async (req, res) => {
       // Não falhar a venda por causa da verificação de estoque
     }
 
+    // Emissão de NF-e (se solicitado)
+    let nfeResult = null;
+    if (emitir_nfe) {
+      try {
+        console.log(`[Venda] Iniciando emissão de NF-e para venda #${numeroVenda}...`);
+        
+        // Verificar configurações da Focus NFe
+        const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
+        const validacao = await validarConfigNfe(req.user.tenant_id);
+        
+        if (validacao.valid) {
+          // Buscar dados do cliente para a NF-e
+          let clienteData = null;
+          if (cliente_id) {
+            const [c] = await query(
+              'SELECT * FROM clientes WHERE id = ? AND tenant_id = ?',
+              [cliente_id, req.user.tenant_id]
+            );
+            clienteData = c;
+          }
+          
+          // Preparar itens da NF-e
+          const itensNfe = itens.map((item, index) => ({
+            produto_id: item.produto_id,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario
+          }));
+          
+          // Criar NF-e no banco
+          const ambienteAtual = focusConfig.ambiente || 'homologacao';
+          const seriePadrao = focusConfig.serie_padrao || '001';
+          
+          // Gerar número da NF-e
+          const [ultimaNfe] = await query(
+            `SELECT MAX(CAST(numero AS UNSIGNED)) as ultimo FROM nfe WHERE tenant_id = ?`,
+            [req.user.tenant_id]
+          );
+          const numeroNfe = (ultimaNfe?.ultimo || 0) + 1;
+          
+          // Criar registro da NF-e
+          const nfeInsert = await queryWithResult(
+            `INSERT INTO nfe (
+              tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
+              status, ambiente, observacoes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              req.user.tenant_id,
+              vendaId,
+              cliente_id ?? null,
+              clienteData?.cpf_cnpj ?? null,
+              numeroNfe.toString(),
+              seriePadrao,
+              total,
+              'pendente',
+              ambienteAtual,
+              `NF-e gerada automaticamente da venda #${numeroVenda}`
+            ]
+          );
+          
+          const nfeId = nfeInsert.insertId;
+          
+          // Inserir itens da NF-e
+          for (const item of itens) {
+            await query(
+              `INSERT INTO nfe_itens (nfe_id, produto_id, quantidade, preco_unitario, preco_total)
+               VALUES (?, ?, ?, ?, ?)`,
+              [nfeId, item.produto_id, item.quantidade, item.preco_unitario, item.preco_total]
+            );
+          }
+          
+          console.log(`[Venda] NF-e #${numeroNfe} criada. Ambiente: ${ambienteAtual.toUpperCase()}`);
+          
+          // Emitir NF-e via Focus NFe
+          try {
+            const emissaoResult = await focusEmitirNfe(req.user.tenant_id, nfeId);
+            nfeResult = {
+              success: emissaoResult.success,
+              nfe_id: nfeId,
+              numero: numeroNfe.toString(),
+              ambiente: ambienteAtual,
+              status: emissaoResult.status,
+              chave_acesso: emissaoResult.chave_acesso,
+              protocolo: emissaoResult.protocolo,
+              mensagem: emissaoResult.mensagem
+            };
+            console.log(`[Venda] NF-e emitida: ${emissaoResult.status}`);
+          } catch (emissaoError) {
+            console.error('[Venda] Erro ao emitir NF-e:', emissaoError.message);
+            nfeResult = {
+              success: false,
+              nfe_id: nfeId,
+              numero: numeroNfe.toString(),
+              ambiente: ambienteAtual,
+              status: 'erro',
+              mensagem: emissaoError.message
+            };
+          }
+        } else {
+          console.log('[Venda] Configurações de NF-e inválidas:', validacao.errors);
+          nfeResult = {
+            success: false,
+            status: 'nao_configurado',
+            mensagem: 'Configurações de NF-e incompletas: ' + (validacao.errors || []).join(', ')
+          };
+        }
+      } catch (nfeError) {
+        console.error('[Venda] Erro ao processar NF-e:', nfeError);
+        nfeResult = {
+          success: false,
+          status: 'erro',
+          mensagem: nfeError.message
+        };
+      }
+    }
+
     res.status(201).json({
       message: 'Venda criada com sucesso',
       venda: {
         ...venda,
         metodos_pagamento: metodosPagamento,
         pagamento_prazo: pagamentoPrazo.length > 0 ? pagamentoPrazo[0] : null
-      }
+      },
+      nfe: nfeResult // Resultado da emissão de NF-e (se solicitado)
     });
   } catch (error) {
     console.error('Erro ao criar venda:', error);

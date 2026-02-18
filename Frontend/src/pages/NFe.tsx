@@ -125,15 +125,14 @@ export default function NFe() {
   
   // Estados de configurações Focus NFe
   const [focusNfeConfig, setFocusNfeConfig] = useState<FocusNfeConfig | null>(null);
-  const [configToken, setConfigToken] = useState("");
+  const [configTokenHomologacao, setConfigTokenHomologacao] = useState("");
+  const [configTokenProducao, setConfigTokenProducao] = useState("");
+  const [configCnpjEmitente, setConfigCnpjEmitente] = useState("");
   const [configAmbiente, setConfigAmbiente] = useState<"homologacao" | "producao">("homologacao");
   const [configSeriePadrao, setConfigSeriePadrao] = useState("001");
   const [configNaturezaOperacao, setConfigNaturezaOperacao] = useState("Venda de mercadoria");
-  const [configRegimeTributario, setConfigRegimeTributario] = useState("1");
-  const [configCnpjEmitente, setConfigCnpjEmitente] = useState("");
-  const [configInscricaoEstadual, setConfigInscricaoEstadual] = useState("");
   const [configSalvando, setConfigSalvando] = useState(false);
-  const [validacaoConfig, setValidacaoConfig] = useState<{ valid: boolean; errors: string[] } | null>(null);
+  const [validacaoConfig, setValidacaoConfig] = useState<{ valid: boolean; errors: string[]; warnings?: string[] } | null>(null);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -152,9 +151,7 @@ export default function NFe() {
       setConfigAmbiente(config.ambiente || "homologacao");
       setConfigSeriePadrao(config.serie_padrao || "001");
       setConfigNaturezaOperacao(config.natureza_operacao || "Venda de mercadoria");
-      setConfigRegimeTributario(config.regime_tributario || "1");
       setConfigCnpjEmitente(config.cnpj_emitente || "");
-      setConfigInscricaoEstadual(config.inscricao_estadual || "");
     }
   };
 
@@ -429,15 +426,20 @@ export default function NFe() {
       const configToSave: Record<string, string> = {
         ambiente: configAmbiente,
         serie_padrao: configSeriePadrao,
-        natureza_operacao: configNaturezaOperacao,
-        regime_tributario: configRegimeTributario,
-        cnpj_emitente: configCnpjEmitente,
-        inscricao_estadual: configInscricaoEstadual
+        natureza_operacao: configNaturezaOperacao
       };
 
-      // Só salvar o token se foi informado
-      if (configToken) {
-        configToSave.token = configToken;
+      // Salvar os tokens se foram informados
+      if (configTokenHomologacao) {
+        configToSave.token_homologacao = configTokenHomologacao;
+      }
+      if (configTokenProducao) {
+        configToSave.token_producao = configTokenProducao;
+      }
+      
+      // Salvar CNPJ do emitente (obrigatório)
+      if (configCnpjEmitente) {
+        configToSave.cnpj_emitente = configCnpjEmitente.replace(/\D/g, '');
       }
 
       await saveFocusNfeConfig(configToSave);
@@ -449,7 +451,9 @@ export default function NFe() {
 
       // Recarregar configurações
       await carregarConfigFocusNfe();
-      setConfigToken(""); // Limpar campo do token
+      // Limpar campos dos tokens
+      setConfigTokenHomologacao("");
+      setConfigTokenProducao("");
     } catch (err) {
       toast({
         title: "Erro ao salvar",
@@ -1133,7 +1137,7 @@ export default function NFe() {
         </TabsContent>
 
         <TabsContent value="configuracoes" className="space-y-4">
-          {/* Alerta de validação */}
+          {/* Alerta de validação - Erros */}
           {validacaoConfig && !validacaoConfig.valid && (
             <Card className="border-destructive bg-destructive/10">
               <CardContent className="p-4">
@@ -1142,7 +1146,7 @@ export default function NFe() {
                   <div>
                     <h4 className="font-semibold text-destructive">Problemas nas configurações:</h4>
                     <ul className="text-sm text-destructive/80 mt-1 space-y-1">
-                      {validacaoConfig.errors.map((error, i) => (
+                      {validacaoConfig.errors.map((error: string, i: number) => (
                         <li key={i}>• {error}</li>
                       ))}
                     </ul>
@@ -1152,59 +1156,213 @@ export default function NFe() {
             </Card>
           )}
 
+          {/* Sucesso na validação */}
           {validacaoConfig && validacaoConfig.valid && (
             <Card className="border-success bg-success/10">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-success" />
-                  <p className="font-medium text-success">Todas as configurações estão corretas!</p>
+                  <p className="font-medium text-success">Configurações válidas! Pronto para emitir NF-e.</p>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Configurações da API Focus NFe */}
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  API Focus NFe
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Token da API *</Label>
-                  <Input 
-                    type="password"
-                    placeholder={focusNfeConfig?.token_configurado ? "Token já configurado (deixe vazio para manter)" : "Cole seu token aqui"}
-                    value={configToken}
-                    onChange={(e) => setConfigToken(e.target.value)}
-                  />
-                  {focusNfeConfig?.token_configurado && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Token atual: {focusNfeConfig.token_masked}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Obtenha seu token em <a href="https://focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary underline">focusnfe.com.br</a>
-                  </p>
+          {/* Avisos (warnings) */}
+          {validacaoConfig && (validacaoConfig as { warnings?: string[] }).warnings && (validacaoConfig as { warnings?: string[] }).warnings!.length > 0 && (
+            <Card className="border-warning bg-warning/10">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Clock className="h-5 w-5 text-warning mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-warning">Avisos (opcional):</h4>
+                    <ul className="text-sm text-warning/80 mt-1 space-y-1">
+                      {(validacaoConfig as { warnings?: string[] }).warnings!.map((warning: string, i: number) => (
+                        <li key={i}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Status do Token Principal (Fixo no Sistema) */}
+          <Card className={`shadow-card ${focusNfeConfig?.token_principal_configurado ? 'bg-success/10 border-success' : 'bg-destructive/10 border-destructive'}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${focusNfeConfig?.token_principal_configurado ? 'bg-success/20' : 'bg-destructive/20'}`}>
+                    {focusNfeConfig?.token_principal_configurado ? (
+                      <CheckCircle className="h-5 w-5 text-success" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold">🔑 Token Principal (Master)</p>
+                    <p className="text-xs text-muted-foreground">
+                      {focusNfeConfig?.token_principal_configurado 
+                        ? "Configurado no servidor - usado para gerenciar empresas via API"
+                        : "Não configurado - configure a variável FOCUS_NFE_TOKEN_PRINCIPAL no arquivo .env do backend"
+                      }
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="outline" className={focusNfeConfig?.token_principal_configurado ? 'bg-success/20 text-success border-success' : 'bg-destructive/20 text-destructive border-destructive'}>
+                  {focusNfeConfig?.token_principal_configurado ? '✓ Configurado' : '✗ Não configurado'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tokens da API Focus NFe (Por Tenant) */}
+          <Card className="bg-gradient-card shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Settings className="h-5 w-5 mr-2" />
+                Dados da Empresa
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Configure os dados e tokens da sua empresa para emitir notas fiscais.
+              </p>
+              
+              {/* CNPJ do Emitente */}
+              <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="flex items-center gap-2">
+                    🏢 CNPJ do Emitente
+                    <Badge variant="outline" className="text-xs bg-destructive/20 text-destructive border-destructive">
+                      Obrigatório
+                    </Badge>
+                  </Label>
+                  {configCnpjEmitente && (
+                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                      ✓ Configurado
+                    </Badge>
+                  )}
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="00.000.000/0000-00"
+                  value={configCnpjEmitente}
+                  onChange={(e) => {
+                    // Formatar CNPJ
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 14) {
+                      value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                      value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                      value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                      value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                    }
+                    setConfigCnpjEmitente(value);
+                  }}
+                  maxLength={18}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  ⚠️ O CNPJ deve ser o mesmo cadastrado na empresa da Focus NFe
+                </p>
+              </div>
+              
+              {/* Token de Homologação */}
+              <div className={`p-4 rounded-lg border-2 ${configAmbiente === 'homologacao' ? 'border-warning bg-warning/5' : 'border-muted'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="flex items-center gap-2">
+                    🧪 Token de Homologação
+                    {configAmbiente === 'homologacao' && (
+                      <Badge variant="outline" className="text-xs bg-warning/20 text-warning border-warning">
+                        Ambiente Atual
+                      </Badge>
+                    )}
+                  </Label>
+                  {focusNfeConfig?.token_homologacao_configurado && (
+                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                      ✓ Configurado
+                    </Badge>
+                  )}
+                </div>
+                <Input 
+                  type="password"
+                  placeholder={focusNfeConfig?.token_homologacao_configurado ? "Token já configurado (deixe vazio para manter)" : "Cole o token de homologação aqui"}
+                  value={configTokenHomologacao}
+                  onChange={(e) => setConfigTokenHomologacao(e.target.value)}
+                />
+                {focusNfeConfig?.token_homologacao_configurado && focusNfeConfig.token_homologacao_masked && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Token atual: {focusNfeConfig.token_homologacao_masked}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  ⚠️ Notas emitidas em homologação não têm validade fiscal (para testes)
+                </p>
+              </div>
+
+              {/* Token de Produção */}
+              <div className={`p-4 rounded-lg border-2 ${configAmbiente === 'producao' ? 'border-success bg-success/5' : 'border-muted'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="flex items-center gap-2">
+                    🚀 Token de Produção
+                    {configAmbiente === 'producao' && (
+                      <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                        Ambiente Atual
+                      </Badge>
+                    )}
+                  </Label>
+                  {focusNfeConfig?.token_producao_configurado && (
+                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                      ✓ Configurado
+                    </Badge>
+                  )}
+                </div>
+                <Input 
+                  type="password"
+                  placeholder={focusNfeConfig?.token_producao_configurado ? "Token já configurado (deixe vazio para manter)" : "Cole o token de produção aqui"}
+                  value={configTokenProducao}
+                  onChange={(e) => setConfigTokenProducao(e.target.value)}
+                />
+                {focusNfeConfig?.token_producao_configurado && focusNfeConfig.token_producao_masked && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Token atual: {focusNfeConfig.token_producao_masked}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  ✅ Notas emitidas em produção têm validade fiscal (para uso real)
+                </p>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Obtenha seus tokens em <a href="https://focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary underline">focusnfe.com.br</a>
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Configurações Gerais */}
+          <Card className="bg-gradient-card shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Settings className="h-5 w-5 mr-2" />
+                Configurações de Emissão
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
                 <div>
-                  <Label>Ambiente</Label>
+                  <Label>Ambiente Ativo</Label>
                   <Select value={configAmbiente} onValueChange={(v: "homologacao" | "producao") => setConfigAmbiente(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="homologacao">Homologação (Testes)</SelectItem>
-                      <SelectItem value="producao">Produção (Real)</SelectItem>
+                      <SelectItem value="homologacao">🧪 Homologação (Testes)</SelectItem>
+                      <SelectItem value="producao">🚀 Produção (Real)</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
                     {configAmbiente === "homologacao" 
-                      ? "⚠️ Notas emitidas em homologação não têm validade fiscal"
-                      : "✅ Notas emitidas em produção têm validade fiscal"
+                      ? "⚠️ Notas sem validade fiscal"
+                      : "✅ Notas com validade fiscal"
                     }
                   </p>
                 </div>
@@ -1216,6 +1374,9 @@ export default function NFe() {
                     onChange={(e) => setConfigSeriePadrao(e.target.value)}
                     maxLength={3}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Série da NF-e (geralmente 001)
+                  </p>
                 </div>
                 <div>
                   <Label>Natureza da Operação</Label>
@@ -1224,77 +1385,49 @@ export default function NFe() {
                     value={configNaturezaOperacao}
                     onChange={(e) => setConfigNaturezaOperacao(e.target.value)}
                   />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Dados do Emitente */}
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Building className="h-5 w-5 mr-2" />
-                  Dados do Emitente
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>CNPJ do Emitente *</Label>
-                  <Input 
-                    placeholder="00.000.000/0000-00"
-                    value={configCnpjEmitente}
-                    onChange={(e) => setConfigCnpjEmitente(e.target.value)}
-                  />
                   <p className="text-xs text-muted-foreground mt-1">
-                    CNPJ da empresa que emite as notas
+                    Descrição da operação fiscal
                   </p>
                 </div>
-                <div>
-                  <Label>Inscrição Estadual</Label>
-                  <Input 
-                    placeholder="000000000"
-                    value={configInscricaoEstadual}
-                    onChange={(e) => setConfigInscricaoEstadual(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Regime Tributário</Label>
-                  <Select value={configRegimeTributario} onValueChange={setConfigRegimeTributario}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Simples Nacional</SelectItem>
-                      <SelectItem value="2">Simples Nacional - Excesso de sublimite</SelectItem>
-                      <SelectItem value="3">Regime Normal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="pt-2 space-y-2">
-                  <Button 
-                    className="w-full bg-gradient-primary text-white"
-                    onClick={handleSalvarConfigFocusNfe}
-                    disabled={configSalvando}
-                  >
-                    {configSalvando ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Settings className="h-4 w-4 mr-2" />
-                    )}
-                    Salvar Configurações
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={handleValidarConfig}
-                    disabled={loading}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Validar Configurações
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+              
+              <div className="pt-4 flex flex-col sm:flex-row gap-2">
+                <Button 
+                  className="flex-1 bg-gradient-primary text-white"
+                  onClick={handleSalvarConfigFocusNfe}
+                  disabled={configSalvando}
+                >
+                  {configSalvando ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Settings className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar Configurações
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={handleValidarConfig}
+                  disabled={loading}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Validar Configurações
+                </Button>
+              </div>
+
+              {/* Nota sobre cadastro da empresa */}
+              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-sm text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                  <Building className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Dados da empresa:</strong> O cadastro completo da empresa (CNPJ, endereço, IE, regime tributário) 
+                    é feito diretamente no <a href="https://app.focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="underline">painel Focus NFe</a>. 
+                    Os tokens acima já estão vinculados aos dados da sua empresa.
+                  </span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Informações sobre a Focus NFe */}
           <Card className="bg-muted/30">

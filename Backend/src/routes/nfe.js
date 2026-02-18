@@ -10,7 +10,8 @@ import {
   obterDanfeNfe,
   getFocusNfeConfig,
   saveFocusNfeConfig,
-  validarConfiguracoes
+  validarConfiguracoes,
+  isTokenPrincipalConfigurado
 } from '../services/focusNfeService.js';
 
 const router = express.Router();
@@ -196,6 +197,11 @@ router.post('/', async (req, res) => {
       observacoes
     } = req.body;
 
+    // Buscar configurações da Focus NFe do tenant (ambiente e série)
+    const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
+    const ambienteAtual = focusConfig.ambiente || 'homologacao';
+    const seriePadrao = focusConfig.serie_padrao || '001';
+
     // Verificar se venda existe (se fornecida)
     if (venda_id) {
       const vendas = await query(
@@ -237,17 +243,27 @@ router.post('/', async (req, res) => {
     // Gerar número da NF-e
     const numeroNfe = await gerarNumeroNfe(req.user.tenant_id);
 
-    // Criar NF-e
+    // Criar NF-e com o ambiente configurado pelo usuário
     const result = await queryWithResult(
       `INSERT INTO nfe (
         tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
         status, ambiente, observacoes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        req.user.tenant_id, venda_id, cliente_id, cnpj_cpf, numeroNfe, '001',
-        valorTotal, 'pendente', 'homologacao', observacoes
+        req.user.tenant_id, 
+        venda_id ?? null, 
+        cliente_id ?? null, 
+        cnpj_cpf ?? null, 
+        numeroNfe, 
+        seriePadrao,
+        valorTotal, 
+        'pendente', 
+        ambienteAtual, // Usa o ambiente configurado (homologacao ou producao)
+        observacoes ?? null
       ]
     );
+    
+    console.log(`[NF-e] Criada NF-e #${numeroNfe} em ambiente: ${ambienteAtual.toUpperCase()}`);
 
     const nfeId = result.insertId;
 
@@ -400,14 +416,40 @@ router.get('/config/focus-nfe', async (req, res) => {
   try {
     const config = await getFocusNfeConfig(req.user.tenant_id);
     
-    // Ocultar o token completo por segurança (mostrar apenas os últimos 4 caracteres)
-    if (config.token) {
-      config.token_masked = '****' + config.token.slice(-4);
-      config.token_configurado = true;
+    // Verificar se o Token Principal está configurado no sistema (variável de ambiente)
+    config.token_principal_configurado = isTokenPrincipalConfigurado();
+    
+    // Ocultar os tokens completos por segurança (mostrar apenas os últimos 4 caracteres)
+    // Token de Homologação
+    if (config.token_homologacao) {
+      config.token_homologacao_masked = '****' + config.token_homologacao.slice(-4);
+      config.token_homologacao_configurado = true;
+    } else if (config.token) {
+      // Fallback para token legado em homologação
+      config.token_homologacao_masked = '****' + config.token.slice(-4);
+      config.token_homologacao_configurado = true;
     } else {
-      config.token_configurado = false;
+      config.token_homologacao_configurado = false;
     }
-    delete config.token; // Não enviar o token completo
+    
+    // Token de Produção
+    if (config.token_producao) {
+      config.token_producao_masked = '****' + config.token_producao.slice(-4);
+      config.token_producao_configurado = true;
+    } else {
+      config.token_producao_configurado = false;
+    }
+    
+    // Manter compatibilidade com frontend antigo
+    config.token_configurado = config.token_homologacao_configurado || config.token_producao_configurado;
+    config.token_masked = config.ambiente === 'producao' 
+      ? config.token_producao_masked 
+      : config.token_homologacao_masked;
+    
+    // Não enviar os tokens completos
+    delete config.token;
+    delete config.token_homologacao;
+    delete config.token_producao;
     
     res.json({ config });
   } catch (error) {
@@ -422,7 +464,9 @@ router.get('/config/focus-nfe', async (req, res) => {
 router.post('/config/focus-nfe', async (req, res) => {
   try {
     const {
-      token,
+      token, // Token legado (mantido para compatibilidade)
+      token_homologacao, // Token para ambiente de homologação
+      token_producao, // Token para ambiente de produção
       ambiente,
       serie_padrao,
       natureza_operacao,
@@ -434,7 +478,9 @@ router.post('/config/focus-nfe', async (req, res) => {
     
     // Construir objeto de configuração apenas com campos fornecidos
     const config = {};
-    if (token !== undefined) config.token = token;
+    if (token !== undefined && token !== '') config.token = token;
+    if (token_homologacao !== undefined && token_homologacao !== '') config.token_homologacao = token_homologacao;
+    if (token_producao !== undefined && token_producao !== '') config.token_producao = token_producao;
     if (ambiente !== undefined) config.ambiente = ambiente;
     if (serie_padrao !== undefined) config.serie_padrao = serie_padrao;
     if (natureza_operacao !== undefined) config.natureza_operacao = natureza_operacao;
