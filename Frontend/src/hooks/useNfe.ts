@@ -46,8 +46,17 @@ export interface Nfe {
 
 // Interface para configurações da Focus NFe
 export interface FocusNfeConfig {
+  // Token Principal (Master) - Fixo no backend (.env)
+  token_principal_configurado: boolean;
+  // Tokens separados por ambiente - Configuráveis pelo usuário
+  token_homologacao_configurado: boolean;
+  token_homologacao_masked?: string;
+  token_producao_configurado: boolean;
+  token_producao_masked?: string;
+  // Compatibilidade com versões anteriores
   token_configurado: boolean;
   token_masked?: string;
+  // Configurações gerais
   ambiente: 'homologacao' | 'producao';
   serie_padrao: string;
   natureza_operacao: string;
@@ -538,7 +547,9 @@ export function useNfe() {
 
   // Salvar configurações da Focus NFe
   const saveFocusNfeConfig = useCallback(async (config: Partial<{
-    token: string;
+    token: string; // Legado
+    token_homologacao: string; // Token para ambiente de homologação
+    token_producao: string; // Token para ambiente de produção
     ambiente: 'homologacao' | 'producao';
     serie_padrao: string;
     natureza_operacao: string;

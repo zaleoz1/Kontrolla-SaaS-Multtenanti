@@ -8,6 +8,16 @@
  * - Consulta de NF-e
  * - Cancelamento de NF-e
  * - Download de XML e PDF (DANFE)
+ * 
+ * ESTRUTURA DE TOKENS:
+ * - Token Principal (Master): Fixo no .env (FOCUS_NFE_TOKEN_PRINCIPAL)
+ *   → Usado para operações administrativas (gerenciar empresas, certificados)
+ * 
+ * - Token Produção: Configurado por cada tenant na interface
+ *   → Usado para emitir notas REAIS com validade fiscal
+ * 
+ * - Token Homologação: Configurado por cada tenant na interface
+ *   → Usado para emitir notas de TESTE (sem validade fiscal)
  */
 
 import axios from 'axios';
@@ -18,6 +28,25 @@ const FOCUS_NFE_URLS = {
   homologacao: 'https://homologacao.focusnfe.com.br',
   producao: 'https://api.focusnfe.com.br'
 };
+
+// Token Principal (Master) - Fixo no sistema via variável de ambiente
+const FOCUS_NFE_TOKEN_PRINCIPAL = process.env.FOCUS_NFE_TOKEN_PRINCIPAL || '';
+
+/**
+ * Obtém o Token Principal da Focus NFe (para operações administrativas)
+ * @returns {string} - Token principal configurado no .env
+ */
+export function getTokenPrincipal() {
+  return FOCUS_NFE_TOKEN_PRINCIPAL;
+}
+
+/**
+ * Verifica se o Token Principal está configurado
+ * @returns {boolean}
+ */
+export function isTokenPrincipalConfigurado() {
+  return !!FOCUS_NFE_TOKEN_PRINCIPAL && FOCUS_NFE_TOKEN_PRINCIPAL !== 'XnAPKJKCzYI7ZSzcPQewYM5a3jCuC...';
+}
 
 /**
  * Cria uma instância do cliente HTTP para a API Focus NFe
@@ -42,6 +71,26 @@ function createFocusNfeClient(token, ambiente = 'homologacao') {
 }
 
 /**
+ * Obtém o token correto baseado no ambiente
+ * @param {Object} config - Configurações do tenant
+ * @returns {string} - Token para o ambiente selecionado
+ */
+function getTokenForAmbiente(config) {
+  const ambiente = config.ambiente || 'homologacao';
+  
+  // Primeiro tenta usar o token específico do ambiente
+  if (ambiente === 'producao' && config.token_producao) {
+    return config.token_producao;
+  }
+  if (ambiente === 'homologacao' && config.token_homologacao) {
+    return config.token_homologacao;
+  }
+  
+  // Fallback para o token genérico (compatibilidade com configurações antigas)
+  return config.token || '';
+}
+
+/**
  * Busca as configurações da Focus NFe do tenant
  * @param {number} tenantId - ID do tenant
  * @returns {Promise<Object>}
@@ -60,7 +109,12 @@ export async function getFocusNfeConfig(tenantId) {
   }
   
   return {
+    // Tokens separados por ambiente
+    token_homologacao: config.token_homologacao || '',
+    token_producao: config.token_producao || '',
+    // Token legado (mantido para compatibilidade)
     token: config.token || '',
+    // Configurações gerais
     ambiente: config.ambiente || 'homologacao',
     serie_padrao: config.serie_padrao || '001',
     natureza_operacao: config.natureza_operacao || 'Venda de mercadoria',
@@ -79,13 +133,14 @@ export async function getFocusNfeConfig(tenantId) {
  */
 export async function saveFocusNfeConfig(tenantId, config) {
   const configKeys = [
-    'token', 'ambiente', 'serie_padrao', 'natureza_operacao',
+    'token', 'token_homologacao', 'token_producao', // Tokens (legado + separados)
+    'ambiente', 'serie_padrao', 'natureza_operacao',
     'regime_tributario', 'cnpj_emitente', 'inscricao_estadual',
     'informacoes_complementares'
   ];
   
   for (const key of configKeys) {
-    if (config[key] !== undefined) {
+    if (config[key] !== undefined && config[key] !== '') {
       await query(
         `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
          VALUES (?, ?, ?, 'string')
@@ -98,14 +153,27 @@ export async function saveFocusNfeConfig(tenantId, config) {
 
 /**
  * Monta o objeto da NF-e para envio à API Focus NFe
+ * 
+ * NOTA: Os dados do emitente (CNPJ, endereço, IE, etc.) são cadastrados
+ * diretamente no site Focus NFe e preenchidos automaticamente pela API
+ * com base no token da empresa utilizado na autenticação.
+ * 
  * @param {Object} nfe - Dados da NF-e do banco
- * @param {Object} tenant - Dados do tenant (emitente)
+ * @param {Object} tenant - Dados do tenant (não mais usado para emitente)
  * @param {Object} cliente - Dados do cliente (destinatário)
  * @param {Array} itens - Itens da NF-e
  * @param {Object} focusConfig - Configurações Focus NFe
  * @returns {Object}
  */
 function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
+  // Determinar se é venda para consumidor final (pessoa física)
+  // Consumidor final = 1 se for pessoa física (CPF) ou consumidor não identificado
+  // Consumidor final = 0 se for pessoa jurídica (CNPJ) com IE
+  const isConsumidorFinal = !cliente || 
+    !cliente.cpf_cnpj || 
+    cliente.cpf_cnpj.replace(/\D/g, '').length === 11 || 
+    !cliente.inscricao_estadual;
+  
   // Dados básicos da NF-e
   const payload = {
     // Natureza da operação
@@ -124,67 +192,94 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     // Finalidade (1=Normal, 2=Complementar, 3=Ajuste, 4=Devolução)
     finalidade_emissao: 1,
     
-    // Consumidor final (0=Não, 1=Sim)
-    consumidor_final: cliente ? 0 : 1,
+    // Consumidor final (0=Não, 1=Sim) - IMPORTANTE: deve ser 1 para pessoa física
+    consumidor_final: isConsumidorFinal ? 1 : 0,
     
-    // Presença do comprador (1=Presencial, 2=Internet, 9=Outros)
+    // Presença do comprador (0=Não se aplica, 1=Presencial, 2=Internet, 4=NFC-e em entrega a domicílio, 9=Outros)
     presenca_comprador: 1,
     
     // Informações adicionais
     informacoes_adicionais_contribuinte: nfe.observacoes || '',
     
-    // === EMITENTE (dados do tenant) ===
-    cnpj_emitente: tenant.cnpj?.replace(/\D/g, '') || focusConfig.cnpj_emitente?.replace(/\D/g, ''),
-    inscricao_estadual_emitente: tenant.inscricao_estadual || focusConfig.inscricao_estadual,
-    nome_emitente: tenant.razao_social || tenant.nome,
-    nome_fantasia_emitente: tenant.nome_fantasia || tenant.nome,
-    logradouro_emitente: extrairLogradouro(tenant.endereco) || 'Endereço não informado',
-    numero_emitente: extrairNumero(tenant.endereco) || 'S/N',
-    bairro_emitente: 'Centro',
-    municipio_emitente: tenant.cidade || 'Cidade não informada',
-    uf_emitente: tenant.estado || 'SP',
-    cep_emitente: tenant.cep?.replace(/\D/g, '') || '00000000',
-    telefone_emitente: tenant.telefone?.replace(/\D/g, '') || '',
-    
-    // Regime tributário (1=Simples Nacional, 2=Simples Nacional - excesso, 3=Normal)
-    regime_tributario: parseInt(focusConfig.regime_tributario) || 1,
-    
     // === ITENS ===
     items: itens.map((item, index) => montarItemNfe(item, index, focusConfig))
   };
   
-  // === DESTINATÁRIO (se houver cliente) ===
+  // === CNPJ DO EMITENTE (pode ser necessário para autorização) ===
+  // Obtém do tenant ou das configurações de NF-e
+  const cnpjEmitente = focusConfig.cnpj_emitente || tenant?.cnpj;
+  if (cnpjEmitente) {
+    payload.cnpj_emitente = cnpjEmitente.replace(/\D/g, '');
+    console.log(`[Focus NFe] CNPJ do emitente: ${payload.cnpj_emitente}`);
+  } else {
+    console.log('[Focus NFe] AVISO: CNPJ do emitente não configurado');
+  }
+  
+  // === DESTINATÁRIO ===
   if (cliente && cliente.cpf_cnpj) {
+    // Cliente identificado
     const cpfCnpj = cliente.cpf_cnpj.replace(/\D/g, '');
     
     if (cpfCnpj.length === 11) {
-      // CPF
+      // Pessoa física (CPF)
       payload.cpf_destinatario = cpfCnpj;
+      // Pessoa física = Não contribuinte de ICMS
+      payload.indicador_inscricao_estadual_destinatario = 9;
     } else if (cpfCnpj.length === 14) {
-      // CNPJ
+      // Pessoa jurídica (CNPJ)
       payload.cnpj_destinatario = cpfCnpj;
       if (cliente.inscricao_estadual) {
         payload.inscricao_estadual_destinatario = cliente.inscricao_estadual;
+        payload.indicador_inscricao_estadual_destinatario = 1; // Contribuinte ICMS
+      } else {
+        payload.indicador_inscricao_estadual_destinatario = 9; // Não contribuinte
       }
     }
     
-    payload.nome_destinatario = cliente.nome;
-    
-    if (cliente.endereco) {
-      payload.logradouro_destinatario = extrairLogradouro(cliente.endereco) || 'Endereço não informado';
-      payload.numero_destinatario = extrairNumero(cliente.endereco) || 'S/N';
-      payload.bairro_destinatario = 'Centro';
-    }
-    
-    payload.municipio_destinatario = cliente.cidade || 'Cidade não informada';
+    payload.nome_destinatario = cliente.nome || 'Consumidor';
+    payload.logradouro_destinatario = extrairLogradouro(cliente.endereco) || 'Rua não informada';
+    payload.numero_destinatario = extrairNumero(cliente.endereco) || 'S/N';
+    payload.bairro_destinatario = cliente.bairro || 'Centro';
+    payload.municipio_destinatario = cliente.cidade || 'São Paulo';
     payload.uf_destinatario = cliente.estado || 'SP';
     payload.cep_destinatario = cliente.cep?.replace(/\D/g, '') || '00000000';
-    payload.indicador_inscricao_estadual_destinatario = 9; // 9=Não contribuinte
     
     if (cliente.email) {
       payload.email_destinatario = cliente.email;
     }
+  } else {
+    // Consumidor não identificado - OBRIGATÓRIO enviar dados mínimos na NF-e modelo 55
+    // A Focus NFe e SEFAZ exigem os dados do destinatário
+    
+    // Em HOMOLOGAÇÃO, usar dados específicos conforme documentação Focus NFe
+    const isHomologacao = focusConfig.ambiente === 'homologacao';
+    
+    // CPF válido para homologação (conforme exemplo da documentação Focus NFe)
+    // Em produção, usar um CPF genérico válido para consumidor não identificado
+    payload.cpf_destinatario = isHomologacao ? '03055054911' : '00000000191';
+    
+    // Nome do destinatário - em homologação DEVE usar esse texto
+    payload.nome_destinatario = isHomologacao 
+      ? 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL'
+      : 'CONSUMIDOR NAO IDENTIFICADO';
+    
+    // Endereço obrigatório (usando dados do emitente como base)
+    payload.logradouro_destinatario = tenant?.endereco?.split(',')[0] || 'Rua nao informada';
+    payload.numero_destinatario = '1';
+    payload.bairro_destinatario = tenant?.bairro || 'Centro';
+    payload.municipio_destinatario = tenant?.cidade || 'Sao Paulo';
+    payload.uf_destinatario = tenant?.estado || 'SP';
+    payload.cep_destinatario = tenant?.cep?.replace(/\D/g, '') || '01310100';
+    
+    // Indicador IE = 9 (Não contribuinte)
+    payload.indicador_inscricao_estadual_destinatario = 9;
+    
+    console.log(`[Focus NFe] Consumidor não identificado - Ambiente: ${focusConfig.ambiente}`);
   }
+  
+  // === MODALIDADE DE FRETE (obrigatório) ===
+  // 0=Por conta do emitente, 1=Por conta do destinatário, 2=Por conta de terceiros, 9=Sem frete
+  payload.modalidade_frete = 9; // Sem frete (mais comum para vendas de balcão)
   
   // === FORMA DE PAGAMENTO ===
   payload.formas_pagamento = [
@@ -222,7 +317,8 @@ function montarItemNfe(item, index, focusConfig) {
     valor_unitario_tributavel: parseFloat(item.preco_unitario).toFixed(4),
     
     // Origem da mercadoria (0=Nacional, exceto as indicadas nos códigos 3, 4, 5 e 8)
-    origem: produto.icms_origem || '0',
+    // Campo deve se chamar 'icms_origem' conforme documentação Focus NFe
+    icms_origem: parseInt(produto.icms_origem) || 0,
     
     // === ICMS (para Simples Nacional) ===
     icms_situacao_tributaria: produto.icms_situacao_tributaria || '102', // 102 = Tributada pelo Simples Nacional sem permissão de crédito
@@ -271,8 +367,19 @@ export async function emitirNfe(tenantId, nfeId) {
     // Buscar configurações
     const focusConfig = await getFocusNfeConfig(tenantId);
     
-    if (!focusConfig.token) {
-      throw new Error('Token da API Focus NFe não configurado. Configure em Configurações > NF-e.');
+    // Obter o token correto para o ambiente selecionado
+    const token = getTokenForAmbiente(focusConfig);
+    const ambiente = focusConfig.ambiente || 'homologacao';
+    
+    // Debug: mostrar qual token está sendo usado
+    console.log(`[Focus NFe] Ambiente: ${ambiente}`);
+    console.log(`[Focus NFe] Token sendo usado: ${token ? token.substring(0, 8) + '...' : 'NENHUM'}`);
+    console.log(`[Focus NFe] Token Homologação configurado: ${focusConfig.token_homologacao ? 'SIM' : 'NÃO'}`);
+    console.log(`[Focus NFe] Token Produção configurado: ${focusConfig.token_producao ? 'SIM' : 'NÃO'}`);
+    console.log(`[Focus NFe] Token Legado configurado: ${focusConfig.token ? 'SIM' : 'NÃO'}`);
+    
+    if (!token) {
+      throw new Error(`Token de ${ambiente} da API Focus NFe não configurado. Configure em Configurações > NF-e.`);
     }
     
     // Buscar dados da NF-e
@@ -325,8 +432,8 @@ export async function emitirNfe(tenantId, nfeId) {
     // Criar referência única para a NF-e
     const referencia = `nfe-${tenantId}-${nfeId}-${Date.now()}`;
     
-    // Criar cliente da API
-    const client = createFocusNfeClient(focusConfig.token, focusConfig.ambiente);
+    // Criar cliente da API com o token correto
+    const client = createFocusNfeClient(token, focusConfig.ambiente);
     
     // Enviar para a API
     console.log(`[Focus NFe] Emitindo NF-e ${nfe.numero} para referência ${referencia}`);
@@ -335,6 +442,15 @@ export async function emitirNfe(tenantId, nfeId) {
     
     // Processar resposta
     const { data } = response;
+    
+    // Log detalhado da resposta da SEFAZ
+    console.log(`[Focus NFe] Resposta da API:`, {
+      status: data.status,
+      mensagem_sefaz: data.mensagem_sefaz,
+      mensagem: data.mensagem,
+      protocolo: data.protocolo,
+      chave_nfe: data.chave_nfe
+    });
     
     // Salvar referência e status
     await query(
@@ -388,8 +504,9 @@ export async function emitirNfe(tenantId, nfeId) {
 export async function consultarNfe(tenantId, nfeId) {
   try {
     const focusConfig = await getFocusNfeConfig(tenantId);
+    const token = getTokenForAmbiente(focusConfig);
     
-    if (!focusConfig.token) {
+    if (!token) {
       throw new Error('Token da API Focus NFe não configurado');
     }
     
@@ -407,7 +524,7 @@ export async function consultarNfe(tenantId, nfeId) {
       throw new Error('NF-e não possui referência da Focus NFe. Emita a nota primeiro.');
     }
     
-    const client = createFocusNfeClient(focusConfig.token, focusConfig.ambiente);
+    const client = createFocusNfeClient(token, focusConfig.ambiente);
     
     const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
     const { data } = response;
@@ -471,8 +588,9 @@ export async function cancelarNfe(tenantId, nfeId, justificativa) {
     }
     
     const focusConfig = await getFocusNfeConfig(tenantId);
+    const token = getTokenForAmbiente(focusConfig);
     
-    if (!focusConfig.token) {
+    if (!token) {
       throw new Error('Token da API Focus NFe não configurado');
     }
     
@@ -494,7 +612,7 @@ export async function cancelarNfe(tenantId, nfeId, justificativa) {
       throw new Error('NF-e não possui referência da Focus NFe');
     }
     
-    const client = createFocusNfeClient(focusConfig.token, focusConfig.ambiente);
+    const client = createFocusNfeClient(token, focusConfig.ambiente);
     
     const response = await client.delete(`/v2/nfe/${nfe.focus_nfe_ref}`, {
       data: { justificativa }
@@ -541,8 +659,9 @@ export async function cancelarNfe(tenantId, nfeId, justificativa) {
 export async function obterXmlNfe(tenantId, nfeId) {
   try {
     const focusConfig = await getFocusNfeConfig(tenantId);
+    const token = getTokenForAmbiente(focusConfig);
     
-    if (!focusConfig.token) {
+    if (!token) {
       throw new Error('Token da API Focus NFe não configurado');
     }
     
@@ -560,11 +679,14 @@ export async function obterXmlNfe(tenantId, nfeId) {
       throw new Error('NF-e não possui referência da Focus NFe');
     }
     
-    const client = createFocusNfeClient(focusConfig.token, focusConfig.ambiente);
+    const client = createFocusNfeClient(token, focusConfig.ambiente);
     
+    console.log(`[Focus NFe] Obtendo XML para ref: ${nfe.focus_nfe_ref}`);
     const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}.xml`, {
       responseType: 'text'
     });
+    
+    console.log(`[Focus NFe] XML obtido, tamanho: ${response.data?.length || 0} caracteres`);
     
     return {
       xml: response.data,
@@ -585,8 +707,9 @@ export async function obterXmlNfe(tenantId, nfeId) {
 export async function obterDanfeNfe(tenantId, nfeId) {
   try {
     const focusConfig = await getFocusNfeConfig(tenantId);
+    const token = getTokenForAmbiente(focusConfig);
     
-    if (!focusConfig.token) {
+    if (!token) {
       throw new Error('Token da API Focus NFe não configurado');
     }
     
@@ -608,18 +731,35 @@ export async function obterDanfeNfe(tenantId, nfeId) {
       throw new Error('DANFE só está disponível para NF-e autorizadas');
     }
     
-    const client = createFocusNfeClient(focusConfig.token, focusConfig.ambiente);
+    const client = createFocusNfeClient(token, focusConfig.ambiente);
     
     // Primeiro, consultar a NF-e para obter o caminho do DANFE
+    console.log(`[Focus NFe] Consultando DANFE para ref: ${nfe.focus_nfe_ref}`);
     const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
     const { data } = response;
     
+    console.log('[Focus NFe] Resposta da consulta:', JSON.stringify(data, null, 2));
+    
     if (!data.caminho_danfe) {
+      console.log('[Focus NFe] caminho_danfe não disponível ainda');
       throw new Error('DANFE ainda não está disponível. Aguarde alguns segundos e tente novamente.');
     }
     
+    // A URL do DANFE vem como caminho relativo - montar URL completa
+    // Homologação: https://homologacao.focusnfe.com.br
+    // Produção: https://api.focusnfe.com.br
+    const baseUrl = focusConfig.ambiente === 'producao' 
+      ? 'https://api.focusnfe.com.br' 
+      : 'https://homologacao.focusnfe.com.br';
+    
+    const danfeUrl = data.caminho_danfe.startsWith('http') 
+      ? data.caminho_danfe 
+      : `${baseUrl}${data.caminho_danfe}`;
+    
+    console.log(`[Focus NFe] URL do DANFE: ${danfeUrl}`);
+    
     return {
-      url: data.caminho_danfe,
+      url: danfeUrl,
       filename: `danfe_${nfe.numero}_${nfe.chave_acesso || 'sem_chave'}.pdf`
     };
   } catch (error) {
@@ -630,67 +770,68 @@ export async function obterDanfeNfe(tenantId, nfeId) {
 
 /**
  * Valida se o tenant possui as configurações mínimas para emissão de NF-e
+ * 
+ * NOTA: Os dados da empresa (CNPJ, endereço, IE, etc.) são cadastrados
+ * diretamente no site Focus NFe e já estão vinculados aos tokens.
+ * Aqui validamos apenas os tokens e configurações do sistema.
+ * 
  * @param {number} tenantId - ID do tenant
  * @returns {Promise<Object>}
  */
 export async function validarConfiguracoes(tenantId) {
   const focusConfig = await getFocusNfeConfig(tenantId);
   const errors = [];
+  const warnings = [];
+  const ambiente = focusConfig.ambiente || 'homologacao';
   
-  if (!focusConfig.token) {
-    errors.push('Token da API Focus NFe não configurado');
+  // Verificar token do ambiente atual
+  const tokenAtual = getTokenForAmbiente(focusConfig);
+  if (!tokenAtual) {
+    errors.push(`Token de ${ambiente} da API Focus NFe não configurado`);
   }
   
-  if (!focusConfig.cnpj_emitente) {
-    errors.push('CNPJ do emitente não configurado');
+  // Verificar se tem token do outro ambiente (aviso, não erro)
+  if (ambiente === 'homologacao' && !focusConfig.token_producao) {
+    warnings.push('Token de produção ainda não configurado');
+  }
+  if (ambiente === 'producao' && !focusConfig.token_homologacao) {
+    warnings.push('Token de homologação não configurado (opcional para testes)');
   }
   
-  // Buscar dados do tenant
-  const [tenant] = await query(
-    `SELECT * FROM tenants WHERE id = ?`,
-    [tenantId]
-  );
-  
-  if (!tenant) {
-    errors.push('Tenant não encontrado');
-  } else {
-    if (!tenant.razao_social && !tenant.nome) {
-      errors.push('Razão social ou nome da empresa não informado');
-    }
-    if (!tenant.endereco) {
-      errors.push('Endereço da empresa não informado');
-    }
-    if (!tenant.cidade) {
-      errors.push('Cidade da empresa não informada');
-    }
-    if (!tenant.estado) {
-      errors.push('Estado da empresa não informado');
-    }
+  // Verificar série padrão
+  if (!focusConfig.serie_padrao) {
+    warnings.push('Série padrão não configurada (usando 001)');
   }
   
   return {
     valid: errors.length === 0,
     errors,
+    warnings,
     config: {
-      token_configurado: !!focusConfig.token,
+      // Tokens separados por ambiente
+      token_homologacao_configurado: !!focusConfig.token_homologacao || !!focusConfig.token,
+      token_producao_configurado: !!focusConfig.token_producao,
+      token_configurado: !!tokenAtual, // Token do ambiente atual está configurado?
       ambiente: focusConfig.ambiente,
-      cnpj_emitente: focusConfig.cnpj_emitente,
-      inscricao_estadual: focusConfig.inscricao_estadual,
-      serie_padrao: focusConfig.serie_padrao,
-      natureza_operacao: focusConfig.natureza_operacao,
-      regime_tributario: focusConfig.regime_tributario
+      serie_padrao: focusConfig.serie_padrao || '001',
+      natureza_operacao: focusConfig.natureza_operacao || 'Venda de mercadoria'
     }
   };
 }
 
 export default {
+  // Tokens
+  getTokenPrincipal,
+  isTokenPrincipalConfigurado,
+  // Configurações
   getFocusNfeConfig,
   saveFocusNfeConfig,
+  validarConfiguracoes,
+  // Operações NF-e
   emitirNfe,
   consultarNfe,
   cancelarNfe,
   obterXmlNfe,
-  obterDanfeNfe,
-  validarConfiguracoes
+  obterDanfeNfe
 };
 

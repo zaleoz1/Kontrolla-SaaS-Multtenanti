@@ -269,7 +269,7 @@ export const usePagamentos = () => {
   };
 
   // Função para criar venda
-  const criarVenda = async (dadosVenda: DadosVendaCompleta) => {
+  const criarVenda = async (dadosVenda: DadosVendaCompleta & { emitir_nfe?: boolean }) => {
     try {
       setLoading(true);
       setError(null);
@@ -277,9 +277,26 @@ export const usePagamentos = () => {
       const response = await makeRequest('/vendas', {
         method: 'POST',
         body: dadosVenda
-      }) as { venda: any; message: string };
+      }) as { 
+        venda: any; 
+        message: string; 
+        nfe?: {
+          success: boolean;
+          nfe_id?: number;
+          numero?: string;
+          ambiente?: string;
+          status?: string;
+          chave_acesso?: string;
+          protocolo?: string;
+          mensagem?: string;
+        } 
+      };
 
-      return response.venda;
+      // Retornar venda com informações da NF-e (se emitida)
+      return {
+        ...response.venda,
+        nfe: response.nfe
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar venda';
       setError(errorMessage);

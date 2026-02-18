@@ -28,8 +28,11 @@ import {
   Building2,
   FileText,
   Calendar,
-  QrCode
+  QrCode,
+  FileCheck
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { Cliente } from "@/hooks/useClientes";
 import { PagamentoPrazo } from "@/hooks/useVendas";
@@ -118,6 +121,16 @@ export default function Pagamentos() {
     dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   });
   const [usarPagamentoPrazo, setUsarPagamentoPrazo] = useState(false);
+  
+  // Estado para emissão de NF-e
+  const [emitirNfe, setEmitirNfe] = useState(false);
+  const [nfeResult, setNfeResult] = useState<{
+    success: boolean;
+    numero?: string;
+    ambiente?: string;
+    status?: string;
+    mensagem?: string;
+  } | null>(null);
   
   // Estados para controle de carregamento
   const [erroCarregamentoMetodos, setErroCarregamentoMetodos] = useState<string | null>(null);
@@ -572,12 +585,23 @@ export default function Pagamentos() {
         pagamentoPrazo
       );
 
+      // Adicionar opção de emitir NF-e
+      const dadosVendaComNfe = {
+        ...dadosVenda,
+        emitir_nfe: emitirNfe
+      };
+
       // Salvar venda via API
-      const vendaCriada = await criarVenda(dadosVenda);
+      const response = await criarVenda(dadosVendaComNfe);
+      
+      // Processar resultado da NF-e (se emitida)
+      if (response.nfe) {
+        setNfeResult(response.nfe);
+      }
       
       // Preparar dados para o modal da nota
       const dadosNota = {
-        ...vendaCriada,
+        ...response,
         cliente: clienteSelecionado,
         itens: carrinho,
         metodos_pagamento: dadosVenda.metodos_pagamento,
@@ -585,16 +609,33 @@ export default function Pagamentos() {
         subtotal: subtotal,
         desconto: valorDesconto,
         total: dadosVenda.total,
-        data_hora: new Date()
+        data_hora: new Date(),
+        nfe: response.nfe
       };
       
       // Salvar dados da venda finalizada
       setVendaFinalizada(dadosNota);
       
-      toast({
-        title: "Venda realizada com sucesso!",
-        description: `Venda #${vendaCriada.numero_venda} foi criada`,
-      });
+      // Mostrar toast com resultado
+      if (emitirNfe && response.nfe) {
+        if (response.nfe.success) {
+          toast({
+            title: "Venda realizada com sucesso!",
+            description: `Venda #${response.numero_venda} criada. NF-e #${response.nfe.numero} emitida (${response.nfe.ambiente?.toUpperCase()})`,
+          });
+        } else {
+          toast({
+            title: "Venda realizada com sucesso!",
+            description: `Venda #${response.numero_venda} criada. NF-e: ${response.nfe.mensagem || 'Erro na emissão'}`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Venda realizada com sucesso!",
+          description: `Venda #${response.numero_venda} foi criada`,
+        });
+      }
 
       // Opcional: Imprimir automaticamente após um pequeno delay
       // setTimeout(() => {
@@ -2469,6 +2510,29 @@ export default function Pagamentos() {
                       return null;
                     })()}
                   </div>
+                  
+                  {/* Toggle para Emissão de NF-e */}
+                  <div className="pt-3 border-t border-border mt-3">
+                    <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center space-x-2">
+                        <FileCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <Label htmlFor="emitir-nfe" className="text-xs font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
+                            Emitir NF-e
+                          </Label>
+                          <p className="text-[10px] text-blue-600 dark:text-blue-400">
+                            {emitirNfe ? "Nota fiscal será emitida" : "Sem nota fiscal"}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="emitir-nfe"
+                        checked={emitirNfe}
+                        onCheckedChange={setEmitirNfe}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -2493,6 +2557,52 @@ export default function Pagamentos() {
                   Venda #{vendaFinalizada.numero_venda} foi criada
                 </p>
               </div>
+              
+              {/* Informações da NF-e */}
+              {vendaFinalizada.nfe && (
+                <div className={`mb-4 p-3 rounded-lg border ${
+                  vendaFinalizada.nfe.success 
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                    : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                }`}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileCheck className={`h-4 w-4 ${
+                      vendaFinalizada.nfe.success 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-amber-600 dark:text-amber-400'
+                    }`} />
+                    <span className={`text-sm font-medium ${
+                      vendaFinalizada.nfe.success 
+                        ? 'text-green-800 dark:text-green-200' 
+                        : 'text-amber-800 dark:text-amber-200'
+                    }`}>
+                      {vendaFinalizada.nfe.success ? 'NF-e Emitida' : 'NF-e Pendente'}
+                    </span>
+                    {vendaFinalizada.nfe.ambiente && (
+                      <Badge variant={vendaFinalizada.nfe.ambiente === 'producao' ? 'default' : 'secondary'} className="text-[10px]">
+                        {vendaFinalizada.nfe.ambiente === 'producao' ? '🚀 Produção' : '🧪 Homologação'}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    {vendaFinalizada.nfe.numero && (
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Número:</span> {vendaFinalizada.nfe.numero}
+                      </p>
+                    )}
+                    {vendaFinalizada.nfe.status && (
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Status:</span> {vendaFinalizada.nfe.status}
+                      </p>
+                    )}
+                    {vendaFinalizada.nfe.mensagem && !vendaFinalizada.nfe.success && (
+                      <p className="text-amber-600 dark:text-amber-400">
+                        {vendaFinalizada.nfe.mensagem}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
               
               <div className="flex flex-col space-y-2 sm:space-y-3">
                 <Button 
