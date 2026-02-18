@@ -941,7 +941,7 @@ export default function NovaVenda() {
                       className="h-7 sm:h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
                     >
                       <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      {clienteSelecionado ? 'Alterar' : 'Selecionar'}
+                      {clienteSelecionado ? 'Alterar Cliente' : 'Selecionar Cliente'}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[80vh] w-[95vw] sm:w-full">
