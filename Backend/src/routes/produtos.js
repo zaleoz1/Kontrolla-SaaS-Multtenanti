@@ -196,6 +196,21 @@ router.post('/', validateProduto, async (req, res) => {
     
     console.log('🔍 Valores finais - tipo_preco:', tipo_preco, 'preco_por_kg:', preco_por_kg, 'preco_por_litros:', preco_por_litros);
 
+    // Verificar se preço foi fornecido (obrigatório para criação de novo produto)
+    // Preço 0 é permitido para produtos importados sem preço de venda definido
+    if (preco === null || preco === undefined || preco === '') {
+      return res.status(400).json({
+        error: 'Preço é obrigatório para criar um novo produto'
+      });
+    }
+    
+    const precoNumerico = parseFloat(preco);
+    if (isNaN(precoNumerico) || precoNumerico < 0) {
+      return res.status(400).json({
+        error: 'Preço deve ser um número válido e não negativo'
+      });
+    }
+
     // Verificar se categoria existe (se fornecida)
     if (categoria_id) {
       const categorias = await query(
@@ -583,7 +598,7 @@ router.post('/importar', validateProduto, async (req, res) => {
         `UPDATE produtos SET
           nome = ?,
           descricao = CONCAT(COALESCE(descricao, ''), '\n', ?),
-          preco = ?,
+          preco = COALESCE(?, preco),
           preco_compra = COALESCE(?, preco_compra),
           preco_promocional = COALESCE(?, preco_promocional),
           tipo_preco = ?,
@@ -610,7 +625,7 @@ router.post('/importar', validateProduto, async (req, res) => {
         [
           nome,
           toNull(descricao) || '',
-          preco,
+          toNull(preco),
           toNull(preco_compra),
           toNull(preco_promocional),
           tipo_preco,

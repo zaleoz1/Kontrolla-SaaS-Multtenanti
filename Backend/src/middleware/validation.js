@@ -282,18 +282,21 @@ export const validateProduto = [
     .isLength({ min: 1, max: 100 })
     .withMessage('SKU deve ter entre 1 e 100 caracteres'),
   body('preco')
+    .optional()
     .custom((value) => {
       console.log('🔍 Validando preço:', value, 'tipo:', typeof value);
+      // Preço é opcional para permitir atualizações sem alterar o preço de venda
       if (value === null || value === undefined || value === '') {
-        throw new Error('Preço é obrigatório');
+        return true; // Campo opcional
       }
       const numValue = parseFloat(value);
       if (isNaN(numValue)) {
         throw new Error('Preço deve ser um número válido');
       }
-      if (numValue <= 0) {
-        throw new Error('Preço deve ser maior que zero');
+      if (numValue < 0) {
+        throw new Error('Preço não pode ser negativo');
       }
+      // Preço 0 é permitido para produtos importados sem preço de venda definido
       return true;
     }),
   body('preco_promocional')
