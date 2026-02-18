@@ -1751,9 +1751,10 @@ export default function Produtos() {
           destaque: false,
         };
         
-        // Só incluir preço de venda para NOVOS produtos (não sobrescrever na atualização)
+        // Para NOVOS produtos: preço de venda = 0 (usuário deve definir manualmente)
+        // Para ATUALIZAÇÃO: não enviar preço (manter o existente)
         if (!isAtualizacao) {
-          dadosProduto.preco = Number(produtoXML.valorUnitario.toFixed(2));
+          dadosProduto.preco = 0; // Preço zerado para identificar produtos sem preço de venda definido
         }
 
         // Vincular fornecedor ao produto se disponível
@@ -2557,7 +2558,7 @@ export default function Produtos() {
             {produtos.map((produto) => (
             <Card 
               key={produto.id} 
-              className={`bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full ${modoSelecao ? 'cursor-pointer' : ''} ${modoSelecao && produtosSelecionados.has(produto.id) ? 'ring-2 ring-primary border-primary' : ''}`}
+              className={`shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full ${modoSelecao ? 'cursor-pointer' : ''} ${modoSelecao && produtosSelecionados.has(produto.id) ? 'ring-2 ring-primary border-primary' : ''} ${(Number(produto.preco) <= 0 || !produto.preco) ? '!ring-2 !ring-warning !border-warning !bg-warning/10' : 'bg-gradient-card'}`}
               onClick={modoSelecao ? () => toggleSelecaoProduto(produto.id) : undefined}
             >
               <CardHeader className="pb-3 sm:pb-4">
@@ -2608,10 +2609,15 @@ export default function Produtos() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs sm:text-sm text-muted-foreground">Preço:</span>
                     <div className="text-right">
-                      <span className="font-semibold text-foreground text-sm sm:text-base">
-                        {formatarPreco(produto.preco_promocional || produto.preco)}
+                      <span className={`font-semibold text-sm sm:text-base ${(Number(produto.preco) <= 0 || !produto.preco) ? 'text-warning font-bold' : 'text-foreground'}`}>
+                        {(Number(produto.preco) <= 0 || !produto.preco) ? (
+                          <span className="flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Definir preço
+                          </span>
+                        ) : formatarPreco(produto.preco_promocional || produto.preco)}
                       </span>
-                      {produto.preco_promocional && produto.preco_promocional < produto.preco && (
+                      {produto.preco_promocional && produto.preco_promocional < produto.preco && produto.preco > 0 && (
                         <div className="text-xs text-muted-foreground line-through">
                           {formatarPreco(produto.preco)}
                         </div>
