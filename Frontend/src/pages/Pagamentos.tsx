@@ -29,7 +29,8 @@ import {
   FileText,
   Calendar,
   QrCode,
-  FileCheck
+  FileCheck,
+  ExternalLink
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ import { PagamentoPrazo } from "@/hooks/useVendas";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
 import { useApi } from "@/hooks/useApi";
 import { usePixConfiguracoes } from "@/hooks/usePixConfiguracoes";
@@ -591,8 +593,18 @@ export default function Pagamentos() {
         emitir_nfe: emitirNfe
       };
 
+      // Debug: Log para verificar se emitir_nfe está sendo enviado
+      console.log('[Pagamentos] Enviando venda com emitir_nfe:', emitirNfe);
+
       // Salvar venda via API
       const response = await criarVenda(dadosVendaComNfe);
+      
+      // Debug: Log da resposta
+      console.log('[Pagamentos] Resposta da venda:', {
+        numero_venda: response.numero_venda,
+        nfe: response.nfe,
+        emitir_nfe_enviado: emitirNfe
+      });
       
       // Processar resultado da NF-e (se emitida)
       if (response.nfe) {
@@ -618,17 +630,39 @@ export default function Pagamentos() {
       
       // Mostrar toast com resultado
       if (emitirNfe && response.nfe) {
-        if (response.nfe.success) {
+        // Considerar sucesso se autorizada ou processando (enviada com sucesso)
+        const nfeSucesso = response.nfe.success || response.nfe.status === 'processando_autorizacao';
+        
+        if (nfeSucesso) {
+          const statusMsg = response.nfe.status === 'processando_autorizacao' 
+            ? 'enviada e aguardando autorização' 
+            : 'emitida';
           toast({
             title: "Venda realizada com sucesso!",
-            description: `Venda #${response.numero_venda} criada. NF-e #${response.nfe.numero} emitida (${response.nfe.ambiente?.toUpperCase()})`,
+            description: `Venda #${response.numero_venda} criada. NF-e #${response.nfe.numero} ${statusMsg} (${response.nfe.ambiente?.toUpperCase()})`,
           });
         } else {
-          toast({
-            title: "Venda realizada com sucesso!",
-            description: `Venda #${response.numero_venda} criada. NF-e: ${response.nfe.mensagem || 'Erro na emissão'}`,
-            variant: "destructive",
-          });
+          // Erro na emissão - mostrar mensagem mais clara com ação
+          const mensagemErro = response.nfe.mensagem || 'Erro na emissão da NF-e';
+          const toastOptions: any = {
+            title: "Venda concluída, mas houve erro na emissão da NF-e",
+            description: `Venda #${response.numero_venda} foi criada com sucesso. Erro: ${mensagemErro}. Acesse a página de NF-e para tentar emitir novamente.`,
+            variant: "destructive" as const,
+          };
+          
+          // Adicionar ação apenas se houver nfe_id
+          if (response.nfe.nfe_id) {
+            toastOptions.action = (
+              <ToastAction 
+                altText="Ir para NF-e" 
+                onClick={() => navigate('/dashboard/nfe')}
+              >
+                Ir para NF-e
+              </ToastAction>
+            );
+          }
+          
+          toast(toastOptions);
         }
       } else {
         toast({
