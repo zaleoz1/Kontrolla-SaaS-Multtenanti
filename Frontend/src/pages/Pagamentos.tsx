@@ -534,6 +534,42 @@ export default function Pagamentos() {
     }
   }, [usarPagamentoPrazo, metodosPagamento.length]);
 
+  // Ativar/desativar emissão de NF-e baseado no método de pagamento
+  useEffect(() => {
+    // Se for apenas pagamento a prazo (sem métodos múltiplos ou único), desativar NF-e
+    if (usarPagamentoPrazo && metodosPagamento.length === 0 && !metodoPagamentoUnico) {
+      setEmitirNfe(false);
+      return;
+    }
+
+    // Verificar se há múltiplos métodos de pagamento
+    if (metodosPagamento.length > 0) {
+      // Se algum método for PIX, cartão de débito ou crédito, ativar NF-e
+      // Mesmo que tenha pagamento a prazo junto, se houver método eletrônico, emitir nota
+      const temMetodoEletronico = metodosPagamento.some(m => 
+        m.metodo === "pix" || 
+        m.metodo === "cartao_debito" || 
+        m.metodo === "cartao_credito" ||
+        m.metodo === "transferencia"
+      );
+      setEmitirNfe(temMetodoEletronico);
+    } else if (metodoPagamentoUnico) {
+      // Para método único, verificar se é PIX, cartão de débito, crédito ou transferência
+      // Se tiver pagamento a prazo junto, ainda emitir nota se for método eletrônico
+      if (metodoPagamentoUnico === "pix" || 
+          metodoPagamentoUnico === "cartao_debito" || 
+          metodoPagamentoUnico === "cartao_credito" ||
+          metodoPagamentoUnico === "transferencia") {
+        setEmitirNfe(true);
+      } else if (metodoPagamentoUnico === "dinheiro") {
+        setEmitirNfe(false);
+      }
+    } else {
+      // Se não há método selecionado, manter o estado atual ou desativar
+      // Não alterar aqui para não interferir com a escolha manual do usuário
+    }
+  }, [metodosPagamento, metodoPagamentoUnico, usarPagamentoPrazo]);
+
   // Adicionar atalho da tecla ESC para voltar
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1006,6 +1042,9 @@ export default function Pagamentos() {
         
         if (result.success) {
           console.log('✅ Impressão realizada com sucesso');
+          // Fechar o modal e navegar para vendas após impressão bem-sucedida
+          setVendaFinalizada(null);
+          navigate("/dashboard/vendas");
         } else {
           console.error('❌ Erro na impressão:', result.error);
           // Fallback para impressão via navegador
@@ -1043,9 +1082,19 @@ export default function Pagamentos() {
       iframe.onload = () => {
         setTimeout(() => {
           iframe.contentWindow?.print();
+          
+          // Fechar o modal e navegar para vendas após iniciar a impressão
+          // Usar um pequeno delay para garantir que o diálogo foi aberto
+          setTimeout(() => {
+            setVendaFinalizada(null);
+            navigate("/dashboard/vendas");
+          }, 500);
+          
           // Remover o iframe após a impressão
           setTimeout(() => {
-            document.body.removeChild(iframe);
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
           }, 1000);
         }, 250);
       };
@@ -2465,7 +2514,7 @@ export default function Pagamentos() {
                       <div className="flex justify-between items-center p-2 bg-primary/5 dark:bg-primary/10 rounded border border-primary/20 dark:border-primary/30">
                         <div className="flex items-center space-x-1">
                           <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                              <span className="text-xs font-medium text-white">Total a Receber:</span>
+                              <span className="text-xs font-medium text-black">Total a Receber:</span>
                         </div>
                         <span className="text-sm font-bold text-foreground">
                           {calcularTotalPago().toLocaleString("pt-BR", {
