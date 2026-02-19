@@ -27,11 +27,13 @@ import {
   AlertCircle,
   Trash2,
   Package,
-  FileText
+  FileText,
+  Printer
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useVendas, VendasFilters } from "@/hooks/useVendas";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
+import { useTenant } from "@/hooks/useTenant";
 
 export default function Vendas() {
   const [termoBusca, setTermoBusca] = useState("");
@@ -77,6 +79,7 @@ export default function Vendas() {
   } = useVendas();
 
   const { metodosPagamento } = useMetodosPagamento();
+  const { tenant } = useTenant();
 
   // Função para separar vendas com pagamento múltiplo
   const separarVendasMultiplas = (vendas: any[], filtroStatus?: string) => {
@@ -318,6 +321,349 @@ export default function Vendas() {
   // Abrir modal de confirmação de exclusão
   const abrirModalExclusao = () => {
     setModalExclusaoAberto(true);
+  };
+
+  // Função para imprimir cupom da venda
+  const imprimirCupomVenda = async () => {
+    if (!vendaSelecionada) return;
+    
+    // Gerar o HTML da nota baseado nos dados da venda selecionada
+    const htmlNota = `
+        <html>
+          <head>
+            <title>Nota de Venda #${vendaSelecionada?.numero_venda || ''}</title>
+            <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body { 
+              font-family: 'Courier New', monospace; 
+              margin: 0; 
+              padding: 5mm;
+              font-size: 12px;
+              line-height: 1.2;
+              width: 70mm;
+              font-weight: bold;
+            }
+            .header { 
+              text-align: center; 
+              border-bottom: 1px solid #000; 
+              padding-bottom: 5px; 
+              margin-bottom: 10px; 
+              font-weight: bold;
+            }
+            .loja-nome { 
+              font-size: 14px; 
+              font-weight: bold; 
+              margin-bottom: 3px;
+            }
+            .loja-info { 
+              font-size: 10px; 
+              margin-bottom: 5px; 
+              font-weight: bold;
+            }
+            .venda-info { 
+              margin-bottom: 8px; 
+              font-size: 10px;
+              font-weight: bold;
+            }
+            .cliente-info { 
+              margin-bottom: 8px; 
+              font-size: 10px;
+              border: 1px solid #000;
+              padding: 3px;
+              font-weight: bold;
+            }
+            .itens { 
+              margin-bottom: 8px; 
+            }
+            .itens table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              font-size: 10px;
+            }
+            .itens th, .itens td { 
+              border: 1px solid #000; 
+              padding: 2px; 
+              text-align: left; 
+              font-weight: bold;
+            }
+            .itens th { 
+              background-color: #f0f0f0; 
+              font-weight: bold;
+            }
+            .produto-nome { 
+              max-width: 30mm; 
+              word-wrap: break-word; 
+            }
+            .produto-qtd { 
+              width: 8mm; 
+              text-align: center; 
+            }
+            .produto-preco { 
+              width: 15mm; 
+              text-align: right; 
+            }
+            .produto-total { 
+              width: 15mm; 
+              text-align: right; 
+              font-weight: bold;
+            }
+            .totais { 
+              margin-top: 8px; 
+              font-size: 11px;
+              font-weight: bold;
+            }
+            .totais table { 
+              width: 100%; 
+            }
+            .totais td { 
+              padding: 1px; 
+              font-weight: bold;
+            }
+            .total-final { 
+              font-weight: bold; 
+              font-size: 13px; 
+              border-top: 1px solid #000; 
+              padding-top: 3px;
+            }
+            .footer { 
+              margin-top: 10px; 
+              text-align: center; 
+              font-size: 10px; 
+              border-top: 1px solid #000;
+              padding-top: 5px;
+              font-weight: bold;
+            }
+            .separator { 
+              border-top: 1px dashed #000; 
+              margin: 5px 0; 
+            }
+            @media print { 
+              body { margin: 0; padding: 2mm; }
+              .no-print { display: none; }
+            }
+            </style>
+          </head>
+          <body>
+          <div class="header">
+            <div class="loja-nome">
+              ${tenant?.nome_fantasia || tenant?.nome || 'Kontrolla'}
+            </div>
+            <div class="loja-info">
+              ${tenant?.endereco ? `
+                <div>
+                  ${tenant.endereco}
+                  ${tenant.cidade ? ` - ${tenant.cidade}` : ''}
+                  ${tenant.estado ? `/${tenant.estado}` : ''}
+                  ${tenant.cep ? ` - ${tenant.cep}` : ''}
+                </div>
+              ` : ''}
+              ${tenant?.telefone ? `<div>Tel: ${tenant.telefone}</div>` : ''}
+              ${tenant?.email ? `<div>${tenant.email}</div>` : ''}
+              ${(tenant?.cnpj || tenant?.cpf) ? `
+                <div>
+                  ${tenant.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}: ${tenant.cnpj || tenant.cpf}
+                </div>
+              ` : ''}
+              ${tenant?.inscricao_estadual ? `<div>IE: ${tenant.inscricao_estadual}</div>` : ''}
+            </div>
+          </div>
+
+          <div class="venda-info">
+            <div>Data: ${new Date(vendaSelecionada?.data_venda).toLocaleDateString('pt-BR') || ''} ${new Date(vendaSelecionada?.data_venda).toLocaleTimeString('pt-BR') || ''}</div>
+            <div>Venda: #${vendaSelecionada?.numero_venda || ''}</div>
+          </div>
+
+          ${vendaSelecionada?.cliente_nome ? `
+            <div class="cliente-info">
+              <div><strong>CLIENTE:</strong></div>
+              <div>Nome: ${vendaSelecionada.cliente_nome}</div>
+              ${vendaSelecionada.cliente_cpf_cnpj ? `<div>CPF/CNPJ: ${vendaSelecionada.cliente_cpf_cnpj}</div>` : ''}
+            </div>
+          ` : ''}
+
+          <div class="itens">
+            <div><strong>ITENS:</strong></div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="produto-nome">Produto</th>
+                  <th class="produto-qtd">Qtd</th>
+                  <th class="produto-preco">Unit.</th>
+                  <th class="produto-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vendaSelecionada?.itens?.map((item: any) => `
+                  <tr>
+                    <td class="produto-nome">${item.produto_nome}</td>
+                    <td class="produto-qtd">${item.tipo_preco === 'kg' || item.tipo_preco === 'litros' 
+                      ? parseFloat(item.quantidade).toFixed(3).replace(/\.?0+$/, '')
+                      : Math.round(parseFloat(item.quantidade))}</td>
+                    <td class="produto-preco">
+                      ${item.preco_unitario.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </td>
+                    <td class="produto-total">
+                      ${item.preco_total.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </td>
+                  </tr>
+                `).join('') || ''}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="totais">
+            <div class="separator"></div>
+            <div>Subtotal: ${vendaSelecionada?.subtotal?.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL'
+            }) || 'R$ 0,00'}</div>
+            
+            ${vendaSelecionada?.desconto > 0 ? `
+              <div>Desconto: -${vendaSelecionada.desconto.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              })}</div>
+            ` : ''}
+
+            ${vendaSelecionada?.metodos_pagamento?.map((metodo: any) => {
+              const metodoDisponivel = metodosPagamento.find(m => m.tipo === metodo.metodo);
+              const valorMetodo = parseFloat(metodo.valor || 0);
+              const parcelas = metodo.parcelas || 1;
+              const taxaParcela = metodo.taxa_parcela || 0;
+              
+              // Calcular valor com juros se houver taxa
+              const valorComJuros = taxaParcela > 0 ? valorMetodo * (1 + taxaParcela / 100) : valorMetodo;
+              const valorParcela = valorComJuros / parcelas;
+              
+              let metodoInfo = `
+                <div>
+                  ${metodoDisponivel?.nome || metodo.metodo?.replace('_', ' ').toUpperCase()}: ${valorComJuros.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}
+              `;
+              
+              // Se for cartão de crédito com parcelas, mostrar detalhes
+              if (metodo.metodo === 'cartao_credito' && parcelas > 1) {
+                metodoInfo += `
+                  <div style="margin-left: 10px; font-size: 10px;">
+                    ${parcelas}x de ${valorParcela.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}
+                  </div>
+                `;
+              }
+              
+              metodoInfo += `</div>`;
+              return metodoInfo;
+            }).join('') || ''}
+
+            ${vendaSelecionada?.pagamento_prazo ? `
+              <div>
+                <div><strong>Valor a Prazo: ${vendaSelecionada.pagamento_prazo.valor_com_juros.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                })}</strong></div>
+                <div>Juros (${vendaSelecionada.pagamento_prazo.juros}%): +${(vendaSelecionada.pagamento_prazo.valor_com_juros - (vendaSelecionada.pagamento_prazo.valor_original || vendaSelecionada.total)).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                })}</div>
+                <div>Vencimento: ${new Date(vendaSelecionada.pagamento_prazo.data_vencimento).toLocaleDateString('pt-BR')}</div>
+              </div>
+            ` : ''}
+
+            <div class="separator"></div>
+            <div class="total-final">
+              TOTAL: ${vendaSelecionada?.pagamento_prazo ? 
+                vendaSelecionada.pagamento_prazo.valor_com_juros.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }) : 
+                vendaSelecionada?.total?.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }) || 'R$ 0,00'
+              }
+            </div>
+          </div>
+
+          <div class="footer">
+            <div>Obrigado pela sua compra!</div>
+            <div>Volte sempre!</div>
+          </div>
+          </body>
+        </html>
+    `;
+
+    // Verificar se está no Electron e usar API de impressão nativa
+    const electronAPI = (window as any).electronAPI;
+    if (electronAPI && electronAPI.printHTML) {
+      try {
+        console.log('🖨️ Imprimindo via Electron...');
+        const result = await electronAPI.printHTML(htmlNota, {
+          silent: true, // Impressão silenciosa - envia direto para impressora padrão
+          pageSize: 'A4'
+        });
+        
+        if (result.success) {
+          console.log('✅ Impressão realizada com sucesso');
+        } else {
+          console.error('❌ Erro na impressão:', result.error);
+          // Fallback para impressão via navegador
+          imprimirViaBrowser(htmlNota);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao imprimir via Electron:', error);
+        // Fallback para impressão via navegador
+        imprimirViaBrowser(htmlNota);
+      }
+    } else {
+      // Fallback para navegador web (não-Electron)
+      imprimirViaBrowser(htmlNota);
+    }
+  };
+
+  // Função auxiliar para imprimir via navegador (fallback)
+  const imprimirViaBrowser = (htmlContent: string) => {
+    // Criar um iframe oculto para impressão
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.left = '-9999px';
+    document.body.appendChild(iframe);
+    
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(htmlContent);
+      iframeDoc.close();
+      
+      // Aguardar o carregamento e imprimir
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          
+          // Remover o iframe após a impressão
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 1000);
+        }, 250);
+      };
+    }
   };
 
   // Fechar modal de confirmação de exclusão
@@ -1205,11 +1551,20 @@ export default function Vendas() {
               {/* Ações */}
               <Card className="shadow-sm border-0 bg-gradient-to-br from-white to-slate-50/50">
                 <CardContent className="p-3 sm:p-4">
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={imprimirCupomVenda}
+                      className="w-full sm:flex-1"
+                      size="sm"
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Imprimir Cupom
+                    </Button>
                     <Button 
                       variant="destructive" 
                       onClick={abrirModalExclusao}
-                      className="w-full"
+                      className="w-full sm:flex-1"
                       size="sm"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
