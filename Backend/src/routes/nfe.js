@@ -419,7 +419,7 @@ router.get('/config/focus-nfe', async (req, res) => {
     // Verificar se o Token Principal está configurado no sistema (variável de ambiente)
     config.token_principal_configurado = isTokenPrincipalConfigurado();
     
-    // Ocultar os tokens completos por segurança (mostrar apenas os últimos 4 caracteres)
+    // Criar versões mascaradas dos tokens (mantido para compatibilidade)
     // Token de Homologação
     if (config.token_homologacao) {
       config.token_homologacao_masked = '****' + config.token_homologacao.slice(-4);
@@ -428,6 +428,8 @@ router.get('/config/focus-nfe', async (req, res) => {
       // Fallback para token legado em homologação
       config.token_homologacao_masked = '****' + config.token.slice(-4);
       config.token_homologacao_configurado = true;
+      // Usar token legado como token de homologação
+      config.token_homologacao = config.token;
     } else {
       config.token_homologacao_configurado = false;
     }
@@ -446,10 +448,8 @@ router.get('/config/focus-nfe', async (req, res) => {
       ? config.token_producao_masked 
       : config.token_homologacao_masked;
     
-    // Não enviar os tokens completos
+    // Remover apenas o token legado (mantém os tokens separados para exibição)
     delete config.token;
-    delete config.token_homologacao;
-    delete config.token_producao;
     
     res.json({ config });
   } catch (error) {

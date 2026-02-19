@@ -51,8 +51,10 @@ export interface FocusNfeConfig {
   // Tokens separados por ambiente - Configuráveis pelo usuário
   token_homologacao_configurado: boolean;
   token_homologacao_masked?: string;
+  token_homologacao?: string; // Token completo
   token_producao_configurado: boolean;
   token_producao_masked?: string;
+  token_producao?: string; // Token completo
   // Compatibilidade com versões anteriores
   token_configurado: boolean;
   token_masked?: string;

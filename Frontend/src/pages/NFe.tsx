@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,11 +52,17 @@ import {
   Settings,
   Trash2,
   RefreshCw,
-  Loader2
+  Loader2,
+  Pencil,
+  X,
+  EyeOff,
+  FlaskConical,
+  Rocket
 } from "lucide-react";
 import { useNfe, Nfe, NfeCreate, FocusNfeConfig } from "@/hooks/useNfe";
 import { useClientes, Cliente } from "@/hooks/useClientes";
 import { useProdutos, Produto } from "@/hooks/useProdutos";
+import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NFe() {
@@ -91,6 +98,7 @@ export default function NFe() {
 
   const { clientes, buscarClientes } = useClientes();
   const { produtos, buscarProdutos } = useProdutos();
+  const { tenant } = useTenant();
 
   // Estados locais
   const [termoBusca, setTermoBusca] = useState("");
@@ -133,6 +141,14 @@ export default function NFe() {
   const [configNaturezaOperacao, setConfigNaturezaOperacao] = useState("Venda de mercadoria");
   const [configSalvando, setConfigSalvando] = useState(false);
   const [validacaoConfig, setValidacaoConfig] = useState<{ valid: boolean; errors: string[]; warnings?: string[] } | null>(null);
+  const [editandoCnpj, setEditandoCnpj] = useState(false);
+  const [cnpjOriginal, setCnpjOriginal] = useState("");
+  const [editandoTokenHomologacao, setEditandoTokenHomologacao] = useState(false);
+  const [tokenHomologacaoOriginal, setTokenHomologacaoOriginal] = useState("");
+  const [editandoTokenProducao, setEditandoTokenProducao] = useState(false);
+  const [tokenProducaoOriginal, setTokenProducaoOriginal] = useState("");
+  const [mostrarTokenHomologacao, setMostrarTokenHomologacao] = useState(false);
+  const [mostrarTokenProducao, setMostrarTokenProducao] = useState(false);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -143,6 +159,22 @@ export default function NFe() {
     carregarConfigFocusNfe();
   }, []);
 
+  // Função para formatar CNPJ
+  const formatarCNPJ = (cnpj: string): string => {
+    if (!cnpj) return "";
+    // Remove tudo que não é dígito
+    const apenasNumeros = cnpj.replace(/\D/g, '');
+    // Aplica a máscara
+    if (apenasNumeros.length <= 14) {
+      return apenasNumeros
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    return apenasNumeros;
+  };
+
   // Carregar configurações da Focus NFe
   const carregarConfigFocusNfe = async () => {
     const config = await fetchFocusNfeConfig();
@@ -151,7 +183,15 @@ export default function NFe() {
       setConfigAmbiente(config.ambiente || "homologacao");
       setConfigSeriePadrao(config.serie_padrao || "001");
       setConfigNaturezaOperacao(config.natureza_operacao || "Venda de mercadoria");
-      setConfigCnpjEmitente(config.cnpj_emitente || "");
+      // Aplicar máscara ao CNPJ ao carregar do banco
+      setConfigCnpjEmitente(config.cnpj_emitente ? formatarCNPJ(config.cnpj_emitente) : "");
+      // Preencher tokens completos quando configurados (não mascarados)
+      if (config.token_homologacao_configurado && config.token_homologacao) {
+        setConfigTokenHomologacao(config.token_homologacao);
+      }
+      if (config.token_producao_configurado && config.token_producao) {
+        setConfigTokenProducao(config.token_producao);
+      }
     }
   };
 
@@ -429,11 +469,19 @@ export default function NFe() {
         natureza_operacao: configNaturezaOperacao
       };
 
-      // Salvar os tokens se foram informados
-      if (configTokenHomologacao) {
+      // Salvar os tokens apenas se foram informados novos valores
+      // Se estava editando e tem valor, salvar (se vazio, mantém o token atual)
+      if (editandoTokenHomologacao && configTokenHomologacao) {
+        configToSave.token_homologacao = configTokenHomologacao;
+      } else if (!focusNfeConfig?.token_homologacao_configurado && configTokenHomologacao) {
+        // Se não estava configurado e agora tem valor, salvar
         configToSave.token_homologacao = configTokenHomologacao;
       }
-      if (configTokenProducao) {
+      
+      if (editandoTokenProducao && configTokenProducao) {
+        configToSave.token_producao = configTokenProducao;
+      } else if (!focusNfeConfig?.token_producao_configurado && configTokenProducao) {
+        // Se não estava configurado e agora tem valor, salvar
         configToSave.token_producao = configTokenProducao;
       }
       
@@ -451,9 +499,17 @@ export default function NFe() {
 
       // Recarregar configurações
       await carregarConfigFocusNfe();
-      // Limpar campos dos tokens
-      setConfigTokenHomologacao("");
-      setConfigTokenProducao("");
+      // Limpar estados de edição
+      setEditandoCnpj(false);
+      setEditandoTokenHomologacao(false);
+      setEditandoTokenProducao(false);
+      // Limpar campos dos tokens apenas se não estiverem configurados
+      if (!focusNfeConfig?.token_homologacao_configurado) {
+        setConfigTokenHomologacao("");
+      }
+      if (!focusNfeConfig?.token_producao_configurado) {
+        setConfigTokenProducao("");
+      }
     } catch (err) {
       toast({
         title: "Erro ao salvar",
@@ -1187,42 +1243,39 @@ export default function NFe() {
             </Card>
           )}
 
-          {/* Status do Token Principal (Fixo no Sistema) */}
-          <Card className={`shadow-card ${focusNfeConfig?.token_principal_configurado ? 'bg-success/10 border-success' : 'bg-destructive/10 border-destructive'}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${focusNfeConfig?.token_principal_configurado ? 'bg-success/20' : 'bg-destructive/20'}`}>
-                    {focusNfeConfig?.token_principal_configurado ? (
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-semibold">🔑 Token Principal (Master)</p>
-                    <p className="text-xs text-muted-foreground">
-                      {focusNfeConfig?.token_principal_configurado 
-                        ? "Configurado no servidor - usado para gerenciar empresas via API"
-                        : "Não configurado - configure a variável FOCUS_NFE_TOKEN_PRINCIPAL no arquivo .env do backend"
-                      }
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="outline" className={focusNfeConfig?.token_principal_configurado ? 'bg-success/20 text-success border-success' : 'bg-destructive/20 text-destructive border-destructive'}>
-                  {focusNfeConfig?.token_principal_configurado ? '✓ Configurado' : '✗ Não configurado'}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Tokens da API Focus NFe (Por Tenant) */}
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Dados da Empresa
-              </CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <CardTitle className="flex items-center">
+                  <Settings className="h-5 w-5 mr-2" />
+                  Dados da Empresa
+                </CardTitle>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button 
+                    className="bg-gradient-primary text-white"
+                    onClick={handleSalvarConfigFocusNfe}
+                    disabled={configSalvando}
+                    size="sm"
+                  >
+                    {configSalvando ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Settings className="h-4 w-4 mr-2" />
+                    )}
+                    Salvar Configurações
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleValidarConfig}
+                    disabled={loading}
+                    size="sm"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Validar Configurações
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -1230,111 +1283,281 @@ export default function NFe() {
               </p>
               
               {/* CNPJ do Emitente */}
-              <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
-                <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="mb-2">
                   <Label className="flex items-center gap-2">
-                    🏢 CNPJ do Emitente
-                    <Badge variant="outline" className="text-xs bg-destructive/20 text-destructive border-destructive">
-                      Obrigatório
-                    </Badge>
+                    <Building className="h-4 w-4" />
+                    CNPJ do Emitente
                   </Label>
+                </div>
+                <div className="flex items-center gap-1 mb-2">
                   {configCnpjEmitente && (
                     <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
                       ✓ Configurado
                     </Badge>
                   )}
                 </div>
-                <Input 
-                  type="text"
-                  placeholder="00.000.000/0000-00"
-                  value={configCnpjEmitente}
-                  onChange={(e) => {
-                    // Formatar CNPJ
-                    let value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 14) {
-                      value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-                      value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                      value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                      value = value.replace(/(\d{4})(\d)/, '$1-$2');
-                    }
-                    setConfigCnpjEmitente(value);
-                  }}
-                  maxLength={18}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  ⚠️ O CNPJ deve ser o mesmo cadastrado na empresa da Focus NFe
-                </p>
-              </div>
-              
-              {/* Token de Homologação */}
-              <div className={`p-4 rounded-lg border-2 ${configAmbiente === 'homologacao' ? 'border-warning bg-warning/5' : 'border-muted'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="flex items-center gap-2">
-                    🧪 Token de Homologação
-                    {configAmbiente === 'homologacao' && (
-                      <Badge variant="outline" className="text-xs bg-warning/20 text-warning border-warning">
-                        Ambiente Atual
-                      </Badge>
-                    )}
-                  </Label>
-                  {focusNfeConfig?.token_homologacao_configurado && (
-                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
-                      ✓ Configurado
-                    </Badge>
+                <div className="flex items-center gap-2 max-w-xs">
+                  <Input 
+                    type="text"
+                    placeholder="00.000.000/0000-00"
+                    value={configCnpjEmitente}
+                    onChange={(e) => {
+                      // Aplicar máscara ao CNPJ
+                      const valorFormatado = formatarCNPJ(e.target.value);
+                      setConfigCnpjEmitente(valorFormatado);
+                    }}
+                    maxLength={18}
+                    readOnly={!editandoCnpj}
+                    className={!editandoCnpj ? "bg-muted/50" : ""}
+                  />
+                  {!editandoCnpj ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setCnpjOriginal(configCnpjEmitente);
+                        setEditandoCnpj(true);
+                      }}
+                      className="h-10 w-10 flex-shrink-0"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          setConfigCnpjEmitente(cnpjOriginal);
+                          setEditandoCnpj(false);
+                        }}
+                        className="h-10 w-10"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          setEditandoCnpj(false);
+                        }}
+                        className="h-10 w-10 bg-success/10 hover:bg-success/20 border-success/30"
+                      >
+                        <CheckCircle className="h-4 w-4 text-success" />
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <Input 
-                  type="password"
-                  placeholder={focusNfeConfig?.token_homologacao_configurado ? "Token já configurado (deixe vazio para manter)" : "Cole o token de homologação aqui"}
-                  value={configTokenHomologacao}
-                  onChange={(e) => setConfigTokenHomologacao(e.target.value)}
-                />
-                {focusNfeConfig?.token_homologacao_configurado && focusNfeConfig.token_homologacao_masked && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Token atual: {focusNfeConfig.token_homologacao_masked}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  ⚠️ Notas emitidas em homologação não têm validade fiscal (para testes)
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 text-orange-500" />
+                  O CNPJ deve ser o mesmo cadastrado na empresa da Focus NFe
                 </p>
               </div>
 
-              {/* Token de Produção */}
-              <div className={`p-4 rounded-lg border-2 ${configAmbiente === 'producao' ? 'border-success bg-success/5' : 'border-muted'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="flex items-center gap-2">
-                    🚀 Token de Produção
-                    {configAmbiente === 'producao' && (
-                      <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
-                        Ambiente Atual
-                      </Badge>
+              {/* Tokens */}
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Token de Homologação */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="flex items-center gap-2">
+                      <FlaskConical className="h-4 w-4" />
+                      Token de Homologação
+                    </Label>
+                    <div className="flex items-center gap-1">
+                      {configAmbiente === 'homologacao' && (
+                        <Badge variant="outline" className="text-xs bg-warning/20 text-warning border-warning">
+                          Ambiente Atual
+                        </Badge>
+                      )}
+                      {focusNfeConfig?.token_homologacao_configurado && (
+                        <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                          ✓ Configurado
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type={mostrarTokenHomologacao ? "text" : "password"}
+                      placeholder="Cole o token de homologação aqui"
+                      value={configTokenHomologacao}
+                      onChange={(e) => setConfigTokenHomologacao(e.target.value)}
+                      readOnly={!editandoTokenHomologacao && focusNfeConfig?.token_homologacao_configurado}
+                      className={!editandoTokenHomologacao && focusNfeConfig?.token_homologacao_configurado ? "bg-muted/50" : ""}
+                    />
+                    {!editandoTokenHomologacao && focusNfeConfig?.token_homologacao_configurado && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setMostrarTokenHomologacao(!mostrarTokenHomologacao)}
+                        className="h-10 w-10 flex-shrink-0"
+                      >
+                        {mostrarTokenHomologacao ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
                     )}
-                  </Label>
-                  {focusNfeConfig?.token_producao_configurado && (
-                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
-                      ✓ Configurado
-                    </Badge>
-                  )}
-                </div>
-                <Input 
-                  type="password"
-                  placeholder={focusNfeConfig?.token_producao_configurado ? "Token já configurado (deixe vazio para manter)" : "Cole o token de produção aqui"}
-                  value={configTokenProducao}
-                  onChange={(e) => setConfigTokenProducao(e.target.value)}
-                />
-                {focusNfeConfig?.token_producao_configurado && focusNfeConfig.token_producao_masked && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Token atual: {focusNfeConfig.token_producao_masked}
+                    {!editandoTokenHomologacao && focusNfeConfig?.token_homologacao_configurado ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          setTokenHomologacaoOriginal(configTokenHomologacao);
+                          setConfigTokenHomologacao(""); // Limpar campo para permitir digitar novo token
+                          setEditandoTokenHomologacao(true);
+                          setMostrarTokenHomologacao(false);
+                        }}
+                        className="h-10 w-10 flex-shrink-0"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            if (focusNfeConfig?.token_homologacao_configurado) {
+                              setConfigTokenHomologacao(tokenHomologacaoOriginal);
+                            } else {
+                              setConfigTokenHomologacao("");
+                            }
+                            setEditandoTokenHomologacao(false);
+                            setMostrarTokenHomologacao(false);
+                          }}
+                          className="h-10 w-10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setEditandoTokenHomologacao(false);
+                            setMostrarTokenHomologacao(false);
+                          }}
+                          className="h-10 w-10 bg-success/10 hover:bg-success/20 border-success/30"
+                        >
+                          <CheckCircle className="h-4 w-4 text-success" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-orange-500" />
+                    Notas emitidas em homologação não têm validade fiscal (para testes)
                   </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  ✅ Notas emitidas em produção têm validade fiscal (para uso real)
-                </p>
-              </div>
+                </div>
 
-              <p className="text-xs text-muted-foreground">
-                Obtenha seus tokens em <a href="https://focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary underline">focusnfe.com.br</a>
-              </p>
+                {/* Token de Produção */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="flex items-center gap-2">
+                      <Rocket className="h-4 w-4" />
+                      Token de Produção
+                    </Label>
+                    <div className="flex items-center gap-1">
+                      {configAmbiente === 'producao' && (
+                        <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                          Ambiente Atual
+                        </Badge>
+                      )}
+                      {focusNfeConfig?.token_producao_configurado && (
+                        <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                          ✓ Configurado
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type={mostrarTokenProducao ? "text" : "password"}
+                      placeholder="Cole o token de produção aqui"
+                      value={configTokenProducao}
+                      onChange={(e) => setConfigTokenProducao(e.target.value)}
+                      readOnly={!editandoTokenProducao && focusNfeConfig?.token_producao_configurado}
+                      className={!editandoTokenProducao && focusNfeConfig?.token_producao_configurado ? "bg-muted/50" : ""}
+                    />
+                    {!editandoTokenProducao && focusNfeConfig?.token_producao_configurado && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setMostrarTokenProducao(!mostrarTokenProducao)}
+                        className="h-10 w-10 flex-shrink-0"
+                      >
+                        {mostrarTokenProducao ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    {!editandoTokenProducao && focusNfeConfig?.token_producao_configurado ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          setTokenProducaoOriginal(configTokenProducao);
+                          setConfigTokenProducao(""); // Limpar campo para permitir digitar novo token
+                          setEditandoTokenProducao(true);
+                          setMostrarTokenProducao(false);
+                        }}
+                        className="h-10 w-10 flex-shrink-0"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            if (focusNfeConfig?.token_producao_configurado) {
+                              setConfigTokenProducao(tokenProducaoOriginal);
+                            } else {
+                              setConfigTokenProducao("");
+                            }
+                            setEditandoTokenProducao(false);
+                            setMostrarTokenProducao(false);
+                          }}
+                          className="h-10 w-10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setEditandoTokenProducao(false);
+                            setMostrarTokenProducao(false);
+                          }}
+                          className="h-10 w-10 bg-success/10 hover:bg-success/20 border-success/30"
+                        >
+                          <CheckCircle className="h-4 w-4 text-success" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-success" />
+                    Notas emitidas em produção têm validade fiscal (para uso real)
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -1355,15 +1578,32 @@ export default function NFe() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="homologacao">🧪 Homologação (Testes)</SelectItem>
-                      <SelectItem value="producao">🚀 Produção (Real)</SelectItem>
+                      <SelectItem value="homologacao">
+                        <span className="flex items-center gap-2">
+                          <FlaskConical className="h-4 w-4" />
+                          Homologação (Testes)
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="producao">
+                        <span className="flex items-center gap-2">
+                          <Rocket className="h-4 w-4" />
+                          Produção (Real)
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {configAmbiente === "homologacao" 
-                      ? "⚠️ Notas sem validade fiscal"
-                      : "✅ Notas com validade fiscal"
-                    }
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    {configAmbiente === "homologacao" ? (
+                      <>
+                        <AlertTriangle className="h-3 w-3 text-orange-500" />
+                        Notas sem validade fiscal
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-3 w-3 text-success" />
+                        Notas com validade fiscal
+                      </>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -1390,41 +1630,72 @@ export default function NFe() {
                   </p>
                 </div>
               </div>
-              
-              <div className="pt-4 flex flex-col sm:flex-row gap-2">
-                <Button 
-                  className="flex-1 bg-gradient-primary text-white"
-                  onClick={handleSalvarConfigFocusNfe}
-                  disabled={configSalvando}
-                >
-                  {configSalvando ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Settings className="h-4 w-4 mr-2" />
-                  )}
-                  Salvar Configurações
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={handleValidarConfig}
-                  disabled={loading}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Validar Configurações
-                </Button>
-              </div>
 
-              {/* Nota sobre cadastro da empresa */}
-              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <p className="text-sm text-blue-600 dark:text-blue-400 flex items-start gap-2">
-                  <Building className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>
-                    <strong>Dados da empresa:</strong> O cadastro completo da empresa (CNPJ, endereço, IE, regime tributário) 
-                    é feito diretamente no <a href="https://app.focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="underline">painel Focus NFe</a>. 
-                    Os tokens acima já estão vinculados aos dados da sua empresa.
-                  </span>
-                </p>
+              {/* Dados da Empresa */}
+              <div className="pt-4 border-t border-border/60">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-base font-semibold">Dados da Empresa</Label>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Nome / Razão Social</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.razao_social || tenant?.nome || "Não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Nome Fantasia</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.nome_fantasia || tenant?.nome || "Não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CNPJ/CPF</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.cnpj || tenant?.cpf || "Não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Inscrição Estadual</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.inscricao_estadual || "Não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Inscrição Municipal</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.inscricao_municipal || "Não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.email || "Não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Telefone</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.telefone || "Não informado"}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <Label className="text-xs text-muted-foreground">Endereço</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tenant?.endereco ? (
+                        <>
+                          {tenant.endereco}
+                          {tenant.cidade && `, ${tenant.cidade}`}
+                          {tenant.estado && ` - ${tenant.estado}`}
+                          {tenant.cep && ` (CEP: ${tenant.cep})`}
+                        </>
+                      ) : (
+                        "Não informado"
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1445,8 +1716,18 @@ export default function NFe() {
                 <div className="space-y-2">
                   <p>• <strong>Download XML:</strong> Baixe o XML oficial da nota</p>
                   <p>• <strong>DANFE:</strong> Acesse o PDF do DANFE para impressão</p>
-                  <p>• <strong>Documentação:</strong> <a href="https://doc.focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="text-primary underline">doc.focusnfe.com.br</a></p>
                 </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                  <Building className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Importante:</strong> Para emissão de NF-e, certifique-se de que os dados da empresa estão completos e corretos. 
+                    Você pode atualizar essas informações na página de <Link to="/dashboard/configuracoes" className="underline">Configurações</Link>.
+                    O cadastro completo da empresa (CNPJ, endereço, IE, regime tributário) também deve estar configurado no <a href="https://app.focusnfe.com.br" target="_blank" rel="noopener noreferrer" className="underline">painel Focus NFe</a>.
+                  </span>
+                </p>
               </div>
             </CardContent>
           </Card>
