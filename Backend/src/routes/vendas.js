@@ -296,6 +296,9 @@ router.post('/', validateVenda, async (req, res) => {
       status = 'pendente',
       emitir_nfe = false // Opção para emitir NF-e automaticamente
     } = req.body;
+    
+    // Normalizar emitir_nfe para boolean
+    const emitirNfeNormalizado = emitir_nfe === true || emitir_nfe === 'true' || emitir_nfe === 1 || emitir_nfe === '1';
 
     // Debug: verificar dados recebidos
     console.log('Dados recebidos na criação da venda:', {
@@ -648,8 +651,9 @@ router.post('/', validateVenda, async (req, res) => {
     }
 
     // Emissão de NF-e (se solicitado)
+    console.log(`[Venda] emitir_nfe recebido: ${emitir_nfe} (tipo: ${typeof emitir_nfe}), normalizado: ${emitirNfeNormalizado}`);
     let nfeResult = null;
-    if (emitir_nfe) {
+    if (emitirNfeNormalizado) {
       try {
         console.log(`[Venda] Iniciando emissão de NF-e para venda #${numeroVenda}...`);
         

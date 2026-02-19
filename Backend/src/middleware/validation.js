@@ -529,6 +529,22 @@ export const validateVenda = [
       }
       return true;
     }),
+  body('emitir_nfe')
+    .optional()
+    .custom((value) => {
+      // Aceitar boolean, string "true"/"false", ou número 0/1
+      if (value === null || value === undefined || value === '') {
+        return true; // Permitir vazio/null/undefined
+      }
+      // Converter para boolean se necessário
+      if (value === 'true' || value === true || value === 1 || value === '1') {
+        return true;
+      }
+      if (value === 'false' || value === false || value === 0 || value === '0') {
+        return true;
+      }
+      throw new Error('emitir_nfe deve ser true ou false');
+    }),
   body('pagamento_prazo.juros')
     .optional()
     .custom((value) => {

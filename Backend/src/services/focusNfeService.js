@@ -603,12 +603,25 @@ export async function emitirNfe(tenantId, nfeId) {
       ]
     );
     
+    // Considerar sucesso se autorizado ou processando (nota foi enviada com sucesso)
+    const isSuccess = data.status === 'autorizado' || data.status === 'processando_autorizacao';
+    
+    // Se estiver processando, iniciar verificação automática em background
+    if (data.status === 'processando_autorizacao') {
+      console.log(`[Focus NFe] Iniciando verificação automática da NF-e ${nfeId} com referência ${referencia}`);
+      // Iniciar verificação automática sem bloquear a resposta
+      verificarStatusAutomaticamente(tenantId, nfeId, referencia).catch(err => {
+        console.error(`[Focus NFe] Erro na verificação automática da NF-e ${nfeId}:`, err.message);
+        console.error(`[Focus NFe] Stack trace:`, err.stack);
+      });
+    }
+    
     return {
-      success: data.status === 'autorizado',
+      success: isSuccess,
       status: data.status,
       protocolo: data.protocolo,
       chave_acesso: data.chave_nfe,
-      mensagem: data.mensagem_sefaz || data.mensagem,
+      mensagem: data.mensagem_sefaz || data.mensagem || (data.status === 'processando_autorizacao' ? 'NF-e enviada e aguardando processamento pela SEFAZ' : null),
       referencia
     };
   } catch (error) {
@@ -622,6 +635,109 @@ export async function emitirNfe(tenantId, nfeId) {
     
     throw new Error(error.response?.data?.mensagem || error.message);
   }
+}
+
+/**
+ * Verifica automaticamente o status da NF-e após alguns segundos
+ * Faz até 3 tentativas com intervalos crescentes
+ * @param {number} tenantId - ID do tenant
+ * @param {number} nfeId - ID da NF-e
+ * @param {string} referencia - Referência da NF-e na Focus NFe
+ * @returns {Promise<void>}
+ */
+async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
+  const tentativas = 5; // Aumentar para 5 tentativas
+  const intervalos = [3000, 5000, 7000, 10000, 15000]; // 3s, 5s, 7s, 10s, 15s (total: ~40s)
+  
+  console.log(`[Focus NFe] 🔄 Iniciando verificação automática: NF-e ${nfeId}, Referência: ${referencia}`);
+  
+  for (let i = 0; i < tentativas; i++) {
+    // Aguardar antes de consultar (exceto na primeira tentativa)
+    if (i > 0) {
+      console.log(`[Focus NFe] ⏳ Aguardando ${intervalos[i]}ms antes da tentativa ${i + 1}/${tentativas}...`);
+      await new Promise(resolve => setTimeout(resolve, intervalos[i]));
+    }
+    
+    try {
+      console.log(`[Focus NFe] 🔍 Verificação automática ${i + 1}/${tentativas} da NF-e ${nfeId} (ref: ${referencia})...`);
+      
+      const focusConfig = await getFocusNfeConfig(tenantId);
+      const token = getTokenForAmbiente(focusConfig);
+      
+      if (!token) {
+        console.log(`[Focus NFe] ⚠️ Token não configurado, parando verificação automática`);
+        break;
+      }
+      
+      const client = createFocusNfeClient(token, focusConfig.ambiente);
+      const response = await client.get(`/v2/nfe/${referencia}`);
+      const { data } = response;
+      
+      console.log(`[Focus NFe] 📊 Status retornado na tentativa ${i + 1}: ${data.status}`);
+      
+      // Se foi autorizada, atualizar e parar
+      if (data.status === 'autorizado') {
+        console.log(`[Focus NFe] ✅ NF-e ${nfeId} autorizada automaticamente na tentativa ${i + 1}!`);
+        console.log(`[Focus NFe] 📄 Protocolo: ${data.protocolo || 'N/A'}, Chave: ${data.chave_nfe || 'N/A'}`);
+        
+        await query(
+          `UPDATE nfe SET 
+            status = 'autorizada',
+            protocolo = COALESCE(?, protocolo),
+            chave_acesso = COALESCE(?, chave_acesso),
+            motivo_status = ?,
+            data_autorizacao = NOW()
+           WHERE id = ? AND tenant_id = ?`,
+          [
+            data.protocolo || null,
+            data.chave_nfe || null,
+            data.mensagem_sefaz || data.mensagem || 'NF-e autorizada',
+            nfeId,
+            tenantId
+          ]
+        );
+        
+        console.log(`[Focus NFe] ✅ Status atualizado no banco de dados para 'autorizada'`);
+        break; // Parar tentativas
+      }
+      
+      // Se houve erro, atualizar e parar
+      if (data.status === 'erro_autorizacao') {
+        console.log(`[Focus NFe] ❌ NF-e ${nfeId} rejeitada na tentativa ${i + 1}: ${data.mensagem_sefaz || data.mensagem}`);
+        
+        await query(
+          `UPDATE nfe SET 
+            status = 'erro',
+            motivo_status = ?
+           WHERE id = ? AND tenant_id = ?`,
+          [
+            data.mensagem_sefaz || data.mensagem || 'Erro na autorização',
+            nfeId,
+            tenantId
+          ]
+        );
+        
+        break; // Parar tentativas
+      }
+      
+      // Se ainda está processando e é a última tentativa, logar
+      if (i === tentativas - 1 && data.status === 'processando_autorizacao') {
+        console.log(`[Focus NFe] ⏳ NF-e ${nfeId} ainda processando após ${tentativas} tentativas (total: ~${intervalos.reduce((a, b) => a + b, 0)}ms). Verifique manualmente.`);
+      }
+      
+    } catch (error) {
+      console.error(`[Focus NFe] ❌ Erro na verificação automática ${i + 1}/${tentativas}:`, error.message);
+      if (error.response) {
+        console.error(`[Focus NFe] Resposta do erro:`, error.response.data);
+      }
+      // Continuar tentando mesmo se houver erro (pode ser erro temporário)
+      if (i < tentativas - 1) {
+        console.log(`[Focus NFe] 🔄 Continuando para próxima tentativa...`);
+      }
+    }
+  }
+  
+  console.log(`[Focus NFe] 🏁 Verificação automática finalizada para NF-e ${nfeId}`);
 }
 
 /**
