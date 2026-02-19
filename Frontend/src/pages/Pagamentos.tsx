@@ -778,12 +778,14 @@ export default function Pagamentos() {
               font-size: 12px;
               line-height: 1.2;
               width: 70mm;
+              font-weight: bold;
             }
             .header { 
               text-align: center; 
               border-bottom: 1px solid #000; 
               padding-bottom: 5px; 
               margin-bottom: 10px; 
+              font-weight: bold;
             }
             .loja-nome { 
               font-size: 14px; 
@@ -793,16 +795,19 @@ export default function Pagamentos() {
             .loja-info { 
               font-size: 10px; 
               margin-bottom: 5px; 
+              font-weight: bold;
             }
             .venda-info { 
               margin-bottom: 8px; 
               font-size: 10px;
+              font-weight: bold;
             }
             .cliente-info { 
               margin-bottom: 8px; 
               font-size: 10px;
               border: 1px solid #000;
               padding: 3px;
+              font-weight: bold;
             }
             .itens { 
               margin-bottom: 8px; 
@@ -816,6 +821,7 @@ export default function Pagamentos() {
               border: 1px solid #000; 
               padding: 2px; 
               text-align: left; 
+              font-weight: bold;
             }
             .itens th { 
               background-color: #f0f0f0; 
@@ -841,12 +847,14 @@ export default function Pagamentos() {
             .totais { 
               margin-top: 8px; 
               font-size: 11px;
+              font-weight: bold;
             }
             .totais table { 
               width: 100%; 
             }
             .totais td { 
               padding: 1px; 
+              font-weight: bold;
             }
             .total-final { 
               font-weight: bold; 
@@ -860,6 +868,7 @@ export default function Pagamentos() {
               font-size: 10px; 
               border-top: 1px solid #000;
               padding-top: 5px;
+              font-weight: bold;
             }
             .separator { 
               border-top: 1px dashed #000; 
