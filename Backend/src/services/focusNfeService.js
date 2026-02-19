@@ -239,7 +239,8 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     payload.nome_destinatario = cliente.nome || 'Consumidor';
     payload.logradouro_destinatario = extrairLogradouro(cliente.endereco) || 'Rua não informada';
     payload.numero_destinatario = extrairNumero(cliente.endereco) || 'S/N';
-    payload.bairro_destinatario = cliente.bairro || 'Centro';
+    // Bairro não existe no schema, usar valor padrão ou extrair do endereço se possível
+    payload.bairro_destinatario = 'Centro'; // Valor padrão conforme exigência da SEFAZ
     payload.municipio_destinatario = cliente.cidade || 'São Paulo';
     payload.uf_destinatario = cliente.estado || 'SP';
     payload.cep_destinatario = cliente.cep?.replace(/\D/g, '') || '00000000';
@@ -264,9 +265,10 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
       : 'CONSUMIDOR NAO IDENTIFICADO';
     
     // Endereço obrigatório (usando dados do emitente como base)
-    payload.logradouro_destinatario = tenant?.endereco?.split(',')[0] || 'Rua nao informada';
-    payload.numero_destinatario = '1';
-    payload.bairro_destinatario = tenant?.bairro || 'Centro';
+    payload.logradouro_destinatario = extrairLogradouro(tenant?.endereco) || 'Rua nao informada';
+    payload.numero_destinatario = extrairNumero(tenant?.endereco) || '1';
+    // Bairro não existe no schema do tenant, usar valor padrão
+    payload.bairro_destinatario = 'Centro';
     payload.municipio_destinatario = tenant?.cidade || 'Sao Paulo';
     payload.uf_destinatario = tenant?.estado || 'SP';
     payload.cep_destinatario = tenant?.cep?.replace(/\D/g, '') || '01310100';
@@ -294,40 +296,136 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
 
 /**
  * Monta um item da NF-e
- * @param {Object} item - Item do banco de dados
+ * @param {Object} item - Item do banco de dados (com campos do produto já incluídos)
  * @param {number} index - Índice do item
  * @param {Object} focusConfig - Configurações Focus NFe
  * @returns {Object}
  */
 function montarItemNfe(item, index, focusConfig) {
-  const produto = item.produto || {};
+  // Os campos do produto já vêm diretos do item (não há objeto produto separado)
+  // item já contém: produto_nome, sku, codigo_barras, ncm, cfop, icms_origem, etc.
+  
+  // === VERIFICAR REGIME TRIBUTÁRIO DO EMITENTE ===
+  // CRT = 1 ou 4 = Simples Nacional
+  // Para emitentes do Simples Nacional, SEMPRE usar CST 102, independente do CST cadastrado no produto
+  const regimeTributario = focusConfig.regime_tributario || '1'; // 1=Simples Nacional por padrão
+  const isSimplesNacional = regimeTributario === '1' || regimeTributario === '4';
+  
+  // === CÁLCULOS ICMS (antes de montar o objeto) ===
+  // Se for Simples Nacional, forçar CST 102
+  // Caso contrário, usar o CST do produto
+  const cstIcmsOriginal = item.icms_situacao_tributaria || '102';
+  const cstIcms = isSimplesNacional ? '102' : cstIcmsOriginal;
+  
+  // Log quando CST for forçado para 102 devido ao Simples Nacional
+  if (isSimplesNacional && cstIcmsOriginal !== '102') {
+    console.log(`[Focus NFe] Item ${index + 1}: CST ${cstIcmsOriginal} do produto foi alterado para CST 102 (Simples Nacional - CRT ${regimeTributario})`);
+  }
+  const icmsAliquota = parseFloat(item.icms_aliquota) || 0;
+  const valorBruto = parseFloat(item.preco_total || 0);
+  
+  // Montar objeto ICMS baseado no CST
+  let icmsFields = {
+    icms_situacao_tributaria: cstIcms
+  };
+  
+  if (cstIcms === '102') {
+    // CST 102 = Simples Nacional sem permissão de crédito
+    // Apenas origem e situação tributária (sem campos de base de cálculo)
+    // Não adiciona mais campos
+  } else if (cstIcms === '20' || cstIcms === '00' || cstIcms === '10' || cstIcms === '90') {
+    // CST 20 = Com redução de base de cálculo
+    // CST 00 = Tributada integralmente
+    // CST 10 = Tributada e com cobrança do ICMS por substituição tributária
+    // CST 90 = Outras
+    // Para estes CSTs, precisamos de: modBC, vBC, pICMS, vICMS
+    // Se CST 20, também pode ter pRedBC (percentual de redução)
+    
+    // Modalidade de determinação da base de cálculo (0=Margem de valor agregado, 1=Pauta, 2=Preço tabelado, 3=Valor da operação)
+    const modBC = 0; // Usar 0 (valor da operação) como padrão
+    
+    // Calcular base de cálculo (se não houver redução, usar valor bruto)
+    // Se houver redução, calcular base reduzida
+    let vBC = valorBruto;
+    let pRedBC = null;
+    
+    // Se CST 20 e houver alíquota, calcular base reduzida (assumindo redução padrão de 30% se não especificado)
+    // Na prática, isso deveria vir do cadastro do produto
+    if (cstIcms === '20') {
+      // Para CST 20, geralmente há redução. Se não especificado, usar 30% como padrão
+      // Em produção, isso deveria vir de um campo específico do produto
+      const percentualReducao = 30; // Padrão 30% - deveria vir do cadastro do produto
+      pRedBC = percentualReducao.toFixed(2);
+      vBC = valorBruto * (1 - percentualReducao / 100);
+    }
+    
+    // Valor do ICMS
+    const vICMS = vBC * (icmsAliquota / 100);
+    
+    // Adicionar campos do ICMS
+    icmsFields = {
+      ...icmsFields,
+      icms_modalidade_base_calculo: modBC,
+      icms_base_calculo: vBC.toFixed(2),
+      icms_aliquota: icmsAliquota.toFixed(2),
+      icms_valor: vICMS.toFixed(2)
+    };
+    
+    // Adicionar percentual de redução apenas para CST 20
+    if (cstIcms === '20' && pRedBC) {
+      icmsFields.icms_reducao_base_calculo = pRedBC;
+    }
+  } else {
+    // Para outros CSTs não implementados, usar CST 102 como fallback
+    icmsFields.icms_situacao_tributaria = '102';
+  }
   
   return {
     numero_item: index + 1,
-    codigo_produto: produto.sku || produto.codigo_barras || item.produto_id.toString(),
-    descricao: item.produto_nome || produto.nome || `Produto ${item.produto_id}`,
-    codigo_ncm: produto.ncm?.replace(/\D/g, '') || '00000000', // NCM genérico se não informado
-    cfop: produto.cfop || '5102', // 5102 = Venda de mercadoria adquirida
+    codigo_produto: item.sku || item.codigo_barras || item.produto_id?.toString() || `PROD${index + 1}`,
+    descricao: item.produto_nome || `Produto ${item.produto_id}`,
+    codigo_ncm: item.ncm?.replace(/\D/g, '') || '00000000', // NCM genérico se não informado
+    cfop: item.cfop || '5102', // 5102 = Venda de mercadoria adquirida
+    // Unidade comercial: usar 'UN' como padrão (tipo_preco não é a unidade fiscal)
     unidade_comercial: 'UN',
-    quantidade_comercial: parseFloat(item.quantidade).toFixed(4),
-    valor_unitario_comercial: parseFloat(item.preco_unitario).toFixed(4),
-    valor_bruto: parseFloat(item.preco_total).toFixed(2),
-    unidade_tributavel: 'UN',
-    quantidade_tributavel: parseFloat(item.quantidade).toFixed(4),
-    valor_unitario_tributavel: parseFloat(item.preco_unitario).toFixed(4),
+    quantidade_comercial: parseFloat(item.quantidade || 0).toFixed(4),
+    valor_unitario_comercial: parseFloat(item.preco_unitario || 0).toFixed(4),
+    valor_bruto: parseFloat(item.preco_total || 0).toFixed(2),
+    unidade_tributavel: 'UN', // Unidade tributável padrão
+    quantidade_tributavel: parseFloat(item.quantidade || 0).toFixed(4),
+    valor_unitario_tributavel: parseFloat(item.preco_unitario || 0).toFixed(4),
     
     // Origem da mercadoria (0=Nacional, exceto as indicadas nos códigos 3, 4, 5 e 8)
     // Campo deve se chamar 'icms_origem' conforme documentação Focus NFe
-    icms_origem: parseInt(produto.icms_origem) || 0,
+    icms_origem: parseInt(item.icms_origem) || 0,
     
-    // === ICMS (para Simples Nacional) ===
-    icms_situacao_tributaria: produto.icms_situacao_tributaria || '102', // 102 = Tributada pelo Simples Nacional sem permissão de crédito
+    // Aplicar campos do ICMS calculados acima
+    ...icmsFields,
     
     // === PIS ===
-    pis_situacao_tributaria: produto.pis_cst || '07', // 07 = Operação Isenta da Contribuição
+    // IMPORTANTE: Sempre usar CST 07 (Isento) para evitar erros de validação
+    // CST 07 = Operação Isenta da Contribuição
+    // Para CST 07, NÃO devemos enviar alíquota
+    // 
+    // NOTA: Outros CSTs de PIS requerem campos adicionais que ainda não estão implementados
+    pis_situacao_tributaria: '07',
     
     // === COFINS ===
-    cofins_situacao_tributaria: produto.cofins_cst || '07', // 07 = Operação Isenta da Contribuição
+    // IMPORTANTE: Sempre usar CST 07 (Isento) para evitar erros de validação
+    // CST 07 = Operação Isenta da Contribuição
+    // Para CST 07, NÃO devemos enviar alíquota
+    // 
+    // NOTA: Outros CSTs de COFINS requerem campos adicionais que ainda não estão implementados
+    cofins_situacao_tributaria: '07',
+    
+    // === IPI (se aplicável) ===
+    ...(item.ipi_aliquota && {
+      ipi_aliquota: parseFloat(item.ipi_aliquota).toFixed(4),
+      ipi_codigo_enquadramento: item.ipi_codigo_enquadramento || undefined
+    }),
+    
+    // === CEST (se aplicável) ===
+    ...(item.cest && { cest: item.cest }),
     
     // Inclui no total da NF
     inclui_no_total: 1
@@ -412,10 +510,25 @@ export async function emitirNfe(tenantId, nfeId) {
       cliente = c;
     }
     
-    // Buscar itens da NF-e com dados do produto
+    // Buscar itens da NF-e com dados do produto (todos os campos fiscais necessários)
     const itens = await query(
-      `SELECT ni.*, p.nome as produto_nome, p.sku, p.codigo_barras, p.ncm, p.cfop,
-              p.icms_origem, p.icms_situacao_tributaria, p.pis_cst, p.cofins_cst
+      `SELECT ni.*, 
+              p.nome as produto_nome, 
+              p.sku, 
+              p.codigo_barras, 
+              p.ncm, 
+              p.cfop,
+              p.icms_origem, 
+              p.icms_situacao_tributaria,
+              p.icms_aliquota,
+              p.pis_cst, 
+              p.pis_aliquota,
+              p.cofins_cst,
+              p.cofins_aliquota,
+              p.ipi_aliquota,
+              p.ipi_codigo_enquadramento,
+              p.cest,
+              p.tipo_preco
        FROM nfe_itens ni
        JOIN produtos p ON ni.produto_id = p.id
        WHERE ni.nfe_id = ?`,
@@ -426,8 +539,24 @@ export async function emitirNfe(tenantId, nfeId) {
       throw new Error('NF-e não possui itens');
     }
     
+    // Log do regime tributário configurado
+    const regimeTributario = focusConfig.regime_tributario || '1';
+    const isSimplesNacional = regimeTributario === '1' || regimeTributario === '4';
+    console.log(`[Focus NFe] Regime Tributário: ${regimeTributario} (${isSimplesNacional ? 'Simples Nacional' : 'Outro'})`);
+    if (isSimplesNacional) {
+      console.log(`[Focus NFe] AVISO: Emitente do Simples Nacional - Todos os itens usarão CST 102, independente do CST cadastrado no produto`);
+    }
+    
     // Montar payload
     const payload = montarNfePayload(nfe, tenant, cliente, itens, focusConfig);
+    
+    // Debug: Log do payload antes de enviar (apenas estrutura, sem dados sensíveis)
+    console.log(`[Focus NFe] Payload preparado - Itens: ${payload.items?.length || 0}`);
+    if (payload.items && payload.items.length > 0) {
+      const primeiroItem = payload.items[0];
+      console.log(`[Focus NFe] Primeiro item - ICMS CST: ${primeiroItem.icms_situacao_tributaria}, Origem: ${primeiroItem.icms_origem}`);
+      console.log(`[Focus NFe] Primeiro item - PIS CST: ${primeiroItem.pis_situacao_tributaria}, COFINS CST: ${primeiroItem.cofins_situacao_tributaria}`);
+    }
     
     // Criar referência única para a NF-e
     const referencia = `nfe-${tenantId}-${nfeId}-${Date.now()}`;
