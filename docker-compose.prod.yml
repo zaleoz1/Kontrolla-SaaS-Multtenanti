@@ -92,6 +92,7 @@ services:
       DOMAIN: ${DOMAIN}
       FRONTEND_URL: ${FRONTEND_URL}
       SESSION_SECRET: ${SESSION_SECRET}
+      FOCUS_NFE_TOKEN_PRINCIPAL: XnAPKJKCzYl7ZSzcPQewYM5a3jCuCgZ8
     volumes:
       - uploads_data:/app/uploads
       - logs_data:/app/logs

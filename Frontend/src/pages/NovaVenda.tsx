@@ -107,38 +107,12 @@ export default function NovaVenda() {
   const [quantidadePesoVolume, setQuantidadePesoVolume] = useState("");
   const [unidadeEntrada, setUnidadeEntrada] = useState<'pequena' | 'grande'>('pequena'); // 'pequena' = g/mL, 'grande' = kg/L
   const [editandoItem, setEditandoItem] = useState<ItemCarrinho | null>(null);
-  const [filtroImpostos, setFiltroImpostos] = useState("com_impostos"); // '', 'com_impostos', 'sem_impostos'
   
   // Ref para o campo de código de barras
   const codigoBarrasRef = useRef<HTMLInputElement>(null);
-
-  // Verificar se o produto tem impostos cadastrados
-  const temImpostosCadastrados = (produto: Produto): boolean => {
-    return !!(
-      produto.ncm ||
-      produto.cfop ||
-      produto.cst ||
-      produto.icms_aliquota ||
-      produto.icms_origem ||
-      produto.icms_situacao_tributaria ||
-      produto.ipi_aliquota ||
-      produto.ipi_codigo_enquadramento ||
-      produto.pis_aliquota ||
-      produto.pis_cst ||
-      produto.cofins_aliquota ||
-      produto.cofins_cst
-    );
-  };
-
-
-
-  // Usar produtos filtrados da API com filtro de impostos
-  const produtosDisponiveis = produtosFiltrados.filter((produto: Produto) => {
-    if (!filtroImpostos) return true;
-    if (filtroImpostos === 'com_impostos') return temImpostosCadastrados(produto);
-    if (filtroImpostos === 'sem_impostos') return !temImpostosCadastrados(produto);
-    return true;
-  });
+  
+  // Usar produtos filtrados da API sem filtro de impostos adicional
+  const produtosDisponiveis = produtosFiltrados;
 
   // Limpar o estado da navegação após carregar os dados
   useEffect(() => {
@@ -813,29 +787,7 @@ export default function NovaVenda() {
                 />
               </div>
 
-              {/* Filtro de Impostos */}
-              <div className="mt-2 flex gap-1">
-                <button
-                  onClick={() => setFiltroImpostos(filtroImpostos === 'com_impostos' ? '' : 'com_impostos')}
-                  className={`flex-1 h-7 sm:h-8 px-2 text-[10px] sm:text-xs rounded-md border transition-colors ${
-                    filtroImpostos === 'com_impostos' 
-                      ? 'bg-green-600 text-white border-green-600' 
-                      : 'border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  Com impostos
-                </button>
-                <button
-                  onClick={() => setFiltroImpostos(filtroImpostos === 'sem_impostos' ? '' : 'sem_impostos')}
-                  className={`flex-1 h-7 sm:h-8 px-2 text-[10px] sm:text-xs rounded-md border transition-colors ${
-                    filtroImpostos === 'sem_impostos' 
-                      ? 'bg-amber-500 text-white border-amber-500' 
-                      : 'border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  Sem impostos
-                </button>
-              </div>
+              
             </div>
 
             {/* Grid de Produtos com Scroll Interno */}
