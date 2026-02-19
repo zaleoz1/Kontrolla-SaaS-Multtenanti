@@ -1040,11 +1040,44 @@ export default function NFe() {
                   <div className="space-y-4">
                     <div>
                       <Label>Série</Label>
-                      <Input value="001" disabled />
+                      <Input value={configSeriePadrao || "001"} disabled />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Série padrão configurada
+                      </p>
                     </div>
                     <div>
                       <Label>Ambiente</Label>
-                      <Input value="Homologação" disabled />
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          value={configAmbiente === "homologacao" ? "Homologação (Testes)" : "Produção (Real)"} 
+                          disabled 
+                        />
+                        {configAmbiente === "homologacao" ? (
+                          <FlaskConical className="h-4 w-4 text-orange-500" />
+                        ) : (
+                          <Rocket className="h-4 w-4 text-success" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        {configAmbiente === "homologacao" ? (
+                          <>
+                            <AlertTriangle className="h-3 w-3 text-orange-500" />
+                            Notas sem validade fiscal
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-3 w-3 text-success" />
+                            Notas com validade fiscal
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Natureza da Operação</Label>
+                      <Input value={configNaturezaOperacao || "Venda de mercadoria"} disabled />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Natureza da operação configurada
+                      </p>
                     </div>
                     <div>
                       <Label>Observações</Label>
