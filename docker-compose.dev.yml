@@ -24,6 +24,7 @@ services:
       EMAIL_PASS: kbuz yhdu hdku htaq
       MEUDANFE_API_KEY: 518f8e2a-351c-4bd3-9f60-e0b04f79b8c9
       MEUDANFE_API_URL: https://api.meudanfe.com.br/v2/fd
+      FOCUS_NFE_TOKEN_PRINCIPAL: XnAPKJKCzYl7ZSzcPQewYM5a3jCuCgZ8
     volumes:
       - ./Backend:/app
       - /app/node_modules
