@@ -800,7 +800,21 @@ export default function NFe() {
                                 variant="outline" 
                                 size="sm" 
                                 title="Download XML"
-                                onClick={() => downloadXml(nfe.id, nfe.numero)}
+                                onClick={async () => {
+                                  try {
+                                    await downloadXml(nfe.id, nfe.numero, nfe.chave_acesso);
+                                    toast({
+                                      title: "XML baixado com sucesso!",
+                                      description: `O arquivo XML da NF-e #${nfe.numero} foi baixado.`,
+                                    });
+                                  } catch (error) {
+                                    toast({
+                                      title: "Erro ao baixar XML",
+                                      description: error instanceof Error ? error.message : "Não foi possível baixar o XML da NF-e.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
                               >
                                 <Download className="h-4 w-4 mr-1" />
                                 XML

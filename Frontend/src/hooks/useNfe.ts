@@ -479,26 +479,114 @@ export function useNfe() {
   }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
 
   // Download XML da NF-e
-  const downloadXml = useCallback(async (id: number, numero: string): Promise<void> => {
+  const downloadXml = useCallback(async (id: number, numero: string, chaveAcesso?: string): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fazer requisição para obter o XML
-      const response = await makeRequest(`/nfe/${id}/xml`, {
-        responseType: 'blob'
+      // Obter token para autenticação
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado');
+      }
+
+      // Importar configuração da API
+      const { API_CONFIG } = await import('@/config/api');
+      
+      // Fazer requisição fetch diretamente para ter controle total sobre o blob
+      const response = await fetch(`${API_CONFIG.BASE_URL}/nfe/${id}/xml`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
-      // Criar blob e fazer download
-      const blob = new Blob([response as unknown as BlobPart], { type: 'application/xml' });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro ao baixar XML' }));
+        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
+      }
+
+      // Verificar o tipo de conteúdo
+      const contentType = response.headers.get('Content-Type') || '';
+      
+      // Sempre obter como texto primeiro para garantir encoding UTF-8 correto
+      const xmlText = await response.text();
+      
+      // Verificar se o XML começa corretamente (remover BOM se existir)
+      const cleanXml = xmlText.replace(/^\uFEFF/, '').trim();
+      
+      // Verificar se é um XML válido
+      if (!cleanXml.startsWith('<?xml') && !cleanXml.startsWith('<nfeProc') && !cleanXml.startsWith('<NFe')) {
+        throw new Error('Arquivo não é um XML válido de NF-e');
+      }
+      
+      // Criar blob com encoding UTF-8 explícito
+      const blob = new Blob([cleanXml], { 
+        type: 'application/xml; charset=utf-8' 
+      });
+      
+      // Obter o nome do arquivo - prioridade: chave de acesso passada, depois headers
+      let filename = `nfe_${numero}.xml`;
+      
+      // Prioridade 1: Chave de acesso passada como parâmetro (mais confiável)
+      if (chaveAcesso) {
+        filename = `${chaveAcesso}.xml`;
+      } else {
+        // Prioridade 2: Header customizado X-Filename
+        const customFilename = response.headers.get('X-Filename');
+        if (customFilename) {
+          filename = customFilename;
+        } else {
+          // Prioridade 3: Content-Disposition header
+          const contentDisposition = response.headers.get('Content-Disposition');
+          
+          if (contentDisposition) {
+            // Tentar obter do filename*=UTF-8'' primeiro (formato RFC 5987)
+            const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utf8Match && utf8Match[1]) {
+              try {
+                filename = decodeURIComponent(utf8Match[1]);
+              } catch (e) {
+                console.warn('Erro ao decodificar filename UTF-8, tentando formato simples', e);
+              }
+            }
+            
+            // Se não encontrou no formato UTF-8, tentar formato simples filename="..."
+            if (filename === `nfe_${numero}.xml`) {
+              const simpleMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i);
+              if (simpleMatch && simpleMatch[1]) {
+                filename = simpleMatch[1].replace(/['"]/g, '').trim();
+              }
+            }
+            
+            // Tentar também sem aspas
+            if (filename === `nfe_${numero}.xml`) {
+              const noQuotesMatch = contentDisposition.match(/filename=([^;]+)/i);
+              if (noQuotesMatch && noQuotesMatch[1]) {
+                filename = noQuotesMatch[1].trim();
+              }
+            }
+          }
+        }
+      }
+
+      // Criar URL do blob e fazer download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `nfe_${numero}.xml`;
+      a.download = filename;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Limpar após um pequeno delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+      }, 100);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao baixar XML');
       console.error('Erro ao baixar XML:', err);
@@ -506,7 +594,7 @@ export function useNfe() {
     } finally {
       setLoading(false);
     }
-  }, [makeRequest]);
+  }, []);
 
   // Download DANFE (PDF) da NF-e
   const downloadDanfe = useCallback(async (id: number): Promise<void> => {

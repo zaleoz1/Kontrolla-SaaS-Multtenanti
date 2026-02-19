@@ -660,9 +660,19 @@ router.get('/:id/xml', validateId, handleValidationErrors, async (req, res) => {
     // Obter XML via Focus NFe
     const resultado = await obterXmlNfe(req.user.tenant_id, id);
     
-    res.setHeader('Content-Type', 'application/xml');
-    res.setHeader('Content-Disposition', `attachment; filename="${resultado.filename}"`);
-    res.send(resultado.xml);
+    // Garantir que o XML está como string UTF-8
+    const xmlContent = typeof resultado.xml === 'string' 
+      ? resultado.xml 
+      : Buffer.from(resultado.xml).toString('utf-8');
+    
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    // Usar formato RFC 5987 para suporte a caracteres especiais no nome do arquivo
+    const encodedFilename = encodeURIComponent(resultado.filename);
+    const disposition = `attachment; filename="${resultado.filename}"; filename*=UTF-8''${encodedFilename}`;
+    res.setHeader('Content-Disposition', disposition);
+    // Adicionar header customizado como fallback
+    res.setHeader('X-Filename', resultado.filename);
+    res.send(xmlContent);
   } catch (error) {
     console.error('Erro ao obter XML da NF-e:', error);
     res.status(500).json({

@@ -679,6 +679,33 @@ router.post('/', validateVenda, async (req, res) => {
             preco_unitario: item.preco_unitario
           }));
           
+          // Calcular valor total para NF-e
+          // Se há pagamento múltiplo com prazo, usar apenas o valor pago (total já está correto)
+          // Se há apenas pagamento a prazo, não deve emitir NF-e (já validado no frontend)
+          let valorTotalNfe = total;
+          
+          // Se há pagamento a prazo e métodos múltiplos, garantir que estamos usando apenas o valor pago
+          if (pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0) {
+            // Calcular valor total pago pelos métodos à vista
+            const valorPago = metodos_pagamento.reduce((sum, metodo) => {
+              return sum + (parseFloat(metodo.valor) || 0);
+            }, 0);
+            valorTotalNfe = valorPago;
+            
+            // Calcular proporção do valor pago em relação ao total original
+            const totalOriginal = subtotal - desconto;
+            const proporcao = totalOriginal > 0 ? valorPago / totalOriginal : 1;
+            
+            // Ajustar itens proporcionalmente ao valor pago
+            itensNfe.forEach((item, index) => {
+              const itemOriginal = itens[index];
+              if (itemOriginal) {
+                item.preco_unitario = itemOriginal.preco_unitario * proporcao;
+                item.quantidade = itemOriginal.quantidade;
+              }
+            });
+          }
+          
           // Criar NF-e no banco
           const ambienteAtual = focusConfig.ambiente || 'homologacao';
           const seriePadrao = focusConfig.serie_padrao || '001';
@@ -703,21 +730,35 @@ router.post('/', validateVenda, async (req, res) => {
               clienteData?.cpf_cnpj ?? null,
               numeroNfe.toString(),
               seriePadrao,
-              total,
+              valorTotalNfe,
               'pendente',
               ambienteAtual,
-              `NF-e gerada automaticamente da venda #${numeroVenda}`
+              `NF-e gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`
             ]
           );
           
           const nfeId = nfeInsert.insertId;
           
-          // Inserir itens da NF-e
-          for (const item of itens) {
+          // Inserir itens da NF-e (com valores proporcionais se houver pagamento a prazo)
+          for (let i = 0; i < itens.length; i++) {
+            const itemOriginal = itens[i];
+            const itemNfe = itensNfe[i];
+            
+            // Se há pagamento a prazo e métodos múltiplos, usar valores proporcionais
+            let precoUnitario = itemOriginal.preco_unitario;
+            let precoTotal = itemOriginal.preco_total;
+            
+            if (pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0) {
+              const totalOriginal = subtotal - desconto;
+              const proporcao = totalOriginal > 0 ? valorTotalNfe / totalOriginal : 1;
+              precoUnitario = itemOriginal.preco_unitario * proporcao;
+              precoTotal = itemOriginal.preco_total * proporcao;
+            }
+            
             await query(
               `INSERT INTO nfe_itens (nfe_id, produto_id, quantidade, preco_unitario, preco_total)
                VALUES (?, ?, ?, ?, ?)`,
-              [nfeId, item.produto_id, item.quantidade, item.preco_unitario, item.preco_total]
+              [nfeId, itemOriginal.produto_id, itemOriginal.quantidade, precoUnitario, precoTotal]
             );
           }
           

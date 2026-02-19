@@ -927,15 +927,109 @@ export async function obterXmlNfe(tenantId, nfeId) {
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
     console.log(`[Focus NFe] Obtendo XML para ref: ${nfe.focus_nfe_ref}`);
-    const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}.xml`, {
-      responseType: 'text'
+    
+    // Primeiro, consultar a NF-e para obter o caminho do XML
+    const consultaResponse = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
+    const consultaData = consultaResponse.data;
+    
+    console.log(`[Focus NFe] Consulta da NF-e - Status: ${consultaData.status}`);
+    console.log(`[Focus NFe] Campos disponíveis na resposta:`, Object.keys(consultaData));
+    console.log(`[Focus NFe] Chave de acesso no banco: ${nfe.chave_acesso || 'N/A'}`);
+    console.log(`[Focus NFe] Chave de acesso na API: ${consultaData.chave_nfe || consultaData.chave_acesso || 'N/A'}`);
+    
+    // Se a NF-e não está autorizada, não tem XML disponível
+    if (consultaData.status !== 'autorizado') {
+      throw new Error(`NF-e não está autorizada. Status atual: ${consultaData.status}`);
+    }
+    
+    // Atualizar chave de acesso se não estiver salva ou se a API retornou uma diferente
+    const chaveAcesso = consultaData.chave_nfe || consultaData.chave_acesso || nfe.chave_acesso;
+    if (chaveAcesso && chaveAcesso !== nfe.chave_acesso) {
+      console.log(`[Focus NFe] Atualizando chave de acesso no banco: ${chaveAcesso}`);
+      await query(
+        `UPDATE nfe SET chave_acesso = ? WHERE id = ? AND tenant_id = ?`,
+        [chaveAcesso, nfeId, tenantId]
+      );
+      nfe.chave_acesso = chaveAcesso;
+    }
+    
+    // Obter o caminho do XML (pode estar em diferentes campos)
+    const xmlPath = consultaData.caminho_xml_nota_fiscal || 
+                    consultaData.caminho_xml || 
+                    consultaData.xml_url ||
+                    consultaData.url_xml ||
+                    consultaData.xml;
+    
+    if (!xmlPath) {
+      console.error(`[Focus NFe] ❌ Caminho do XML não encontrado. Dados completos:`, JSON.stringify(consultaData, null, 2));
+      throw new Error('Caminho do XML não disponível na resposta da API Focus NFe. Verifique se a NF-e está autorizada.');
+    }
+    
+    // Construir URL completa do XML
+    // Se já for URL completa, usar diretamente; caso contrário, construir com base URL
+    let xmlUrl = xmlPath;
+    if (!xmlPath.startsWith('http')) {
+      const baseURL = FOCUS_NFE_URLS[focusConfig.ambiente] || FOCUS_NFE_URLS.homologacao;
+      xmlUrl = `${baseURL}${xmlPath.startsWith('/') ? '' : '/'}${xmlPath}`;
+    }
+    
+    console.log(`[Focus NFe] 📥 Obtendo XML da URL: ${xmlUrl}`);
+    
+    // Obter o XML usando autenticação básica (token como username)
+    const httpResponse = await axios.get(xmlUrl, {
+      responseType: 'text',
+      auth: {
+        username: token,
+        password: ''
+      },
+      headers: {
+        'Accept': 'application/xml, text/xml, */*'
+      },
+      timeout: 30000
     });
     
-    console.log(`[Focus NFe] XML obtido, tamanho: ${response.data?.length || 0} caracteres`);
+    let xmlContent = httpResponse.data;
+    
+    console.log(`[Focus NFe] ✅ XML obtido, tamanho: ${xmlContent?.length || 0} caracteres`);
+    
+    // Garantir que é string
+    if (Buffer.isBuffer(xmlContent)) {
+      xmlContent = xmlContent.toString('utf-8');
+    } else if (typeof xmlContent !== 'string') {
+      xmlContent = String(xmlContent);
+    }
+    
+    // Remover BOM se existir
+    xmlContent = xmlContent.replace(/^\uFEFF/, '').trim();
+    
+    // Validar se é um XML válido
+    if (!xmlContent || xmlContent.length === 0) {
+      throw new Error('XML vazio retornado pela Focus NFe');
+    }
+    
+    // Verificar se começa com declaração XML ou tag NFe
+    if (!xmlContent.match(/^<\?xml|^<nfeProc|^<NFe/i)) {
+      console.error(`[Focus NFe] XML inválido - Primeiros 200 caracteres: ${xmlContent.substring(0, 200)}`);
+      throw new Error('XML retornado não está em formato válido. Verifique se a NF-e está autorizada.');
+    }
+    
+    console.log(`[Focus NFe] ✅ XML obtido com sucesso, tamanho: ${xmlContent.length} caracteres`);
+    console.log(`[Focus NFe] XML inicia com: ${xmlContent.substring(0, 50)}...`);
+    
+    // Usar a chave de acesso já obtida anteriormente (prioridade: da consulta da API, depois do banco)
+    // A variável chaveAcesso já foi declarada acima, então apenas usamos ela aqui
+    console.log(`[Focus NFe] Chave de acesso para nome do arquivo: ${chaveAcesso || 'N/A'}`);
+    
+    // Usar a chave de acesso como nome do arquivo, ou fallback se não tiver
+    const filename = chaveAcesso 
+      ? `${chaveAcesso}.xml`
+      : `nfe_${nfe.numero}.xml`;
+    
+    console.log(`[Focus NFe] Nome do arquivo gerado: ${filename}`);
     
     return {
-      xml: response.data,
-      filename: `nfe_${nfe.numero}_${nfe.chave_acesso || 'sem_chave'}.xml`
+      xml: xmlContent,
+      filename
     };
   } catch (error) {
     console.error('[Focus NFe] Erro ao obter XML:', error.response?.data || error.message);
