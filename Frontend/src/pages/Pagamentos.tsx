@@ -645,6 +645,15 @@ export default function Pagamentos() {
       // Processar resultado da NF-e (se emitida)
       if (response.nfe) {
         setNfeResult(response.nfe);
+        console.log('[NFe] NF-e na venda:', {
+          nfe_id: response.nfe.nfe_id,
+          numero: response.nfe.numero,
+          ambiente: response.nfe.ambiente,
+          status: response.nfe.status,
+          success: response.nfe.success,
+          mensagem: response.nfe.mensagem,
+          numero_venda: response.numero_venda
+        });
       }
       
       // Preparar dados para o modal da nota

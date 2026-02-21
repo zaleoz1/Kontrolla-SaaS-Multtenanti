@@ -40,14 +40,16 @@ export async function avancarSequenciaAposDuplicidade(tenantId, ambiente, numero
  * @returns {Promise<string>} - Número formatado (9 dígitos)
  */
 export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologacao') {
-  const chaveSeq = getChaveSequencia(ambiente);
+  const amb = String(ambiente || 'homologacao').toLowerCase().trim();
+  const chaveSeq = getChaveSequencia(amb);
 
   // Garantir que a linha de sequência SEMPRE exista para este ambiente
+  // Usar LOWER(n.ambiente) para bater com valor no banco (pode vir 'Producao' ou 'producao')
   await conn.execute(
     `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
      VALUES (?, ?, '0')
-     ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), (SELECT COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0) FROM nfe n WHERE n.tenant_id = ? AND n.ambiente = ?))`,
-    [tenantId, chaveSeq, tenantId, ambiente]
+     ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), (SELECT COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0) FROM nfe n WHERE n.tenant_id = ? AND LOWER(TRIM(n.ambiente)) = ?))`,
+    [tenantId, chaveSeq, tenantId, amb]
   );
 
   const [rows] = await conn.execute(
@@ -57,10 +59,10 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
   );
   const ultimoSeq = parseInt(rows[0]?.valor || '0', 10);
 
-  // Maior número já na tabela nfe NESTE AMBIENTE
+  // Maior número já na tabela nfe NESTE AMBIENTE (LOWER para garantir match)
   const [maxRows] = await conn.execute(
-    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m FROM nfe WHERE tenant_id = ? AND ambiente = ?`,
-    [tenantId, ambiente]
+    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m FROM nfe WHERE tenant_id = ? AND LOWER(TRIM(ambiente)) = ?`,
+    [tenantId, amb]
   );
   const maxTabela = parseInt(maxRows[0]?.m || '0', 10);
 
@@ -68,22 +70,29 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
   const [configRows] = await conn.execute(
     `SELECT chave, valor FROM tenant_configuracoes
      WHERE tenant_id = ? AND (chave = 'nfe_proximo_numero' OR chave = ?)`,
-    [tenantId, `nfe_proximo_numero_${ambiente}`]
+    [tenantId, `nfe_proximo_numero_${amb}`]
   );
   let configProximo = 0;
   for (const r of configRows) {
     const v = parseInt(r.valor || '0', 10);
-    if (r.chave === `nfe_proximo_numero_${ambiente}`) configProximo = Math.max(configProximo, v);
+    if (r.chave === `nfe_proximo_numero_${amb}`) configProximo = Math.max(configProximo, v);
     if (r.chave === 'nfe_proximo_numero') configProximo = Math.max(configProximo, v);
   }
   const configMinBase = configProximo > 0 ? configProximo - 1 : 0;
 
-  const base = Math.max(ultimoSeq, maxTabela, configMinBase);
-  const proximo = base + 1;
+  let base = Math.max(ultimoSeq, maxTabela, configMinBase);
+  let proximo = base + 1;
+  // Garantir que nunca retornamos número já existente na tabela (proteção extra)
+  if (proximo <= maxTabela) {
+    proximo = maxTabela + 1;
+    base = maxTabela;
+  }
 
   await conn.execute(
     `UPDATE tenant_configuracoes SET valor = ? WHERE tenant_id = ? AND chave = ?`,
     [String(proximo), tenantId, chaveSeq]
   );
-  return proximo.toString().padStart(9, '0');
+  const numeroFormatado = proximo.toString().padStart(9, '0');
+  console.log(`[NFe] Número gerado: ${numeroFormatado} (ambiente=${amb}, seq=${ultimoSeq}, maxTabela=${maxTabela}, configMin=${configProximo})`);
+  return numeroFormatado;
 }

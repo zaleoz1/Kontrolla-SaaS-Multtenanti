@@ -575,8 +575,8 @@ export async function emitirNfe(tenantId, nfeId) {
     // Criar cliente da API com o token correto
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    // Enviar para a API
-    console.log(`[Focus NFe] Emitindo NF-e ${nfe.numero} para referência ${referencia}`);
+    // Enviar para a API (numero enviado no payload é o que a SEFAZ usa; ambiente vem do token/config)
+    console.log(`[Focus NFe] Emitindo NF-e numero=${nfe.numero} ambiente=${nfe.ambiente || focusConfig.ambiente} ref=${referencia}`);
     
     let response;
     try {
