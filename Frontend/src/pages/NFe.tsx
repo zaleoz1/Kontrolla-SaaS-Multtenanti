@@ -131,6 +131,10 @@ export default function NFe() {
   const [nfeParaDeletar, setNfeParaDeletar] = useState<Nfe | null>(null);
   const [nfeParaReprocessar, setNfeParaReprocessar] = useState<Nfe | null>(null);
   
+  // Erro de duplicidade na SEFAZ = nota pode já estar autorizada; reprocessar não é permitido
+  const isErroDuplicidadeNfe = (motivo: string | null | undefined) =>
+    !!motivo && /duplicidade de nf-?e/i.test(motivo);
+  
   // Estados de configurações Focus NFe
   const [focusNfeConfig, setFocusNfeConfig] = useState<FocusNfeConfig | null>(null);
   const [configTokenHomologacao, setConfigTokenHomologacao] = useState("");
@@ -505,10 +509,10 @@ export default function NFe() {
       setEditandoTokenProducao(false);
       // Limpar campos dos tokens apenas se não estiverem configurados
       if (!focusNfeConfig?.token_homologacao_configurado) {
-        setConfigTokenHomologacao("");
+      setConfigTokenHomologacao("");
       }
       if (!focusNfeConfig?.token_producao_configurado) {
-        setConfigTokenProducao("");
+      setConfigTokenProducao("");
       }
     } catch (err) {
       toast({
@@ -879,9 +883,12 @@ export default function NFe() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                onClick={() => setNfeParaReprocessar(nfe)}
+                                onClick={() => !isErroDuplicidadeNfe(nfe.motivo_status) && setNfeParaReprocessar(nfe)}
                                 className="bg-warning/10 hover:bg-warning/20"
-                                title="Tentar emitir novamente"
+                                title={isErroDuplicidadeNfe(nfe.motivo_status) 
+                                  ? "Não é possível reprocessar: a SEFAZ indicou duplicidade (a nota pode já estar autorizada). Use Verificar para consultar o status." 
+                                  : "Tentar emitir novamente"}
+                                disabled={isErroDuplicidadeNfe(nfe.motivo_status)}
                               >
                                 <RefreshCw className="h-4 w-4 mr-2" />
                                 Reprocessar
@@ -1294,10 +1301,10 @@ export default function NFe() {
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Dados da Empresa
-                </CardTitle>
+              <CardTitle className="flex items-center">
+                <Settings className="h-5 w-5 mr-2" />
+                Dados da Empresa
+              </CardTitle>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button 
                     className="bg-gradient-primary text-white"
@@ -1345,16 +1352,16 @@ export default function NFe() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 max-w-xs">
-                  <Input 
-                    type="text"
-                    placeholder="00.000.000/0000-00"
-                    value={configCnpjEmitente}
-                    onChange={(e) => {
+                <Input 
+                  type="text"
+                  placeholder="00.000.000/0000-00"
+                  value={configCnpjEmitente}
+                  onChange={(e) => {
                       // Aplicar máscara ao CNPJ
                       const valorFormatado = formatarCNPJ(e.target.value);
                       setConfigCnpjEmitente(valorFormatado);
-                    }}
-                    maxLength={18}
+                  }}
+                  maxLength={18}
                     readOnly={!editandoCnpj}
                     className={!editandoCnpj ? "bg-muted/50" : ""}
                   />
@@ -1404,35 +1411,35 @@ export default function NFe() {
                   O CNPJ deve ser o mesmo cadastrado na empresa da Focus NFe
                 </p>
               </div>
-
+              
               {/* Tokens */}
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Token de Homologação */}
+              {/* Token de Homologação */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="flex items-center gap-2">
                       <FlaskConical className="h-4 w-4" />
                       Token de Homologação
                     </Label>
                     <div className="flex items-center gap-1">
-                      {configAmbiente === 'homologacao' && (
-                        <Badge variant="outline" className="text-xs bg-warning/20 text-warning border-warning">
-                          Ambiente Atual
-                        </Badge>
-                      )}
-                      {focusNfeConfig?.token_homologacao_configurado && (
-                        <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
-                          ✓ Configurado
-                        </Badge>
-                      )}
-                    </div>
+                    {configAmbiente === 'homologacao' && (
+                      <Badge variant="outline" className="text-xs bg-warning/20 text-warning border-warning">
+                        Ambiente Atual
+                      </Badge>
+                    )}
+                  {focusNfeConfig?.token_homologacao_configurado && (
+                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                      ✓ Configurado
+                    </Badge>
+                  )}
+                </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Input 
+                <Input 
                       type={mostrarTokenHomologacao ? "text" : "password"}
                       placeholder="Cole o token de homologação aqui"
-                      value={configTokenHomologacao}
-                      onChange={(e) => setConfigTokenHomologacao(e.target.value)}
+                  value={configTokenHomologacao}
+                  onChange={(e) => setConfigTokenHomologacao(e.target.value)}
                       readOnly={!editandoTokenHomologacao && focusNfeConfig?.token_homologacao_configurado}
                       className={!editandoTokenHomologacao && focusNfeConfig?.token_homologacao_configurado ? "bg-muted/50" : ""}
                     />
@@ -1503,35 +1510,35 @@ export default function NFe() {
                   <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3 text-orange-500" />
                     Notas emitidas em homologação não têm validade fiscal (para testes)
-                  </p>
-                </div>
+                </p>
+              </div>
 
-                {/* Token de Produção */}
+              {/* Token de Produção */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="flex items-center gap-2">
                       <Rocket className="h-4 w-4" />
                       Token de Produção
                     </Label>
                     <div className="flex items-center gap-1">
-                      {configAmbiente === 'producao' && (
-                        <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
-                          Ambiente Atual
-                        </Badge>
-                      )}
-                      {focusNfeConfig?.token_producao_configurado && (
-                        <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
-                          ✓ Configurado
-                        </Badge>
-                      )}
-                    </div>
+                    {configAmbiente === 'producao' && (
+                      <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                        Ambiente Atual
+                      </Badge>
+                    )}
+                  {focusNfeConfig?.token_producao_configurado && (
+                    <Badge variant="outline" className="text-xs bg-success/20 text-success border-success">
+                      ✓ Configurado
+                    </Badge>
+                  )}
+                </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Input 
+                <Input 
                       type={mostrarTokenProducao ? "text" : "password"}
                       placeholder="Cole o token de produção aqui"
-                      value={configTokenProducao}
-                      onChange={(e) => setConfigTokenProducao(e.target.value)}
+                  value={configTokenProducao}
+                  onChange={(e) => setConfigTokenProducao(e.target.value)}
                       readOnly={!editandoTokenProducao && focusNfeConfig?.token_producao_configurado}
                       className={!editandoTokenProducao && focusNfeConfig?.token_producao_configurado ? "bg-muted/50" : ""}
                     />
@@ -1596,7 +1603,7 @@ export default function NFe() {
                         >
                           <CheckCircle className="h-4 w-4 text-success" />
                         </Button>
-                      </div>
+              </div>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
@@ -1677,7 +1684,7 @@ export default function NFe() {
                   </p>
                 </div>
               </div>
-
+              
               {/* Dados da Empresa */}
               <div className="pt-4 border-t border-border/60">
                 <div className="flex items-center gap-2 mb-4">
@@ -1696,7 +1703,7 @@ export default function NFe() {
                     <p className="text-sm font-medium mt-1">
                       {tenant?.nome_fantasia || tenant?.nome || "Não informado"}
                     </p>
-                  </div>
+              </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">CNPJ/CPF</Label>
                     <p className="text-sm font-medium mt-1">
@@ -1859,6 +1866,11 @@ export default function NFe() {
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                   <Label className="text-destructive text-xs">Motivo do Erro</Label>
                   <p className="text-sm text-destructive">{nfeSelecionada.motivo_status}</p>
+                  {isErroDuplicidadeNfe(nfeSelecionada.motivo_status) && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Esta nota pode já estar autorizada na SEFAZ. Use o botão &quot;Verificar&quot; na lista para consultar o status.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -2032,10 +2044,22 @@ export default function NFe() {
       <AlertDialog open={!!nfeParaReprocessar} onOpenChange={() => setNfeParaReprocessar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reprocessar NF-e</AlertDialogTitle>
+            <AlertDialogTitle>
+              {nfeParaReprocessar && isErroDuplicidadeNfe(nfeParaReprocessar.motivo_status)
+                ? "Reprocessamento não permitido"
+                : "Reprocessar NF-e"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              A NF-e #{nfeParaReprocessar?.numero} teve um erro na emissão.
-              Deseja tentar emitir novamente?
+              {nfeParaReprocessar && isErroDuplicidadeNfe(nfeParaReprocessar.motivo_status) ? (
+                <>
+                  A SEFAZ rejeitou esta NF-e por <strong>duplicidade</strong>: pode ser que a nota já esteja autorizada (em uma tentativa anterior). Reprocessar não é possível nesse caso. Use o botão &quot;Verificar&quot; para consultar o status na SEFAZ ou confira na lista de notas autorizadas.
+                </>
+              ) : (
+                <>
+                  A NF-e #{nfeParaReprocessar?.numero} teve um erro na emissão.
+                  Deseja tentar emitir novamente?
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {nfeParaReprocessar?.motivo_status && (
@@ -2046,11 +2070,13 @@ export default function NFe() {
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmarReprocessamento}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Reprocessar
-            </AlertDialogAction>
+            <AlertDialogCancel>{nfeParaReprocessar && isErroDuplicidadeNfe(nfeParaReprocessar.motivo_status) ? "Entendi" : "Cancelar"}</AlertDialogCancel>
+            {(!nfeParaReprocessar || !isErroDuplicidadeNfe(nfeParaReprocessar.motivo_status)) && (
+              <AlertDialogAction onClick={handleConfirmarReprocessamento}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reprocessar
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

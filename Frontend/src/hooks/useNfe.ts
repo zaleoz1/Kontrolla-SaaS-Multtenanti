@@ -581,9 +581,9 @@ export function useNfe() {
       
       // Limpar após um pequeno delay
       setTimeout(() => {
-        window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
         if (document.body.contains(a)) {
-          document.body.removeChild(a);
+      document.body.removeChild(a);
         }
       }, 100);
       

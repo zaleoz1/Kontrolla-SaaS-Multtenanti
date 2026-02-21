@@ -1,5 +1,5 @@
 import express from 'express';
-import { query, queryWithResult } from '../database/connection.js';
+import { query, queryWithResult, transaction } from '../database/connection.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import {
@@ -240,44 +240,44 @@ router.post('/', async (req, res) => {
     // Calcular valor total
     const valorTotal = itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0);
 
-    // Gerar número da NF-e
-    const numeroNfe = await gerarNumeroNfe(req.user.tenant_id);
+    const tenantId = req.user.tenant_id;
 
-    // Criar NF-e com o ambiente configurado pelo usuário
-    const result = await queryWithResult(
-      `INSERT INTO nfe (
-        tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
-        status, ambiente, observacoes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        req.user.tenant_id, 
-        venda_id ?? null, 
-        cliente_id ?? null, 
-        cnpj_cpf ?? null, 
-        numeroNfe, 
-        seriePadrao,
-        valorTotal, 
-        'pendente', 
-        ambienteAtual, // Usa o ambiente configurado (homologacao ou producao)
-        observacoes ?? null
-      ]
-    );
-    
-    console.log(`[NF-e] Criada NF-e #${numeroNfe} em ambiente: ${ambienteAtual.toUpperCase()}`);
-
-    const nfeId = result.insertId;
-
-    // Inserir itens da NF-e
-    for (const item of itens) {
-      await query(
-        `INSERT INTO nfe_itens (nfe_id, produto_id, quantidade, preco_unitario, preco_total)
-         VALUES (?, ?, ?, ?, ?)`,
+    // Gerar número e criar NF-e + itens em uma transação (evita reutilizar número e condição de corrida)
+    const { nfeId, numeroNfe } = await transaction(async (conn) => {
+      const numeroNfe = await gerarNumeroNfeComTransacao(conn, tenantId);
+      const [insertResult] = await conn.execute(
+        `INSERT INTO nfe (
+          tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
+          status, ambiente, observacoes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          nfeId, item.produto_id, item.quantidade, item.preco_unitario,
-          item.quantidade * item.preco_unitario
+          tenantId,
+          venda_id ?? null,
+          cliente_id ?? null,
+          cnpj_cpf ?? null,
+          numeroNfe,
+          seriePadrao,
+          valorTotal,
+          'pendente',
+          ambienteAtual,
+          observacoes ?? null
         ]
       );
-    }
+      const nfeId = insertResult.insertId;
+      for (const item of itens) {
+        await conn.execute(
+          `INSERT INTO nfe_itens (nfe_id, produto_id, quantidade, preco_unitario, preco_total)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            nfeId, item.produto_id, item.quantidade, item.preco_unitario,
+            item.quantidade * item.preco_unitario
+          ]
+        );
+      }
+      return { nfeId, numeroNfe };
+    });
+
+    console.log(`[NF-e] Criada NF-e #${numeroNfe} em ambiente: ${ambienteAtual.toUpperCase()}`);
 
     // Buscar NF-e criada
     const [nfe] = await query(
@@ -290,7 +290,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({
       message: 'NF-e criada com sucesso',
-      nfe
+      nfe: nfe || null
     });
   } catch (error) {
     console.error('Erro ao criar NF-e:', error);
@@ -394,17 +394,38 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
   }
 });
 
-// Função auxiliar para gerar número da NF-e
-async function gerarNumeroNfe(tenantId) {
-  const result = await query(
-    'SELECT MAX(CAST(numero AS UNSIGNED)) as ultimo_numero FROM nfe WHERE tenant_id = ?',
-    [tenantId]
-  );
+// Chave em tenant_configuracoes para o último número de NF-e usado (sequência que nunca reutiliza)
+const NFE_ULTIMO_NUMERO_KEY = 'nfe_ultimo_numero';
 
-  const ultimoNumero = result[0]?.ultimo_numero || 0;
-  const proximoNumero = ultimoNumero + 1;
-  
-  return proximoNumero.toString().padStart(9, '0');
+/**
+ * Gera o próximo número de NF-e dentro de uma transação, usando sequência que nunca reutiliza.
+ * Evita duplicidade na SEFAZ quando NF-e são excluídas (número já usado na SEFAZ não é reutilizado).
+ * @param {import('mysql2/promise').PoolConnection} conn - Conexão da transação (com lock)
+ * @param {number} tenantId - ID do tenant
+ * @returns {Promise<string>} - Número formatado (9 dígitos)
+ */
+async function gerarNumeroNfeComTransacao(conn, tenantId) {
+  // Garantir que existe linha de sequência (valor = maior entre 0 e MAX(numero) atual)
+  await conn.execute(
+    `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
+     SELECT ?, ?, COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0)
+     FROM nfe n WHERE n.tenant_id = ?
+     ON DUPLICATE KEY UPDATE valor = valor`,
+    [tenantId, NFE_ULTIMO_NUMERO_KEY, tenantId]
+  );
+  // Bloquear a linha e obter próximo número
+  const [rows] = await conn.execute(
+    `SELECT valor FROM tenant_configuracoes
+     WHERE tenant_id = ? AND chave = ? FOR UPDATE`,
+    [tenantId, NFE_ULTIMO_NUMERO_KEY]
+  );
+  const ultimo = parseInt(rows[0]?.valor || '0', 10);
+  const proximo = ultimo + 1;
+  await conn.execute(
+    `UPDATE tenant_configuracoes SET valor = ? WHERE tenant_id = ? AND chave = ?`,
+    [String(proximo), tenantId, NFE_ULTIMO_NUMERO_KEY]
+  );
+  return proximo.toString().padStart(9, '0');
 }
 
 // ==========================================
@@ -721,7 +742,7 @@ router.post('/:id/reprocessar', validateId, handleValidationErrors, async (req, 
     
     // Verificar se NF-e existe e pertence ao tenant
     const existingNfes = await query(
-      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      'SELECT id, status, motivo_status FROM nfe WHERE id = ? AND tenant_id = ?',
       [id, req.user.tenant_id]
     );
     
@@ -736,6 +757,14 @@ router.post('/:id/reprocessar', validateId, handleValidationErrors, async (req, 
     if (nfe.status !== 'erro' && nfe.status !== 'processando') {
       return res.status(400).json({
         error: 'Apenas NF-e com erro ou em processamento podem ser reprocessadas'
+      });
+    }
+    
+    // Não permitir reprocessar quando a SEFAZ rejeitou por duplicidade: a nota pode já estar autorizada
+    const motivo = (nfe.motivo_status || '').toLowerCase();
+    if (motivo.includes('duplicidade de nf-e') || motivo.includes('duplicidade de nfe')) {
+      return res.status(400).json({
+        error: 'Esta NF-e não pode ser reprocessada: a SEFAZ indicou duplicidade (a nota pode já estar autorizada). Use "Verificar" para consultar o status na SEFAZ ou verifique na lista de notas autorizadas.'
       });
     }
     
