@@ -24,6 +24,14 @@ import axios from 'axios';
 import { query } from '../database/connection.js';
 import { avancarSequenciaAposDuplicidade } from './nfeNumeroService.js';
 
+/** Rejeições SEFAZ em que o número já foi "consumido" e a sequência deve avançar (próxima emissão usa número seguinte). */
+function deveAvancarSequencia(statusSefaz, mensagem) {
+  const msg = String(mensagem || '');
+  if (/duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(msg)) return true;
+  if (statusSefaz === '218' || /já está cancelada|já cancelada na base/i.test(msg)) return true;
+  return false;
+}
+
 // URLs da API Focus NFe
 const FOCUS_NFE_URLS = {
   homologacao: 'https://homologacao.focusnfe.com.br',
@@ -589,13 +597,13 @@ export async function emitirNfe(tenantId, nfeId) {
         `UPDATE nfe SET status = 'erro', motivo_status = ?, focus_nfe_ref = ? WHERE id = ? AND tenant_id = ?`,
         [msgErro, referencia, nfeId, tenantId]
       );
-      // Se for duplicidade (qualquer formato: "Duplicidade de NF-e", "Rejeição: Duplicidade...", etc.), avançar sequência
+      // Se for duplicidade ou NF-e já cancelada (número consumido na SEFAZ), avançar sequência
       const textoErro = String(msgErro || '');
-      if (/duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(textoErro)) {
+      if (deveAvancarSequencia(dataErro.status_sefaz, textoErro)) {
         avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
-          console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade:', e.message)
+          console.error('[Focus NFe] Erro ao ajustar sequência:', e.message)
         );
-        console.log('[Focus NFe] Duplicidade detectada na emissão – sequência avançada; próxima emissão usará número seguinte.');
+        console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na emissão – sequência avançada; próxima emissão usará número seguinte.');
       }
       throw new Error(msgErro);
     }
@@ -633,13 +641,13 @@ export async function emitirNfe(tenantId, nfeId) {
         tenantId
       ]
     );
-    // Se rejeitou por duplicidade, avançar sequência do ambiente para a próxima emissão não repetir o número
+    // Se rejeitou (duplicidade 539 ou já cancelada 218), avançar sequência para a próxima emissão não repetir o número
     const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
-    if (data.status === 'erro_autorizacao' && /duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(msgSefaz)) {
+    if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgSefaz)) {
       avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
-        console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade:', e.message)
+        console.error('[Focus NFe] Erro ao ajustar sequência:', e.message)
       );
-      console.log('[Focus NFe] Duplicidade detectada na resposta – sequência avançada; próxima emissão usará número seguinte.');
+      console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na resposta – sequência avançada; próxima emissão usará número seguinte.');
     }
     
     // Considerar sucesso se autorizado ou processando (nota foi enviada com sucesso)
@@ -840,13 +848,13 @@ export async function consultarNfe(tenantId, nfeId) {
       ]
     );
 
-    // Se a consulta retornou duplicidade (539), avançar sequência para a próxima emissão não repetir o número
+    // Se a consulta retornou duplicidade (539) ou já cancelada (218), avançar sequência para a próxima emissão não repetir o número
     const msgConsulta = String(data.mensagem_sefaz || data.mensagem || '');
-    if (data.status === 'erro_autorizacao' && /duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(msgConsulta)) {
+    if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgConsulta)) {
       avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
-        console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade (consulta):', e.message)
+        console.error('[Focus NFe] Erro ao ajustar sequência (consulta):', e.message)
       );
-      console.log('[Focus NFe] Duplicidade detectada na consulta – sequência avançada; próxima emissão usará número seguinte.');
+      console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na consulta – sequência avançada; próxima emissão usará número seguinte.');
     }
 
     return {
