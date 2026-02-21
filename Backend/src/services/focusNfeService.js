@@ -98,14 +98,18 @@ function getTokenForAmbiente(config) {
 export async function getFocusNfeConfig(tenantId) {
   const configs = await query(
     `SELECT chave, valor FROM tenant_configuracoes 
-     WHERE tenant_id = ? AND chave LIKE 'focus_nfe_%'`,
+     WHERE tenant_id = ? AND (chave LIKE 'focus_nfe_%' OR chave = 'nfe_proximo_numero')`,
     [tenantId]
   );
   
   const config = {};
   for (const c of configs) {
-    const key = c.chave.replace('focus_nfe_', '');
-    config[key] = c.valor;
+    if (c.chave === 'nfe_proximo_numero') {
+      config.proximo_numero = c.valor;
+    } else {
+      const key = c.chave.replace('focus_nfe_', '');
+      config[key] = c.valor;
+    }
   }
   
   return {
@@ -122,7 +126,9 @@ export async function getFocusNfeConfig(tenantId) {
     cnpj_emitente: config.cnpj_emitente || '',
     inscricao_estadual: config.inscricao_estadual || '',
     // Configurações opcionais
-    incluir_na_danfe_informacoes_complementares: config.informacoes_complementares || ''
+    incluir_na_danfe_informacoes_complementares: config.informacoes_complementares || '',
+    // Próximo número NF-e (quando SEFAZ já tem números à frente - ex.: após duplicidade)
+    proximo_numero: config.proximo_numero || ''
   };
 }
 
@@ -136,16 +142,20 @@ export async function saveFocusNfeConfig(tenantId, config) {
     'token', 'token_homologacao', 'token_producao', // Tokens (legado + separados)
     'ambiente', 'serie_padrao', 'natureza_operacao',
     'regime_tributario', 'cnpj_emitente', 'inscricao_estadual',
-    'informacoes_complementares'
+    'informacoes_complementares', 'proximo_numero'
   ];
   
   for (const key of configKeys) {
-    if (config[key] !== undefined && config[key] !== '') {
+    const isProximoNumero = key === 'proximo_numero';
+    const deveSalvar = isProximoNumero ? config[key] !== undefined : (config[key] !== undefined && config[key] !== '');
+    if (deveSalvar) {
+      const chave = isProximoNumero ? 'nfe_proximo_numero' : `focus_nfe_${key}`;
+      const valor = config[key] === '' || config[key] == null ? '' : String(config[key]);
       await query(
         `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
          VALUES (?, ?, ?, 'string')
          ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
-        [tenantId, `focus_nfe_${key}`, config[key]]
+        [tenantId, chave, valor]
       );
     }
   }
