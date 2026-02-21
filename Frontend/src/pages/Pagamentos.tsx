@@ -2682,21 +2682,39 @@ export default function Pagamentos() {
                         <span className="font-medium">Número:</span> {vendaFinalizada.nfe.numero}
                       </p>
                     )}
-                    {vendaFinalizada.nfe.status && (
+                    {vendaFinalizada.nfe.status && !vendaFinalizada.nfe.success && (
                       <p className="text-muted-foreground">
-                        <span className="font-medium">Status:</span> {vendaFinalizada.nfe.status}
+                        <span className="font-medium">Status:</span>{' '}
+                        {vendaFinalizada.nfe.status === 'erro_autorizacao' ? 'Erro na autorização' : vendaFinalizada.nfe.status}
                       </p>
                     )}
                     {vendaFinalizada.nfe.mensagem && !vendaFinalizada.nfe.success && (
-                      <p className="text-amber-600 dark:text-amber-400">
-                        {vendaFinalizada.nfe.mensagem}
-                      </p>
+                      <div className="mt-2 space-y-1">
+                        <p className="font-medium text-amber-700 dark:text-amber-300">Rejeição:</p>
+                        <p className="text-amber-600 dark:text-amber-400 break-words">
+                          {vendaFinalizada.nfe.mensagem}
+                        </p>
+                        {/duplicidade de nf-?e/i.test(vendaFinalizada.nfe.mensagem) && (
+                          <p className="text-muted-foreground mt-2">
+                            A nota pode já estar autorizada na SEFAZ. Na página NF-e, use &quot;Verificar&quot; na nota para atualizar o status.
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
               )}
               
               <div className="flex flex-col space-y-2 sm:space-y-3">
+                {vendaFinalizada?.nfe?.nfe_id && !vendaFinalizada?.nfe?.success && (
+                  <Button
+                    variant="outline"
+                    onClick={() => { navigate('/dashboard/nfe'); fecharVenda(); }}
+                    className="w-full h-8 sm:h-10 text-xs sm:text-sm border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                  >
+                    Ir para NF-e e verificar status
+                  </Button>
+                )}
                 <Button 
                   onClick={imprimirNota} 
                   className="w-full bg-primary hover:bg-primary/90 text-white h-8 sm:h-10 text-xs sm:text-sm"
