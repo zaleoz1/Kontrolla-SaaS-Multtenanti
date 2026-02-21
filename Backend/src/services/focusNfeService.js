@@ -22,6 +22,7 @@
 
 import axios from 'axios';
 import { query } from '../database/connection.js';
+import { avancarSequenciaAposDuplicidade } from './nfeNumeroService.js';
 
 // URLs da API Focus NFe
 const FOCUS_NFE_URLS = {
@@ -581,12 +582,19 @@ export async function emitirNfe(tenantId, nfeId) {
     try {
       response = await client.post(`/v2/nfe?ref=${referencia}`, payload);
     } catch (postError) {
+      const msgErro = postError.response?.data?.mensagem || postError.message;
       // Salvar ref mesmo quando a API retorna erro (ex.: duplicidade), para permitir "Verificar" depois
       await query(
         `UPDATE nfe SET status = 'erro', motivo_status = ?, focus_nfe_ref = ? WHERE id = ? AND tenant_id = ?`,
-        [postError.response?.data?.mensagem || postError.message, referencia, nfeId, tenantId]
+        [msgErro, referencia, nfeId, tenantId]
       );
-      throw new Error(postError.response?.data?.mensagem || postError.message);
+      // Se for duplicidade, avançar sequência do ambiente para a próxima emissão usar número seguinte
+      if (/duplicidade de nf-?e/i.test(String(msgErro))) {
+        avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
+          console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade:', e.message)
+        );
+      }
+      throw new Error(msgErro);
     }
     
     // Processar resposta
@@ -622,6 +630,12 @@ export async function emitirNfe(tenantId, nfeId) {
         tenantId
       ]
     );
+    // Se rejeitou por duplicidade, avançar sequência do ambiente para a próxima emissão não repetir o número
+    if (data.status === 'erro_autorizacao' && /duplicidade de nf-?e/i.test(String(data.mensagem_sefaz || data.mensagem || ''))) {
+      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
+        console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade:', e.message)
+      );
+    }
     
     // Considerar sucesso se autorizado ou processando (nota foi enviada com sucesso)
     const isSuccess = data.status === 'autorizado' || data.status === 'processando_autorizacao';

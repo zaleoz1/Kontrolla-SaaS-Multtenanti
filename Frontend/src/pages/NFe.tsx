@@ -82,6 +82,7 @@ export default function NFe() {
     consultarNfeSefaz,
     cancelarNfe,
     reprocessarNfe,
+    marcarNfeComoAutorizada,
     downloadXml,
     downloadDanfe,
     updateNfeStatus,
@@ -452,9 +453,8 @@ export default function NFe() {
   const handleConfirmarMarcarAutorizada = async () => {
     if (!nfeParaMarcarAutorizada) return;
     try {
-      await updateNfeStatus(
+      await marcarNfeComoAutorizada(
         nfeParaMarcarAutorizada.id,
-        "autorizada",
         chaveMarcarAutorizada.trim() || undefined
       );
       toast({
