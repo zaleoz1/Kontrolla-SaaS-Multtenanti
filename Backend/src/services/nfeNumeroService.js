@@ -8,21 +8,23 @@ const NFE_ULTIMO_NUMERO_KEY = 'nfe_ultimo_numero';
 
 /**
  * Gera o próximo número de NF-e dentro de uma transação (usa a conexão passada).
- * Usa o maior entre: valor da sequência e MAX(numero) na tabela nfe (e opcionalmente
- * o config nfe_proximo_numero), assim nunca reutiliza número já usado.
+ * Garante que a linha de sequência sempre exista e que o número seja único e crescente.
  * @param {import('mysql2/promise').PoolConnection} conn - Conexão da transação (com lock)
  * @param {number} tenantId - ID do tenant
  * @returns {Promise<string>} - Número formatado (9 dígitos)
  */
 export async function gerarProximoNumeroNfe(conn, tenantId) {
-  // Garantir que existe linha de sequência
+  // Garantir que a linha de sequência SEMPRE exista. Se não existir, criar com 0.
+  // (Antes usávamos INSERT...SELECT FROM nfe: com 0 NF-e o SELECT retorna 0 linhas, o INSERT não
+  // inseria nada e o UPDATE não afetava linha → todas as vendas recebiam o mesmo número.)
   await conn.execute(
     `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
-     SELECT ?, ?, COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0)
-     FROM nfe n WHERE n.tenant_id = ?
-     ON DUPLICATE KEY UPDATE valor = valor`,
+     VALUES (?, ?, '0')
+     ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), (SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) FROM nfe n WHERE n.tenant_id = ?))`,
     [tenantId, NFE_ULTIMO_NUMERO_KEY, tenantId]
   );
+
+  // Bloquear a linha e ler valor atual
   const [rows] = await conn.execute(
     `SELECT valor FROM tenant_configuracoes
      WHERE tenant_id = ? AND chave = ? FOR UPDATE`,
@@ -30,21 +32,20 @@ export async function gerarProximoNumeroNfe(conn, tenantId) {
   );
   const ultimoSeq = parseInt(rows[0]?.valor || '0', 10);
 
-  // Maior número já usado na tabela (evita reutilizar se a sequência estiver atrás)
+  // Maior número já na tabela nfe (nunca reutilizar)
   const [maxRows] = await conn.execute(
     `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m FROM nfe WHERE tenant_id = ?`,
     [tenantId]
   );
   const maxTabela = parseInt(maxRows[0]?.m || '0', 10);
 
-  // Opcional: próximo número definido em config (ex.: quando SEFAZ já tem números à frente)
+  // Opcional: próximo número em config (quando SEFAZ já tem números à frente)
   const [configRows] = await conn.execute(
     `SELECT valor FROM tenant_configuracoes
      WHERE tenant_id = ? AND chave = 'nfe_proximo_numero'`,
     [tenantId]
   );
   const configProximo = configRows[0]?.valor ? parseInt(configRows[0].valor, 10) : 0;
-  // Se config definiu "4", queremos que o próximo seja 4 → base = 3
   const configMinBase = configProximo > 0 ? configProximo - 1 : 0;
 
   const base = Math.max(ultimoSeq, maxTabela, configMinBase);
