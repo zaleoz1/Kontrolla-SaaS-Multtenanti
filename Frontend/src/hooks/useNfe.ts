@@ -66,6 +66,8 @@ export interface FocusNfeConfig {
   cnpj_emitente: string;
   inscricao_estadual: string;
   informacoes_complementares?: string;
+  /** Próximo número da NF-e (quando SEFAZ já tem números à frente; deixe vazio para automático) */
+  proximo_numero?: string;
 }
 
 // Interface para resultado de validação de configurações
@@ -647,6 +649,7 @@ export function useNfe() {
     cnpj_emitente: string;
     inscricao_estadual: string;
     informacoes_complementares: string;
+    proximo_numero: string;
   }>): Promise<void> => {
     try {
       setLoading(true);

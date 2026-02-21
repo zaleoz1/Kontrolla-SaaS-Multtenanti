@@ -143,6 +143,7 @@ export default function NFe() {
   const [configAmbiente, setConfigAmbiente] = useState<"homologacao" | "producao">("homologacao");
   const [configSeriePadrao, setConfigSeriePadrao] = useState("001");
   const [configNaturezaOperacao, setConfigNaturezaOperacao] = useState("Venda de mercadoria");
+  const [configProximoNumero, setConfigProximoNumero] = useState("");
   const [configSalvando, setConfigSalvando] = useState(false);
   const [validacaoConfig, setValidacaoConfig] = useState<{ valid: boolean; errors: string[]; warnings?: string[] } | null>(null);
   const [editandoCnpj, setEditandoCnpj] = useState(false);
@@ -187,6 +188,7 @@ export default function NFe() {
       setConfigAmbiente(config.ambiente || "homologacao");
       setConfigSeriePadrao(config.serie_padrao || "001");
       setConfigNaturezaOperacao(config.natureza_operacao || "Venda de mercadoria");
+      setConfigProximoNumero(config.proximo_numero ?? "");
       // Aplicar máscara ao CNPJ ao carregar do banco
       setConfigCnpjEmitente(config.cnpj_emitente ? formatarCNPJ(config.cnpj_emitente) : "");
       // Preencher tokens completos quando configurados (não mascarados)
@@ -470,7 +472,8 @@ export default function NFe() {
       const configToSave: Record<string, string> = {
         ambiente: configAmbiente,
         serie_padrao: configSeriePadrao,
-        natureza_operacao: configNaturezaOperacao
+        natureza_operacao: configNaturezaOperacao,
+        proximo_numero: configProximoNumero.trim()
       };
 
       // Salvar os tokens apenas se foram informados novos valores
@@ -1681,6 +1684,19 @@ export default function NFe() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Descrição da operação fiscal
+                  </p>
+                </div>
+                <div>
+                  <Label>Próximo número da NF-e (opcional)</Label>
+                  <Input 
+                    type="number"
+                    min={1}
+                    placeholder="Deixe vazio para automático"
+                    value={configProximoNumero}
+                    onChange={(e) => setConfigProximoNumero(e.target.value.replace(/\D/g, ''))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use só se aparecer erro de duplicidade: informe o próximo número que a SEFAZ deve usar (ex.: se a última nota na SEFAZ é 3, coloque 4). Deixe vazio para o sistema definir.
                   </p>
                 </div>
               </div>
