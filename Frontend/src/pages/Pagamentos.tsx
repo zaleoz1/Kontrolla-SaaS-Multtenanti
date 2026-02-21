@@ -645,6 +645,7 @@ export default function Pagamentos() {
       // Processar resultado da NF-e (se emitida)
       if (response.nfe) {
         setNfeResult(response.nfe);
+        const isDuplicidade = response.nfe.mensagem && /duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(String(response.nfe.mensagem));
         console.log('[NFe] NF-e na venda:', {
           nfe_id: response.nfe.nfe_id,
           numero: response.nfe.numero,
@@ -652,7 +653,10 @@ export default function Pagamentos() {
           status: response.nfe.status,
           success: response.nfe.success,
           mensagem: response.nfe.mensagem,
-          numero_venda: response.numero_venda
+          numero_venda: response.numero_venda,
+          ...(isDuplicidade && {
+            sugestao: 'Próxima emissão usará o próximo número. Na página NF-e use "Verificar" se a nota já estiver autorizada na SEFAZ.'
+          })
         });
       }
       
