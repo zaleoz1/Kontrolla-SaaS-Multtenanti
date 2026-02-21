@@ -436,12 +436,15 @@ export function useNfe() {
         caminho_danfe?: string;
       };
 
+      const msgSefaz = response.mensagem_sefaz || '';
+      const chaveNaMensagem = msgSefaz ? (msgSefaz.match(/\[chNFe:\s*(\d+)\]/i)?.[1] ?? undefined) : undefined;
       console.log('[NFe] Consulta SEFAZ (Verificar):', {
         id,
         status: response.status,
         status_sefaz: response.status_sefaz,
         chave_acesso: response.chave_acesso,
-        mensagem_sefaz: response.mensagem_sefaz
+        mensagem_sefaz: msgSefaz,
+        ...(chaveNaMensagem && { chave_extraida_mensagem: chaveNaMensagem, sugestao: 'Use "Marcar como autorizada" com esta chave (já preenchida se abrir o modal).' })
       });
 
       // Atualizar lista

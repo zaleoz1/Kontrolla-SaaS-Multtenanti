@@ -582,17 +582,20 @@ export async function emitirNfe(tenantId, nfeId) {
     try {
       response = await client.post(`/v2/nfe?ref=${referencia}`, payload);
     } catch (postError) {
-      const msgErro = postError.response?.data?.mensagem || postError.message;
+      const dataErro = postError.response?.data || {};
+      const msgErro = dataErro.mensagem || dataErro.mensagem_sefaz || postError.message;
       // Salvar ref mesmo quando a API retorna erro (ex.: duplicidade), para permitir "Verificar" depois
       await query(
         `UPDATE nfe SET status = 'erro', motivo_status = ?, focus_nfe_ref = ? WHERE id = ? AND tenant_id = ?`,
         [msgErro, referencia, nfeId, tenantId]
       );
-      // Se for duplicidade, avançar sequência do ambiente para a próxima emissão usar número seguinte
-      if (/duplicidade de nf-?e/i.test(String(msgErro))) {
+      // Se for duplicidade (qualquer formato: "Duplicidade de NF-e", "Rejeição: Duplicidade...", etc.), avançar sequência
+      const textoErro = String(msgErro || '');
+      if (/duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(textoErro)) {
         avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
           console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade:', e.message)
         );
+        console.log('[Focus NFe] Duplicidade detectada na emissão – sequência avançada; próxima emissão usará número seguinte.');
       }
       throw new Error(msgErro);
     }
@@ -631,10 +634,12 @@ export async function emitirNfe(tenantId, nfeId) {
       ]
     );
     // Se rejeitou por duplicidade, avançar sequência do ambiente para a próxima emissão não repetir o número
-    if (data.status === 'erro_autorizacao' && /duplicidade de nf-?e/i.test(String(data.mensagem_sefaz || data.mensagem || ''))) {
+    const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
+    if (data.status === 'erro_autorizacao' && /duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(msgSefaz)) {
       avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
         console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade:', e.message)
       );
+      console.log('[Focus NFe] Duplicidade detectada na resposta – sequência avançada; próxima emissão usará número seguinte.');
     }
     
     // Considerar sucesso se autorizado ou processando (nota foi enviada com sucesso)

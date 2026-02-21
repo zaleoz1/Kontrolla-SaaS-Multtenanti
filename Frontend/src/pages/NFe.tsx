@@ -430,10 +430,21 @@ export default function NFe() {
   const handleConsultarSefaz = async (nfe: Nfe) => {
     try {
       const resultado = await consultarNfeSefaz(nfe.id);
-      toast({
-        title: resultado.status === "autorizado" ? "NF-e autorizada!" : `Status: ${resultado.status}`,
-        description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
-      });
+      const isDuplicidade = resultado.mensagem_sefaz && /duplicidade\s+de\s+nf-?e/i.test(String(resultado.mensagem_sefaz));
+      if (resultado.status === "autorizado") {
+        toast({ title: "NF-e autorizada!", description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}` });
+      } else if (resultado.status === "erro_autorizacao" && isDuplicidade) {
+        toast({
+          title: "Duplicidade na SEFAZ (539)",
+          description: "A nota pode já estar autorizada. O status foi atualizado. Use \"Marcar como autorizada\" — a chave será preenchida automaticamente se estiver na mensagem.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: `Status: ${resultado.status}`,
+          description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
+        });
+      }
       fetchStats();
       // Atualizar detalhes se o painel estiver aberto para esta NF-e
       if (nfeSelecionada?.id === nfe.id) {
@@ -1962,10 +1973,18 @@ export default function NFe() {
                         if (!nfeSelecionada) return;
                         try {
                           const resultado = await consultarNfeSefaz(nfeSelecionada.id);
-                          toast({
-                            title: resultado.status === "autorizado" ? "NF-e autorizada!" : `Status: ${resultado.status}`,
-                            description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
-                          });
+                          const isDuplicidade = resultado.mensagem_sefaz && /duplicidade\s+de\s+nf-?e/i.test(String(resultado.mensagem_sefaz));
+                          if (resultado.status === "autorizado") {
+                            toast({ title: "NF-e autorizada!", description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}` });
+                          } else if (resultado.status === "erro_autorizacao" && isDuplicidade) {
+                            toast({
+                              title: "Duplicidade na SEFAZ (539)",
+                              description: "A nota pode já estar autorizada. Use \"Marcar como autorizada\" — a chave será preenchida automaticamente.",
+                              variant: "default"
+                            });
+                          } else {
+                            toast({ title: `Status: ${resultado.status}`, description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}` });
+                          }
                           const atualizada = await fetchNfe(nfeSelecionada.id);
                           if (atualizada) setNfeSelecionada(atualizada);
                           fetchStats();
