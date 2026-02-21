@@ -245,7 +245,7 @@ router.post('/', async (req, res) => {
 
     // Gerar número e criar NF-e + itens em uma transação (evita reutilizar número e condição de corrida)
     const { nfeId, numeroNfe } = await transaction(async (conn) => {
-      const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId);
+      const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId, ambienteAtual);
       const [insertResult] = await conn.execute(
         `INSERT INTO nfe (
           tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
@@ -325,13 +325,16 @@ router.patch('/:id/status', validateId, handleValidationErrors, async (req, res)
       });
     }
 
-    // Atualizar status e chave de acesso (se fornecida)
+    // Atualizar status e chave de acesso (se fornecida); ao marcar como autorizada, limpar motivo do erro
     const updateFields = ['status = ?'];
     const updateParams = [status];
 
     if (chave_acesso) {
       updateFields.push('chave_acesso = ?');
       updateParams.push(chave_acesso);
+    }
+    if (status === 'autorizada') {
+      updateFields.push('motivo_status = NULL', 'data_autorizacao = COALESCE(data_autorizacao, NOW())');
     }
 
     updateParams.push(id, req.user.tenant_id);
