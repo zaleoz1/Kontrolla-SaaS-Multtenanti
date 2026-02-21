@@ -708,7 +708,7 @@ router.post('/', validateVenda, async (req, res) => {
           }
           
           // Criar NF-e no banco (em transação com sequência que não reutiliza número)
-          const ambienteAtual = focusConfig.ambiente || 'homologacao';
+          const ambienteAtual = String(focusConfig.ambiente || 'homologacao').toLowerCase().trim() === 'producao' ? 'producao' : 'homologacao';
           const seriePadrao = focusConfig.serie_padrao || '001';
           const tenantId = req.user.tenant_id;
           const observacoesNfe = `NF-e gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`;

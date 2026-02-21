@@ -200,7 +200,7 @@ router.post('/', async (req, res) => {
 
     // Buscar configurações da Focus NFe do tenant (ambiente e série)
     const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
-    const ambienteAtual = focusConfig.ambiente || 'homologacao';
+    const ambienteAtual = String(focusConfig.ambiente || 'homologacao').toLowerCase().trim() === 'producao' ? 'producao' : 'homologacao';
     const seriePadrao = focusConfig.serie_padrao || '001';
 
     // Verificar se venda existe (se fornecida)
