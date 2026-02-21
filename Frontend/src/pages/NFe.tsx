@@ -1781,7 +1781,7 @@ export default function NFe() {
                     onChange={(e) => setConfigProximoNumero(e.target.value.replace(/\D/g, ''))}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Use só se aparecer erro de duplicidade: informe o próximo número que a SEFAZ deve usar (ex.: se a última nota na SEFAZ é 3, coloque 4). Deixe vazio para o sistema definir.
+                    Para evitar duplicidade: informe o próximo número que a SEFAZ deve usar para o ambiente atual (ex.: se a última nota em Produção é 20, coloque 21). O valor é salvo por ambiente. Deixe vazio para o sistema definir automaticamente.
                   </p>
                 </div>
               </div>

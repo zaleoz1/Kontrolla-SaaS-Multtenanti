@@ -107,19 +107,22 @@ function getTokenForAmbiente(config) {
 export async function getFocusNfeConfig(tenantId) {
   const configs = await query(
     `SELECT chave, valor FROM tenant_configuracoes 
-     WHERE tenant_id = ? AND (chave LIKE 'focus_nfe_%' OR chave = 'nfe_proximo_numero')`,
+     WHERE tenant_id = ? AND (chave LIKE 'focus_nfe_%' OR chave LIKE 'nfe_proximo_numero%')`,
     [tenantId]
   );
   
   const config = {};
   for (const c of configs) {
-    if (c.chave === 'nfe_proximo_numero') {
-      config.proximo_numero = c.valor;
+    if (c.chave.startsWith('nfe_proximo_numero')) {
+      config[c.chave] = c.valor;
     } else {
       const key = c.chave.replace('focus_nfe_', '');
       config[key] = c.valor;
     }
   }
+  const amb = (config.ambiente || 'homologacao').toLowerCase().trim();
+  const chaveProximoAmb = amb === 'producao' ? 'nfe_proximo_numero_producao' : 'nfe_proximo_numero_homologacao';
+  const proximoNumero = config[chaveProximoAmb] || config.nfe_proximo_numero || '';
   
   return {
     // Tokens separados por ambiente
@@ -136,8 +139,8 @@ export async function getFocusNfeConfig(tenantId) {
     inscricao_estadual: config.inscricao_estadual || '',
     // Configurações opcionais
     incluir_na_danfe_informacoes_complementares: config.informacoes_complementares || '',
-    // Próximo número NF-e (quando SEFAZ já tem números à frente - ex.: após duplicidade)
-    proximo_numero: config.proximo_numero || ''
+    // Próximo número NF-e do ambiente atual (alinhar com painel Focus NFe para evitar duplicidade)
+    proximo_numero: proximoNumero || ''
   };
 }
 
@@ -158,14 +161,34 @@ export async function saveFocusNfeConfig(tenantId, config) {
     const isProximoNumero = key === 'proximo_numero';
     const deveSalvar = isProximoNumero ? config[key] !== undefined : (config[key] !== undefined && config[key] !== '');
     if (deveSalvar) {
-      const chave = isProximoNumero ? 'nfe_proximo_numero' : `focus_nfe_${key}`;
       const valor = config[key] === '' || config[key] == null ? '' : String(config[key]);
-      await query(
-        `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
-         VALUES (?, ?, ?, 'string')
-         ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
-        [tenantId, chave, valor]
-      );
+      if (isProximoNumero) {
+        // Salvar por ambiente para alinhar com o painel Focus NFe / SEFAZ (produção e homologação independentes)
+        const amb = (config.ambiente || 'homologacao').toLowerCase().trim();
+        const chaveAmb = amb === 'producao' ? 'nfe_proximo_numero_producao' : 'nfe_proximo_numero_homologacao';
+        await query(
+          `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
+           VALUES (?, ?, ?, 'string')
+           ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
+          [tenantId, chaveAmb, valor]
+        );
+        if (valor) {
+          await query(
+            `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
+             VALUES (?, ?, ?, 'string')
+             ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
+            [tenantId, 'nfe_proximo_numero', valor]
+          );
+        }
+      } else {
+        const chave = `focus_nfe_${key}`;
+        await query(
+          `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
+           VALUES (?, ?, ?, 'string')
+           ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
+          [tenantId, chave, valor]
+        );
+      }
     }
   }
 }
@@ -750,7 +773,8 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
       
       // Se houve erro, atualizar e parar
       if (data.status === 'erro_autorizacao') {
-        console.log(`[Focus NFe] ❌ NF-e ${nfeId} rejeitada na tentativa ${i + 1}: ${data.mensagem_sefaz || data.mensagem}`);
+        const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
+        console.log(`[Focus NFe] ❌ NF-e ${nfeId} rejeitada na tentativa ${i + 1}: ${msgSefaz}`);
         
         await query(
           `UPDATE nfe SET 
@@ -763,6 +787,22 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
             tenantId
           ]
         );
+
+        // Duplicidade (539) ou já cancelada (218): avançar sequência para a próxima emissão não repetir o número
+        if (deveAvancarSequencia(data.status_sefaz, msgSefaz)) {
+          const nfeRows = await query(
+            `SELECT numero, ambiente FROM nfe WHERE id = ? AND tenant_id = ?`,
+            [nfeId, tenantId]
+          );
+          const nfeRow = nfeRows && nfeRows[0];
+          if (nfeRow) {
+            const { numero, ambiente } = nfeRow;
+            avancarSequenciaAposDuplicidade(tenantId, ambiente, numero).catch((e) =>
+              console.error('[Focus NFe] Erro ao ajustar sequência (verificação automática):', e.message)
+            );
+            console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na verificação automática – sequência avançada.');
+          }
+        }
         
         break; // Parar tentativas
       }
