@@ -2,6 +2,9 @@
  * Serviço de geração do próximo número de NF-e.
  * Usa sequência por AMBIENTE (homologação e produção são independentes na SEFAZ).
  * Evita duplicidade e garante que produção não use a mesma sequência que homologação.
+ * Em rejeição 539 (duplicidade) ou 218 (já cancelada), a sequência é avançada no focusNfeService
+ * para a próxima emissão usar o número seguinte. Opcionalmente, em Configurações > NF-e,
+ * "Próximo número" (por ambiente) alinha com o painel Focus NFe para evitar duplicidade.
  */
 
 import { query } from '../database/connection.js';
