@@ -568,7 +568,7 @@ export async function emitirNfe(tenantId, nfeId) {
       console.log(`[Focus NFe] Primeiro item - PIS CST: ${primeiroItem.pis_situacao_tributaria}, COFINS CST: ${primeiroItem.cofins_situacao_tributaria}`);
     }
     
-    // Criar referência única para a NF-e
+    // Criar referência única para a NF-e (definida antes do POST para poder salvar no catch em caso de erro)
     const referencia = `nfe-${tenantId}-${nfeId}-${Date.now()}`;
     
     // Criar cliente da API com o token correto
@@ -577,7 +577,17 @@ export async function emitirNfe(tenantId, nfeId) {
     // Enviar para a API
     console.log(`[Focus NFe] Emitindo NF-e ${nfe.numero} para referência ${referencia}`);
     
-    const response = await client.post(`/v2/nfe?ref=${referencia}`, payload);
+    let response;
+    try {
+      response = await client.post(`/v2/nfe?ref=${referencia}`, payload);
+    } catch (postError) {
+      // Salvar ref mesmo quando a API retorna erro (ex.: duplicidade), para permitir "Verificar" depois
+      await query(
+        `UPDATE nfe SET status = 'erro', motivo_status = ?, focus_nfe_ref = ? WHERE id = ? AND tenant_id = ?`,
+        [postError.response?.data?.mensagem || postError.message, referencia, nfeId, tenantId]
+      );
+      throw new Error(postError.response?.data?.mensagem || postError.message);
+    }
     
     // Processar resposta
     const { data } = response;

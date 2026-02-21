@@ -421,14 +421,19 @@ export default function NFe() {
     try {
       const resultado = await consultarNfeSefaz(nfe.id);
       toast({
-        title: `Status: ${resultado.status}`,
-        description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || 'N/A'}`
+        title: resultado.status === "autorizado" ? "NF-e autorizada!" : `Status: ${resultado.status}`,
+        description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
       });
       fetchStats();
+      // Atualizar detalhes se o painel estiver aberto para esta NF-e
+      if (nfeSelecionada?.id === nfe.id) {
+        const atualizada = await fetchNfe(nfe.id);
+        if (atualizada) setNfeSelecionada(atualizada);
+      }
     } catch (err) {
       toast({
         title: "Erro ao consultar",
-        description: err instanceof Error ? err.message : "Erro ao consultar NF-e",
+        description: err instanceof Error ? err.message : "Erro ao consultar NF-e. Verifique se a nota foi enviada à Focus NFe.",
         variant: "destructive"
       });
     }
@@ -883,6 +888,15 @@ export default function NFe() {
 
                           {nfe.status === "erro" && (
                             <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleConsultarSefaz(nfe)}
+                                title="Consultar status na SEFAZ"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Verificar
+                              </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm"
@@ -1884,9 +1898,37 @@ export default function NFe() {
                   <p className="text-sm text-destructive">{nfeSelecionada.motivo_status}</p>
                   {isErroDuplicidadeNfe(nfeSelecionada.motivo_status) && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      Esta nota pode já estar autorizada na SEFAZ. Use o botão &quot;Verificar&quot; na lista para consultar o status.
+                      Esta nota pode já estar autorizada na SEFAZ. Use o botão abaixo para consultar o status.
                     </p>
                   )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={async () => {
+                      if (!nfeSelecionada) return;
+                      try {
+                        const resultado = await consultarNfeSefaz(nfeSelecionada.id);
+                        toast({
+                          title: resultado.status === "autorizado" ? "NF-e autorizada!" : `Status: ${resultado.status}`,
+                          description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
+                        });
+                        const atualizada = await fetchNfe(nfeSelecionada.id);
+                        if (atualizada) setNfeSelecionada(atualizada);
+                        fetchStats();
+                      } catch (err) {
+                        toast({
+                          title: "Erro ao consultar",
+                          description: err instanceof Error ? err.message : "Erro ao consultar NF-e.",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Verificar status na SEFAZ
+                  </Button>
                 </div>
               )}
 
