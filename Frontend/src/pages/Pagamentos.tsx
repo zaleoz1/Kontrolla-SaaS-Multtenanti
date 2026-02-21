@@ -1102,7 +1102,7 @@ export default function Pagamentos() {
           // Remover o iframe após a impressão
           setTimeout(() => {
             if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
+            document.body.removeChild(iframe);
             }
           }, 1000);
         }, 250);
