@@ -9,6 +9,9 @@
 
 import { query } from '../database/connection.js';
 
+/** Mínimo para o próximo número (base). Próxima emissão será >= 50. Ajuste aqui se precisar. */
+const MIN_PROXIMO_NUMERO_NFE = 49;
+
 function getChaveSequencia(ambiente) {
   const amb = (ambiente || 'homologacao').toLowerCase();
   return amb === 'producao' ? 'nfe_ultimo_numero_producao' : 'nfe_ultimo_numero_homologacao';
@@ -88,7 +91,7 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
   }
   const configMinBase = configProximo > 0 ? configProximo - 1 : 0;
 
-  let base = Math.max(ultimoSeq, maxTabela, configMinBase);
+  let base = Math.max(ultimoSeq, maxTabela, configMinBase, MIN_PROXIMO_NUMERO_NFE);
   let proximo = base + 1;
   // Garantir que nunca retornamos número já existente na tabela (proteção extra)
   if (proximo <= maxTabela) {
