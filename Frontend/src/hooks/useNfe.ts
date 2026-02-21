@@ -438,13 +438,15 @@ export function useNfe() {
 
       const msgSefaz = response.mensagem_sefaz || '';
       const chaveNaMensagem = msgSefaz ? (msgSefaz.match(/\[chNFe:\s*(\d+)\]/i)?.[1] ?? undefined) : undefined;
+      const is218 = response.status_sefaz === '218' || /já está cancelada|já cancelada na base/i.test(msgSefaz);
       console.log('[NFe] Consulta SEFAZ (Verificar):', {
         id,
         status: response.status,
         status_sefaz: response.status_sefaz,
         chave_acesso: response.chave_acesso,
         mensagem_sefaz: msgSefaz,
-        ...(chaveNaMensagem && { chave_extraida_mensagem: chaveNaMensagem, sugestao: 'Use "Marcar como autorizada" com esta chave (já preenchida se abrir o modal).' })
+        ...(chaveNaMensagem && { chave_extraida_mensagem: chaveNaMensagem, sugestao: 'Use "Marcar como autorizada" com esta chave (já preenchida se abrir o modal).' }),
+        ...(is218 && { sugestao_218: 'NF-e já cancelada na SEFAZ. Sequência avançada; próxima emissão usará o número seguinte.' })
       });
 
       // Atualizar lista

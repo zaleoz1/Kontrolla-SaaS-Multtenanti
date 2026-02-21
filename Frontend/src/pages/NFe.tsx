@@ -430,13 +430,21 @@ export default function NFe() {
   const handleConsultarSefaz = async (nfe: Nfe) => {
     try {
       const resultado = await consultarNfeSefaz(nfe.id);
-      const isDuplicidade = resultado.mensagem_sefaz && /duplicidade\s+de\s+nf-?e/i.test(String(resultado.mensagem_sefaz));
+      const msgSefaz = String(resultado.mensagem_sefaz || '');
+      const isDuplicidade = /duplicidade\s+de\s+nf-?e/i.test(msgSefaz);
+      const isJaCancelada = resultado.status_sefaz === '218' || /já está cancelada|já cancelada na base/i.test(msgSefaz);
       if (resultado.status === "autorizado") {
         toast({ title: "NF-e autorizada!", description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}` });
       } else if (resultado.status === "erro_autorizacao" && isDuplicidade) {
         toast({
           title: "Duplicidade na SEFAZ (539)",
           description: "A nota pode já estar autorizada. O status foi atualizado. Use \"Marcar como autorizada\" — a chave será preenchida automaticamente se estiver na mensagem.",
+          variant: "default"
+        });
+      } else if (resultado.status === "erro_autorizacao" && isJaCancelada) {
+        toast({
+          title: "NF-e já cancelada na SEFAZ (218)",
+          description: "Esta NF-e consta como cancelada na SEFAZ. A sequência foi ajustada; a próxima emissão usará o número seguinte.",
           variant: "default"
         });
       } else {
@@ -1973,13 +1981,21 @@ export default function NFe() {
                         if (!nfeSelecionada) return;
                         try {
                           const resultado = await consultarNfeSefaz(nfeSelecionada.id);
-                          const isDuplicidade = resultado.mensagem_sefaz && /duplicidade\s+de\s+nf-?e/i.test(String(resultado.mensagem_sefaz));
+                          const msgSefaz = String(resultado.mensagem_sefaz || '');
+                          const isDuplicidade = /duplicidade\s+de\s+nf-?e/i.test(msgSefaz);
+                          const isJaCancelada = resultado.status_sefaz === '218' || /já está cancelada|já cancelada na base/i.test(msgSefaz);
                           if (resultado.status === "autorizado") {
                             toast({ title: "NF-e autorizada!", description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}` });
                           } else if (resultado.status === "erro_autorizacao" && isDuplicidade) {
                             toast({
                               title: "Duplicidade na SEFAZ (539)",
                               description: "A nota pode já estar autorizada. Use \"Marcar como autorizada\" — a chave será preenchida automaticamente.",
+                              variant: "default"
+                            });
+                          } else if (resultado.status === "erro_autorizacao" && isJaCancelada) {
+                            toast({
+                              title: "NF-e já cancelada na SEFAZ (218)",
+                              description: "Esta NF-e consta como cancelada na SEFAZ. A sequência foi ajustada; a próxima emissão usará o número seguinte.",
                               variant: "default"
                             });
                           } else {
