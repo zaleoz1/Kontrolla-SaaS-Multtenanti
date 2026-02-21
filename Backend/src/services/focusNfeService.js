@@ -839,7 +839,16 @@ export async function consultarNfe(tenantId, nfeId) {
         tenantId
       ]
     );
-    
+
+    // Se a consulta retornou duplicidade (539), avançar sequência para a próxima emissão não repetir o número
+    const msgConsulta = String(data.mensagem_sefaz || data.mensagem || '');
+    if (data.status === 'erro_autorizacao' && /duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(msgConsulta)) {
+      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
+        console.error('[Focus NFe] Erro ao ajustar sequência após duplicidade (consulta):', e.message)
+      );
+      console.log('[Focus NFe] Duplicidade detectada na consulta – sequência avançada; próxima emissão usará número seguinte.');
+    }
+
     return {
       status: data.status,
       status_sefaz: data.status_sefaz,
