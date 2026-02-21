@@ -4,9 +4,31 @@
  * Evita duplicidade e garante que produção não use a mesma sequência que homologação.
  */
 
+import { query } from '../database/connection.js';
+
 function getChaveSequencia(ambiente) {
   const amb = (ambiente || 'homologacao').toLowerCase();
   return amb === 'producao' ? 'nfe_ultimo_numero_producao' : 'nfe_ultimo_numero_homologacao';
+}
+
+/**
+ * Avança a sequência do ambiente após rejeição por duplicidade, para a próxima emissão usar número seguinte.
+ * Chamado quando a SEFAZ retorna "Duplicidade de NF-e" (o número já foi usado).
+ * @param {number} tenantId - ID do tenant
+ * @param {string} ambiente - 'homologacao' ou 'producao'
+ * @param {string|number} numeroUsado - Número que foi rejeitado (ex.: 14)
+ */
+export async function avancarSequenciaAposDuplicidade(tenantId, ambiente, numeroUsado) {
+  const chave = getChaveSequencia(ambiente);
+  const num = parseInt(String(numeroUsado).replace(/\D/g, ''), 10) || 0;
+  if (num <= 0) return;
+  await query(
+    `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), ?)`,
+    [tenantId, chave, String(num), num]
+  );
+  console.log(`[NFe] Sequência ${chave} ajustada para pelo menos ${num} (próxima emissão usará ${num + 1})`);
 }
 
 /**

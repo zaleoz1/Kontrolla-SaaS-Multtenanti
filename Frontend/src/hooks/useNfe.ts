@@ -237,6 +237,25 @@ export function useNfe() {
     }
   }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
 
+  // Marcar NF-e como autorizada (POST dedicado; evita "failed to fetch" com PATCH em alguns ambientes)
+  const marcarNfeComoAutorizada = useCallback(async (id: number, chave_acesso?: string): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+      await makeRequest(`/nfe/${id}/marcar-autorizada`, {
+        method: 'POST',
+        body: chave_acesso ? { chave_acesso: chave_acesso.trim() } : {}
+      });
+      await fetchNfes({ page: pagination.page, limit: pagination.limit });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao marcar NF-e como autorizada');
+      console.error('Erro ao marcar NF-e como autorizada:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
+
   // Deletar NF-e
   const deleteNfe = useCallback(async (id: number): Promise<void> => {
     try {
@@ -698,6 +717,7 @@ export function useNfe() {
     fetchNfe,
     createNfe,
     updateNfeStatus,
+    marcarNfeComoAutorizada,
     deleteNfe,
     fetchStats,
     

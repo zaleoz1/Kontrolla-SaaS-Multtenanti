@@ -355,6 +355,41 @@ router.patch('/:id/status', validateId, handleValidationErrors, async (req, res)
   }
 });
 
+// Marcar NF-e como autorizada (para notas com erro de duplicidade que já estão na SEFAZ)
+// Usa POST para evitar problemas com PATCH em alguns ambientes ("failed to fetch")
+router.post('/:id/marcar-autorizada', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const chave_acesso = req.body?.chave_acesso ? String(req.body.chave_acesso).replace(/\D/g, '').slice(0, 44) : null;
+
+    const existingNfes = await query(
+      'SELECT id FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    if (existingNfes.length === 0) {
+      return res.status(404).json({ error: 'NF-e não encontrada' });
+    }
+
+    const updateFields = ['status = ?', 'motivo_status = NULL', 'data_autorizacao = COALESCE(data_autorizacao, NOW())'];
+    const updateParams = ['autorizada'];
+    if (chave_acesso) {
+      updateFields.push('chave_acesso = ?');
+      updateParams.push(chave_acesso);
+    }
+    updateParams.push(id, req.user.tenant_id);
+
+    await query(
+      `UPDATE nfe SET ${updateFields.join(', ')} WHERE id = ? AND tenant_id = ?`,
+      updateParams
+    );
+
+    return res.json({ message: 'NF-e marcada como autorizada' });
+  } catch (error) {
+    console.error('Erro ao marcar NF-e como autorizada:', error);
+    return res.status(500).json({ error: error.message || 'Erro ao atualizar status' });
+  }
+});
+
 // Deletar NF-e
 router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
   try {
