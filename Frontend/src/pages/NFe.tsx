@@ -1783,6 +1783,9 @@ export default function NFe() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Para evitar duplicidade: informe o próximo número que a SEFAZ deve usar para o ambiente atual (ex.: se a última nota em Produção é 20, coloque 21). O valor é salvo por ambiente. Deixe vazio para o sistema definir automaticamente.
                   </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                    Se você apagou NF-e do banco: informe aqui o próximo número (ex.: 24) ou use &quot;Verificar&quot; na última NF-e com erro 539 para ajustar a sequência; a próxima emissão usará o número seguinte.
+                  </p>
                 </div>
               </div>
               

@@ -46,13 +46,18 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
   const amb = String(ambiente || 'homologacao').toLowerCase().trim();
   const chaveSeq = getChaveSequencia(amb);
 
-  // Garantir que a linha de sequência SEMPRE exista para este ambiente
-  // Usar LOWER(n.ambiente) para bater com valor no banco (pode vir 'Producao' ou 'producao')
+  // Garantir que a linha de sequência exista; se não existir, criar com MAX(numero) da tabela
+  // (evita resetar para 0 quando alguém apagou a config mas manteve NF-e, ou quando apagou NF-e e a config)
+  const [maxInit] = await conn.execute(
+    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m FROM nfe WHERE tenant_id = ? AND LOWER(TRIM(ambiente)) = ?`,
+    [tenantId, amb]
+  );
+  const valorInicial = String(maxInit[0]?.m ?? 0);
   await conn.execute(
     `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
-     VALUES (?, ?, '0')
+     VALUES (?, ?, ?)
      ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), (SELECT COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0) FROM nfe n WHERE n.tenant_id = ? AND LOWER(TRIM(n.ambiente)) = ?))`,
-    [tenantId, chaveSeq, tenantId, amb]
+    [tenantId, chaveSeq, valorInicial, tenantId, amb]
   );
 
   const [rows] = await conn.execute(
