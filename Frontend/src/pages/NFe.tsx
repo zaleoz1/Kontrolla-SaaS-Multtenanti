@@ -84,6 +84,7 @@ export default function NFe() {
     reprocessarNfe,
     downloadXml,
     downloadDanfe,
+    updateNfeStatus,
     deleteNfe,
     fetchStats,
     fetchFocusNfeConfig,
@@ -130,10 +131,18 @@ export default function NFe() {
   const [justificativaCancelamento, setJustificativaCancelamento] = useState("");
   const [nfeParaDeletar, setNfeParaDeletar] = useState<Nfe | null>(null);
   const [nfeParaReprocessar, setNfeParaReprocessar] = useState<Nfe | null>(null);
+  const [nfeParaMarcarAutorizada, setNfeParaMarcarAutorizada] = useState<Nfe | null>(null);
+  const [chaveMarcarAutorizada, setChaveMarcarAutorizada] = useState("");
   
   // Erro de duplicidade na SEFAZ = nota pode já estar autorizada; reprocessar não é permitido
   const isErroDuplicidadeNfe = (motivo: string | null | undefined) =>
     !!motivo && /duplicidade de nf-?e/i.test(motivo);
+  // Extrair chave de acesso da mensagem de rejeição (ex.: [chNFe: 21240752390958000130550010000000091199820007])
+  const extrairChaveDoMotivo = (motivo: string | null | undefined) => {
+    if (!motivo) return "";
+    const m = motivo.match(/\[chNFe:\s*(\d+)\]/i);
+    return m ? m[1] : "";
+  };
   
   // Estados de configurações Focus NFe
   const [focusNfeConfig, setFocusNfeConfig] = useState<FocusNfeConfig | null>(null);
@@ -434,6 +443,34 @@ export default function NFe() {
       toast({
         title: "Erro ao consultar",
         description: err instanceof Error ? err.message : "Erro ao consultar NF-e. Verifique se a nota foi enviada à Focus NFe.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Marcar NF-e como autorizada (para notas com erro de duplicidade que já estão autorizadas na SEFAZ)
+  const handleConfirmarMarcarAutorizada = async () => {
+    if (!nfeParaMarcarAutorizada) return;
+    try {
+      await updateNfeStatus(
+        nfeParaMarcarAutorizada.id,
+        "autorizada",
+        chaveMarcarAutorizada.trim() || undefined
+      );
+      toast({
+        title: "NF-e marcada como autorizada",
+        description: `A NF-e #${nfeParaMarcarAutorizada.numero} foi atualizada. Você pode imprimir o DANFE se tiver a chave.`
+      });
+      setNfeParaMarcarAutorizada(null);
+      setChaveMarcarAutorizada("");
+      if (nfeSelecionada?.id === nfeParaMarcarAutorizada.id) {
+        const atualizada = await fetchNfe(nfeParaMarcarAutorizada.id);
+        if (atualizada) setNfeSelecionada(atualizada);
+      }
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Não foi possível atualizar o status.",
         variant: "destructive"
       });
     }
@@ -897,6 +934,21 @@ export default function NFe() {
                                 <RefreshCw className="h-4 w-4 mr-2" />
                                 Verificar
                               </Button>
+                              {isErroDuplicidadeNfe(nfe.motivo_status) && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="bg-success/10 hover:bg-success/20"
+                                  onClick={() => {
+                                    setNfeParaMarcarAutorizada(nfe);
+                                    setChaveMarcarAutorizada(extrairChaveDoMotivo(nfe.motivo_status));
+                                  }}
+                                  title="A nota pode já estar autorizada na SEFAZ. Marque como autorizada para corrigir o status."
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Marcar como autorizada
+                                </Button>
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm"
@@ -1901,34 +1953,50 @@ export default function NFe() {
                       Esta nota pode já estar autorizada na SEFAZ. Use o botão abaixo para consultar o status.
                     </p>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={async () => {
-                      if (!nfeSelecionada) return;
-                      try {
-                        const resultado = await consultarNfeSefaz(nfeSelecionada.id);
-                        toast({
-                          title: resultado.status === "autorizado" ? "NF-e autorizada!" : `Status: ${resultado.status}`,
-                          description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
-                        });
-                        const atualizada = await fetchNfe(nfeSelecionada.id);
-                        if (atualizada) setNfeSelecionada(atualizada);
-                        fetchStats();
-                      } catch (err) {
-                        toast({
-                          title: "Erro ao consultar",
-                          description: err instanceof Error ? err.message : "Erro ao consultar NF-e.",
-                          variant: "destructive"
-                        });
-                      }
-                    }}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Verificar status na SEFAZ
-                  </Button>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (!nfeSelecionada) return;
+                        try {
+                          const resultado = await consultarNfeSefaz(nfeSelecionada.id);
+                          toast({
+                            title: resultado.status === "autorizado" ? "NF-e autorizada!" : `Status: ${resultado.status}`,
+                            description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}`
+                          });
+                          const atualizada = await fetchNfe(nfeSelecionada.id);
+                          if (atualizada) setNfeSelecionada(atualizada);
+                          fetchStats();
+                        } catch (err) {
+                          toast({
+                            title: "Erro ao consultar",
+                            description: err instanceof Error ? err.message : "Erro ao consultar NF-e.",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Verificar status na SEFAZ
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-success/10 hover:bg-success/20"
+                      onClick={() => {
+                        if (!nfeSelecionada) return;
+                        setNfeParaMarcarAutorizada(nfeSelecionada);
+                        setChaveMarcarAutorizada(extrairChaveDoMotivo(nfeSelecionada.motivo_status) || nfeSelecionada.chave_acesso || "");
+                        setModalDetalhesAberto(false);
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Marcar como autorizada
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -2097,6 +2165,46 @@ export default function NFe() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog - Marcar como autorizada (duplicidade) */}
+      <Dialog open={!!nfeParaMarcarAutorizada} onOpenChange={(open) => { if (!open) { setNfeParaMarcarAutorizada(null); setChaveMarcarAutorizada(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Marcar NF-e como autorizada</DialogTitle>
+            <DialogDescription>
+              Em caso de duplicidade, a nota pode já estar autorizada na SEFAZ. Ao marcar como autorizada, o sistema passa a tratar esta NF-e como emitida (relatórios, impressão, etc.). Use apenas se você confirmou na SEFAZ ou no painel da Focus NFe que a nota está autorizada.
+            </DialogDescription>
+          </DialogHeader>
+          {nfeParaMarcarAutorizada && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                NF-e #{nfeParaMarcarAutorizada.numero}
+              </p>
+              <div>
+                <Label className="text-sm">Chave de acesso (opcional)</Label>
+                <Input
+                  className="font-mono text-xs mt-1"
+                  placeholder="44 dígitos da chave (pode colar do erro)"
+                  value={chaveMarcarAutorizada}
+                  onChange={(e) => setChaveMarcarAutorizada(e.target.value.replace(/\D/g, "").slice(0, 44))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  A chave aparece na mensagem de rejeição [chNFe: ...]. Preencha para poder baixar XML/DANFE depois.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setNfeParaMarcarAutorizada(null); setChaveMarcarAutorizada(""); }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarMarcarAutorizada}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Marcar como autorizada
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmação - Reprocessar */}
       <AlertDialog open={!!nfeParaReprocessar} onOpenChange={() => setNfeParaReprocessar(null)}>

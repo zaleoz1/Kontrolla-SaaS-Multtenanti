@@ -714,7 +714,7 @@ router.post('/', validateVenda, async (req, res) => {
           const observacoesNfe = `NF-e gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`;
 
           const { nfeId, numeroNfe } = await transaction(async (conn) => {
-            const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId);
+            const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId, ambienteAtual);
             const [nfeInsert] = await conn.execute(
               `INSERT INTO nfe (
                 tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
