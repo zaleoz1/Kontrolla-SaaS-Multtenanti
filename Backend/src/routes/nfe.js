@@ -1,5 +1,6 @@
 import express from 'express';
 import { query, queryWithResult, transaction } from '../database/connection.js';
+import { gerarProximoNumeroNfe } from '../services/nfeNumeroService.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import {
@@ -244,7 +245,7 @@ router.post('/', async (req, res) => {
 
     // Gerar número e criar NF-e + itens em uma transação (evita reutilizar número e condição de corrida)
     const { nfeId, numeroNfe } = await transaction(async (conn) => {
-      const numeroNfe = await gerarNumeroNfeComTransacao(conn, tenantId);
+      const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId);
       const [insertResult] = await conn.execute(
         `INSERT INTO nfe (
           tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
@@ -393,40 +394,6 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
     });
   }
 });
-
-// Chave em tenant_configuracoes para o último número de NF-e usado (sequência que nunca reutiliza)
-const NFE_ULTIMO_NUMERO_KEY = 'nfe_ultimo_numero';
-
-/**
- * Gera o próximo número de NF-e dentro de uma transação, usando sequência que nunca reutiliza.
- * Evita duplicidade na SEFAZ quando NF-e são excluídas (número já usado na SEFAZ não é reutilizado).
- * @param {import('mysql2/promise').PoolConnection} conn - Conexão da transação (com lock)
- * @param {number} tenantId - ID do tenant
- * @returns {Promise<string>} - Número formatado (9 dígitos)
- */
-async function gerarNumeroNfeComTransacao(conn, tenantId) {
-  // Garantir que existe linha de sequência (valor = maior entre 0 e MAX(numero) atual)
-  await conn.execute(
-    `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
-     SELECT ?, ?, COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0)
-     FROM nfe n WHERE n.tenant_id = ?
-     ON DUPLICATE KEY UPDATE valor = valor`,
-    [tenantId, NFE_ULTIMO_NUMERO_KEY, tenantId]
-  );
-  // Bloquear a linha e obter próximo número
-  const [rows] = await conn.execute(
-    `SELECT valor FROM tenant_configuracoes
-     WHERE tenant_id = ? AND chave = ? FOR UPDATE`,
-    [tenantId, NFE_ULTIMO_NUMERO_KEY]
-  );
-  const ultimo = parseInt(rows[0]?.valor || '0', 10);
-  const proximo = ultimo + 1;
-  await conn.execute(
-    `UPDATE tenant_configuracoes SET valor = ? WHERE tenant_id = ? AND chave = ?`,
-    [String(proximo), tenantId, NFE_ULTIMO_NUMERO_KEY]
-  );
-  return proximo.toString().padStart(9, '0');
-}
 
 // ==========================================
 // ROTAS DE INTEGRAÇÃO COM FOCUS NFE

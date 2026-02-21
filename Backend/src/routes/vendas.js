@@ -1,5 +1,6 @@
 import express from 'express';
-import { query, queryWithResult } from '../database/connection.js';
+import { query, queryWithResult, transaction } from '../database/connection.js';
+import { gerarProximoNumeroNfe } from '../services/nfeNumeroService.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateVenda, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import NotificationService from '../services/notificationService.js';
@@ -706,62 +707,52 @@ router.post('/', validateVenda, async (req, res) => {
             });
           }
           
-          // Criar NF-e no banco
+          // Criar NF-e no banco (em transação com sequência que não reutiliza número)
           const ambienteAtual = focusConfig.ambiente || 'homologacao';
           const seriePadrao = focusConfig.serie_padrao || '001';
-          
-          // Gerar número da NF-e
-          const [ultimaNfe] = await query(
-            `SELECT MAX(CAST(numero AS UNSIGNED)) as ultimo FROM nfe WHERE tenant_id = ?`,
-            [req.user.tenant_id]
-          );
-          const numeroNfe = (ultimaNfe?.ultimo || 0) + 1;
-          
-          // Criar registro da NF-e
-          const nfeInsert = await queryWithResult(
-            `INSERT INTO nfe (
-              tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
-              status, ambiente, observacoes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              req.user.tenant_id,
-              vendaId,
-              cliente_id ?? null,
-              clienteData?.cpf_cnpj ?? null,
-              numeroNfe.toString(),
-              seriePadrao,
-              valorTotalNfe,
-              'pendente',
-              ambienteAtual,
-              `NF-e gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`
-            ]
-          );
-          
-          const nfeId = nfeInsert.insertId;
-          
-          // Inserir itens da NF-e (com valores proporcionais se houver pagamento a prazo)
-          for (let i = 0; i < itens.length; i++) {
-            const itemOriginal = itens[i];
-            const itemNfe = itensNfe[i];
-            
-            // Se há pagamento a prazo e métodos múltiplos, usar valores proporcionais
-            let precoUnitario = itemOriginal.preco_unitario;
-            let precoTotal = itemOriginal.preco_total;
-            
-            if (pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0) {
-              const totalOriginal = subtotal - desconto;
-              const proporcao = totalOriginal > 0 ? valorTotalNfe / totalOriginal : 1;
-              precoUnitario = itemOriginal.preco_unitario * proporcao;
-              precoTotal = itemOriginal.preco_total * proporcao;
-            }
-            
-            await query(
-              `INSERT INTO nfe_itens (nfe_id, produto_id, quantidade, preco_unitario, preco_total)
-               VALUES (?, ?, ?, ?, ?)`,
-              [nfeId, itemOriginal.produto_id, itemOriginal.quantidade, precoUnitario, precoTotal]
+          const tenantId = req.user.tenant_id;
+          const observacoesNfe = `NF-e gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`;
+
+          const { nfeId, numeroNfe } = await transaction(async (conn) => {
+            const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId);
+            const [nfeInsert] = await conn.execute(
+              `INSERT INTO nfe (
+                tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
+                status, ambiente, observacoes
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                tenantId,
+                vendaId,
+                cliente_id ?? null,
+                clienteData?.cpf_cnpj ?? null,
+                numeroNfe,
+                seriePadrao,
+                valorTotalNfe,
+                'pendente',
+                ambienteAtual,
+                observacoesNfe
+              ]
             );
-          }
-          
+            const nfeId = nfeInsert.insertId;
+            for (let i = 0; i < itens.length; i++) {
+              const itemOriginal = itens[i];
+              let precoUnitario = itemOriginal.preco_unitario;
+              let precoTotal = itemOriginal.preco_total;
+              if (pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0) {
+                const totalOriginal = subtotal - desconto;
+                const proporcao = totalOriginal > 0 ? valorTotalNfe / totalOriginal : 1;
+                precoUnitario = itemOriginal.preco_unitario * proporcao;
+                precoTotal = itemOriginal.preco_total * proporcao;
+              }
+              await conn.execute(
+                `INSERT INTO nfe_itens (nfe_id, produto_id, quantidade, preco_unitario, preco_total)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [nfeId, itemOriginal.produto_id, itemOriginal.quantidade, precoUnitario, precoTotal]
+              );
+            }
+            return { nfeId, numeroNfe };
+          });
+
           console.log(`[Venda] NF-e #${numeroNfe} criada. Ambiente: ${ambienteAtual.toUpperCase()}`);
           
           // Emitir NF-e via Focus NFe
