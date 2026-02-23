@@ -216,12 +216,12 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     cliente.cpf_cnpj.replace(/\D/g, '').length === 11 || 
     !cliente.inscricao_estadual;
   
-  // local_destino (idDest no XML): 1=operação interna, 2=interestadual, 3=exterior. SEFAZ exige consistência com CFOP (5.xxx=interno, 6.xxx=interestadual).
-  const temCFOPInterestadual = itens.some((item) => {
-    const cfop = String(item.cfop || '').replace(/\D/g, '').trim();
-    return cfop.length >= 1 && cfop.charAt(0) === '6';
-  });
-  const localDestino = temCFOPInterestadual ? 2 : 1;
+  // local_destino (idDest no XML): 1=operação interna, 2=interestadual, 3=exterior.
+  // SEFAZ exige: interestadual só quando UF destino ≠ UF origem; se iguais, deve ser operação interna.
+  const ufOrigem = (tenant?.estado || '').toString().trim().toUpperCase().substring(0, 2);
+  const ufDestino = (cliente?.estado ?? tenant?.estado ?? 'SP').toString().trim().toUpperCase().substring(0, 2);
+  const isInterestadual = ufDestino.length === 2 && ufOrigem.length === 2 && ufDestino !== ufOrigem;
+  const localDestino = isInterestadual ? 2 : 1;
 
   // Dados básicos da NF-e
   const payload = {
