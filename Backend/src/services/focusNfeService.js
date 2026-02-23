@@ -253,8 +253,8 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     // Informações adicionais
     informacoes_adicionais_contribuinte: nfe.observacoes || '',
     
-    // === ITENS ===
-    items: itens.map((item, index) => montarItemNfe(item, index, focusConfig))
+    // === ITENS === (passa localDestino para itens: em operação interna, CFOP 6.xxx é convertido para 5.xxx)
+    items: itens.map((item, index) => montarItemNfe(item, index, focusConfig, localDestino))
   };
   
   // === CNPJ DO EMITENTE (pode ser necessário para autorização) ===
@@ -351,11 +351,20 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
  * @param {Object} item - Item do banco de dados (com campos do produto já incluídos)
  * @param {number} index - Índice do item
  * @param {Object} focusConfig - Configurações Focus NFe
+ * @param {number} localDestino - 1=operação interna, 2=interestadual. Em operação interna, CFOP 6.xxx é convertido para 5.xxx.
  * @returns {Object}
  */
-function montarItemNfe(item, index, focusConfig) {
+function montarItemNfe(item, index, focusConfig, localDestino = 1) {
   // Os campos do produto já vêm diretos do item (não há objeto produto separado)
   // item já contém: produto_nome, sku, codigo_barras, ncm, cfop, icms_origem, etc.
+
+  // Operação interna (mesmo estado): SEFAZ exige CFOP 5.xxx. Se o produto tem 6.xxx, usar equivalente 5.xxx no envio.
+  let cfopEnvio = (item.cfop || '5102').toString().trim();
+  const cfopNumerico = cfopEnvio.replace(/\D/g, '');
+  if (localDestino === 1 && cfopNumerico.length >= 1 && cfopNumerico.charAt(0) === '6') {
+    cfopEnvio = '5' + cfopNumerico.substring(1);
+    console.log(`[Focus NFe] Item ${index + 1}: CFOP ${item.cfop} ajustado para operação interna → ${cfopEnvio}`);
+  }
   
   // === VERIFICAR REGIME TRIBUTÁRIO DO EMITENTE ===
   // CRT = 1 ou 4 = Simples Nacional
@@ -437,7 +446,7 @@ function montarItemNfe(item, index, focusConfig) {
     codigo_produto: item.sku || item.codigo_barras || item.produto_id?.toString() || `PROD${index + 1}`,
     descricao: item.produto_nome || `Produto ${item.produto_id}`,
     codigo_ncm: item.ncm?.replace(/\D/g, '') || '00000000', // NCM genérico se não informado
-    cfop: item.cfop || '5102', // 5102 = Venda de mercadoria adquirida
+    cfop: cfopEnvio, // 5.xxx = interno, 6.xxx = interestadual; em operação interna 6.xxx é convertido para 5.xxx
     // Unidade comercial: usar 'UN' como padrão (tipo_preco não é a unidade fiscal)
     unidade_comercial: 'UN',
     quantidade_comercial: parseFloat(item.quantidade || 0).toFixed(4),
