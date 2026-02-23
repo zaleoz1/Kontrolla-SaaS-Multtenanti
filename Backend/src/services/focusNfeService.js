@@ -216,6 +216,13 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     cliente.cpf_cnpj.replace(/\D/g, '').length === 11 || 
     !cliente.inscricao_estadual;
   
+  // local_destino (idDest no XML): 1=operação interna, 2=interestadual, 3=exterior. SEFAZ exige consistência com CFOP (5.xxx=interno, 6.xxx=interestadual).
+  const temCFOPInterestadual = itens.some((item) => {
+    const cfop = String(item.cfop || '').replace(/\D/g, '').trim();
+    return cfop.length >= 1 && cfop.charAt(0) === '6';
+  });
+  const localDestino = temCFOPInterestadual ? 2 : 1;
+
   // Dados básicos da NF-e
   const payload = {
     // Natureza da operação
@@ -233,6 +240,9 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     
     // Finalidade (1=Normal, 2=Complementar, 3=Ajuste, 4=Devolução)
     finalidade_emissao: 1,
+    
+    // Local de destino: 1=Operação interna, 2=Operação interestadual, 3=Operação com exterior (obrigatório consistente com CFOP dos itens)
+    local_destino: localDestino,
     
     // Consumidor final (0=Não, 1=Sim) - IMPORTANTE: deve ser 1 para pessoa física
     consumidor_final: isConsumidorFinal ? 1 : 0,

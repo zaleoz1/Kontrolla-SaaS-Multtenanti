@@ -481,7 +481,14 @@ export default function Produtos() {
   const gerarXMLFornecedor = (fornecedor: FornecedorExport | null, produtosFornecedor: Produto[]): string => {
     const dataFormatada = new Date().toISOString().replace('T', ' ').substring(0, 19);
     const nfeId = `NFe_EXPORT_${Date.now()}_${fornecedor?.id || 'sem_fornecedor'}`;
-    
+
+    // idDest: 1 = operação interna (CFOP 5.xxx), 2 = interestadual (CFOP 6.xxx). SEFAZ exige consistência.
+    const temCFOPInterestadual = produtosFornecedor.some((p) => {
+      const cfop = (p.cfop || '').replace(/\D/g, '').trim();
+      return cfop.length >= 1 && cfop.charAt(0) === '6';
+    });
+    const idDest = temCFOPInterestadual ? '2' : '1';
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
@@ -495,7 +502,7 @@ export default function Produtos() {
         <nNF>${Date.now()}</nNF>
         <dhEmi>${dataFormatada}</dhEmi>
         <tpNF>1</tpNF>
-        <idDest>1</idDest>
+        <idDest>${idDest}</idDest>
         <cMunFG>0000000</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>

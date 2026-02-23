@@ -10,7 +10,6 @@ import { OperadorProvider } from "./contexts/OperadorContext";
 import { ThemeColorProvider } from "./hooks/useThemeColor";
 import { DebugRoute } from "./components/DebugRoute";
 import LandingPage from "./pages/LandingPage";
-import DownloadPage from "./pages/Download";
 import Dashboard from "./pages/Dashboard";
 import Produtos from "./pages/Produtos";
 import Vendas from "./pages/Vendas";
@@ -48,7 +47,6 @@ function AppContent() {
         <Routes>
           {/* Landing Page */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/download" element={<DownloadPage />} />
           
           {/* Páginas de Autenticação */}
           <Route path="/login" element={<Login />} />
