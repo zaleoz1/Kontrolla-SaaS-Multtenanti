@@ -67,6 +67,8 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function NFe() {
   const { toast } = useToast();
+  const getDocumentoLabel = (modelo?: string) => (String(modelo || '') === '65' ? 'NFC-e' : 'NF-e');
+  const DOCUMENTO_FISCAL_PREF_KEY = "kontrolla.documento_fiscal_modelo";
   
   // Hooks de dados
   const {
@@ -117,6 +119,14 @@ export default function NFe() {
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [termoBuscaCliente, setTermoBuscaCliente] = useState("");
   const [mostrarListaClientes, setMostrarListaClientes] = useState(false);
+  const [modeloNovaNota, setModeloNovaNota] = useState<'55' | '65'>(() => {
+    try {
+      const v = typeof window !== 'undefined' ? localStorage.getItem(DOCUMENTO_FISCAL_PREF_KEY) : null;
+      return v === '65' ? '65' : '55';
+    } catch {
+      return '55';
+    }
+  });
   const [itensNfe, setItensNfe] = useState<{
     produto: Produto;
     quantidade: number;
@@ -152,8 +162,10 @@ export default function NFe() {
   const [configCnpjEmitente, setConfigCnpjEmitente] = useState("");
   const [configAmbiente, setConfigAmbiente] = useState<"homologacao" | "producao">("homologacao");
   const [configSeriePadrao, setConfigSeriePadrao] = useState("001");
+  const [configSeriePadraoNfce, setConfigSeriePadraoNfce] = useState("1");
   const [configNaturezaOperacao, setConfigNaturezaOperacao] = useState("Venda de mercadoria");
   const [configProximoNumero, setConfigProximoNumero] = useState("");
+  const [configProximoNumeroNfce, setConfigProximoNumeroNfce] = useState("");
   const [configSalvando, setConfigSalvando] = useState(false);
   const [validacaoConfig, setValidacaoConfig] = useState<{ valid: boolean; errors: string[]; warnings?: string[] } | null>(null);
   const [editandoCnpj, setEditandoCnpj] = useState(false);
@@ -173,6 +185,15 @@ export default function NFe() {
     buscarProdutos({ limit: 100, status: 'ativo' });
     carregarConfigFocusNfe();
   }, []);
+
+  // Persistir a preferência de emissão (NF-e/NFC-e) para outras telas (ex.: Pagamentos)
+  useEffect(() => {
+    try {
+      localStorage.setItem(DOCUMENTO_FISCAL_PREF_KEY, modeloNovaNota);
+    } catch {
+      // ignore
+    }
+  }, [modeloNovaNota]);
 
   // Função para formatar CNPJ
   const formatarCNPJ = (cnpj: string): string => {
@@ -197,8 +218,10 @@ export default function NFe() {
       setFocusNfeConfig(config);
       setConfigAmbiente(config.ambiente || "homologacao");
       setConfigSeriePadrao(config.serie_padrao || "001");
+      setConfigSeriePadraoNfce((config.serie_padrao_nfce as any) || "1");
       setConfigNaturezaOperacao(config.natureza_operacao || "Venda de mercadoria");
       setConfigProximoNumero(config.proximo_numero ?? "");
+      setConfigProximoNumeroNfce((config.proximo_numero_nfce as any) ?? "");
       // Aplicar máscara ao CNPJ ao carregar do banco
       setConfigCnpjEmitente(config.cnpj_emitente ? formatarCNPJ(config.cnpj_emitente) : "");
       // Preencher tokens completos quando configurados (não mascarados)
@@ -318,8 +341,18 @@ export default function NFe() {
       return;
     }
 
+    if (String(modeloNovaNota) === '55' && !clienteSelecionado) {
+      toast({
+        title: "Cliente obrigatório para NF-e",
+        description: "Para emitir NF-e (modelo 55), selecione um cliente com CPF/CNPJ. Para consumidor não identificado, selecione NFC-e (modelo 65) na aba Configurações.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const dados: NfeCreate = {
+        modelo: modeloNovaNota,
         cliente_id: clienteSelecionado?.id,
         cnpj_cpf: clienteSelecionado?.cpf_cnpj,
         itens: itensNfe.map(item => ({
@@ -334,7 +367,7 @@ export default function NFe() {
 
       toast({
         title: "Sucesso",
-        description: "NF-e criada com sucesso! Você pode transmiti-la na lista."
+        description: `${getDocumentoLabel(modeloNovaNota)} criada com sucesso! Você pode transmiti-la na lista.`
       });
 
       // Limpar formulário
@@ -349,7 +382,7 @@ export default function NFe() {
     } catch (err) {
       toast({
         title: "Erro",
-        description: err instanceof Error ? err.message : "Erro ao criar NF-e",
+        description: err instanceof Error ? err.message : `Erro ao criar ${getDocumentoLabel(modeloNovaNota)}`,
         variant: "destructive"
       });
     }
@@ -533,8 +566,10 @@ export default function NFe() {
       const configToSave: Record<string, string> = {
         ambiente: configAmbiente,
         serie_padrao: configSeriePadrao,
+        serie_padrao_nfce: configSeriePadraoNfce,
         natureza_operacao: configNaturezaOperacao,
-        proximo_numero: configProximoNumero.trim()
+        proximo_numero: configProximoNumero.trim(),
+        proximo_numero_nfce: configProximoNumeroNfce.trim()
       };
 
       // Salvar os tokens apenas se foram informados novos valores
@@ -824,7 +859,7 @@ export default function NFe() {
                         
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold">NF-e #{nfe.numero}</h3>
+                            <h3 className="font-semibold">{getDocumentoLabel(nfe.modelo)} #{nfe.numero}</h3>
                             <Badge className={getStatusBadgeClass(nfe.status)}>
                               {getStatusLabel(nfe.status)}
                             </Badge>
@@ -873,12 +908,12 @@ export default function NFe() {
                                     await downloadXml(nfe.id, nfe.numero, nfe.chave_acesso);
                                     toast({
                                       title: "XML baixado com sucesso!",
-                                      description: `O arquivo XML da NF-e #${nfe.numero} foi baixado.`,
+                                      description: `O arquivo XML da ${getDocumentoLabel(nfe.modelo)} #${nfe.numero} foi baixado.`,
                                     });
                                   } catch (error) {
                                     toast({
                                       title: "Erro ao baixar XML",
-                                      description: error instanceof Error ? error.message : "Não foi possível baixar o XML da NF-e.",
+                                      description: error instanceof Error ? error.message : `Não foi possível baixar o XML da ${getDocumentoLabel(nfe.modelo)}.`,
                                       variant: "destructive",
                                     });
                                   }
@@ -1046,7 +1081,7 @@ export default function NFe() {
         <TabsContent value="emitir" className="space-y-4">
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
-              <CardTitle>Emitir Nova NF-e</CardTitle>
+              <CardTitle>Emitir Nova Nota</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 md:grid-cols-2">
@@ -1327,7 +1362,7 @@ export default function NFe() {
                   ) : (
                     <Send className="h-4 w-4 mr-2" />
                   )}
-                  Criar NF-e
+                  Criar {getDocumentoLabel(modeloNovaNota)}
                 </Button>
               </div>
             </CardContent>
@@ -1714,6 +1749,21 @@ export default function NFe() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
+                  <Label>O que será emitido</Label>
+                  <Select value={modeloNovaNota} onValueChange={(v) => setModeloNovaNota(v as '55' | '65')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="55">NF-e (modelo 55)</SelectItem>
+                      <SelectItem value="65">NFC-e (modelo 65)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    NF-e (55) exige cliente com CPF/CNPJ. Para consumidor não identificado, use NFC-e (65).
+                  </p>
+                </div>
+                <div>
                   <Label>Ambiente Ativo</Label>
                   <Select value={configAmbiente} onValueChange={(v: "homologacao" | "producao") => setConfigAmbiente(v)}>
                     <SelectTrigger>
@@ -1761,6 +1811,18 @@ export default function NFe() {
                   </p>
                 </div>
                 <div>
+                  <Label>Série Padrão (NFC-e)</Label>
+                  <Input 
+                    placeholder="1"
+                    value={configSeriePadraoNfce}
+                    onChange={(e) => setConfigSeriePadraoNfce(e.target.value)}
+                    maxLength={3}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Série da NFC-e (geralmente 1)
+                  </p>
+                </div>
+                <div>
                   <Label>Natureza da Operação</Label>
                   <Input 
                     placeholder="Venda de mercadoria"
@@ -1783,8 +1845,18 @@ export default function NFe() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Para evitar duplicidade: informe o próximo número que a SEFAZ deve usar para o ambiente atual (ex.: se a última nota em Produção é 20, coloque 21). O valor é salvo por ambiente. Deixe vazio para o sistema definir automaticamente.
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                    Se você apagou NF-e do banco: informe aqui o próximo número (ex.: 24) ou use &quot;Verificar&quot; na última NF-e com erro 539 para ajustar a sequência; a próxima emissão usará o número seguinte.
+                </div>
+                <div>
+                  <Label>Próximo número da NFC-e (opcional)</Label>
+                  <Input 
+                    type="number"
+                    min={1}
+                    placeholder="Deixe vazio para automático"
+                    value={configProximoNumeroNfce}
+                    onChange={(e) => setConfigProximoNumeroNfce(e.target.value.replace(/\D/g, ''))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Para evitar duplicidade: informe o próximo número que a SEFAZ deve usar para a NFC-e no ambiente atual. O valor é salvo por ambiente.
                   </p>
                 </div>
               </div>

@@ -389,6 +389,7 @@ CREATE TABLE IF NOT EXISTS nfe (
     valor_total DECIMAL(10,2) NOT NULL,
     status ENUM('pendente', 'autorizada', 'cancelada', 'erro', 'processando') DEFAULT 'pendente',
     ambiente ENUM('homologacao', 'producao') DEFAULT 'homologacao',
+    modelo ENUM('55', '65') DEFAULT '55' COMMENT '55=NF-e, 65=NFC-e',
     -- Campos para integração Focus NFe
     focus_nfe_ref VARCHAR(100) COMMENT 'Referência única da NF-e na API Focus NFe',
     protocolo VARCHAR(50) COMMENT 'Número do protocolo de autorização',
@@ -405,6 +406,24 @@ CREATE TABLE IF NOT EXISTS nfe (
     FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE SET NULL,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
 );
+
+-- Ajustes incrementais (idempotentes) para bases já existentes
+-- Adicionar coluna 'modelo' (55=NF-e, 65=NFC-e) caso não exista
+SET @__nfe_modelo_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'nfe'
+    AND COLUMN_NAME = 'modelo'
+);
+SET @__nfe_modelo_sql := IF(
+  @__nfe_modelo_exists = 0,
+  "ALTER TABLE nfe ADD COLUMN modelo ENUM('55','65') DEFAULT '55' COMMENT '55=NF-e, 65=NFC-e' AFTER ambiente",
+  "SELECT 1"
+);
+PREPARE __stmt FROM @__nfe_modelo_sql;
+EXECUTE __stmt;
+DEALLOCATE PREPARE __stmt;
 
 -- Tabela de itens da NF-e
 CREATE TABLE IF NOT EXISTS nfe_itens (

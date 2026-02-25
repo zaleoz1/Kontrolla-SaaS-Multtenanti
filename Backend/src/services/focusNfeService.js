@@ -22,7 +22,7 @@
 
 import axios from 'axios';
 import { query } from '../database/connection.js';
-import { avancarSequenciaAposDuplicidade } from './nfeNumeroService.js';
+import { avancarSequenciaAposDuplicidadeDocumento } from './nfeNumeroService.js';
 
 /** Rejeições SEFAZ em que o número já foi "consumido" e a sequência deve avançar (próxima emissão usa número seguinte). */
 function deveAvancarSequencia(statusSefaz, mensagem) {
@@ -40,6 +40,94 @@ const FOCUS_NFE_URLS = {
 
 // Token Principal (Master) - Fixo no sistema via variável de ambiente
 const FOCUS_NFE_TOKEN_PRINCIPAL = process.env.FOCUS_NFE_TOKEN_PRINCIPAL || '';
+
+function getTipoDocumentoFromModelo(modelo) {
+  const m = String(modelo || '55').trim();
+  return m === '65' ? 'nfce' : 'nfe';
+}
+
+function getEndpointDocumento(tipoDocumento) {
+  return tipoDocumento === 'nfce' ? 'nfce' : 'nfe';
+}
+
+function mapMetodoPagamentoParaCodigoFocus(metodo) {
+  const m = String(metodo || '').toLowerCase().trim();
+  if (m.includes('dinheiro')) return '01';
+  if (m.includes('cheque')) return '02';
+  if (m.includes('cartao_credito')) return '03';
+  if (m.includes('cartao_debito')) return '04';
+  if (m.includes('boleto')) return '15';
+  if (m.includes('pix')) return '17';
+  if (m.includes('transferencia')) return '18';
+  // Prazo / outros: usar 99 (outros) para não “inventar” um meio específico
+  if (m.includes('prazo')) return '99';
+  return '99';
+}
+
+function montarFormasPagamento(nfe, vendaPagamentos = []) {
+  const total = Number(nfe?.valor_total ?? 0);
+  const totalValido = Number.isFinite(total) && total > 0 ? total : 0;
+
+  /** @type {{ forma_pagamento: string; valor: number }[]} */
+  const linhas = [];
+
+  if (Array.isArray(vendaPagamentos) && vendaPagamentos.length > 0) {
+    for (const p of vendaPagamentos) {
+      const metodo = String(p?.metodo || '').toLowerCase().trim();
+      const valor = Number(p?.valor ?? 0);
+      const troco = Number(p?.troco ?? 0);
+      if (!Number.isFinite(valor) || valor <= 0) continue;
+
+      // Para dinheiro, valor "aplicado" no documento é valor - troco
+      const valorAplicado = metodo.includes('dinheiro')
+        ? Math.max(0, valor - (Number.isFinite(troco) ? troco : 0))
+        : valor;
+
+      if (valorAplicado <= 0) continue;
+
+      linhas.push({
+        forma_pagamento: mapMetodoPagamentoParaCodigoFocus(metodo),
+        valor: valorAplicado
+      });
+    }
+  }
+
+  // Fallback: se não há venda/pagamentos, considerar dinheiro no total do documento
+  if (linhas.length === 0) {
+    linhas.push({
+      forma_pagamento: '01',
+      valor: totalValido || 0
+    });
+  }
+
+  // Ajustar soma para bater com o total do documento (evita rejeição por centavos / troco)
+  if (totalValido > 0 && linhas.length > 0) {
+    const soma = linhas.reduce((s, l) => s + (Number.isFinite(l.valor) ? l.valor : 0), 0);
+    const diff = Number((totalValido - soma).toFixed(2));
+    if (Math.abs(diff) >= 0.01) {
+      const last = linhas[linhas.length - 1];
+      last.valor = Number((last.valor + diff).toFixed(2));
+    }
+  }
+
+  // Remover linhas inválidas e formatar
+  const result = linhas
+    .filter((l) => Number.isFinite(l.valor) && l.valor > 0)
+    .map((l) => ({
+      forma_pagamento: l.forma_pagamento,
+      valor_pagamento: Number(l.valor).toFixed(2)
+    }));
+
+  // Garantir pelo menos uma forma de pagamento
+  if (result.length === 0) {
+    return [{
+      forma_pagamento: '01',
+      valor_pagamento: (totalValido || 0).toFixed(2)
+    }];
+  }
+
+  return result;
+}
 
 /**
  * Obtém o Token Principal da Focus NFe (para operações administrativas)
@@ -107,13 +195,18 @@ function getTokenForAmbiente(config) {
 export async function getFocusNfeConfig(tenantId) {
   const configs = await query(
     `SELECT chave, valor FROM tenant_configuracoes 
-     WHERE tenant_id = ? AND (chave LIKE 'focus_nfe_%' OR chave LIKE 'nfe_proximo_numero%')`,
+     WHERE tenant_id = ?
+       AND (
+         chave LIKE 'focus_nfe_%'
+         OR chave LIKE 'nfe_proximo_numero%'
+         OR chave LIKE 'nfce_proximo_numero%'
+       )`,
     [tenantId]
   );
   
   const config = {};
   for (const c of configs) {
-    if (c.chave.startsWith('nfe_proximo_numero')) {
+    if (c.chave.startsWith('nfe_proximo_numero') || c.chave.startsWith('nfce_proximo_numero')) {
       config[c.chave] = c.valor;
     } else {
       const key = c.chave.replace('focus_nfe_', '');
@@ -121,8 +214,10 @@ export async function getFocusNfeConfig(tenantId) {
     }
   }
   const amb = (config.ambiente || 'homologacao').toLowerCase().trim();
-  const chaveProximoAmb = amb === 'producao' ? 'nfe_proximo_numero_producao' : 'nfe_proximo_numero_homologacao';
-  const proximoNumero = config[chaveProximoAmb] || config.nfe_proximo_numero || '';
+  const chaveProximoNfeAmb = amb === 'producao' ? 'nfe_proximo_numero_producao' : 'nfe_proximo_numero_homologacao';
+  const chaveProximoNfceAmb = amb === 'producao' ? 'nfce_proximo_numero_producao' : 'nfce_proximo_numero_homologacao';
+  const proximoNumeroNfe = config[chaveProximoNfeAmb] || config.nfe_proximo_numero || '';
+  const proximoNumeroNfce = config[chaveProximoNfceAmb] || config.nfce_proximo_numero || '';
   
   return {
     // Tokens separados por ambiente
@@ -132,15 +227,18 @@ export async function getFocusNfeConfig(tenantId) {
     token: config.token || '',
     // Configurações gerais
     ambiente: config.ambiente || 'homologacao',
-    serie_padrao: config.serie_padrao || '001',
+    serie_padrao: config.serie_padrao || '001', // NF-e (modelo 55)
+    serie_padrao_nfce: config.serie_padrao_nfce || '1', // NFC-e (modelo 65) - padrão comum no painel Focus
     natureza_operacao: config.natureza_operacao || 'Venda de mercadoria',
     regime_tributario: config.regime_tributario || '1', // 1=Simples Nacional
     cnpj_emitente: config.cnpj_emitente || '',
     inscricao_estadual: config.inscricao_estadual || '',
     // Configurações opcionais
     incluir_na_danfe_informacoes_complementares: config.informacoes_complementares || '',
-    // Próximo número NF-e do ambiente atual (alinhar com painel Focus NFe para evitar duplicidade)
-    proximo_numero: proximoNumero || ''
+    // Próximo número (por tipo e ambiente) - alinhar com painel Focus NFe para evitar duplicidade
+    // Mantém 'proximo_numero' como o da NF-e por compatibilidade com telas antigas.
+    proximo_numero: proximoNumeroNfe || '',
+    proximo_numero_nfce: proximoNumeroNfce || ''
   };
 }
 
@@ -153,19 +251,23 @@ export async function saveFocusNfeConfig(tenantId, config) {
   const configKeys = [
     'token', 'token_homologacao', 'token_producao', // Tokens (legado + separados)
     'ambiente', 'serie_padrao', 'natureza_operacao',
+    'serie_padrao_nfce',
     'regime_tributario', 'cnpj_emitente', 'inscricao_estadual',
-    'informacoes_complementares', 'proximo_numero'
+    'informacoes_complementares', 'proximo_numero', 'proximo_numero_nfce'
   ];
   
   for (const key of configKeys) {
-    const isProximoNumero = key === 'proximo_numero';
+    const isProximoNumeroNfe = key === 'proximo_numero';
+    const isProximoNumeroNfce = key === 'proximo_numero_nfce';
+    const isProximoNumero = isProximoNumeroNfe || isProximoNumeroNfce;
     const deveSalvar = isProximoNumero ? config[key] !== undefined : (config[key] !== undefined && config[key] !== '');
     if (deveSalvar) {
       const valor = config[key] === '' || config[key] == null ? '' : String(config[key]);
       if (isProximoNumero) {
-        // Salvar por ambiente para alinhar com o painel Focus NFe / SEFAZ (produção e homologação independentes)
+        // Salvar por ambiente e por tipo para alinhar com o painel Focus NFe / SEFAZ (produção e homologação independentes)
         const amb = (config.ambiente || 'homologacao').toLowerCase().trim();
-        const chaveAmb = amb === 'producao' ? 'nfe_proximo_numero_producao' : 'nfe_proximo_numero_homologacao';
+        const prefix = isProximoNumeroNfce ? 'nfce' : 'nfe';
+        const chaveAmb = amb === 'producao' ? `${prefix}_proximo_numero_producao` : `${prefix}_proximo_numero_homologacao`;
         await query(
           `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
            VALUES (?, ?, ?, 'string')
@@ -177,7 +279,7 @@ export async function saveFocusNfeConfig(tenantId, config) {
             `INSERT INTO tenant_configuracoes (tenant_id, chave, valor, tipo)
              VALUES (?, ?, ?, 'string')
              ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
-            [tenantId, 'nfe_proximo_numero', valor]
+            [tenantId, `${prefix}_proximo_numero`, valor]
           );
         }
       } else {
@@ -207,7 +309,8 @@ export async function saveFocusNfeConfig(tenantId, config) {
  * @param {Object} focusConfig - Configurações Focus NFe
  * @returns {Object}
  */
-function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
+function montarNfePayload(nfe, tenant, cliente, itens, focusConfig, vendaPagamentos = []) {
+  const modelo = String(nfe?.modelo || '55').trim() === '65' ? '65' : '55';
   // Determinar se é venda para consumidor final (pessoa física)
   // Consumidor final = 1 se for pessoa física (CPF) ou consumidor não identificado
   // Consumidor final = 0 se for pessoa jurídica (CNPJ) com IE
@@ -265,9 +368,17 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
   }
   
   // === DESTINATÁRIO ===
-  if (cliente && cliente.cpf_cnpj) {
+  const docDestinatarioRaw = (cliente?.cpf_cnpj || nfe?.cnpj_cpf || '').toString();
+  const docDestinatario = docDestinatarioRaw.replace(/\D/g, '');
+
+  // NF-e (55): destinatário identificado é obrigatório (CPF/CNPJ real)
+  if (modelo === '55' && !docDestinatario) {
+    throw new Error('Para emitir NF-e (modelo 55) é obrigatório informar o CPF/CNPJ do destinatário (cliente).');
+  }
+
+  if (docDestinatario) {
     // Cliente identificado
-    const cpfCnpj = cliente.cpf_cnpj.replace(/\D/g, '');
+    const cpfCnpj = docDestinatario;
     
     if (cpfCnpj.length === 11) {
       // Pessoa física (CPF)
@@ -277,53 +388,42 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     } else if (cpfCnpj.length === 14) {
       // Pessoa jurídica (CNPJ)
       payload.cnpj_destinatario = cpfCnpj;
-      if (cliente.inscricao_estadual) {
-        payload.inscricao_estadual_destinatario = cliente.inscricao_estadual;
+      const ie = cliente?.inscricao_estadual;
+      if (ie) {
+        payload.inscricao_estadual_destinatario = ie;
         payload.indicador_inscricao_estadual_destinatario = 1; // Contribuinte ICMS
       } else {
         payload.indicador_inscricao_estadual_destinatario = 9; // Não contribuinte
       }
+    } else {
+      throw new Error('CPF/CNPJ do destinatário inválido. Informe um documento com 11 (CPF) ou 14 (CNPJ) dígitos.');
     }
     
-    payload.nome_destinatario = cliente.nome || 'Consumidor';
-    payload.logradouro_destinatario = extrairLogradouro(cliente.endereco) || 'Rua não informada';
-    payload.numero_destinatario = extrairNumero(cliente.endereco) || 'S/N';
+    payload.nome_destinatario = cliente?.nome || 'Consumidor';
+    payload.logradouro_destinatario = extrairLogradouro(cliente?.endereco) || 'Rua não informada';
+    payload.numero_destinatario = extrairNumero(cliente?.endereco) || 'S/N';
     // Bairro não existe no schema, usar valor padrão ou extrair do endereço se possível
     payload.bairro_destinatario = 'Centro'; // Valor padrão conforme exigência da SEFAZ
-    payload.municipio_destinatario = cliente.cidade || 'São Paulo';
-    payload.uf_destinatario = cliente.estado || 'SP';
-    payload.cep_destinatario = cliente.cep?.replace(/\D/g, '') || '00000000';
+    payload.municipio_destinatario = cliente?.cidade || 'São Paulo';
+    payload.uf_destinatario = cliente?.estado || 'SP';
+    payload.cep_destinatario = cliente?.cep?.replace(/\D/g, '') || '00000000';
     
-    if (cliente.email) {
+    if (cliente?.email) {
       payload.email_destinatario = cliente.email;
     }
   } else {
-    // Consumidor não identificado - OBRIGATÓRIO enviar dados mínimos na NF-e modelo 55
-    // A Focus NFe e SEFAZ exigem os dados do destinatário
-    
-    // Em HOMOLOGAÇÃO, usar dados específicos conforme documentação Focus NFe
-    const isHomologacao = focusConfig.ambiente === 'homologacao';
-    
-    // CPF válido para homologação (conforme exemplo da documentação Focus NFe)
-    // Em produção, usar um CPF genérico válido para consumidor não identificado
-    payload.cpf_destinatario = isHomologacao ? '03055054911' : '00000000191';
-    
-    // Nome do destinatário - em homologação DEVE usar esse texto
-    payload.nome_destinatario = isHomologacao 
-      ? 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL'
-      : 'CONSUMIDOR NAO IDENTIFICADO';
-    
-    // Endereço obrigatório (usando dados do emitente como base)
-    payload.logradouro_destinatario = extrairLogradouro(tenant?.endereco) || 'Rua nao informada';
-    payload.numero_destinatario = extrairNumero(tenant?.endereco) || '1';
-    // Bairro não existe no schema do tenant, usar valor padrão
-    payload.bairro_destinatario = 'Centro';
-    payload.municipio_destinatario = tenant?.cidade || 'Sao Paulo';
-    payload.uf_destinatario = tenant?.estado || 'SP';
-    payload.cep_destinatario = tenant?.cep?.replace(/\D/g, '') || '01310100';
-    
-    // Indicador IE = 9 (Não contribuinte)
-    payload.indicador_inscricao_estadual_destinatario = 9;
+    // Consumidor não identificado
+    // NFC-e (65): pode ser sem CPF/CNPJ (não vamos injetar documento "genérico").
+    //
+    // IMPORTANTE:
+    // - Se enviarmos xNome/enderDest sem CPF/CNPJ, o XML pode ficar inválido
+    //   (ex.: xNome aparece onde era esperado CNPJ/CPF).
+    // - Portanto, em NFC-e sem documento, NÃO enviar nenhum campo do destinatário.
+    //
+    // NF-e (55): já bloqueamos acima (exige CPF/CNPJ real).
+    if (modelo !== '65') {
+      throw new Error('Documento do destinatário ausente para emissão de NF-e (modelo 55).');
+    }
   }
   
   // === MODALIDADE DE FRETE (obrigatório) ===
@@ -331,12 +431,7 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
   payload.modalidade_frete = 9; // Sem frete (mais comum para vendas de balcão)
   
   // === FORMA DE PAGAMENTO ===
-  payload.formas_pagamento = [
-    {
-      forma_pagamento: '01', // 01=Dinheiro, 02=Cheque, 03=Cartão Crédito, 04=Cartão Débito, 05=Crédito Loja, 14=Duplicata, 15=Boleto, 17=PIX
-      valor_pagamento: parseFloat(nfe.valor_total).toFixed(2)
-    }
-  ];
+  payload.formas_pagamento = montarFormasPagamento(nfe, vendaPagamentos);
   
   return payload;
 }
@@ -539,6 +634,9 @@ export async function emitirNfe(tenantId, nfeId) {
       throw new Error('NF-e já está autorizada');
     }
     
+    const tipoDocumento = getTipoDocumentoFromModelo(nfe.modelo);
+    const endpoint = getEndpointDocumento(tipoDocumento);
+
     // Buscar dados do tenant (emitente)
     const [tenant] = await query(
       `SELECT * FROM tenants WHERE id = ?`,
@@ -584,20 +682,33 @@ export async function emitirNfe(tenantId, nfeId) {
       throw new Error('NF-e não possui itens');
     }
     
+    // Buscar pagamentos da venda (se a NF-e foi gerada a partir de uma venda)
+    let vendaPagamentos = [];
+    if (nfe.venda_id) {
+      try {
+        vendaPagamentos = await query(
+          `SELECT metodo, valor, troco FROM venda_pagamentos WHERE venda_id = ?`,
+          [nfe.venda_id]
+        );
+      } catch {
+        // Se não conseguir buscar pagamentos, segue com fallback (dinheiro)
+      }
+    }
+
     const regimeTributario = focusConfig.regime_tributario || '1';
     const isSimplesNacional = regimeTributario === '1' || regimeTributario === '4';
     // Montar payload
-    const payload = montarNfePayload(nfe, tenant, cliente, itens, focusConfig);
+    const payload = montarNfePayload(nfe, tenant, cliente, itens, focusConfig, vendaPagamentos);
     
     // Criar referência única para a NF-e (definida antes do POST para poder salvar no catch em caso de erro)
-    const referencia = `nfe-${tenantId}-${nfeId}-${Date.now()}`;
+    const referencia = `${endpoint}-${tenantId}-${nfeId}-${Date.now()}`;
     
     // Criar cliente da API com o token correto
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
     let response;
     try {
-      response = await client.post(`/v2/nfe?ref=${referencia}`, payload);
+      response = await client.post(`/v2/${endpoint}?ref=${referencia}`, payload);
     } catch (postError) {
       const dataErro = postError.response?.data || {};
       const msgErro = dataErro.mensagem || dataErro.mensagem_sefaz || postError.message;
@@ -609,7 +720,7 @@ export async function emitirNfe(tenantId, nfeId) {
       // Se for duplicidade ou NF-e já cancelada (número consumido na SEFAZ), avançar sequência
       const textoErro = String(msgErro || '');
       if (deveAvancarSequencia(dataErro.status_sefaz, textoErro)) {
-        avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch(() => {});
+        avancarSequenciaAposDuplicidadeDocumento(tenantId, nfe.ambiente, tipoDocumento, nfe.numero).catch(() => {});
       }
       throw new Error(msgErro);
     }
@@ -630,7 +741,7 @@ export async function emitirNfe(tenantId, nfeId) {
         referencia,
         data.status === 'autorizado' ? 'autorizada' : (data.status === 'erro_autorizacao' ? 'erro' : 'processando'),
         data.protocolo || null,
-        data.chave_nfe || null,
+        data.chave_nfe || data.chave_nfce || data.chave_acesso || null,
         data.mensagem_sefaz || data.mensagem || null,
         data.status,
         nfeId,
@@ -640,7 +751,7 @@ export async function emitirNfe(tenantId, nfeId) {
     // Se rejeitou (duplicidade 539 ou já cancelada 218), avançar sequência para a próxima emissão não repetir o número
     const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
     if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgSefaz)) {
-      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch(() => {});
+      avancarSequenciaAposDuplicidadeDocumento(tenantId, nfe.ambiente, tipoDocumento, nfe.numero).catch(() => {});
     }
     
     // Considerar sucesso se autorizado ou processando (nota foi enviada com sucesso)
@@ -655,7 +766,7 @@ export async function emitirNfe(tenantId, nfeId) {
       success: isSuccess,
       status: data.status,
       protocolo: data.protocolo,
-      chave_acesso: data.chave_nfe,
+      chave_acesso: data.chave_nfe || data.chave_nfce || data.chave_acesso,
       mensagem: data.mensagem_sefaz || data.mensagem || (data.status === 'processando_autorizacao' ? 'NF-e enviada e aguardando processamento pela SEFAZ' : null),
       referencia
     };
@@ -694,7 +805,9 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
       if (!token) break;
       
       const client = createFocusNfeClient(token, focusConfig.ambiente);
-      const response = await client.get(`/v2/nfe/${referencia}`);
+      const tipoDocumento = referencia?.startsWith('nfce-') ? 'nfce' : 'nfe';
+      const endpoint = getEndpointDocumento(tipoDocumento);
+      const response = await client.get(`/v2/${endpoint}/${referencia}`);
       const { data } = response;
       
       if (data.status === 'autorizado') {
@@ -708,7 +821,7 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
            WHERE id = ? AND tenant_id = ?`,
           [
             data.protocolo || null,
-            data.chave_nfe || null,
+            data.chave_nfe || data.chave_nfce || data.chave_acesso || null,
             data.mensagem_sefaz || data.mensagem || 'NF-e autorizada',
             nfeId,
             tenantId
@@ -734,13 +847,14 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
         // Duplicidade (539) ou já cancelada (218): avançar sequência para a próxima emissão não repetir o número
         if (deveAvancarSequencia(data.status_sefaz, msgSefaz)) {
           const nfeRows = await query(
-            `SELECT numero, ambiente FROM nfe WHERE id = ? AND tenant_id = ?`,
+            `SELECT numero, ambiente, modelo FROM nfe WHERE id = ? AND tenant_id = ?`,
             [nfeId, tenantId]
           );
           const nfeRow = nfeRows && nfeRows[0];
           if (nfeRow) {
-            const { numero, ambiente } = nfeRow;
-            avancarSequenciaAposDuplicidade(tenantId, ambiente, numero).catch(() => {});
+            const { numero, ambiente, modelo } = nfeRow;
+            const tipoDoc = getTipoDocumentoFromModelo(modelo);
+            avancarSequenciaAposDuplicidadeDocumento(tenantId, ambiente, tipoDoc, numero).catch(() => {});
           }
         }
         break;
@@ -784,7 +898,9 @@ export async function consultarNfe(tenantId, nfeId) {
     
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
+    const tipoDocumento = getTipoDocumentoFromModelo(nfe.modelo);
+    const endpoint = getEndpointDocumento(tipoDocumento);
+    const response = await client.get(`/v2/${endpoint}/${nfe.focus_nfe_ref}`);
     const { data } = response;
     
     // Atualizar status no banco
@@ -807,7 +923,7 @@ export async function consultarNfe(tenantId, nfeId) {
       [
         novoStatus,
         data.protocolo || null,
-        data.chave_nfe || null,
+        data.chave_nfe || data.chave_nfce || data.chave_acesso || null,
         data.mensagem_sefaz || data.mensagem || null,
         nfeId,
         tenantId
@@ -817,7 +933,7 @@ export async function consultarNfe(tenantId, nfeId) {
     // Se a consulta retornou duplicidade (539) ou já cancelada (218), avançar sequência para a próxima emissão não repetir o número
     const msgConsulta = String(data.mensagem_sefaz || data.mensagem || '');
     if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgConsulta)) {
-      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch(() => {});
+      avancarSequenciaAposDuplicidadeDocumento(tenantId, nfe.ambiente, tipoDocumento, nfe.numero).catch(() => {});
     }
 
     return {
@@ -825,7 +941,7 @@ export async function consultarNfe(tenantId, nfeId) {
       status_sefaz: data.status_sefaz,
       mensagem_sefaz: data.mensagem_sefaz,
       protocolo: data.protocolo,
-      chave_acesso: data.chave_nfe,
+      chave_acesso: data.chave_nfe || data.chave_nfce || data.chave_acesso,
       numero: data.numero,
       serie: data.serie,
       caminho_xml: data.caminho_xml_nota_fiscal,
@@ -877,7 +993,9 @@ export async function cancelarNfe(tenantId, nfeId, justificativa) {
     
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    const response = await client.delete(`/v2/nfe/${nfe.focus_nfe_ref}`, {
+    const tipoDocumento = getTipoDocumentoFromModelo(nfe.modelo);
+    const endpoint = getEndpointDocumento(tipoDocumento);
+    const response = await client.delete(`/v2/${endpoint}/${nfe.focus_nfe_ref}`, {
       data: { justificativa }
     });
     
@@ -943,7 +1061,9 @@ export async function obterXmlNfe(tenantId, nfeId) {
     
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    const consultaResponse = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
+    const tipoDocumento = getTipoDocumentoFromModelo(nfe.modelo);
+    const endpoint = getEndpointDocumento(tipoDocumento);
+    const consultaResponse = await client.get(`/v2/${endpoint}/${nfe.focus_nfe_ref}`);
     const consultaData = consultaResponse.data;
     
     // Se a NF-e não está autorizada, não tem XML disponível
@@ -952,7 +1072,7 @@ export async function obterXmlNfe(tenantId, nfeId) {
     }
     
     // Atualizar chave de acesso se não estiver salva ou se a API retornou uma diferente
-    const chaveAcesso = consultaData.chave_nfe || consultaData.chave_acesso || nfe.chave_acesso;
+    const chaveAcesso = consultaData.chave_nfe || consultaData.chave_nfce || consultaData.chave_acesso || nfe.chave_acesso;
     if (chaveAcesso && chaveAcesso !== nfe.chave_acesso) {
       await query(
         `UPDATE nfe SET chave_acesso = ? WHERE id = ? AND tenant_id = ?`,
@@ -1063,7 +1183,9 @@ export async function obterDanfeNfe(tenantId, nfeId) {
     
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
+    const tipoDocumento = getTipoDocumentoFromModelo(nfe.modelo);
+    const endpoint = getEndpointDocumento(tipoDocumento);
+    const response = await client.get(`/v2/${endpoint}/${nfe.focus_nfe_ref}`);
     const { data } = response;
     
     if (!data.caminho_danfe) {

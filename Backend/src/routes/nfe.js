@@ -1,6 +1,6 @@
 import express from 'express';
 import { query, queryWithResult, transaction } from '../database/connection.js';
-import { gerarProximoNumeroNfe } from '../services/nfeNumeroService.js';
+import { gerarProximoNumeroDocumento } from '../services/nfeNumeroService.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import {
@@ -195,13 +195,19 @@ router.post('/', async (req, res) => {
       cliente_id,
       cnpj_cpf,
       itens = [],
-      observacoes
+      observacoes,
+      /** '55' (NF-e) | '65' (NFC-e). Mantém compatibilidade: default '55'. */
+      modelo
     } = req.body;
 
     // Buscar configurações da Focus NFe do tenant (ambiente e série)
     const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
     const ambienteAtual = String(focusConfig.ambiente || 'homologacao').toLowerCase().trim() === 'producao' ? 'producao' : 'homologacao';
-    const seriePadrao = focusConfig.serie_padrao || '001';
+    const modeloDoc = String(modelo || '55').trim() === '65' ? '65' : '55';
+    const tipoDocumento = modeloDoc === '65' ? 'nfce' : 'nfe';
+    const seriePadrao = tipoDocumento === 'nfce'
+      ? (focusConfig.serie_padrao_nfce || '1')
+      : (focusConfig.serie_padrao || '001');
 
     // Verificar se venda existe (se fornecida)
     if (venda_id) {
@@ -245,12 +251,12 @@ router.post('/', async (req, res) => {
 
     // Gerar número e criar NF-e + itens em uma transação (evita reutilizar número e condição de corrida)
     const { nfeId, numeroNfe } = await transaction(async (conn) => {
-      const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId, ambienteAtual);
+      const numeroNfe = await gerarProximoNumeroDocumento(conn, tenantId, ambienteAtual, tipoDocumento);
       const [insertResult] = await conn.execute(
         `INSERT INTO nfe (
           tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
-          status, ambiente, observacoes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          status, ambiente, modelo, observacoes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           tenantId,
           venda_id ?? null,
@@ -261,6 +267,7 @@ router.post('/', async (req, res) => {
           valorTotal,
           'pendente',
           ambienteAtual,
+          modeloDoc,
           observacoes ?? null
         ]
       );
@@ -495,11 +502,14 @@ router.post('/config/focus-nfe', async (req, res) => {
       token_producao, // Token para ambiente de produção
       ambiente,
       serie_padrao,
+      serie_padrao_nfce,
       natureza_operacao,
       regime_tributario,
       cnpj_emitente,
       inscricao_estadual,
-      informacoes_complementares
+      informacoes_complementares,
+      proximo_numero,
+      proximo_numero_nfce
     } = req.body;
     
     // Construir objeto de configuração apenas com campos fornecidos
@@ -509,11 +519,14 @@ router.post('/config/focus-nfe', async (req, res) => {
     if (token_producao !== undefined && token_producao !== '') config.token_producao = token_producao;
     if (ambiente !== undefined) config.ambiente = ambiente;
     if (serie_padrao !== undefined) config.serie_padrao = serie_padrao;
+    if (serie_padrao_nfce !== undefined) config.serie_padrao_nfce = serie_padrao_nfce;
     if (natureza_operacao !== undefined) config.natureza_operacao = natureza_operacao;
     if (regime_tributario !== undefined) config.regime_tributario = regime_tributario;
     if (cnpj_emitente !== undefined) config.cnpj_emitente = cnpj_emitente;
     if (inscricao_estadual !== undefined) config.inscricao_estadual = inscricao_estadual;
     if (informacoes_complementares !== undefined) config.informacoes_complementares = informacoes_complementares;
+    if (proximo_numero !== undefined) config.proximo_numero = proximo_numero;
+    if (proximo_numero_nfce !== undefined) config.proximo_numero_nfce = proximo_numero_nfce;
     
     await saveFocusNfeConfig(req.user.tenant_id, config);
     

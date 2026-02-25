@@ -269,7 +269,11 @@ export const usePagamentos = () => {
   };
 
   // Função para criar venda
-  const criarVenda = async (dadosVenda: DadosVendaCompleta & { emitir_nfe?: boolean }) => {
+  const criarVenda = async (dadosVenda: DadosVendaCompleta & {
+    emitir_nfe?: boolean;
+    emitir_nfce?: boolean;
+    documento_fiscal?: 'nfe' | 'nfce';
+  }) => {
     try {
       setLoading(true);
       setError(null);

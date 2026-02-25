@@ -389,6 +389,7 @@ CREATE TABLE IF NOT EXISTS nfe (
     valor_total DECIMAL(10,2) NOT NULL,
     status ENUM('pendente', 'autorizada', 'cancelada', 'erro', 'processando') DEFAULT 'pendente',
     ambiente ENUM('homologacao', 'producao') DEFAULT 'homologacao',
+    modelo ENUM('55', '65') DEFAULT '55' COMMENT '55=NF-e, 65=NFC-e',
     -- Campos para integração Focus NFe
     focus_nfe_ref VARCHAR(100) COMMENT 'Referência única da NF-e na API Focus NFe',
     protocolo VARCHAR(50) COMMENT 'Número do protocolo de autorização',
@@ -405,6 +406,24 @@ CREATE TABLE IF NOT EXISTS nfe (
     FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE SET NULL,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
 );
+
+-- Ajustes incrementais (idempotentes) para bases já existentes
+-- Adicionar coluna 'modelo' (55=NF-e, 65=NFC-e) caso não exista
+SET @__nfe_modelo_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'nfe'
+    AND COLUMN_NAME = 'modelo'
+);
+SET @__nfe_modelo_sql := IF(
+  @__nfe_modelo_exists = 0,
+  "ALTER TABLE nfe ADD COLUMN modelo ENUM('55','65') DEFAULT '55' COMMENT '55=NF-e, 65=NFC-e' AFTER ambiente",
+  "SELECT 1"
+);
+PREPARE __stmt FROM @__nfe_modelo_sql;
+EXECUTE __stmt;
+DEALLOCATE PREPARE __stmt;
 
 -- Tabela de itens da NF-e
 CREATE TABLE IF NOT EXISTS nfe_itens (
@@ -565,36 +584,126 @@ CREATE TABLE IF NOT EXISTS meudanfe_consultas (
 );
 
 -- Índices para melhor performance
-CREATE INDEX idx_usuarios_tenant ON usuarios(tenant_id);
-CREATE INDEX idx_usuarios_email ON usuarios(email);
-CREATE INDEX idx_cadastros_pendentes_tenant ON cadastros_pendentes(tenant_id);
-CREATE INDEX idx_cadastros_pendentes_token ON cadastros_pendentes(token_verificacao);
-CREATE INDEX idx_sessoes_usuario ON sessoes_usuario(usuario_id);
-CREATE INDEX idx_sessoes_token ON sessoes_usuario(token_sessao);
-CREATE INDEX idx_clientes_tenant ON clientes(tenant_id);
-CREATE INDEX idx_fornecedores_tenant ON fornecedores(tenant_id);
-CREATE INDEX idx_funcionarios_tenant ON funcionarios(tenant_id);
-CREATE INDEX idx_produtos_tenant ON produtos(tenant_id);
-CREATE INDEX idx_produtos_fornecedor ON produtos(fornecedor_id);
-CREATE INDEX idx_vendas_tenant ON vendas(tenant_id);
-CREATE INDEX idx_transacoes_tenant ON transacoes(tenant_id);
-CREATE INDEX idx_transacoes_fornecedor ON transacoes(fornecedor_id);
-CREATE INDEX idx_contas_pagar_tenant ON contas_pagar(tenant_id);
-CREATE INDEX idx_contas_pagar_fornecedor ON contas_pagar(fornecedor_id);
-CREATE INDEX idx_nfe_tenant ON nfe(tenant_id);
-CREATE INDEX idx_nfe_focus_ref ON nfe(focus_nfe_ref);
-CREATE INDEX idx_nfe_protocolo ON nfe(protocolo);
-CREATE INDEX idx_metodos_pagamento_tenant ON metodos_pagamento(tenant_id);
-CREATE INDEX idx_metodos_pagamento_tipo ON metodos_pagamento(tipo);
-CREATE INDEX idx_metodos_pagamento_parcelas_metodo ON metodos_pagamento_parcelas(metodo_pagamento_id);
-CREATE INDEX idx_pix_configuracoes_tenant ON pix_configuracoes(tenant_id);
-CREATE INDEX idx_pix_configuracoes_chave ON pix_configuracoes(chave_pix);
-CREATE INDEX idx_dados_bancarios_tenant ON dados_bancarios(tenant_id);
-CREATE INDEX idx_dados_bancarios_banco ON dados_bancarios(banco);
-CREATE INDEX idx_administradores_tenant ON administradores(tenant_id);
-CREATE INDEX idx_administradores_codigo ON administradores(codigo);
-CREATE INDEX idx_administradores_role ON administradores(role);
-CREATE INDEX idx_administradores_status ON administradores(status);
+-- (idempotente) criar índices somente se não existirem
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND INDEX_NAME = 'idx_usuarios_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_usuarios_tenant ON usuarios(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND INDEX_NAME = 'idx_usuarios_email');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_usuarios_email ON usuarios(email)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cadastros_pendentes' AND INDEX_NAME = 'idx_cadastros_pendentes_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_cadastros_pendentes_tenant ON cadastros_pendentes(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cadastros_pendentes' AND INDEX_NAME = 'idx_cadastros_pendentes_token');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_cadastros_pendentes_token ON cadastros_pendentes(token_verificacao)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessoes_usuario' AND INDEX_NAME = 'idx_sessoes_usuario');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_sessoes_usuario ON sessoes_usuario(usuario_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessoes_usuario' AND INDEX_NAME = 'idx_sessoes_token');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_sessoes_token ON sessoes_usuario(token_sessao)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clientes' AND INDEX_NAME = 'idx_clientes_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_clientes_tenant ON clientes(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fornecedores' AND INDEX_NAME = 'idx_fornecedores_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_fornecedores_tenant ON fornecedores(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'funcionarios' AND INDEX_NAME = 'idx_funcionarios_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_funcionarios_tenant ON funcionarios(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_tenant ON produtos(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_fornecedor');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_fornecedor ON produtos(fornecedor_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vendas' AND INDEX_NAME = 'idx_vendas_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_vendas_tenant ON vendas(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transacoes' AND INDEX_NAME = 'idx_transacoes_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_transacoes_tenant ON transacoes(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transacoes' AND INDEX_NAME = 'idx_transacoes_fornecedor');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_transacoes_fornecedor ON transacoes(fornecedor_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contas_pagar' AND INDEX_NAME = 'idx_contas_pagar_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_contas_pagar_tenant ON contas_pagar(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contas_pagar' AND INDEX_NAME = 'idx_contas_pagar_fornecedor');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_contas_pagar_fornecedor ON contas_pagar(fornecedor_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'nfe' AND INDEX_NAME = 'idx_nfe_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_nfe_tenant ON nfe(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'nfe' AND INDEX_NAME = 'idx_nfe_focus_ref');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_nfe_focus_ref ON nfe(focus_nfe_ref)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'nfe' AND INDEX_NAME = 'idx_nfe_protocolo');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_nfe_protocolo ON nfe(protocolo)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'metodos_pagamento' AND INDEX_NAME = 'idx_metodos_pagamento_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_metodos_pagamento_tenant ON metodos_pagamento(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'metodos_pagamento' AND INDEX_NAME = 'idx_metodos_pagamento_tipo');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_metodos_pagamento_tipo ON metodos_pagamento(tipo)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'metodos_pagamento_parcelas' AND INDEX_NAME = 'idx_metodos_pagamento_parcelas_metodo');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_metodos_pagamento_parcelas_metodo ON metodos_pagamento_parcelas(metodo_pagamento_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pix_configuracoes' AND INDEX_NAME = 'idx_pix_configuracoes_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_pix_configuracoes_tenant ON pix_configuracoes(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pix_configuracoes' AND INDEX_NAME = 'idx_pix_configuracoes_chave');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_pix_configuracoes_chave ON pix_configuracoes(chave_pix)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dados_bancarios' AND INDEX_NAME = 'idx_dados_bancarios_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_dados_bancarios_tenant ON dados_bancarios(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dados_bancarios' AND INDEX_NAME = 'idx_dados_bancarios_banco');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_dados_bancarios_banco ON dados_bancarios(banco)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'administradores' AND INDEX_NAME = 'idx_administradores_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_administradores_tenant ON administradores(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'administradores' AND INDEX_NAME = 'idx_administradores_codigo');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_administradores_codigo ON administradores(codigo)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'administradores' AND INDEX_NAME = 'idx_administradores_role');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_administradores_role ON administradores(role)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'administradores' AND INDEX_NAME = 'idx_administradores_status');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_administradores_status ON administradores(status)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
 
 -- Tabela de notificações
 CREATE TABLE IF NOT EXISTS notificacoes (
@@ -610,24 +719,79 @@ CREATE TABLE IF NOT EXISTS notificacoes (
 );
 
 -- Índices para a tabela de notificações
-CREATE INDEX idx_notificacoes_tenant ON notificacoes(tenant_id);
-CREATE INDEX idx_notificacoes_lida ON notificacoes(lida);
-CREATE INDEX idx_notificacoes_tipo ON notificacoes(tipo);
-CREATE INDEX idx_notificacoes_data_criacao ON notificacoes(data_criacao);
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notificacoes' AND INDEX_NAME = 'idx_notificacoes_tenant');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_notificacoes_tenant ON notificacoes(tenant_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notificacoes' AND INDEX_NAME = 'idx_notificacoes_lida');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_notificacoes_lida ON notificacoes(lida)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notificacoes' AND INDEX_NAME = 'idx_notificacoes_tipo');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_notificacoes_tipo ON notificacoes(tipo)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notificacoes' AND INDEX_NAME = 'idx_notificacoes_data_criacao');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_notificacoes_data_criacao ON notificacoes(data_criacao)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
 
 -- Índices para busca
-CREATE INDEX idx_clientes_nome ON clientes(nome);
-CREATE INDEX idx_fornecedores_nome ON fornecedores(nome);
-CREATE INDEX idx_fornecedores_cnpj ON fornecedores(cnpj);
-CREATE INDEX idx_funcionarios_nome ON funcionarios(nome);
-CREATE INDEX idx_funcionarios_cpf ON funcionarios(cpf);
-CREATE INDEX idx_funcionarios_cargo ON funcionarios(cargo);
-CREATE INDEX idx_produtos_nome ON produtos(nome);
-CREATE INDEX idx_produtos_codigo_barras ON produtos(codigo_barras);
-CREATE INDEX idx_produtos_estoque_kg ON produtos(estoque_kg);
-CREATE INDEX idx_produtos_estoque_litros ON produtos(estoque_litros);
-CREATE INDEX idx_produtos_estoque_minimo_kg ON produtos(estoque_minimo_kg);
-CREATE INDEX idx_produtos_estoque_minimo_litros ON produtos(estoque_minimo_litros);
-CREATE INDEX idx_vendas_numero ON vendas(numero_venda);
-CREATE INDEX idx_vendas_data ON vendas(data_venda);
-CREATE INDEX idx_venda_pagamentos_venda ON venda_pagamentos(venda_id);
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clientes' AND INDEX_NAME = 'idx_clientes_nome');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_clientes_nome ON clientes(nome)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fornecedores' AND INDEX_NAME = 'idx_fornecedores_nome');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_fornecedores_nome ON fornecedores(nome)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fornecedores' AND INDEX_NAME = 'idx_fornecedores_cnpj');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_fornecedores_cnpj ON fornecedores(cnpj)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'funcionarios' AND INDEX_NAME = 'idx_funcionarios_nome');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_funcionarios_nome ON funcionarios(nome)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'funcionarios' AND INDEX_NAME = 'idx_funcionarios_cpf');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_funcionarios_cpf ON funcionarios(cpf)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'funcionarios' AND INDEX_NAME = 'idx_funcionarios_cargo');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_funcionarios_cargo ON funcionarios(cargo)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_nome');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_nome ON produtos(nome)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_codigo_barras');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_codigo_barras ON produtos(codigo_barras)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_estoque_kg');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_estoque_kg ON produtos(estoque_kg)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_estoque_litros');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_estoque_litros ON produtos(estoque_litros)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_estoque_minimo_kg');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_estoque_minimo_kg ON produtos(estoque_minimo_kg)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produtos' AND INDEX_NAME = 'idx_produtos_estoque_minimo_litros');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_produtos_estoque_minimo_litros ON produtos(estoque_minimo_litros)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vendas' AND INDEX_NAME = 'idx_vendas_numero');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_vendas_numero ON vendas(numero_venda)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vendas' AND INDEX_NAME = 'idx_vendas_data');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_vendas_data ON vendas(data_venda)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;
+
+SET @__idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'venda_pagamentos' AND INDEX_NAME = 'idx_venda_pagamentos_venda');
+SET @__idx_sql := IF(@__idx_exists = 0, 'CREATE INDEX idx_venda_pagamentos_venda ON venda_pagamentos(venda_id)', 'SELECT 1');
+PREPARE __stmt FROM @__idx_sql; EXECUTE __stmt; DEALLOCATE PREPARE __stmt;

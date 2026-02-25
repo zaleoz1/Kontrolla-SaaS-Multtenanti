@@ -1,10 +1,13 @@
 /**
- * Serviço de geração do próximo número de NF-e.
+ * Serviço de geração do próximo número de documento fiscal (NF-e e NFC-e).
  * Usa sequência por AMBIENTE (homologação e produção são independentes na SEFAZ).
- * Evita duplicidade e garante que produção não use a mesma sequência que homologação.
- * Em rejeição 539 (duplicidade) ou 218 (já cancelada), a sequência é avançada no focusNfeService
- * para a próxima emissão usar o número seguinte. Opcionalmente, em Configurações > NF-e,
- * "Próximo número" (por ambiente) alinha com o painel Focus NFe para evitar duplicidade.
+ *
+ * IMPORTANTE:
+ * - A sequência é separada por tipo (NF-e vs NFC-e) e por ambiente.
+ * - Em rejeição 539 (duplicidade) ou 218 (já cancelada), a sequência é avançada no focusNfeService
+ *   para a próxima emissão usar o número seguinte.
+ * - Opcionalmente, em Configurações > NF-e, o "Próximo número" (por ambiente e por tipo)
+ *   pode alinhar com o painel Focus NFe para evitar duplicidade.
  */
 
 import { query } from '../database/connection.js';
@@ -12,20 +15,31 @@ import { query } from '../database/connection.js';
 /** Mínimo para o próximo número (base). Próxima emissão será >= 50. Ajuste aqui se precisar. */
 const MIN_PROXIMO_NUMERO_NFE = 49;
 
-function getChaveSequencia(ambiente) {
+function normalizeTipoDocumento(tipoDocumento) {
+  const t = String(tipoDocumento || 'nfe').toLowerCase().trim();
+  return t === 'nfce' ? 'nfce' : 'nfe';
+}
+
+function getModeloFromTipoDocumento(tipoDocumento) {
+  return normalizeTipoDocumento(tipoDocumento) === 'nfce' ? '65' : '55';
+}
+
+function getChaveSequencia(ambiente, tipoDocumento = 'nfe') {
   const amb = (ambiente || 'homologacao').toLowerCase();
-  return amb === 'producao' ? 'nfe_ultimo_numero_producao' : 'nfe_ultimo_numero_homologacao';
+  const prefix = normalizeTipoDocumento(tipoDocumento);
+  const sufixo = amb === 'producao' ? 'producao' : 'homologacao';
+  return `${prefix}_ultimo_numero_${sufixo}`;
 }
 
 /**
  * Avança a sequência do ambiente após rejeição por duplicidade, para a próxima emissão usar número seguinte.
- * Chamado quando a SEFAZ retorna "Duplicidade de NF-e" (o número já foi usado).
+ * Chamado quando a SEFAZ retorna duplicidade (o número já foi usado) ou já cancelada (número consumido).
  * @param {number} tenantId - ID do tenant
  * @param {string} ambiente - 'homologacao' ou 'producao'
  * @param {string|number} numeroUsado - Número que foi rejeitado (ex.: 14)
  */
-export async function avancarSequenciaAposDuplicidade(tenantId, ambiente, numeroUsado) {
-  const chave = getChaveSequencia(ambiente);
+export async function avancarSequenciaAposDuplicidadeDocumento(tenantId, ambiente, tipoDocumento, numeroUsado) {
+  const chave = getChaveSequencia(ambiente, tipoDocumento);
   const num = parseInt(String(numeroUsado).replace(/\D/g, ''), 10) || 0;
   if (num <= 0) return;
   await query(
@@ -37,29 +51,51 @@ export async function avancarSequenciaAposDuplicidade(tenantId, ambiente, numero
 }
 
 /**
- * Gera o próximo número de NF-e dentro de uma transação (usa a conexão passada).
- * Sequência separada por ambiente: homologação e produção não compartilham números.
+ * Mantido por compatibilidade: avança sequência de NF-e (modelo 55).
+ */
+export async function avancarSequenciaAposDuplicidade(tenantId, ambiente, numeroUsado) {
+  return avancarSequenciaAposDuplicidadeDocumento(tenantId, ambiente, 'nfe', numeroUsado);
+}
+
+/**
+ * Gera o próximo número de documento fiscal dentro de uma transação (usa a conexão passada).
+ * Sequência separada por tipo e ambiente: homologação e produção não compartilham números.
  * @param {import('mysql2/promise').PoolConnection} conn - Conexão da transação (com lock)
  * @param {number} tenantId - ID do tenant
  * @param {string} [ambiente='homologacao'] - 'homologacao' ou 'producao'
+ * @param {('nfe'|'nfce')} [tipoDocumento='nfe'] - 'nfe' (modelo 55) ou 'nfce' (modelo 65)
  * @returns {Promise<string>} - Número formatado (9 dígitos)
  */
-export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologacao') {
+export async function gerarProximoNumeroDocumento(conn, tenantId, ambiente = 'homologacao', tipoDocumento = 'nfe') {
   const amb = String(ambiente || 'homologacao').toLowerCase().trim();
-  const chaveSeq = getChaveSequencia(amb);
+  const tipo = normalizeTipoDocumento(tipoDocumento);
+  const modelo = getModeloFromTipoDocumento(tipo);
+  const chaveSeq = getChaveSequencia(amb, tipo);
 
   // Garantir que a linha de sequência exista; se não existir, criar com MAX(numero) da tabela
   // (evita resetar para 0 quando alguém apagou a config mas manteve NF-e, ou quando apagou NF-e e a config)
   const [maxInit] = await conn.execute(
-    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m FROM nfe WHERE tenant_id = ? AND LOWER(TRIM(ambiente)) = ?`,
-    [tenantId, amb]
+    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m
+     FROM nfe
+     WHERE tenant_id = ?
+       AND LOWER(TRIM(ambiente)) = ?
+       AND (COALESCE(modelo, '55') = ?)`,
+    [tenantId, amb, modelo]
   );
   const valorInicial = String(maxInit[0]?.m ?? 0);
   await conn.execute(
     `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
      VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), (SELECT COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0) FROM nfe n WHERE n.tenant_id = ? AND LOWER(TRIM(n.ambiente)) = ?))`,
-    [tenantId, chaveSeq, valorInicial, tenantId, amb]
+     ON DUPLICATE KEY UPDATE valor = GREATEST(
+       CAST(valor AS UNSIGNED),
+       (SELECT COALESCE(MAX(CAST(n.numero AS UNSIGNED)), 0)
+        FROM nfe n
+        WHERE n.tenant_id = ?
+          AND LOWER(TRIM(n.ambiente)) = ?
+          AND (COALESCE(n.modelo, '55') = ?)
+       )
+     )`,
+    [tenantId, chaveSeq, valorInicial, tenantId, amb, modelo]
   );
 
   const [rows] = await conn.execute(
@@ -71,22 +107,28 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
 
   // Maior número já na tabela nfe NESTE AMBIENTE (LOWER para garantir match)
   const [maxRows] = await conn.execute(
-    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m FROM nfe WHERE tenant_id = ? AND LOWER(TRIM(ambiente)) = ?`,
-    [tenantId, amb]
+    `SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) as m
+     FROM nfe
+     WHERE tenant_id = ?
+       AND LOWER(TRIM(ambiente)) = ?
+       AND (COALESCE(modelo, '55') = ?)`,
+    [tenantId, amb, modelo]
   );
   const maxTabela = parseInt(maxRows[0]?.m || '0', 10);
 
-  // Opcional: próximo número em config (geral ou por ambiente)
+  // Opcional: próximo número em config (geral ou por ambiente, por tipo)
+  const chaveProximoGeral = tipo === 'nfce' ? 'nfce_proximo_numero' : 'nfe_proximo_numero';
+  const chaveProximoAmb = `${chaveProximoGeral}_${amb}`;
   const [configRows] = await conn.execute(
     `SELECT chave, valor FROM tenant_configuracoes
-     WHERE tenant_id = ? AND (chave = 'nfe_proximo_numero' OR chave = ?)`,
-    [tenantId, `nfe_proximo_numero_${amb}`]
+     WHERE tenant_id = ? AND (chave = ? OR chave = ?)`,
+    [tenantId, chaveProximoGeral, chaveProximoAmb]
   );
   let configProximo = 0;
   for (const r of configRows) {
     const v = parseInt(r.valor || '0', 10);
-    if (r.chave === `nfe_proximo_numero_${amb}`) configProximo = Math.max(configProximo, v);
-    if (r.chave === 'nfe_proximo_numero') configProximo = Math.max(configProximo, v);
+    if (r.chave === chaveProximoAmb) configProximo = Math.max(configProximo, v);
+    if (r.chave === chaveProximoGeral) configProximo = Math.max(configProximo, v);
   }
   const configMinBase = configProximo > 0 ? configProximo - 1 : 0;
 
@@ -104,4 +146,11 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
   );
   const numeroFormatado = proximo.toString().padStart(9, '0');
   return numeroFormatado;
+}
+
+/**
+ * Mantido por compatibilidade: gera próximo número de NF-e (modelo 55).
+ */
+export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologacao') {
+  return gerarProximoNumeroDocumento(conn, tenantId, ambiente, 'nfe');
 }

@@ -1,6 +1,6 @@
 import express from 'express';
 import { query, queryWithResult, transaction } from '../database/connection.js';
-import { gerarProximoNumeroNfe } from '../services/nfeNumeroService.js';
+import { gerarProximoNumeroDocumento } from '../services/nfeNumeroService.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateVenda, validateId, validatePagination, validateSearch, handleValidationErrors } from '../middleware/validation.js';
 import NotificationService from '../services/notificationService.js';
@@ -295,11 +295,23 @@ router.post('/', validateVenda, async (req, res) => {
       parcelas = 1,
       observacoes,
       status = 'pendente',
-      emitir_nfe = false // Opção para emitir NF-e automaticamente
+      emitir_nfe = false, // Opção para emitir NF-e automaticamente (legado)
+      emitir_nfce = false, // Opção para emitir NFC-e automaticamente
+      documento_fiscal // 'nfe' | 'nfce' (prioriza sobre flags quando presente)
     } = req.body;
     
-    // Normalizar emitir_nfe para boolean
+    // Normalizar flags para boolean
     const emitirNfeNormalizado = emitir_nfe === true || emitir_nfe === 'true' || emitir_nfe === 1 || emitir_nfe === '1';
+    const emitirNfceNormalizado = emitir_nfce === true || emitir_nfce === 'true' || emitir_nfce === 1 || emitir_nfce === '1';
+    const emitirDocumentoFiscal = emitirNfceNormalizado || emitirNfeNormalizado;
+
+    const documentoFiscalNormalizado = (() => {
+      if (emitirNfceNormalizado) return 'nfce';
+      const doc = String(documento_fiscal || '').toLowerCase().trim();
+      if (doc === 'nfce' || doc === 'nfc-e') return 'nfce';
+      if (doc === 'nfe' || doc === 'nf-e') return 'nfe';
+      return 'auto';
+    })();
 
     // Debug: verificar dados recebidos
     console.log('Dados recebidos na criação da venda:', {
@@ -653,7 +665,7 @@ router.post('/', validateVenda, async (req, res) => {
 
     // Emissão de NF-e (se solicitado)
     let nfeResult = null;
-    if (emitirNfeNormalizado) {
+    if (emitirDocumentoFiscal) {
       try {
         
         // Verificar configurações da Focus NFe
@@ -707,17 +719,29 @@ router.post('/', validateVenda, async (req, res) => {
           
           // Criar NF-e no banco (em transação com sequência que não reutiliza número)
           const ambienteAtual = String(focusConfig.ambiente || 'homologacao').toLowerCase().trim() === 'producao' ? 'producao' : 'homologacao';
-          const seriePadrao = focusConfig.serie_padrao || '001';
+          const tipoDocumento = (() => {
+            if (documentoFiscalNormalizado === 'nfce') return 'nfce';
+            if (documentoFiscalNormalizado === 'nfe') return 'nfe';
+            // auto: preferir NFC-e para consumidor final / não identificado;
+            // emitir NF-e automaticamente apenas quando o cliente for PJ (CNPJ).
+            const doc = String(clienteData?.cpf_cnpj || '').replace(/\D/g, '');
+            return doc.length === 14 ? 'nfe' : 'nfce';
+          })();
+          const modeloDoc = tipoDocumento === 'nfce' ? '65' : '55';
+          const seriePadrao = tipoDocumento === 'nfce'
+            ? (focusConfig.serie_padrao_nfce || '1')
+            : (focusConfig.serie_padrao || '001');
           const tenantId = req.user.tenant_id;
-          const observacoesNfe = `NF-e gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`;
+          const labelDoc = tipoDocumento === 'nfce' ? 'NFC-e' : 'NF-e';
+          const observacoesNfe = `${labelDoc} gerada automaticamente da venda #${numeroVenda}${pagamento_prazo && metodos_pagamento && metodos_pagamento.length > 0 ? ' (valor pago à vista)' : ''}`;
 
           const { nfeId, numeroNfe } = await transaction(async (conn) => {
-            const numeroNfe = await gerarProximoNumeroNfe(conn, tenantId, ambienteAtual);
+            const numeroNfe = await gerarProximoNumeroDocumento(conn, tenantId, ambienteAtual, tipoDocumento);
             const [nfeInsert] = await conn.execute(
               `INSERT INTO nfe (
                 tenant_id, venda_id, cliente_id, cnpj_cpf, numero, serie, valor_total,
-                status, ambiente, observacoes
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                status, ambiente, modelo, observacoes
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 tenantId,
                 vendaId,
@@ -728,6 +752,7 @@ router.post('/', validateVenda, async (req, res) => {
                 valorTotalNfe,
                 'pendente',
                 ambienteAtual,
+                modeloDoc,
                 observacoesNfe
               ]
             );
@@ -760,6 +785,7 @@ router.post('/', validateVenda, async (req, res) => {
               nfe_id: nfeId,
               numero: numeroNfe.toString(),
               ambiente: ambienteAtual,
+              modelo: modeloDoc,
               status: emissaoResult.status,
               chave_acesso: emissaoResult.chave_acesso,
               protocolo: emissaoResult.protocolo,
@@ -771,6 +797,7 @@ router.post('/', validateVenda, async (req, res) => {
               nfe_id: nfeId,
               numero: numeroNfe.toString(),
               ambiente: ambienteAtual,
+              modelo: modeloDoc,
               status: 'erro',
               mensagem: emissaoError.message
             };

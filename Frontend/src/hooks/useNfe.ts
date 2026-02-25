@@ -19,6 +19,8 @@ export interface Nfe {
   id: number;
   numero: string;
   serie: string;
+  /** 55=NF-e, 65=NFC-e */
+  modelo?: '55' | '65';
   chave_acesso?: string;
   cliente_id?: number;
   cliente_nome?: string;
@@ -60,7 +62,10 @@ export interface FocusNfeConfig {
   token_masked?: string;
   // Configurações gerais
   ambiente: 'homologacao' | 'producao';
+  /** Série padrão NF-e (modelo 55) */
   serie_padrao: string;
+  /** Série padrão NFC-e (modelo 65) */
+  serie_padrao_nfce?: string;
   natureza_operacao: string;
   regime_tributario: string;
   cnpj_emitente: string;
@@ -68,6 +73,8 @@ export interface FocusNfeConfig {
   informacoes_complementares?: string;
   /** Próximo número da NF-e (quando SEFAZ já tem números à frente; deixe vazio para automático) */
   proximo_numero?: string;
+  /** Próximo número da NFC-e (quando SEFAZ já tem números à frente; deixe vazio para automático) */
+  proximo_numero_nfce?: string;
 }
 
 // Interface para resultado de validação de configurações
@@ -123,6 +130,8 @@ export interface NfeCreate {
   venda_id?: number;
   cliente_id?: number;
   cnpj_cpf?: string;
+  /** '55' (NF-e) | '65' (NFC-e). Default backend: '55'. */
+  modelo?: '55' | '65';
   itens: {
     produto_id: number;
     quantidade: number;
@@ -662,12 +671,14 @@ export function useNfe() {
     token_producao: string; // Token para ambiente de produção
     ambiente: 'homologacao' | 'producao';
     serie_padrao: string;
+    serie_padrao_nfce: string;
     natureza_operacao: string;
     regime_tributario: string;
     cnpj_emitente: string;
     inscricao_estadual: string;
     informacoes_complementares: string;
     proximo_numero: string;
+    proximo_numero_nfce: string;
   }>): Promise<void> => {
     try {
       setLoading(true);

@@ -34,6 +34,13 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useBuscaClientes } from "@/hooks/useBuscaClientes";
 import { Cliente } from "@/hooks/useClientes";
 import { PagamentoPrazo } from "@/hooks/useVendas";
@@ -116,6 +123,7 @@ export default function Pagamentos() {
   const [mostrarSelecaoCliente, setMostrarSelecaoCliente] = useState(false);
   
   // Estados para pagamento a prazo
+  const [documentoFiscal, setDocumentoFiscal] = useState<"nfe" | "nfce">("nfce");
   const [pagamentoPrazo, setPagamentoPrazo] = useState<PagamentoPrazo>({
     dias: "",
     juros: "",
@@ -131,8 +139,11 @@ export default function Pagamentos() {
     numero?: string;
     ambiente?: string;
     status?: string;
+    modelo?: string;
     mensagem?: string;
   } | null>(null);
+
+  const getDocumentoFiscalLabel = (modelo?: string) => (String(modelo || "") === "65" ? "NFC-e" : "NF-e");
   
   // Estados para controle de carregamento
   const [erroCarregamentoMetodos, setErroCarregamentoMetodos] = useState<string | null>(null);
@@ -570,6 +581,46 @@ export default function Pagamentos() {
     }
   }, [metodosPagamento, metodoPagamentoUnico, usarPagamentoPrazo]);
 
+  const DOCUMENTO_FISCAL_PREF_KEY = "kontrolla.documento_fiscal_modelo";
+
+  // Definir o tipo de documento quando emissão estiver habilitada
+  // Regra:
+  // - Se existir preferência em Configurações (NFe.tsx), respeitar.
+  // - Se não houver preferência, usar regra automática (cliente PJ → NF-e; demais → NFC-e).
+  useEffect(() => {
+    if (!emitirNfe) return;
+    const pref = (() => {
+      try {
+        const v = localStorage.getItem(DOCUMENTO_FISCAL_PREF_KEY);
+        return v === "55" || v === "65" ? v : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (pref === "65") {
+      setDocumentoFiscal("nfce");
+      return;
+    }
+
+    if (pref === "55") {
+      setDocumentoFiscal("nfe");
+      return;
+    }
+
+    const docCliente = String(clienteSelecionado?.cpf_cnpj || "").replace(/\D/g, "");
+    const isCnpj = docCliente.length === 14;
+    setDocumentoFiscal(isCnpj ? "nfe" : "nfce");
+  }, [emitirNfe, clienteSelecionado]);
+
+  // Se desativar emissão, resetar o tipo
+  useEffect(() => {
+    if (!emitirNfe) {
+      // manter o default como NFC-e
+      setDocumentoFiscal("nfce");
+    }
+  }, [emitirNfe]);
+
   // Adicionar atalho da tecla ESC para voltar
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -592,6 +643,16 @@ export default function Pagamentos() {
 
   const salvarVenda = async () => {
     try {
+      // Se o usuário configurou NF-e (55) em Configurações, exigir CPF/CNPJ do cliente
+      if (emitirNfe && documentoFiscal === "nfe" && !clienteSelecionado?.cpf_cnpj) {
+        toast({
+          title: "Cliente obrigatório para NF-e",
+          description: "Você selecionou NF-e (modelo 55) em Configurações. Para emitir NF-e, selecione um cliente com CPF/CNPJ. Para consumidor não identificado, altere para NFC-e (modelo 65) nas Configurações de NF-e.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Calcular o total final que será salvo no banco
       const totalFinal = calcularTotalFinal();
       
@@ -626,7 +687,8 @@ export default function Pagamentos() {
       // Adicionar opção de emitir NF-e
       const dadosVendaComNfe = {
         ...dadosVenda,
-        emitir_nfe: emitirNfe
+        emitir_nfe: emitirNfe,
+        documento_fiscal: documentoFiscal
       };
 
       // Salvar venda via API
@@ -656,6 +718,7 @@ export default function Pagamentos() {
       
       // Mostrar toast com resultado
       if (emitirNfe && response.nfe) {
+        const labelDoc = getDocumentoFiscalLabel(response.nfe.modelo);
         // Considerar sucesso se autorizada ou processando (enviada com sucesso)
         const nfeSucesso = response.nfe.success || response.nfe.status === 'processando_autorizacao';
         
@@ -665,14 +728,14 @@ export default function Pagamentos() {
             : 'emitida';
           toast({
             title: "Venda realizada com sucesso!",
-            description: `Venda #${response.numero_venda} criada. NF-e #${response.nfe.numero} ${statusMsg} (${response.nfe.ambiente?.toUpperCase()})`,
+            description: `Venda #${response.numero_venda} criada. ${labelDoc} #${response.nfe.numero} ${statusMsg} (${response.nfe.ambiente?.toUpperCase()})`,
           });
         } else {
           // Erro na emissão - mostrar mensagem mais clara com ação
-          const mensagemErro = response.nfe.mensagem || 'Erro na emissão da NF-e';
+          const mensagemErro = response.nfe.mensagem || `Erro na emissão da ${labelDoc}`;
           const toastOptions: any = {
-            title: "Venda concluída, mas houve erro na emissão da NF-e",
-            description: `Venda #${response.numero_venda} foi criada com sucesso. Erro: ${mensagemErro}. Acesse a página de NF-e para tentar emitir novamente.`,
+            title: `Venda concluída, mas houve erro na emissão da ${labelDoc}`,
+            description: `Venda #${response.numero_venda} foi criada com sucesso. Erro: ${mensagemErro}. Acesse a página de Notas Fiscais para tentar emitir novamente.`,
             variant: "destructive" as const,
           };
           
@@ -680,10 +743,10 @@ export default function Pagamentos() {
           if (response.nfe.nfe_id) {
             toastOptions.action = (
               <ToastAction 
-                altText="Ir para NF-e" 
+                altText="Ir para Notas Fiscais" 
                 onClick={() => navigate('/dashboard/nfe')}
               >
-                Ir para NF-e
+                Ir para Notas Fiscais
               </ToastAction>
             );
           }
@@ -2593,17 +2656,18 @@ export default function Pagamentos() {
                     })()}
                   </div>
                   
-                  {/* Toggle para Emissão de NF-e */}
+                  {/* Toggle para Emissão de documento fiscal (NF-e / NFC-e) */}
                   <div className="pt-3 border-t border-border mt-3">
-                    <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <FileCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <div>
                           <Label htmlFor="emitir-nfe" className="text-xs font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
-                            Emitir NF-e
+                            Emitir documento fiscal
                           </Label>
                           <p className="text-[10px] text-blue-600 dark:text-blue-400">
-                            {emitirNfe ? "Nota fiscal será emitida" : "Sem nota fiscal"}
+                            {emitirNfe ? `Será emitida ${documentoFiscal === "nfce" ? "NFC-e" : "NF-e"}` : "Sem nota fiscal"}
                           </p>
                         </div>
                       </div>
@@ -2613,6 +2677,16 @@ export default function Pagamentos() {
                         onCheckedChange={setEmitirNfe}
                         className="data-[state=checked]:bg-blue-600"
                       />
+                      </div>
+                      
+                      {emitirNfe && (
+                        <div className="mt-2 text-[10px] text-blue-600 dark:text-blue-400">
+                          Será emitida <strong>{documentoFiscal === "nfce" ? "NFC-e (65)" : "NF-e (55)"}</strong>.
+                          {documentoFiscal === "nfe" && !clienteSelecionado?.cpf_cnpj && (
+                            <> Para emitir <strong>NF-e</strong>, selecione um cliente com CPF/CNPJ.</>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2642,6 +2716,10 @@ export default function Pagamentos() {
               
               {/* Informações da NF-e */}
               {vendaFinalizada.nfe && (
+                (() => {
+                  const labelDoc = getDocumentoFiscalLabel(vendaFinalizada.nfe.modelo);
+                  const isDuplicidade = (msg: string) => /duplicidade de (nf-?e|nfc-?e)/i.test(msg);
+                  return (
                 <div className={`mb-4 p-3 rounded-lg border ${
                   vendaFinalizada.nfe.success 
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
@@ -2658,7 +2736,7 @@ export default function Pagamentos() {
                         ? 'text-green-800 dark:text-green-200' 
                         : 'text-amber-800 dark:text-amber-200'
                     }`}>
-                      {vendaFinalizada.nfe.success ? 'NF-e Emitida' : 'NF-e Pendente'}
+                      {vendaFinalizada.nfe.success ? `${labelDoc} Emitida` : `${labelDoc} Pendente`}
                     </span>
                     {vendaFinalizada.nfe.ambiente && (
                       <Badge variant={vendaFinalizada.nfe.ambiente === 'producao' ? 'default' : 'secondary'} className="text-[10px]">
@@ -2684,15 +2762,17 @@ export default function Pagamentos() {
                         <p className="text-amber-600 dark:text-amber-400 break-words">
                           {vendaFinalizada.nfe.mensagem}
                         </p>
-                        {/duplicidade de nf-?e/i.test(vendaFinalizada.nfe.mensagem) && (
+                        {isDuplicidade(vendaFinalizada.nfe.mensagem) && (
                           <p className="text-muted-foreground mt-2">
-                            A nota pode já estar autorizada na SEFAZ. Na página NF-e, use &quot;Verificar&quot; na nota para atualizar o status.
+                            A nota pode já estar autorizada na SEFAZ. Na página de Notas Fiscais, use &quot;Verificar&quot; para atualizar o status.
                           </p>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
+                  );
+                })()
               )}
               
               <div className="flex flex-col space-y-2 sm:space-y-3">
@@ -2702,7 +2782,7 @@ export default function Pagamentos() {
                     onClick={() => { navigate('/dashboard/nfe'); fecharVenda(); }}
                     className="w-full h-8 sm:h-10 text-xs sm:text-sm border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/20"
                   >
-                    Ir para NF-e e verificar status
+                    Ir para Notas Fiscais e verificar status
                   </Button>
                 )}
                 <Button 
