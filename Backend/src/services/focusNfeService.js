@@ -262,9 +262,6 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
   const cnpjEmitente = focusConfig.cnpj_emitente || tenant?.cnpj;
   if (cnpjEmitente) {
     payload.cnpj_emitente = cnpjEmitente.replace(/\D/g, '');
-    console.log(`[Focus NFe] CNPJ do emitente: ${payload.cnpj_emitente}`);
-  } else {
-    console.log('[Focus NFe] AVISO: CNPJ do emitente não configurado');
   }
   
   // === DESTINATÁRIO ===
@@ -327,8 +324,6 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig) {
     
     // Indicador IE = 9 (Não contribuinte)
     payload.indicador_inscricao_estadual_destinatario = 9;
-    
-    console.log(`[Focus NFe] Consumidor não identificado - Ambiente: ${focusConfig.ambiente}`);
   }
   
   // === MODALIDADE DE FRETE (obrigatório) ===
@@ -378,10 +373,6 @@ function montarItemNfe(item, index, focusConfig, localDestino = 1) {
   const cstIcmsOriginal = item.icms_situacao_tributaria || '102';
   const cstIcms = isSimplesNacional ? '102' : cstIcmsOriginal;
   
-  // Log quando CST for forçado para 102 devido ao Simples Nacional
-  if (isSimplesNacional && cstIcmsOriginal !== '102') {
-    console.log(`[Focus NFe] Item ${index + 1}: CST ${cstIcmsOriginal} do produto foi alterado para CST 102 (Simples Nacional - CRT ${regimeTributario})`);
-  }
   const icmsAliquota = parseFloat(item.icms_aliquota) || 0;
   const valorBruto = parseFloat(item.preco_total || 0);
   
@@ -530,13 +521,6 @@ export async function emitirNfe(tenantId, nfeId) {
     const token = getTokenForAmbiente(focusConfig);
     const ambiente = focusConfig.ambiente || 'homologacao';
     
-    // Debug: mostrar qual token está sendo usado
-    console.log(`[Focus NFe] Ambiente: ${ambiente}`);
-    console.log(`[Focus NFe] Token sendo usado: ${token ? token.substring(0, 8) + '...' : 'NENHUM'}`);
-    console.log(`[Focus NFe] Token Homologação configurado: ${focusConfig.token_homologacao ? 'SIM' : 'NÃO'}`);
-    console.log(`[Focus NFe] Token Produção configurado: ${focusConfig.token_producao ? 'SIM' : 'NÃO'}`);
-    console.log(`[Focus NFe] Token Legado configurado: ${focusConfig.token ? 'SIM' : 'NÃO'}`);
-    
     if (!token) {
       throw new Error(`Token de ${ambiente} da API Focus NFe não configurado. Configure em Configurações > NF-e.`);
     }
@@ -600,33 +584,16 @@ export async function emitirNfe(tenantId, nfeId) {
       throw new Error('NF-e não possui itens');
     }
     
-    // Log do regime tributário configurado
     const regimeTributario = focusConfig.regime_tributario || '1';
     const isSimplesNacional = regimeTributario === '1' || regimeTributario === '4';
-    console.log(`[Focus NFe] Regime Tributário: ${regimeTributario} (${isSimplesNacional ? 'Simples Nacional' : 'Outro'})`);
-    if (isSimplesNacional) {
-      console.log(`[Focus NFe] AVISO: Emitente do Simples Nacional - Todos os itens usarão CST 102, independente do CST cadastrado no produto`);
-    }
-    
     // Montar payload
     const payload = montarNfePayload(nfe, tenant, cliente, itens, focusConfig);
-    
-    // Debug: Log do payload antes de enviar (apenas estrutura, sem dados sensíveis)
-    console.log(`[Focus NFe] Payload preparado - Itens: ${payload.items?.length || 0}`);
-    if (payload.items && payload.items.length > 0) {
-      const primeiroItem = payload.items[0];
-      console.log(`[Focus NFe] Primeiro item - ICMS CST: ${primeiroItem.icms_situacao_tributaria}, Origem: ${primeiroItem.icms_origem}`);
-      console.log(`[Focus NFe] Primeiro item - PIS CST: ${primeiroItem.pis_situacao_tributaria}, COFINS CST: ${primeiroItem.cofins_situacao_tributaria}`);
-    }
     
     // Criar referência única para a NF-e (definida antes do POST para poder salvar no catch em caso de erro)
     const referencia = `nfe-${tenantId}-${nfeId}-${Date.now()}`;
     
     // Criar cliente da API com o token correto
     const client = createFocusNfeClient(token, focusConfig.ambiente);
-    
-    // Enviar para a API (numero enviado no payload é o que a SEFAZ usa; ambiente vem do token/config)
-    console.log(`[Focus NFe] Emitindo NF-e numero=${nfe.numero} ambiente=${nfe.ambiente || focusConfig.ambiente} ref=${referencia}`);
     
     let response;
     try {
@@ -642,25 +609,12 @@ export async function emitirNfe(tenantId, nfeId) {
       // Se for duplicidade ou NF-e já cancelada (número consumido na SEFAZ), avançar sequência
       const textoErro = String(msgErro || '');
       if (deveAvancarSequencia(dataErro.status_sefaz, textoErro)) {
-        avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
-          console.error('[Focus NFe] Erro ao ajustar sequência:', e.message)
-        );
-        console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na emissão – sequência avançada; próxima emissão usará número seguinte.');
+        avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch(() => {});
       }
       throw new Error(msgErro);
     }
     
-    // Processar resposta
     const { data } = response;
-    
-    // Log detalhado da resposta da SEFAZ
-    console.log(`[Focus NFe] Resposta da API:`, {
-      status: data.status,
-      mensagem_sefaz: data.mensagem_sefaz,
-      mensagem: data.mensagem,
-      protocolo: data.protocolo,
-      chave_nfe: data.chave_nfe
-    });
     
     // Salvar referência e status
     await query(
@@ -686,10 +640,7 @@ export async function emitirNfe(tenantId, nfeId) {
     // Se rejeitou (duplicidade 539 ou já cancelada 218), avançar sequência para a próxima emissão não repetir o número
     const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
     if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgSefaz)) {
-      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
-        console.error('[Focus NFe] Erro ao ajustar sequência:', e.message)
-      );
-      console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na resposta – sequência avançada; próxima emissão usará número seguinte.');
+      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch(() => {});
     }
     
     // Considerar sucesso se autorizado ou processando (nota foi enviada com sucesso)
@@ -697,12 +648,7 @@ export async function emitirNfe(tenantId, nfeId) {
     
     // Se estiver processando, iniciar verificação automática em background
     if (data.status === 'processando_autorizacao') {
-      console.log(`[Focus NFe] Iniciando verificação automática da NF-e ${nfeId} com referência ${referencia}`);
-      // Iniciar verificação automática sem bloquear a resposta
-      verificarStatusAutomaticamente(tenantId, nfeId, referencia).catch(err => {
-        console.error(`[Focus NFe] Erro na verificação automática da NF-e ${nfeId}:`, err.message);
-        console.error(`[Focus NFe] Stack trace:`, err.stack);
-      });
+      verificarStatusAutomaticamente(tenantId, nfeId, referencia).catch(() => {});
     }
     
     return {
@@ -714,8 +660,6 @@ export async function emitirNfe(tenantId, nfeId) {
       referencia
     };
   } catch (error) {
-    console.error('[Focus NFe] Erro ao emitir NF-e:', error.response?.data || error.message);
-    
     // Atualizar status de erro no banco
     await query(
       `UPDATE nfe SET status = 'erro', motivo_status = ? WHERE id = ? AND tenant_id = ?`,
@@ -738,37 +682,22 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
   const tentativas = 5; // Aumentar para 5 tentativas
   const intervalos = [3000, 5000, 7000, 10000, 15000]; // 3s, 5s, 7s, 10s, 15s (total: ~40s)
   
-  console.log(`[Focus NFe] 🔄 Iniciando verificação automática: NF-e ${nfeId}, Referência: ${referencia}`);
-  
   for (let i = 0; i < tentativas; i++) {
-    // Aguardar antes de consultar (exceto na primeira tentativa)
     if (i > 0) {
-      console.log(`[Focus NFe] ⏳ Aguardando ${intervalos[i]}ms antes da tentativa ${i + 1}/${tentativas}...`);
       await new Promise(resolve => setTimeout(resolve, intervalos[i]));
     }
     
     try {
-      console.log(`[Focus NFe] 🔍 Verificação automática ${i + 1}/${tentativas} da NF-e ${nfeId} (ref: ${referencia})...`);
-      
       const focusConfig = await getFocusNfeConfig(tenantId);
       const token = getTokenForAmbiente(focusConfig);
       
-      if (!token) {
-        console.log(`[Focus NFe] ⚠️ Token não configurado, parando verificação automática`);
-        break;
-      }
+      if (!token) break;
       
       const client = createFocusNfeClient(token, focusConfig.ambiente);
       const response = await client.get(`/v2/nfe/${referencia}`);
       const { data } = response;
       
-      console.log(`[Focus NFe] 📊 Status retornado na tentativa ${i + 1}: ${data.status}`);
-      
-      // Se foi autorizada, atualizar e parar
       if (data.status === 'autorizado') {
-        console.log(`[Focus NFe] ✅ NF-e ${nfeId} autorizada automaticamente na tentativa ${i + 1}!`);
-        console.log(`[Focus NFe] 📄 Protocolo: ${data.protocolo || 'N/A'}, Chave: ${data.chave_nfe || 'N/A'}`);
-        
         await query(
           `UPDATE nfe SET 
             status = 'autorizada',
@@ -785,16 +714,11 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
             tenantId
           ]
         );
-        
-        console.log(`[Focus NFe] ✅ Status atualizado no banco de dados para 'autorizada'`);
-        break; // Parar tentativas
+        break;
       }
       
-      // Se houve erro, atualizar e parar
       if (data.status === 'erro_autorizacao') {
         const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
-        console.log(`[Focus NFe] ❌ NF-e ${nfeId} rejeitada na tentativa ${i + 1}: ${msgSefaz}`);
-        
         await query(
           `UPDATE nfe SET 
             status = 'erro',
@@ -816,34 +740,17 @@ async function verificarStatusAutomaticamente(tenantId, nfeId, referencia) {
           const nfeRow = nfeRows && nfeRows[0];
           if (nfeRow) {
             const { numero, ambiente } = nfeRow;
-            avancarSequenciaAposDuplicidade(tenantId, ambiente, numero).catch((e) =>
-              console.error('[Focus NFe] Erro ao ajustar sequência (verificação automática):', e.message)
-            );
-            console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na verificação automática – sequência avançada.');
+            avancarSequenciaAposDuplicidade(tenantId, ambiente, numero).catch(() => {});
           }
         }
-        
-        break; // Parar tentativas
+        break;
       }
-      
-      // Se ainda está processando e é a última tentativa, logar
-      if (i === tentativas - 1 && data.status === 'processando_autorizacao') {
-        console.log(`[Focus NFe] ⏳ NF-e ${nfeId} ainda processando após ${tentativas} tentativas (total: ~${intervalos.reduce((a, b) => a + b, 0)}ms). Verifique manualmente.`);
-      }
-      
     } catch (error) {
-      console.error(`[Focus NFe] ❌ Erro na verificação automática ${i + 1}/${tentativas}:`, error.message);
-      if (error.response) {
-        console.error(`[Focus NFe] Resposta do erro:`, error.response.data);
-      }
-      // Continuar tentando mesmo se houver erro (pode ser erro temporário)
       if (i < tentativas - 1) {
-        console.log(`[Focus NFe] 🔄 Continuando para próxima tentativa...`);
+        // Continuar para próxima tentativa
       }
     }
   }
-  
-  console.log(`[Focus NFe] 🏁 Verificação automática finalizada para NF-e ${nfeId}`);
 }
 
 /**
@@ -910,10 +817,7 @@ export async function consultarNfe(tenantId, nfeId) {
     // Se a consulta retornou duplicidade (539) ou já cancelada (218), avançar sequência para a próxima emissão não repetir o número
     const msgConsulta = String(data.mensagem_sefaz || data.mensagem || '');
     if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgConsulta)) {
-      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch((e) =>
-        console.error('[Focus NFe] Erro ao ajustar sequência (consulta):', e.message)
-      );
-      console.log('[Focus NFe] Rejeição (duplicidade/cancelada) na consulta – sequência avançada; próxima emissão usará número seguinte.');
+      avancarSequenciaAposDuplicidade(tenantId, nfe.ambiente, nfe.numero).catch(() => {});
     }
 
     return {
@@ -929,7 +833,6 @@ export async function consultarNfe(tenantId, nfeId) {
       data_emissao: data.data_emissao
     };
   } catch (error) {
-    console.error('[Focus NFe] Erro ao consultar NF-e:', error.response?.data || error.message);
     throw new Error(error.response?.data?.mensagem || error.message);
   }
 }
@@ -1005,7 +908,6 @@ export async function cancelarNfe(tenantId, nfeId, justificativa) {
       mensagem: data.mensagem_sefaz || data.mensagem
     };
   } catch (error) {
-    console.error('[Focus NFe] Erro ao cancelar NF-e:', error.response?.data || error.message);
     throw new Error(error.response?.data?.mensagem || error.message);
   }
 }
@@ -1041,16 +943,8 @@ export async function obterXmlNfe(tenantId, nfeId) {
     
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    console.log(`[Focus NFe] Obtendo XML para ref: ${nfe.focus_nfe_ref}`);
-    
-    // Primeiro, consultar a NF-e para obter o caminho do XML
     const consultaResponse = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
     const consultaData = consultaResponse.data;
-    
-    console.log(`[Focus NFe] Consulta da NF-e - Status: ${consultaData.status}`);
-    console.log(`[Focus NFe] Campos disponíveis na resposta:`, Object.keys(consultaData));
-    console.log(`[Focus NFe] Chave de acesso no banco: ${nfe.chave_acesso || 'N/A'}`);
-    console.log(`[Focus NFe] Chave de acesso na API: ${consultaData.chave_nfe || consultaData.chave_acesso || 'N/A'}`);
     
     // Se a NF-e não está autorizada, não tem XML disponível
     if (consultaData.status !== 'autorizado') {
@@ -1060,7 +954,6 @@ export async function obterXmlNfe(tenantId, nfeId) {
     // Atualizar chave de acesso se não estiver salva ou se a API retornou uma diferente
     const chaveAcesso = consultaData.chave_nfe || consultaData.chave_acesso || nfe.chave_acesso;
     if (chaveAcesso && chaveAcesso !== nfe.chave_acesso) {
-      console.log(`[Focus NFe] Atualizando chave de acesso no banco: ${chaveAcesso}`);
       await query(
         `UPDATE nfe SET chave_acesso = ? WHERE id = ? AND tenant_id = ?`,
         [chaveAcesso, nfeId, tenantId]
@@ -1076,7 +969,6 @@ export async function obterXmlNfe(tenantId, nfeId) {
                     consultaData.xml;
     
     if (!xmlPath) {
-      console.error(`[Focus NFe] ❌ Caminho do XML não encontrado. Dados completos:`, JSON.stringify(consultaData, null, 2));
       throw new Error('Caminho do XML não disponível na resposta da API Focus NFe. Verifique se a NF-e está autorizada.');
     }
     
@@ -1087,8 +979,6 @@ export async function obterXmlNfe(tenantId, nfeId) {
       const baseURL = FOCUS_NFE_URLS[focusConfig.ambiente] || FOCUS_NFE_URLS.homologacao;
       xmlUrl = `${baseURL}${xmlPath.startsWith('/') ? '' : '/'}${xmlPath}`;
     }
-    
-    console.log(`[Focus NFe] 📥 Obtendo XML da URL: ${xmlUrl}`);
     
     // Obter o XML usando autenticação básica (token como username)
     const httpResponse = await axios.get(xmlUrl, {
@@ -1104,8 +994,6 @@ export async function obterXmlNfe(tenantId, nfeId) {
     });
     
     let xmlContent = httpResponse.data;
-    
-    console.log(`[Focus NFe] ✅ XML obtido, tamanho: ${xmlContent?.length || 0} caracteres`);
     
     // Garantir que é string
     if (Buffer.isBuffer(xmlContent)) {
@@ -1124,30 +1012,18 @@ export async function obterXmlNfe(tenantId, nfeId) {
     
     // Verificar se começa com declaração XML ou tag NFe
     if (!xmlContent.match(/^<\?xml|^<nfeProc|^<NFe/i)) {
-      console.error(`[Focus NFe] XML inválido - Primeiros 200 caracteres: ${xmlContent.substring(0, 200)}`);
       throw new Error('XML retornado não está em formato válido. Verifique se a NF-e está autorizada.');
     }
     
-    console.log(`[Focus NFe] ✅ XML obtido com sucesso, tamanho: ${xmlContent.length} caracteres`);
-    console.log(`[Focus NFe] XML inicia com: ${xmlContent.substring(0, 50)}...`);
-    
-    // Usar a chave de acesso já obtida anteriormente (prioridade: da consulta da API, depois do banco)
-    // A variável chaveAcesso já foi declarada acima, então apenas usamos ela aqui
-    console.log(`[Focus NFe] Chave de acesso para nome do arquivo: ${chaveAcesso || 'N/A'}`);
-    
-    // Usar a chave de acesso como nome do arquivo, ou fallback se não tiver
     const filename = chaveAcesso 
       ? `${chaveAcesso}.xml`
       : `nfe_${nfe.numero}.xml`;
-    
-    console.log(`[Focus NFe] Nome do arquivo gerado: ${filename}`);
     
     return {
       xml: xmlContent,
       filename
     };
   } catch (error) {
-    console.error('[Focus NFe] Erro ao obter XML:', error.response?.data || error.message);
     throw new Error(error.response?.data?.mensagem || error.message);
   }
 }
@@ -1187,15 +1063,10 @@ export async function obterDanfeNfe(tenantId, nfeId) {
     
     const client = createFocusNfeClient(token, focusConfig.ambiente);
     
-    // Primeiro, consultar a NF-e para obter o caminho do DANFE
-    console.log(`[Focus NFe] Consultando DANFE para ref: ${nfe.focus_nfe_ref}`);
     const response = await client.get(`/v2/nfe/${nfe.focus_nfe_ref}`);
     const { data } = response;
     
-    console.log('[Focus NFe] Resposta da consulta:', JSON.stringify(data, null, 2));
-    
     if (!data.caminho_danfe) {
-      console.log('[Focus NFe] caminho_danfe não disponível ainda');
       throw new Error('DANFE ainda não está disponível. Aguarde alguns segundos e tente novamente.');
     }
     
@@ -1210,14 +1081,11 @@ export async function obterDanfeNfe(tenantId, nfeId) {
       ? data.caminho_danfe 
       : `${baseUrl}${data.caminho_danfe}`;
     
-    console.log(`[Focus NFe] URL do DANFE: ${danfeUrl}`);
-    
     return {
       url: danfeUrl,
       filename: `danfe_${nfe.numero}_${nfe.chave_acesso || 'sem_chave'}.pdf`
     };
   } catch (error) {
-    console.error('[Focus NFe] Erro ao obter DANFE:', error.response?.data || error.message);
     throw new Error(error.response?.data?.mensagem || error.message);
   }
 }

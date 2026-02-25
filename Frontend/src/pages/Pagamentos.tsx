@@ -629,35 +629,12 @@ export default function Pagamentos() {
         emitir_nfe: emitirNfe
       };
 
-      // Debug: Log para verificar se emitir_nfe está sendo enviado
-      console.log('[Pagamentos] Enviando venda com emitir_nfe:', emitirNfe);
-
       // Salvar venda via API
       const response = await criarVenda(dadosVendaComNfe);
-      
-      // Debug: Log da resposta
-      console.log('[Pagamentos] Resposta da venda:', {
-        numero_venda: response.numero_venda,
-        nfe: response.nfe,
-        emitir_nfe_enviado: emitirNfe
-      });
       
       // Processar resultado da NF-e (se emitida)
       if (response.nfe) {
         setNfeResult(response.nfe);
-        const isDuplicidade = response.nfe.mensagem && /duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(String(response.nfe.mensagem));
-        console.log('[NFe] NF-e na venda:', {
-          nfe_id: response.nfe.nfe_id,
-          numero: response.nfe.numero,
-          ambiente: response.nfe.ambiente,
-          status: response.nfe.status,
-          success: response.nfe.success,
-          mensagem: response.nfe.mensagem,
-          numero_venda: response.numero_venda,
-          ...(isDuplicidade && {
-            sugestao: 'Próxima emissão usará o próximo número. Na página NF-e use "Verificar" se a nota já estiver autorizada na SEFAZ.'
-          })
-        });
       }
       
       // Preparar dados para o modal da nota

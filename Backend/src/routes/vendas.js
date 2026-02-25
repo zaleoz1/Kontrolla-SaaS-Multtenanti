@@ -652,11 +652,9 @@ router.post('/', validateVenda, async (req, res) => {
     }
 
     // Emissão de NF-e (se solicitado)
-    console.log(`[Venda] emitir_nfe recebido: ${emitir_nfe} (tipo: ${typeof emitir_nfe}), normalizado: ${emitirNfeNormalizado}`);
     let nfeResult = null;
     if (emitirNfeNormalizado) {
       try {
-        console.log(`[Venda] Iniciando emissão de NF-e para venda #${numeroVenda}...`);
         
         // Verificar configurações da Focus NFe
         const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
@@ -753,7 +751,6 @@ router.post('/', validateVenda, async (req, res) => {
             return { nfeId, numeroNfe };
           });
 
-          console.log(`[Venda] NF-e #${numeroNfe} criada. Ambiente: ${ambienteAtual.toUpperCase()}`);
           
           // Emitir NF-e via Focus NFe
           try {
@@ -768,9 +765,7 @@ router.post('/', validateVenda, async (req, res) => {
               protocolo: emissaoResult.protocolo,
               mensagem: emissaoResult.mensagem
             };
-            console.log(`[Venda] NF-e emitida: ${emissaoResult.status}`);
           } catch (emissaoError) {
-            console.error('[Venda] Erro ao emitir NF-e:', emissaoError.message);
             nfeResult = {
               success: false,
               nfe_id: nfeId,
@@ -781,7 +776,6 @@ router.post('/', validateVenda, async (req, res) => {
             };
           }
         } else {
-          console.log('[Venda] Configurações de NF-e inválidas:', validacao.errors);
           nfeResult = {
             success: false,
             status: 'nao_configurado',
@@ -789,7 +783,6 @@ router.post('/', validateVenda, async (req, res) => {
           };
         }
       } catch (nfeError) {
-        console.error('[Venda] Erro ao processar NF-e:', nfeError);
         nfeResult = {
           success: false,
           status: 'erro',

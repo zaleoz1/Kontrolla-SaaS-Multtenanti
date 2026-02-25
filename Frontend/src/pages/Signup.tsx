@@ -650,7 +650,7 @@ export default function Signup() {
     {
       id: "starter",
       name: "Starter",
-      price: "R$ 97",
+      price: "R$ 57",
       period: "/mês",
       description: "Perfeito para pequenos negócios",
       features: [
@@ -668,14 +668,14 @@ export default function Signup() {
     {
       id: "professional",
       name: "Professional",
-      price: "R$ 197",
+      price: "R$ 167",
       period: "/mês",
       description: "Ideal para empresas em crescimento",
       features: [
         "Produtos ilimitados",
         "Vendas ilimitadas",
         "Até 5 usuários",
-        "Relatórios avançados + IA",
+        "Relatórios avançados",
         "NF-e integrada",
         "Suporte prioritário",
         "API completa",

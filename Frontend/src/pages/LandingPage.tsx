@@ -151,7 +151,7 @@ export default function LandingPage() {
   const plans = [
     {
       name: "Starter",
-      price: "R$ 97",
+      price: "R$ 57",
       period: "/mês",
       description: "Perfeito para pequenos negócios",
       features: [
@@ -169,14 +169,14 @@ export default function LandingPage() {
     },
     {
       name: "Professional",
-      price: "R$ 197",
+      price: "R$ 167",
       period: "/mês",
       description: "Ideal para empresas em crescimento",
       features: [
         "Produtos ilimitados",
         "Vendas ilimitadas",
         "Até 5 usuários",
-        "Relatórios avançados + IA",
+        "Relatórios avançados",
         "NF-e integrada",
         "Suporte prioritário",
         "API completa",
@@ -990,7 +990,7 @@ export default function LandingPage() {
                         viewport={{ once: true }}
                       >
                         {plan.name === 'Starter' && 'Cancele a qualquer momento'}
-                        {plan.name === 'Professional' && '7 dias grátis, depois R$ 197/mês'}
+                        {plan.name === 'Professional' && '7 dias grátis, depois R$ 167/mês'}
                         {plan.name === 'Enterprise' && 'Contrato personalizado'}
                       </motion.p>
                     </motion.div>

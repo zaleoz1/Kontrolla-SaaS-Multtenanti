@@ -163,11 +163,6 @@ export function useNfe() {
       const response = await makeRequest(`/nfe?${params.toString()}`) as NfeResponse;
       setNfes(response.nfes);
       setPagination(response.pagination);
-      console.log('[NFe] Lista carregada:', {
-        total: response.pagination.total,
-        page: response.pagination.page,
-        nfes: response.nfes.map(n => ({ id: n.id, numero: n.numero, ambiente: n.ambiente, status: n.status }))
-      });
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar NF-e');
@@ -185,9 +180,7 @@ export function useNfe() {
       setError(null);
 
       const response = await makeRequest(`/nfe/${id}`) as { nfe: Nfe };
-      const nfe = response.nfe;
-      console.log('[NFe] Detalhe carregado:', { id: nfe.id, numero: nfe.numero, ambiente: nfe.ambiente, status: nfe.status });
-      return nfe;
+      return response.nfe;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar NF-e');
       console.error('Erro ao buscar NF-e:', err);
@@ -208,13 +201,10 @@ export function useNfe() {
         body: dados
       }) as { nfe: Nfe; message: string };
 
-      const nfe = response.nfe;
-      console.log('[NFe] NF-e criada:', { id: nfe.id, numero: nfe.numero, ambiente: nfe.ambiente, status: nfe.status, venda_id: nfe.venda_id });
-
       // Atualizar lista
       await fetchNfes({ page: pagination.page, limit: pagination.limit });
 
-      return nfe;
+      return response.nfe;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar NF-e');
       console.error('Erro ao criar NF-e:', err);
@@ -255,7 +245,6 @@ export function useNfe() {
         method: 'POST',
         body: chave_acesso ? { chave_acesso: chave_acesso.trim() } : {}
       });
-      console.log('[NFe] Marcada como autorizada:', { id, chave_acesso: chave_acesso ? '(informada)' : '(não informada)' });
       await fetchNfes({ page: pagination.page, limit: pagination.limit });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao marcar NF-e como autorizada');
@@ -384,15 +373,6 @@ export function useNfe() {
         message?: string;
       };
 
-      console.log('[NFe] Emissão (emitir):', {
-        id,
-        success: response.success,
-        status: response.status,
-        protocolo: response.protocolo,
-        chave_acesso: response.chave_acesso,
-        mensagem: response.mensagem || response.message
-      });
-
       // Atualizar lista
       await fetchNfes({ page: pagination.page, limit: pagination.limit });
 
@@ -436,19 +416,6 @@ export function useNfe() {
         caminho_danfe?: string;
       };
 
-      const msgSefaz = response.mensagem_sefaz || '';
-      const chaveNaMensagem = msgSefaz ? (msgSefaz.match(/\[chNFe:\s*(\d+)\]/i)?.[1] ?? undefined) : undefined;
-      const is218 = response.status_sefaz === '218' || /já está cancelada|já cancelada na base/i.test(msgSefaz);
-      console.log('[NFe] Consulta SEFAZ (Verificar):', {
-        id,
-        status: response.status,
-        status_sefaz: response.status_sefaz,
-        chave_acesso: response.chave_acesso,
-        mensagem_sefaz: msgSefaz,
-        ...(chaveNaMensagem && { chave_extraida_mensagem: chaveNaMensagem, sugestao: 'Use "Marcar como autorizada" com esta chave (já preenchida se abrir o modal).' }),
-        ...(is218 && { sugestao_218: 'NF-e já cancelada na SEFAZ. Sequência avançada; próxima emissão usará o número seguinte.' })
-      });
-
       // Atualizar lista
       await fetchNfes({ page: pagination.page, limit: pagination.limit });
 
@@ -482,8 +449,6 @@ export function useNfe() {
         protocolo?: string;
         mensagem?: string;
       };
-
-      console.log('[NFe] Cancelamento:', { id, success: response.success, status: response.status, mensagem: response.mensagem });
 
       // Atualizar lista
       await fetchNfes({ page: pagination.page, limit: pagination.limit });
@@ -519,13 +484,6 @@ export function useNfe() {
         chave_acesso?: string;
         mensagem?: string;
       };
-
-      console.log('[NFe] Reprocessar:', {
-        id,
-        success: response.success,
-        status: response.status,
-        mensagem: response.mensagem
-      });
 
       // Atualizar lista
       await fetchNfes({ page: pagination.page, limit: pagination.limit });

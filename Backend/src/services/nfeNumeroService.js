@@ -34,7 +34,6 @@ export async function avancarSequenciaAposDuplicidade(tenantId, ambiente, numero
      ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), ?)`,
     [tenantId, chave, String(num), num]
   );
-  console.log(`[NFe] Sequência ${chave} ajustada para pelo menos ${num} (próxima emissão usará ${num + 1})`);
 }
 
 /**
@@ -104,6 +103,5 @@ export async function gerarProximoNumeroNfe(conn, tenantId, ambiente = 'homologa
     [String(proximo), tenantId, chaveSeq]
   );
   const numeroFormatado = proximo.toString().padStart(9, '0');
-  console.log(`[NFe] Número gerado: ${numeroFormatado} (ambiente=${amb}, seq=${ultimoSeq}, maxTabela=${maxTabela}, configMin=${configProximo})`);
   return numeroFormatado;
 }
