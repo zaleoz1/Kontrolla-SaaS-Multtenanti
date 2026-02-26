@@ -110,7 +110,10 @@ export const useVendas = () => {
   });
 
   // Buscar vendas
-  const fetchVendas = async (filters: VendasFilters = {}) => {
+  const fetchVendas = async (
+    filters: VendasFilters = {},
+    options?: { append?: boolean }
+  ): Promise<VendasResponse | void> => {
     try {
       setLoading(true);
       setError(null);
@@ -125,9 +128,23 @@ export const useVendas = () => {
 
       const response = await makeRequest(`/vendas?${params.toString()}`) as VendasResponse;
       
-      setVendas(response.vendas);
+      if (options?.append) {
+        setVendas((prev) => {
+          const next = [...prev, ...response.vendas];
+          const seen = new Set<string>();
+          return next.filter((v) => {
+            const key = String((v as any)?.id);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        });
+      } else {
+        setVendas(response.vendas);
+      }
       setPagination(response.pagination);
       setSaldoEfetivo(response.saldoEfetivo || 0);
+      return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar vendas');
       console.error('Erro ao buscar vendas:', err);

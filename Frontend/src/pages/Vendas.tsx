@@ -52,6 +52,7 @@ export default function Vendas() {
   const [modalAberto, setModalAberto] = useState(false);
   const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false);
   const [excluindoVenda, setExcluindoVenda] = useState(false);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const navigate = useNavigate();
 
   // Debounce para busca automática
@@ -239,16 +240,6 @@ export default function Vendas() {
     }
   }, [dataInicio, dataFim]); // Removido handleDataFilter das dependências
 
-  // Mudar página
-  const handlePageChange = (newPage: number) => {
-    const novosFiltros = {
-      ...filtros,
-      page: newPage
-    };
-    setFiltros(novosFiltros);
-    fetchVendas(novosFiltros);
-  };
-
   // Filtrar por status
   const handleStatusFilter = (status: string) => {
     const novosFiltros = {
@@ -293,6 +284,27 @@ export default function Vendas() {
 
   // Separar vendas com pagamento múltiplo
   const vendasSeparadas = separarVendasMultiplas(vendas, filtros.status);
+
+  const vendasVisiveis = vendas.length;
+  const vendasRestantes = Math.max(0, (pagination.total || 0) - vendasVisiveis);
+  const VENDAS_POR_PAGINA = filtros.limit || pagination.limit || 10;
+  const temMaisVendas = Boolean(pagination.hasNext) && vendasRestantes > 0;
+
+  const carregarMaisVendas = async () => {
+    if (!temMaisVendas || carregandoMais) return;
+    try {
+      setCarregandoMais(true);
+      const nextPage = (pagination.page || filtros.page || 1) + 1;
+      const novosFiltros = {
+        ...filtros,
+        page: nextPage,
+      };
+      setFiltros(novosFiltros);
+      await fetchVendas(novosFiltros, { append: true });
+    } finally {
+      setCarregandoMais(false);
+    }
+  };
 
   // Calcular totais
   const totalVendas = vendasSeparadas.reduce((acc, venda) => {
@@ -1010,7 +1022,7 @@ export default function Vendas() {
       </Card>
 
       {/* Loading e Error States */}
-      {loading && (
+      {loading && vendasSeparadas.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
@@ -1019,7 +1031,7 @@ export default function Vendas() {
         </Card>
       )}
 
-      {error && (
+      {error && vendasSeparadas.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-12 text-center">
             <p className="text-muted-foreground mb-4">Venda não encontrada, atualize ou tente mais tarde!</p>
@@ -1031,7 +1043,7 @@ export default function Vendas() {
       )}
 
       {/* Lista de Vendas */}
-      {!loading && !error && (
+      {!error && vendasSeparadas.length > 0 && (
         <div className="space-y-3 sm:space-y-4">
           {vendasSeparadas.map((venda) => {
             const statusBadge = getStatusBadge(venda.status);
@@ -1219,6 +1231,21 @@ export default function Vendas() {
         </div>
       )}
 
+      {/* Botão Ver Mais (estilo Produtos) */}
+      {!error && temMaisVendas && (
+        <button
+          onClick={carregarMaisVendas}
+          disabled={carregandoMais}
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/50 rounded-lg mt-4 hover:bg-muted/50"
+        >
+          {carregandoMais ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+          Ver mais {Math.min(vendasRestantes, VENDAS_POR_PAGINA)} venda{Math.min(vendasRestantes, VENDAS_POR_PAGINA) !== 1 ? 's' : ''}
+          <span className="text-xs text-muted-foreground">
+            ({vendasVisiveis} de {pagination.total || 0})
+          </span>
+        </button>
+      )}
+
       {/* Estado vazio */}
       {!loading && !error && vendasSeparadas.length === 0 && (
         <Card className="bg-gradient-card shadow-card">
@@ -1232,41 +1259,6 @@ export default function Vendas() {
               <Plus className="h-4 w-4 mr-2" />
               Nova Venda
             </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Paginação */}
-      {!loading && !error && vendasSeparadas.length > 0 && pagination.totalPages > 1 && (
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-              <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} vendas
-              </p>
-              <div className="flex justify-center sm:justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={!pagination.hasPrev}
-                  className="flex-1 sm:flex-none"
-                >
-                  <span className="hidden sm:inline">Anterior</span>
-                  <span className="sm:hidden">‹</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={!pagination.hasNext}
-                  className="flex-1 sm:flex-none"
-                >
-                  <span className="hidden sm:inline">Próxima</span>
-                  <span className="sm:hidden">›</span>
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
       )}

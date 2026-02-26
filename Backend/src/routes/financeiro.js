@@ -1458,6 +1458,43 @@ router.get('/stats/overview', async (req, res) => {
       vendasParams
     );
 
+    // Construir filtro de período para contas (por data_vencimento)
+    let contasWhereReceber = 'WHERE tenant_id = ?';
+    let contasParamsReceber = [req.user.tenant_id];
+    let contasWherePagar = 'WHERE tenant_id = ?';
+    let contasParamsPagar = [req.user.tenant_id];
+    let contasWherePagarTrans = 'WHERE tenant_id = ? AND tipo = ? AND status = ?';
+    let contasParamsPagarTrans = [req.user.tenant_id, 'saida', 'pendente'];
+    let adiantamentoWhere = 'WHERE t.tenant_id = ?';
+    let adiantamentoParams = [req.user.tenant_id];
+
+    switch (periodo) {
+      case 'hoje':
+        contasWhereReceber += ' AND DATE(data_vencimento) = CURDATE()';
+        contasWherePagar += ' AND DATE(data_vencimento) = CURDATE()';
+        contasWherePagarTrans += ' AND DATE(data_transacao) = CURDATE()';
+        adiantamentoWhere += ' AND DATE(t.data_transacao) = CURDATE()';
+        break;
+      case 'semana':
+        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        break;
+      case 'mes':
+        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        break;
+      case 'ano':
+        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        break;
+    }
+
     // Contas a receber (APENAS da tabela contas_receber)
     const contasReceber = await query(
       `SELECT 
@@ -1466,8 +1503,8 @@ router.get('/stats/overview', async (req, res) => {
         COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido,
         COALESCE(SUM(CASE WHEN status = 'pago' THEN valor ELSE 0 END), 0) as valor_pago
       FROM contas_receber 
-      WHERE tenant_id = ?`,
-      [req.user.tenant_id]
+      ${contasWhereReceber}`,
+      contasParamsReceber
     );
 
     // Contas a pagar (incluindo transações pendentes do tipo saída)
@@ -1478,11 +1515,11 @@ router.get('/stats/overview', async (req, res) => {
         COALESCE(SUM(CASE WHEN status = 'vencido' THEN valor ELSE 0 END), 0) as valor_vencido,
         COALESCE(SUM(CASE WHEN status = 'pago' THEN valor ELSE 0 END), 0) as valor_pago
       FROM (
-        SELECT status, valor FROM contas_pagar WHERE tenant_id = ?
+        SELECT status, valor FROM contas_pagar ${contasWherePagar}
         UNION ALL
-        SELECT status, valor FROM transacoes WHERE tenant_id = ? AND tipo = 'saida' AND status = 'pendente'
+        SELECT status, valor FROM transacoes ${contasWherePagarTrans}
       ) as contas_combineadas`,
-      [req.user.tenant_id, req.user.tenant_id]
+      [...contasParamsPagar, ...contasParamsPagarTrans]
     );
 
     // Calcular valor pago incluindo adiantamentos (transações de saída concluídas relacionadas a contas a pagar)
@@ -1490,8 +1527,8 @@ router.get('/stats/overview', async (req, res) => {
       `SELECT 
         COALESCE(SUM(CASE WHEN t.tipo = 'saida' AND t.status = 'concluida' AND t.categoria = 'Adiantamento' THEN t.valor ELSE 0 END), 0) as valor_adiantamentos
       FROM transacoes t
-      WHERE t.tenant_id = ?`,
-      [req.user.tenant_id]
+      ${adiantamentoWhere}`,
+      adiantamentoParams
     );
 
     // Somar valor pago das contas + adiantamentos

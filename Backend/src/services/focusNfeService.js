@@ -40,6 +40,7 @@ const FOCUS_NFE_URLS = {
 
 // Token Principal (Master) - Fixo no sistema via variável de ambiente
 const FOCUS_NFE_TOKEN_PRINCIPAL = process.env.FOCUS_NFE_TOKEN_PRINCIPAL || '';
+const FOCUS_NFE_DEBUG = String(process.env.FOCUS_NFE_DEBUG || '').trim() === '1';
 
 function getTipoDocumentoFromModelo(modelo) {
   const m = String(modelo || '55').trim();
@@ -336,6 +337,8 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig, vendaPagamen
     numero: nfe.numero,
     
     // Data e hora de emissão
+    // IMPORTANTE: a Focus/SEFAZ costuma limitar diferença do horário atual.
+    // Para emissão, usamos "agora". Para auditoria/diagnóstico (ex.: ticket), o payload pode ser re-gerado e a data pode diferir.
     data_emissao: new Date().toISOString(),
     
     // Tipo de documento (0=entrada, 1=saída)
@@ -434,6 +437,96 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig, vendaPagamen
   payload.formas_pagamento = montarFormasPagamento(nfe, vendaPagamentos);
   
   return payload;
+}
+
+/**
+ * Gera (reconstrói) os dados da requisição de envio para a Focus (sem transmitir).
+ * Útil para auditoria e abertura de ticket (ex.: QRCode/SEFAZ).
+ *
+ * ATENÇÃO: o payload é re-gerado a partir do banco; `data_emissao` será "agora" (mesma regra da emissão).
+ *
+ * @param {number} tenantId
+ * @param {number|string} nfeId
+ * @returns {Promise<{ambiente: string, endpoint: string, referencia: string|null, token_prefix: string, cnpj_emitente: string, payload: any}>}
+ */
+export async function obterJsonEnvioFocus(tenantId, nfeId) {
+  const focusConfig = await getFocusNfeConfig(tenantId);
+  const token = getTokenForAmbiente(focusConfig);
+  const ambiente = focusConfig.ambiente || 'homologacao';
+
+  const nfeRows = await query(
+    `SELECT * FROM nfe WHERE id = ? AND tenant_id = ?`,
+    [nfeId, tenantId]
+  );
+  const nfe = nfeRows && nfeRows[0];
+  if (!nfe) throw new Error('NF-e não encontrada');
+
+  const tipoDocumento = getTipoDocumentoFromModelo(nfe.modelo);
+  const endpoint = getEndpointDocumento(tipoDocumento);
+
+  const tenantRows = await query(`SELECT * FROM tenants WHERE id = ?`, [tenantId]);
+  const tenant = tenantRows && tenantRows[0] ? tenantRows[0] : null;
+
+  // Buscar dados do cliente (destinatário)
+  let cliente = null;
+  if (nfe.cliente_id) {
+    const cRows = await query(
+      `SELECT * FROM clientes WHERE id = ? AND tenant_id = ?`,
+      [nfe.cliente_id, tenantId]
+    );
+    cliente = cRows && cRows[0] ? cRows[0] : null;
+  }
+
+  // Itens
+  const itens = await query(
+    `SELECT ni.*, 
+            p.nome as produto_nome, 
+            p.sku, 
+            p.codigo_barras, 
+            p.ncm, 
+            p.cfop,
+            p.icms_origem, 
+            p.icms_situacao_tributaria,
+            p.icms_aliquota,
+            p.pis_cst, 
+            p.pis_aliquota,
+            p.cofins_cst,
+            p.cofins_aliquota,
+            p.ipi_aliquota,
+            p.ipi_codigo_enquadramento,
+            p.cest,
+            p.tipo_preco
+     FROM nfe_itens ni
+     JOIN produtos p ON ni.produto_id = p.id
+     WHERE ni.nfe_id = ?`,
+    [nfeId]
+  );
+  if (!itens || itens.length === 0) throw new Error('NF-e não possui itens');
+
+  // Pagamentos (se veio de venda)
+  let vendaPagamentos = [];
+  if (nfe.venda_id) {
+    try {
+      vendaPagamentos = await query(
+        `SELECT metodo, valor, troco FROM venda_pagamentos WHERE venda_id = ?`,
+        [nfe.venda_id]
+      );
+    } catch {
+      vendaPagamentos = [];
+    }
+  }
+
+  const payload = montarNfePayload(nfe, tenant, cliente, itens, focusConfig, vendaPagamentos);
+  const cnpjEmitente = (focusConfig.cnpj_emitente || tenant?.cnpj || '').toString().replace(/\D/g, '');
+
+  return {
+    ambiente,
+    endpoint: `/v2/${endpoint}?ref=${nfe.focus_nfe_ref || 'SEM_REFERENCIA'}`,
+    referencia: nfe.focus_nfe_ref || null,
+    token_prefix: token ? String(token).slice(0, 5) : '',
+    cnpj_emitente: cnpjEmitente,
+    payload
+  };
 }
 
 /**
@@ -702,6 +795,16 @@ export async function emitirNfe(tenantId, nfeId) {
     
     // Criar referência única para a NF-e (definida antes do POST para poder salvar no catch em caso de erro)
     const referencia = `${endpoint}-${tenantId}-${nfeId}-${Date.now()}`;
+
+    // DEBUG (temporário): capturar JSON exatamente como enviado para a FocusNFe
+    // Ative com: FOCUS_NFE_DEBUG=1
+    if (FOCUS_NFE_DEBUG) {
+      try {
+        console.log('[FocusNFe][DEBUG] ambiente=%s endpoint=%s ref=%s payload=%s', ambiente, endpoint, referencia, JSON.stringify(payload));
+      } catch {
+        console.log('[FocusNFe][DEBUG] ambiente=%s endpoint=%s ref=%s (payload não serializável)', ambiente, endpoint, referencia);
+      }
+    }
     
     // Criar cliente da API com o token correto
     const client = createFocusNfeClient(token, focusConfig.ambiente);
@@ -1276,6 +1379,7 @@ export default {
   consultarNfe,
   cancelarNfe,
   obterXmlNfe,
-  obterDanfeNfe
+  obterDanfeNfe,
+  obterJsonEnvioFocus
 };
 

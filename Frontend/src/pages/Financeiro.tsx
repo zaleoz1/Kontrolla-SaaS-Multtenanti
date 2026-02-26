@@ -174,6 +174,39 @@ export default function Financeiro() {
     taxaParcela: 0
   });
 
+  // Calcula intervalo de datas a partir do período selecionado
+  const getDateRangeFromPeriodo = (p: 'hoje' | 'semana' | 'mes' | 'ano') => {
+    const hoje = new Date();
+    const fim = hoje.toISOString().split('T')[0];
+    let inicio: string;
+
+    switch (p) {
+      case 'hoje':
+        inicio = fim;
+        break;
+      case 'semana': {
+        const d = new Date(hoje);
+        d.setDate(d.getDate() - 7);
+        inicio = d.toISOString().split('T')[0];
+        break;
+      }
+      case 'mes': {
+        const d = new Date(hoje);
+        d.setMonth(d.getMonth() - 1);
+        inicio = d.toISOString().split('T')[0];
+        break;
+      }
+      case 'ano': {
+        const d = new Date(hoje);
+        d.setFullYear(d.getFullYear() - 1);
+        inicio = d.toISOString().split('T')[0];
+        break;
+      }
+    }
+
+    return { data_inicio: inicio, data_fim: fim };
+  };
+
   // Hooks para dados financeiros
   const { 
     transacoes, 
@@ -312,9 +345,10 @@ export default function Financeiro() {
   useEffect(() => {
     const carregarDados = async () => {
       try {
+        const dateRange = getDateRangeFromPeriodo(periodo);
         await Promise.all([
           buscarStats(periodo),
-          buscarTransacoes({}),
+          buscarTransacoes(dateRange),
           buscarContasReceber({}),
           buscarContasPagar({})
         ]);
@@ -324,14 +358,15 @@ export default function Financeiro() {
     };
 
     carregarDados();
-  }, [periodo]); // Removido as funções das dependências para evitar loop infinito
+  }, [periodo]);
 
   // Função para recarregar dados
   const recarregarDados = async () => {
     try {
+      const dateRange = getDateRangeFromPeriodo(periodo);
       await Promise.all([
         buscarStats(periodo),
-        buscarTransacoes({}),
+        buscarTransacoes(dateRange),
         buscarContasReceber({}),
         buscarContasPagar({})
       ]);
@@ -380,11 +415,6 @@ export default function Financeiro() {
   const saldoAtual = Number((stats?.stats as any)?.saldo_atual) || 0;
   const totalPagoReceber = Number(stats?.stats?.contas_receber?.valor_pago) || 0;
   const totalPagoPagar = Number(stats?.stats?.contas_pagar?.valor_pago) || 0;
-
-  // Calcular total recebido apenas das transações de entrada
-  const totalRecebidoTransacoes = transacoes
-    .filter(transacao => transacao.tipo === 'entrada' && transacao.status === 'concluida')
-    .reduce((total, transacao) => total + (Number(transacao.valor) || 0), 0);
 
   // Função para filtrar contas a receber
   const contasReceberFiltradas = contasReceber.filter((conta) => {
@@ -1043,11 +1073,11 @@ export default function Financeiro() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">Total Recebido</p>
-                {loadingTransacoes ? (
+                {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
                   <p className="text-sm sm:text-2xl font-bold text-success break-words">
-                    {formatarValor(totalRecebidoTransacoes)}
+                    {formatarValor(totalEntradas)}
                   </p>
                 )}
               </div>
