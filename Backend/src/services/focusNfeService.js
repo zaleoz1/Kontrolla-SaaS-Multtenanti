@@ -65,9 +65,13 @@ function mapMetodoPagamentoParaCodigoFocus(metodo) {
   return '99';
 }
 
-function montarFormasPagamento(nfe, vendaPagamentos = []) {
-  const total = Number(nfe?.valor_total ?? 0);
-  const totalValido = Number.isFinite(total) && total > 0 ? total : 0;
+function montarFormasPagamento(nfe, vendaPagamentos = [], totalDocumento = null) {
+  const totalPreferencial = Number(totalDocumento ?? NaN);
+  const totalNfe = Number(nfe?.valor_total ?? 0);
+  const totalBase = (Number.isFinite(totalPreferencial) && totalPreferencial > 0)
+    ? totalPreferencial
+    : (Number.isFinite(totalNfe) && totalNfe > 0 ? totalNfe : 0);
+  const totalValido = totalBase;
 
   /** @type {{ forma_pagamento: string; valor: number }[]} */
   const linhas = [];
@@ -434,7 +438,15 @@ function montarNfePayload(nfe, tenant, cliente, itens, focusConfig, vendaPagamen
   payload.modalidade_frete = 9; // Sem frete (mais comum para vendas de balcão)
   
   // === FORMA DE PAGAMENTO ===
-  payload.formas_pagamento = montarFormasPagamento(nfe, vendaPagamentos);
+  // IMPORTANTE: A SEFAZ valida se o total de pagamentos = total do documento.
+  // Como não enviamos "valor_total" explicitamente, o total do documento é calculado a partir dos itens.
+  const totalItens = Array.isArray(payload.items)
+    ? payload.items.reduce((s, it) => s + (Number.parseFloat(it?.valor_bruto ?? 0) || 0), 0)
+    : 0;
+  const totalDocumento = Number.isFinite(totalItens) && totalItens > 0
+    ? Number(totalItens.toFixed(2))
+    : Number(nfe?.valor_total ?? 0);
+  payload.formas_pagamento = montarFormasPagamento(nfe, vendaPagamentos, totalDocumento);
   
   return payload;
 }
