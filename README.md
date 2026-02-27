@@ -233,6 +233,40 @@ npm run build
 # Deploy da pasta dist/
 ```
 
+## 💾 **Backups (Produção com Docker)**
+
+Este projeto usa **MySQL** + **uploads locais** (pasta/volume) e, em produção, o `docker-compose.prod.yml` já inclui um serviço `backup` que:
+
+- Faz `mysqldump` diário do banco (compactado `.sql.gz`)
+- Compacta os arquivos de `uploads` (e logs, se montados)
+- Aplica retenção por dias (ex.: 30)
+- Salva tudo na pasta `./backups` do host
+
+### Onde ficam os backups
+- **Banco**: `./backups/mysql/backup_<db>_<data>.sql.gz`
+- **Uploads**: `./backups/uploads/uploads_<data>.tar.gz`
+- **Logs**: `./backups/logs/logs_<data>.tar.gz` (se `logs_data` estiver montado)
+
+### Variáveis úteis
+No arquivo `.env.production`:
+- `BACKUP_SCHEDULE` (cron, padrão `0 2 * * *`)
+- `BACKUP_RETENTION_DAYS` (padrão `30`)
+
+### Restaurar (emergência)
+O container `backup` monta `scripts/restore.sh`. Para restaurar o **último dump**:
+
+```bash
+docker exec -e FORCE_RESTORE=1 kontrolla-backup sh /restore.sh
+```
+
+Para restaurar também os uploads (sobrescrevendo arquivos existentes):
+
+```bash
+docker exec -e FORCE_RESTORE=1 -e RESTORE_UPLOADS=1 -e FORCE_RESTORE_UPLOADS=1 kontrolla-backup sh /restore.sh
+```
+
+> Recomendação: mantenha cópia **fora do servidor** (S3/Backblaze/NAS) e teste restore periodicamente.
+
 ## 🤝 **Contribuição**
 
 1. Fork o projeto

@@ -302,10 +302,24 @@ router.get('/vendas-recentes', async (req, res) => {
 router.get('/estoque-baixo', async (req, res) => {
   try {
     const { limit = 10 } = req.query;
-    const limitValue = parseInt(limit);
+    const isAll =
+      limit === undefined ||
+      limit === null ||
+      limit === '' ||
+      String(limit).toLowerCase() === 'all';
 
-    const produtos = await query(
-      `SELECT p.id, p.nome, 
+    const parsedLimit = parseInt(limit);
+    const limitValue = isAll
+      ? 5000
+      : Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 5000)
+        : 10;
+
+    // Importante: se ordenarmos apenas por estoque_atual ASC + LIMIT,
+    // produtos "sem estoque" (0) podem ocupar todo o limite e esconder "estoque baixo" (>0).
+    // Aqui retornamos uma amostra balanceada (zerado + baixo) dentro do mesmo limite.
+
+    const selectFields = `SELECT p.id, p.nome, 
               COALESCE(p.estoque, 0) as estoque, 
               COALESCE(p.estoque_minimo, 0) as estoque_minimo, 
               CAST(p.preco AS DECIMAL(10,2)) as preco, 
@@ -324,18 +338,69 @@ router.get('/estoque-baixo', async (req, res) => {
                 WHEN p.tipo_preco = 'kg' THEN COALESCE(p.estoque_minimo_kg, 0)
                 WHEN p.tipo_preco = 'litros' THEN COALESCE(p.estoque_minimo_litros, 0)
                 ELSE COALESCE(p.estoque_minimo, 0)
-              END AS DECIMAL(10,3)) as estoque_minimo_atual
-       FROM produtos p 
+              END AS DECIMAL(10,3)) as estoque_minimo_atual`;
+
+    const baseFrom = `FROM produtos p 
        LEFT JOIN categorias c ON p.categoria_id = c.id 
-       WHERE p.tenant_id = ? AND (
-         (p.tipo_preco = 'unidade' AND COALESCE(p.estoque, 0) <= COALESCE(p.estoque_minimo, 0)) OR
-         (p.tipo_preco = 'kg' AND COALESCE(p.estoque_kg, 0) <= COALESCE(p.estoque_minimo_kg, 0)) OR
-         (p.tipo_preco = 'litros' AND COALESCE(p.estoque_litros, 0) <= COALESCE(p.estoque_minimo_litros, 0))
-       ) AND p.status = 'ativo'
+       WHERE p.tenant_id = ? AND p.status = 'ativo'`;
+
+    if (isAll) {
+      const produtos = await query(
+        `${selectFields}
+         ${baseFrom} AND (
+           (p.tipo_preco = 'unidade' AND COALESCE(p.estoque, 0) <= COALESCE(p.estoque_minimo, 0)) OR
+           (p.tipo_preco = 'kg' AND COALESCE(p.estoque_kg, 0) <= COALESCE(p.estoque_minimo_kg, 0)) OR
+           (p.tipo_preco = 'litros' AND COALESCE(p.estoque_litros, 0) <= COALESCE(p.estoque_minimo_litros, 0))
+         )
+         ORDER BY estoque_atual ASC`,
+        [req.user.tenant_id]
+      );
+
+      return res.json({ produtos });
+    }
+
+    const produtosZerados = await query(
+      `${selectFields}
+       ${baseFrom} AND (
+         (p.tipo_preco = 'unidade' AND COALESCE(p.estoque, 0) <= 0) OR
+         (p.tipo_preco = 'kg' AND COALESCE(p.estoque_kg, 0) <= 0) OR
+         (p.tipo_preco = 'litros' AND COALESCE(p.estoque_litros, 0) <= 0)
+       )
        ORDER BY estoque_atual ASC 
        LIMIT ${limitValue}`,
       [req.user.tenant_id]
     );
+
+    const produtosBaixos = await query(
+      `${selectFields}
+       ${baseFrom} AND (
+         (p.tipo_preco = 'unidade' AND COALESCE(p.estoque, 0) > 0 AND COALESCE(p.estoque_minimo, 0) > 0 AND COALESCE(p.estoque, 0) <= COALESCE(p.estoque_minimo, 0)) OR
+         (p.tipo_preco = 'kg' AND COALESCE(p.estoque_kg, 0) > 0 AND COALESCE(p.estoque_minimo_kg, 0) > 0 AND COALESCE(p.estoque_kg, 0) <= COALESCE(p.estoque_minimo_kg, 0)) OR
+         (p.tipo_preco = 'litros' AND COALESCE(p.estoque_litros, 0) > 0 AND COALESCE(p.estoque_minimo_litros, 0) > 0 AND COALESCE(p.estoque_litros, 0) <= COALESCE(p.estoque_minimo_litros, 0))
+       )
+       ORDER BY estoque_atual ASC 
+       LIMIT ${limitValue}`,
+      [req.user.tenant_id]
+    );
+
+    const targetBaixo = Math.max(1, Math.floor(limitValue / 2));
+    const targetZerado = Math.max(0, limitValue - targetBaixo);
+
+    const selecionadosZerado = produtosZerados.slice(0, targetZerado);
+    const selecionadosBaixo = produtosBaixos.slice(0, targetBaixo);
+
+    const produtos = [...selecionadosZerado, ...selecionadosBaixo];
+
+    if (produtos.length < limitValue) {
+      const faltando = limitValue - produtos.length;
+      const extrasZerado = produtosZerados.slice(targetZerado);
+      const extrasBaixo = produtosBaixos.slice(targetBaixo);
+
+      produtos.push(...extrasZerado.slice(0, faltando));
+      if (produtos.length < limitValue) {
+        produtos.push(...extrasBaixo.slice(0, limitValue - produtos.length));
+      }
+    }
 
     res.json({
       produtos

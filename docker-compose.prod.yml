@@ -140,11 +140,16 @@ services:
     volumes:
       - mysql_data:/mysql-data:ro
       - uploads_data:/uploads-data:ro
+      - logs_data:/logs-data:ro
       - ./backups:/backups
       - ./scripts/backup.sh:/backup.sh:ro
+      - ./scripts/restore.sh:/restore.sh:ro
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
     depends_on:
       - mysql
@@ -152,7 +157,7 @@ services:
       - kontrolla-network
     command: >
       sh -c "apk add --no-cache mysql-client dcron &&
-             echo '0 2 * * * /backup.sh' | crontab - &&
+             echo \"$${BACKUP_SCHEDULE:-0 2 * * *} /backup.sh\" | crontab - &&
              crond -f"
 
   # =====================================================

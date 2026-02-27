@@ -148,7 +148,8 @@ export function useDashboard() {
       ] = await Promise.all([
         makeRequest(`${API_ENDPOINTS.DASHBOARD.METRICS}?periodo=${periodo}`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.RECENT_SALES}?limit=500`),
-        makeRequest(`${API_ENDPOINTS.DASHBOARD.LOW_STOCK}?limit=10`),
+        // Buscar todos os produtos com alerta de estoque (zerado + baixo)
+        makeRequest(`${API_ENDPOINTS.DASHBOARD.LOW_STOCK}?limit=all`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.SALES_CHART}?tipo=diario&dias=30`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.TOP_PRODUCTS}?limit=10&periodo=30`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.FINANCIAL_SUMMARY}?periodo=30`)
