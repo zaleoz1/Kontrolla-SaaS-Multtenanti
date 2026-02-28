@@ -21,6 +21,8 @@ dist-electron/
 
 # Environment variables
 .env
+.env.production
+.env.production.*
 .env.local
 .env.development.local
 .env.test.local
