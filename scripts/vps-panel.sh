@@ -192,38 +192,29 @@ action_health() {
 }
 
 # =====================================================
-# BANNER E MENU PRINCIPAL (largura fixa 54 chars = bordas alinhadas)
+# BANNER E MENU PRINCIPAL (largura fixa 52 chars)
 # =====================================================
-MENU_W=54
-
 show_banner() {
     clear
-    echo ""
-    echo -e "  ${BOLD}${ACCENT}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
-    _t="KONTROLLAPRO · PAINEL VPS"
-    _pad=$((MENU_W - ${#_t} - 1))
-    echo -e "  ${BOLD}${ACCENT}┃${NC} ${WHITE}${BOLD}${_t}${NC}$(printf '%*s' $_pad '')${BOLD}${ACCENT}┃${NC}"
-    _p="$PROJECT_DIR"
-    [ ${#_p} -gt $((MENU_W - 4)) ] && _p="...${_p: -$((MENU_W - 7))}"
-    _pad=$((MENU_W - ${#_p} - 1))
-    echo -e "  ${BOLD}${ACCENT}┃${NC} ${DIM}${_p}${NC}$(printf '%*s' $_pad '')${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
     echo ""
 }
 
 show_menu() {
     show_banner
-    echo -e "  ${DIM}Deploy${NC}"
-    echo -e "  ${GREEN} 1${NC}  Git pull  ${GREEN}2${NC}  Deploy  ${GREEN}3${NC}  Git pull + Deploy"
-    echo ""
-    echo -e "  ${DIM}Monitoramento${NC}"
-    echo -e "  ${GREEN} 4${NC}  Logs  ${GREEN}5${NC}  Status  ${GREEN}11${NC}  Health check"
-    echo ""
-    echo -e "  ${DIM}Manutenção${NC}"
-    echo -e "  ${GREEN} 6${NC}  Backup  ${GREEN}7${NC}  Restart todos  ${GREEN}8${NC}  Restart um  ${GREEN}9${NC}  Parar  ${GREEN}10${NC}  Iniciar"
-    echo ""
-    echo -e "  ${DIM}Outros${NC}"
-    echo -e "  ${GREEN}12${NC}  Shell no projeto   ${RED}0${NC}  Sair"
+    echo -e "  ${BOLD}${ACCENT}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}  ${WHITE}${BOLD}KONTROLLAPRO${NC}  ${DIM}·${NC}  ${DIM}PAINEL VPS${NC}                         ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}$PROJECT_DIR${NC}                                    ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}Deploy${NC}                                                ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}1)${NC} Git pull    ${GREEN}2)${NC} Deploy     ${GREEN}3)${NC} Pull + Deploy  ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}Monitoramento${NC}                                         ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}4)${NC} Logs       ${GREEN}5)${NC} Status     ${GREEN}11)${NC} Health check   ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}Manutenção${NC}                                              ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}6)${NC} Backup     ${GREEN}7)${NC} Restart    ${GREEN}8)${NC} Restart one   ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}9)${NC} Parar      ${GREEN}10)${NC} Iniciar   ${GREEN}12)${NC} Shell         ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}  ${RED}0) Sair${NC}                                                  ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
     echo ""
 }
 
@@ -250,7 +241,7 @@ main() {
 
     while true; do
         show_menu
-        echo -en "  ${ACCENT}▶${NC} ${DIM}[0-12]:${NC} "
+        echo -en "  ${BOLD}${ACCENT}▶${NC} ${DIM}Opção [0-12]:${NC} "
         read -r op
         case "$op" in
             1)  action_git_pull ;;
@@ -268,7 +259,7 @@ main() {
             0)  echo "" ; echo -e "  ${GREEN}✓${NC} ${DIM}Até logo.${NC}" ; echo "" ; exit 0 ;;
             *)  warn "Opção inválida." ;;
         esac
-        [ "$op" != "4" ] && echo "" && read -r -p "  Enter para continuar... "
+        [ "$op" != "4" ] && echo "" && read -r -p "  Pressione Enter para continuar..."
     done
 }
 
