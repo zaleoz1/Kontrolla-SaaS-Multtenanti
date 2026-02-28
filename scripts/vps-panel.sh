@@ -92,7 +92,8 @@ action_logs() {
     echo -e "  ${BOLD}${ACCENT}│${NC}  ${GREEN}5)${NC} todos      ${GREEN}6)${NC} backup   ${DIM}0) Voltar${NC}         ${BOLD}${ACCENT}│${NC}"
     echo -e "  ${BOLD}${ACCENT}└─────────────────────────────────────────┘${NC}"
     echo ""
-    read -r -p "$(echo -e "  ${ACCENT}Opção:${NC} )" opt
+    echo -en "  ${ACCENT}Opção:${NC} "
+    read -r opt
     cd_project
     case "$opt" in
         1) docker compose -f "$COMPOSE_FILE" logs -f --tail=200 backend ;;
@@ -140,7 +141,8 @@ action_restart_one() {
     echo -e "  ${BOLD}${ACCENT}│${NC}  ${DIM}0) Voltar${NC}                          ${BOLD}${ACCENT}│${NC}"
     echo -e "  ${BOLD}${ACCENT}└────────────────────────────────────┘${NC}"
     echo ""
-    read -r -p "$(echo -e "  ${ACCENT}Opção:${NC} )" opt
+    echo -en "  ${ACCENT}Opção:${NC} "
+    read -r opt
     [ "$opt" = "0" ] && return
     cd_project
     case "$opt" in
@@ -160,7 +162,8 @@ action_pull_and_deploy() {
 action_stop() {
     echo ""
     echo -e "  ${YELLOW}⚠ Parar todos os containers?${NC} ${DIM}(s/N)${NC}"
-    read -r -p "$(echo -e "  ${ACCENT}Confirmar:${NC} )" r
+    echo -en "  ${ACCENT}Confirmar:${NC} "
+    read -r r
     if [ "$r" = "s" ] || [ "$r" = "S" ]; then
         run_compose down
         log "Containers parados."
@@ -255,7 +258,8 @@ main() {
 
     while true; do
         show_menu
-        read -r -p "$(echo -e "  ${BOLD}${ACCENT}▶ Escolha uma opção${NC} ${DIM}[0-12]:${NC} ")" op
+        echo -en "  ${BOLD}${ACCENT}▶ Escolha uma opção${NC} ${DIM}[0-12]:${NC} "
+        read -r op
         case "$op" in
             1)  action_git_pull ;;
             2)  action_deploy ;;
