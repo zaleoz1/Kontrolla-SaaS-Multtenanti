@@ -27,6 +27,7 @@ export function useApi<T = any>() {
     options: ApiOptions = {}
   ): Promise<T> => {
     setState(prev => ({ ...prev, loading: true, error: null }));
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     try {
       const {
@@ -49,7 +50,7 @@ export function useApi<T = any>() {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      timeoutId = setTimeout(() => controller.abort(), timeout);
 
       // Se o body for FormData, não stringify e não definir Content-Type
       const isFormData = body instanceof FormData;
@@ -140,7 +141,9 @@ export function useApi<T = any>() {
     } finally {
       // Garante limpeza do timer tanto em sucesso quanto em erro
       // (inclusive abort/timeout), evitando timers pendentes.
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
   }, []);
 
