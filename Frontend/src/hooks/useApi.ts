@@ -102,6 +102,9 @@ export function useApi<T = any>() {
           case HTTP_STATUS.INTERNAL_SERVER_ERROR:
             errorMessage = ERROR_MESSAGES.SERVER_ERROR;
             break;
+          case HTTP_STATUS.SERVICE_UNAVAILABLE:
+            errorMessage = errorMessage || ERROR_MESSAGES.SERVICE_UNAVAILABLE;
+            break;
         }
 
         throw new Error(errorMessage);

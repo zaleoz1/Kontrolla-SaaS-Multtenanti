@@ -186,6 +186,7 @@ export const ERROR_MESSAGES = {
   FORBIDDEN: 'Você não tem permissão para esta ação.',
   NOT_FOUND: 'Esse Usuário não esta cadastrado no sistema.',
   SERVER_ERROR: 'Erro interno do servidor. Tente novamente mais tarde.',
+  SERVICE_UNAVAILABLE: 'Serviço temporariamente indisponível. Tente novamente mais tarde.',
   VALIDATION_ERROR: 'Dados inválidos. Verifique os campos.',
   UNKNOWN_ERROR: 'Erro desconhecido. Tente novamente.',
 } as const;
