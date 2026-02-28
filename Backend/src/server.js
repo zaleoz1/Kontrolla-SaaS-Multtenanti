@@ -246,6 +246,14 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📊 Ambiente: ${process.env.NODE_ENV}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (stripeKey && !stripeKey.startsWith('change_me')) {
+    const masked = stripeKey.slice(0, 8) + '...' + stripeKey.slice(-4);
+    console.log(`💳 Stripe: configurado (${masked})`);
+  } else {
+    console.warn('⚠️  Stripe: NÃO configurado — STRIPE_SECRET_KEY ausente ou placeholder');
+  }
 });
 
 export default app;
