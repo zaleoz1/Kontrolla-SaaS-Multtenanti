@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useTheme } from "@/hooks/useTheme";
 import { useThemeColor, PREDEFINED_COLORS } from "../hooks/useThemeColor";
 import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
-import { useBilling } from "@/hooks/useBilling";
 import { 
   Settings, 
   User, 
@@ -35,7 +34,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Crown,
-  Sparkles,
   Star,
   Globe,
   Lock,
@@ -75,7 +73,6 @@ import {
   CheckCircle2,
   Menu,
   DollarSign,
-  RefreshCw,
   Package
 } from "lucide-react";
 
@@ -124,8 +121,6 @@ export default function Configuracoes() {
   const { hasPermission, operador } = usePermissions();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { primaryColor, setPrimaryColor } = useThemeColor();
-  const billing = useBilling();
-  const [planoSelecionado, setPlanoSelecionado] = useState<'starter' | 'professional' | 'enterprise'>('professional');
   const [abaAtiva, setAbaAtiva] = useState("conta");
   
   // Função para determinar se uma aba deve ser visível 
@@ -233,71 +228,7 @@ export default function Configuracoes() {
     return numeros.slice(0, 2);
   };
  
-  const canManageBilling = useMemo(() => {
-    return dadosConta?.role === 'admin';
-  }, [dadosConta?.role]);
 
-  const stripeStatusLabel = (status: string | null) => {
-    if (!status) return { label: 'Sem assinatura', variant: 'secondary' as const };
-    const s = status.toLowerCase();
-    if (s === 'active' || s === 'trialing') return { label: s === 'trialing' ? 'Em teste' : 'Ativa', variant: 'default' as const };
-    if (s === 'past_due' || s === 'unpaid') return { label: 'Pagamento pendente', variant: 'destructive' as const };
-    if (s === 'canceled' || s === 'incomplete' || s === 'incomplete_expired') return { label: 'Inativa', variant: 'secondary' as const };
-    return { label: status, variant: 'secondary' as const };
-  };
-
-  // Carregar status do Stripe quando entrar na aba de pagamentos
-  useEffect(() => {
-    if (abaAtiva === 'assinatura') {
-      billing.fetchStatus();
-      const planoAtual = (dadosTenant?.plano || '').toLowerCase();
-      if (planoAtual === 'starter' || planoAtual === 'professional' || planoAtual === 'enterprise') {
-        setPlanoSelecionado(planoAtual as any);
-      }
-    }
-  }, [abaAtiva, billing.fetchStatus, dadosTenant?.plano]);
-
-  const handleAssinarOuAlterarPlano = async () => {
-    if (!canManageBilling) {
-      toast({
-        title: "Permissão insuficiente",
-        description: "Somente o usuário admin do tenant pode gerenciar a assinatura.",
-        variant: "default"
-      });
-      return;
-    }
-    const { url } = await billing.createCheckoutSession(planoSelecionado);
-    if (url) {
-      window.location.href = url;
-      return;
-    }
-    toast({
-      title: "Erro",
-      description: billing.error || "Não foi possível iniciar o checkout do Stripe.",
-      variant: "default"
-    });
-  };
-
-  const handleAbrirPortalStripe = async () => {
-    if (!canManageBilling) {
-      toast({
-        title: "Permissão insuficiente",
-        description: "Somente o usuário admin do tenant pode gerenciar a assinatura.",
-        variant: "default"
-      });
-      return;
-    }
-    const { url } = await billing.createPortalSession();
-    if (url) {
-      window.location.href = url;
-      return;
-    }
-    toast({
-      title: "Erro",
-      description: billing.error || "Não foi possível abrir o portal do Stripe.",
-      variant: "default"
-    });
-  };
 
   const formatarCPFCNPJ = (cpfCnpj: string) => {
     // Remove tudo que não é dígito
@@ -345,6 +276,10 @@ export default function Configuracoes() {
   useEffect(() => {
     const abaParam = searchParams.get('aba');
     if (abaParam) {
+      if (abaParam === 'assinatura') {
+        navigate('/dashboard/assinatura');
+        return;
+      }
       setAbaAtiva(abaParam);
       // Limpar o parâmetro da URL após definir a aba
       setSearchParams({}, { replace: true });
@@ -2350,146 +2285,6 @@ export default function Configuracoes() {
               </CardContent>
             </Card>
           </div>
-          </div>
-        )}
-
-        {/* Assinatura (Stripe) */}
-        {abaAtiva === "assinatura" && isTabVisible('assinatura') && (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="mb-4 md:mb-0">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assinatura</h1>
-              <p className="text-sm sm:text-base text-muted-foreground mt-2">
-                Status do plano e dados da assinatura Stripe
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:gap-6">
-              <Card className="bg-gradient-card shadow-card">
-                <CardHeader className="pb-3 sm:pb-4">
-                  <CardTitle className="flex items-center text-lg sm:text-xl">
-                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    Plano e Stripe
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Use o Checkout para assinar/alterar o plano e o Portal para gerenciar cobrança
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="text-xs sm:text-sm">
-                          Plano: {(dadosTenant?.plano || billing.status?.plano || 'não definido').toString()}
-                        </Badge>
-                        {(() => {
-                          const s = stripeStatusLabel(billing.status?.subscription_status || null);
-                          return (
-                            <Badge variant={s.variant as any} className="text-xs sm:text-sm">
-                              {billing.loading ? 'Carregando...' : s.label}
-                            </Badge>
-                          );
-                        })()}
-                      </div>
-
-                      {billing.status?.subscription_current_period_end && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          Período atual até: {new Date(billing.status.subscription_current_period_end).toLocaleDateString('pt-BR')}
-                        </p>
-                      )}
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                        <div className="rounded-lg border border-border p-3">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Stripe Customer</p>
-                          <p className="text-xs sm:text-sm font-mono break-all">{billing.status?.stripe_customer_id || '-'}</p>
-                        </div>
-                        <div className="rounded-lg border border-border p-3">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Stripe Subscription</p>
-                          <p className="text-xs sm:text-sm font-mono break-all">{billing.status?.stripe_subscription_id || '-'}</p>
-                        </div>
-                        <div className="rounded-lg border border-border p-3">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Stripe Price</p>
-                          <p className="text-xs sm:text-sm font-mono break-all">{billing.status?.stripe_price_id || '-'}</p>
-                        </div>
-                        <div className="rounded-lg border border-border p-3">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Status</p>
-                          <p className="text-xs sm:text-sm font-mono break-all">{billing.status?.subscription_status || '-'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 w-full sm:w-auto">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs sm:text-sm h-8 sm:h-9"
-                        onClick={() => billing.fetchStatus()}
-                        disabled={billing.loading}
-                      >
-                        <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        Atualizar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs sm:text-sm h-8 sm:h-9"
-                        onClick={handleAbrirPortalStripe}
-                        disabled={billing.loading || !canManageBilling}
-                      >
-                        <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        Portal Stripe
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label className="text-xs sm:text-sm">Escolha o plano</Label>
-                      <Select
-                        value={planoSelecionado}
-                        onValueChange={(v) => setPlanoSelecionado(v as any)}
-                        disabled={billing.loading || !canManageBilling}
-                      >
-                        <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
-                          <SelectValue placeholder="Selecione o plano" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="starter">Starter</SelectItem>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="enterprise">Enterprise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {!canManageBilling && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          Somente o usuário <b>admin</b> do tenant pode alterar a assinatura.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs sm:text-sm">Ações</Label>
-                      <Button
-                        onClick={handleAssinarOuAlterarPlano}
-                        className="w-full text-xs sm:text-sm h-8 sm:h-10 bg-gradient-primary text-white"
-                        disabled={billing.loading || !canManageBilling}
-                      >
-                        <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        Assinar / Alterar plano
-                      </Button>
-                    </div>
-                  </div>
-
-                  {billing.error && (
-                    <div className="flex items-start gap-2 rounded-lg border border-border p-3">
-                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-xs sm:text-sm font-medium">Problema ao carregar o billing</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">{billing.error}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
           </div>
         )}
 

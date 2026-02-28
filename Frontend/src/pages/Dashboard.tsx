@@ -572,8 +572,8 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                         <Badge 
-                          variant={Number(produto.estoque_atual) === 0 ? "destructive" : "secondary"}
-                          className={`${Number(produto.estoque_atual) === 0 ? "" : "bg-warning/20 border-warning/30 text-black dark:text-black"} text-xs`}
+                          variant="secondary"
+                          className={`${Number(produto.estoque_atual) === 0 ? "bg-destructive/20 border-destructive/30 text-destructive dark:text-red-400" : "bg-warning/20 border-warning/30 text-black dark:text-black"} text-xs shrink-0`}
                         >
                           {formatarEstoque(produto)}
                         </Badge>

@@ -22,6 +22,7 @@ import Financeiro from "./pages/Financeiro";
 import NFe from "./pages/NFe";
 import ConsultaNfe from "./pages/ConsultaNfe";
 import Configuracoes from "./pages/Configuracoes";
+import Assinatura from "./pages/Assinatura";
 import NovoProduto from "./pages/NovoProduto";
 import NovoCliente from "./pages/NovoCliente";
 import NovaTransacao from "./pages/NovaTransacao";
@@ -127,6 +128,11 @@ function AppContent() {
           {/* Configurações */}
           <Route path="/dashboard/configuracoes" element={<AppLayout />}>
             <Route index element={<Configuracoes />} />
+          </Route>
+          
+          {/* Assinatura (Stripe) */}
+          <Route path="/dashboard/assinatura" element={<AppLayout />}>
+            <Route index element={<Assinatura />} />
           </Route>
           
           {/* Fornecedores */}

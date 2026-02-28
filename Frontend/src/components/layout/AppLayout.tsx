@@ -21,11 +21,12 @@ export function AppLayout() {
   
   // Verificar se estamos em páginas que usam ConfiguracoesSidebar
   const isConfiguracoesPage = location.pathname === '/dashboard/configuracoes';
+  const isAssinaturaPage = location.pathname === '/dashboard/assinatura';
   const isFornecedoresPage = location.pathname === '/dashboard/fornecedores';
   const isFuncionariosPage = location.pathname === '/dashboard/funcionarios';
   const isNovoFornecedorPage = location.pathname === '/dashboard/novo-fornecedor' || location.pathname.startsWith('/dashboard/novo-fornecedor/');
   const isNovoFuncionarioPage = location.pathname === '/dashboard/novo-funcionario' || location.pathname.startsWith('/dashboard/novo-funcionario/');
-  const isConfiguracoesLayout = isConfiguracoesPage || isFornecedoresPage || isFuncionariosPage || isNovoFornecedorPage || isNovoFuncionarioPage;
+  const isConfiguracoesLayout = isConfiguracoesPage || isAssinaturaPage || isFornecedoresPage || isFuncionariosPage || isNovoFornecedorPage || isNovoFuncionarioPage;
 
   // Verificar se estamos em páginas de venda (requerem sidebar colapsado para mais espaço)
   const isNovaVendaPage = location.pathname === '/dashboard/nova-venda';

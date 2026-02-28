@@ -63,6 +63,8 @@ const configuracoesTabs = [
     nome: "Assinatura", 
     icone: DollarSign, 
     descricao: "Plano e Stripe",
+    isExternal: true,
+    path: "/dashboard/assinatura",
     permissao: "configuracoes_gerais"
   },
   { 
