@@ -1,8 +1,5 @@
 version: '3.8'
 
-env_file:
-  - .env.production
-
 services:
   # =====================================================
   # NGINX - PROXY REVERSO E SSL
@@ -36,6 +33,8 @@ services:
     image: mysql:8.0
     container_name: kontrolla-mysql
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -72,40 +71,15 @@ services:
       dockerfile: Dockerfile
     container_name: kontrolla-backend
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
       NODE_ENV: production
       PORT: 3000
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: ${MYSQL_DATABASE}
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-      EMAIL_HOST: ${EMAIL_HOST}
-      EMAIL_PORT: ${EMAIL_PORT}
-      EMAIL_USER: ${EMAIL_USER}
-      EMAIL_PASS: ${EMAIL_PASS}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      DOMAIN: ${DOMAIN}
-      FRONTEND_URL: ${FRONTEND_URL}
-      SESSION_SECRET: ${SESSION_SECRET}
-      FOCUS_NFE_TOKEN_PRINCIPAL: ${FOCUS_NFE_TOKEN_PRINCIPAL}
-
-      # Stripe (assinaturas)
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_PRICE_STARTER: ${STRIPE_PRICE_STARTER}
-      STRIPE_PRICE_PROFESSIONAL: ${STRIPE_PRICE_PROFESSIONAL}
-      STRIPE_PRICE_ENTERPRISE: ${STRIPE_PRICE_ENTERPRISE}
-      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL}
-      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL}
-      STRIPE_BILLING_PORTAL_RETURN_URL: ${STRIPE_BILLING_PORTAL_RETURN_URL}
     volumes:
       - uploads_data:/app/uploads
       - logs_data:/app/logs
@@ -144,6 +118,8 @@ services:
       - ./redis/redis.conf:/etc/redis/redis.conf:ro
     networks:
       - kontrolla-network
+    env_file:
+      - .env.production
     command: redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
@@ -158,6 +134,8 @@ services:
     image: alpine:latest
     container_name: kontrolla-backup
     restart: unless-stopped
+    env_file:
+      - .env.production
     volumes:
       - mysql_data:/mysql-data:ro
       - uploads_data:/uploads-data:ro
