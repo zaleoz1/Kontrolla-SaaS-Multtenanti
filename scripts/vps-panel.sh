@@ -192,46 +192,38 @@ action_health() {
 }
 
 # =====================================================
-# BANNER E MENU PRINCIPAL
+# BANNER E MENU PRINCIPAL (largura fixa 54 chars = bordas alinhadas)
 # =====================================================
+MENU_W=54
+
 show_banner() {
     clear
     echo ""
-    echo -e "  ${BOLD}${ACCENT}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}                                                                ${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}   ${WHITE}${BOLD}  K O N T R O L L A P R O${NC}   ·   ${DIM}P A I N E L   V P S${NC}              ${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}                                                                ${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}   ${DIM}📁 $PROJECT_DIR${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}                                                                ${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
+    echo -e "  ${BOLD}${ACCENT}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
+    _t="KONTROLLAPRO · PAINEL VPS"
+    _pad=$((MENU_W - ${#_t} - 1))
+    echo -e "  ${BOLD}${ACCENT}┃${NC} ${WHITE}${BOLD}${_t}${NC}$(printf '%*s' $_pad '')${BOLD}${ACCENT}┃${NC}"
+    _p="$PROJECT_DIR"
+    [ ${#_p} -gt $((MENU_W - 4)) ] && _p="...${_p: -$((MENU_W - 7))}"
+    _pad=$((MENU_W - ${#_p} - 1))
+    echo -e "  ${BOLD}${ACCENT}┃${NC} ${DIM}${_p}${NC}$(printf '%*s' $_pad '')${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
     echo ""
 }
 
 show_menu() {
     show_banner
-    echo -e "  ${DIM}─── Deploy ─────────────────────────────────────────────────${NC}"
-    echo -e "  ${GREEN}  1)${NC}  Git pull"
-    echo -e "  ${GREEN}  2)${NC}  Deploy (build frontend + containers)"
-    echo -e "  ${GREEN}  3)${NC}  Git pull + Deploy"
+    echo -e "  ${DIM}Deploy${NC}"
+    echo -e "  ${GREEN} 1${NC}  Git pull  ${GREEN}2${NC}  Deploy  ${GREEN}3${NC}  Git pull + Deploy"
     echo ""
-    echo -e "  ${DIM}─── Monitoramento ─────────────────────────────────────────${NC}"
-    echo -e "  ${GREEN}  4)${NC}  Ver logs (backend / nginx / mysql / redis)"
-    echo -e "  ${GREEN}  5)${NC}  Status dos containers"
-    echo -e "  ${GREEN} 11)${NC}  Health check (backend + nginx)"
+    echo -e "  ${DIM}Monitoramento${NC}"
+    echo -e "  ${GREEN} 4${NC}  Logs  ${GREEN}5${NC}  Status  ${GREEN}11${NC}  Health check"
     echo ""
-    echo -e "  ${DIM}─── Manutenção ───────────────────────────────────────────${NC}"
-    echo -e "  ${GREEN}  6)${NC}  Backup manual"
-    echo -e "  ${GREEN}  7)${NC}  Reiniciar todos os serviços"
-    echo -e "  ${GREEN}  8)${NC}  Reiniciar um serviço"
-    echo -e "  ${GREEN}  9)${NC}  Parar containers"
-    echo -e "  ${GREEN} 10)${NC}  Iniciar containers"
+    echo -e "  ${DIM}Manutenção${NC}"
+    echo -e "  ${GREEN} 6${NC}  Backup  ${GREEN}7${NC}  Restart todos  ${GREEN}8${NC}  Restart um  ${GREEN}9${NC}  Parar  ${GREEN}10${NC}  Iniciar"
     echo ""
-    echo -e "  ${DIM}─── Outros ───────────────────────────────────────────────${NC}"
-    echo -e "  ${GREEN} 12)${NC}  Abrir shell no diretório do projeto"
-    echo ""
-    echo -e "  ${BOLD}${ACCENT}  ┌────────────────────────────────────┐${NC}"
-    echo -e "  ${BOLD}${ACCENT}  │${NC}  ${RED} 0)${NC}  Sair                              ${BOLD}${ACCENT}│${NC}"
-    echo -e "  ${BOLD}${ACCENT}  └────────────────────────────────────┘${NC}"
+    echo -e "  ${DIM}Outros${NC}"
+    echo -e "  ${GREEN}12${NC}  Shell no projeto   ${RED}0${NC}  Sair"
     echo ""
 }
 
@@ -258,7 +250,7 @@ main() {
 
     while true; do
         show_menu
-        echo -en "  ${BOLD}${ACCENT}▶ Escolha uma opção${NC} ${DIM}[0-12]:${NC} "
+        echo -en "  ${ACCENT}▶${NC} ${DIM}[0-12]:${NC} "
         read -r op
         case "$op" in
             1)  action_git_pull ;;
@@ -276,7 +268,7 @@ main() {
             0)  echo "" ; echo -e "  ${GREEN}✓${NC} ${DIM}Até logo.${NC}" ; echo "" ; exit 0 ;;
             *)  warn "Opção inválida." ;;
         esac
-        [ "$op" != "4" ] && echo "" && read -r -p "  Pressione Enter para continuar..."
+        [ "$op" != "4" ] && echo "" && read -r -p "  Enter para continuar... "
     done
 }
 
