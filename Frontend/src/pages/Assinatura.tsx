@@ -271,64 +271,85 @@ export default function Assinatura() {
             const Icon = plano.icone;
             const isAtual = planoAtualId === plano.id;
             const isSelecionado = planoSelecionado === plano.id;
+            const corClasses = {
+              blue: {
+                bg: 'bg-blue-500/10 dark:bg-blue-500/20',
+                icon: 'text-blue-600 dark:text-blue-400',
+                ring: 'ring-blue-500/25',
+                gradient: 'from-blue-500/5 to-transparent',
+              },
+              primary: {
+                bg: 'bg-primary/10 dark:bg-primary/20',
+                icon: 'text-primary',
+                ring: 'ring-primary/25',
+                gradient: 'from-primary/5 to-transparent',
+              },
+              purple: {
+                bg: 'bg-purple-500/10 dark:bg-purple-500/20',
+                icon: 'text-purple-600 dark:text-purple-400',
+                ring: 'ring-purple-500/25',
+                gradient: 'from-purple-500/5 to-transparent',
+              },
+            };
+            const cores = corClasses[plano.cor as keyof typeof corClasses] ?? corClasses.primary;
             return (
               <Card
                 key={plano.id}
-                className={`relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                className={`relative cursor-pointer overflow-hidden transition-all duration-300 ease-out rounded-2xl border ${
                   isSelecionado
-                    ? 'ring-2 ring-primary shadow-lg border-primary/50'
-                    : 'border-border/60 hover:border-border'
-                } ${plano.destaque ? 'shadow-md' : ''}`}
+                    ? `ring-1 ${cores.ring} shadow-lg border-primary/50 bg-gradient-to-b ${cores.gradient} scale-[1.01]`
+                    : 'border-border/60 hover:border-border/80 hover:shadow-lg'
+                } ${plano.destaque ? 'md:-mt-1 md:mb-1 shadow-lg' : ''}`}
                 onClick={() => canManageBilling && setPlanoSelecionado(plano.id)}
               >
+                {/* Faixa superior colorida */}
+                <div className={`h-1 w-full ${
+                  plano.cor === 'blue' ? 'bg-gradient-to-r from-blue-500 to-blue-400' :
+                  plano.cor === 'purple' ? 'bg-gradient-to-r from-purple-500 to-purple-400' :
+                  'bg-gradient-to-r from-primary to-primary/80'
+                }`} />
                 {plano.destaque && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                    <Badge className="bg-gradient-primary text-white shadow-md text-[10px] sm:text-xs px-3">
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                    <Badge className="bg-gradient-to-r from-primary to-primary/90 text-white shadow-lg text-[10px] sm:text-xs px-3 py-0.5 font-medium border-0">
                       Mais popular
                     </Badge>
                   </div>
                 )}
                 {isAtual && (
-                  <div className="absolute -top-3 right-3 z-10">
-                    <Badge variant="outline" className="bg-background text-[10px] sm:text-xs px-2 border-primary/50 text-primary">
+                  <div className="absolute top-4 right-4 z-10">
+                    <Badge variant="secondary" className="bg-background/95 backdrop-blur text-[10px] sm:text-xs px-2.5 py-0.5 border border-primary/30 text-primary font-medium">
                       Atual
                     </Badge>
                   </div>
                 )}
-                <CardHeader className="pb-2 sm:pb-3 pt-5">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`p-1.5 sm:p-2 rounded-lg ${
-                      plano.cor === 'blue' ? 'bg-blue-500/10' :
-                      plano.cor === 'purple' ? 'bg-purple-500/10' :
-                      'bg-primary/10'
-                    }`}>
-                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                        plano.cor === 'blue' ? 'text-blue-600 dark:text-blue-400' :
-                        plano.cor === 'purple' ? 'text-purple-600 dark:text-purple-400' :
-                        'text-primary'
-                      }`} />
+                <CardHeader className="pb-3 sm:pb-4 pt-6 sm:pt-8 px-5 sm:px-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className={`p-3 rounded-xl ${cores.bg} w-fit`}>
+                      <Icon className={`h-6 w-6 sm:h-7 sm:w-7 ${cores.icon}`} />
                     </div>
-                    <div>
-                      <CardTitle className="text-base sm:text-lg">{plano.nome}</CardTitle>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">{plano.descricao}</p>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">{plano.nome}</CardTitle>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-snug">{plano.descricao}</p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-2 sm:pt-3">
-                  <ul className="space-y-2">
+                <CardContent className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0">
+                  <ul className="space-y-3">
                     {plano.recursos.map((recurso, i) => (
-                      <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
-                        <Check className={`h-3.5 w-3.5 flex-shrink-0 ${
-                          isSelecionado ? 'text-primary' : 'text-muted-foreground'
-                        }`} />
-                        <span className="text-muted-foreground">{recurso}</span>
+                      <li key={i} className="flex items-center gap-3 text-sm">
+                        <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                          isSelecionado ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          <Check className="h-3 w-3" strokeWidth={2.5} />
+                        </span>
+                        <span className={isSelecionado ? 'text-foreground/90' : 'text-muted-foreground'}>{recurso}</span>
                       </li>
                     ))}
                   </ul>
                   {isSelecionado && (
-                    <div className="mt-4 pt-3 border-t border-border/50">
-                      <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-                        <Check className="h-3.5 w-3.5" />
+                    <div className="mt-5 pt-4 border-t border-border/60">
+                      <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                        <Check className="h-4 w-4" strokeWidth={2.5} />
                         Selecionado
                       </div>
                     </div>

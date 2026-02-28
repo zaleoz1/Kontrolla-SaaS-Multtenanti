@@ -63,7 +63,8 @@ import {
   Square,
   Copy,
   Eye,
-  Archive
+  Archive,
+  FilterX
 } from "lucide-react";
 
 interface Produto {
@@ -318,6 +319,14 @@ export default function Produtos() {
     carregarProdutos();
   }, [termoBusca, filtroStatus, filtroCategoria]);
   // filtroEstoque não precisa recarregar a API pois é filtrado no frontend
+
+  const limparFiltros = () => {
+    setTermoBusca("");
+    setFiltroStatus("");
+    setFiltroCategoria("");
+    setFiltroEstoque("");
+    setFiltroImpostos("");
+  };
 
   const carregarCategorias = async () => {
     try {
@@ -2097,11 +2106,8 @@ export default function Produtos() {
       const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
       return estoqueAtual > 0 && estoqueMinimoAtual > 0 && estoqueAtual <= estoqueMinimoAtual;
     }).length;
-    const disponiveis = produtosFiltrados.filter(p => {
-      const estoqueAtual = obterEstoqueAtual(p);
-      const estoqueMinimoAtual = obterEstoqueMinimoAtual(p);
-      return estoqueAtual > 0 && (!estoqueMinimoAtual || estoqueMinimoAtual <= 0 || estoqueAtual > estoqueMinimoAtual);
-    }).length;
+    // Disponíveis = todos com estoque > 0 (inclui estoque baixo; são produtos em estoque)
+    const disponiveis = produtosFiltrados.filter(p => obterEstoqueAtual(p) > 0).length;
     
     return { total, semEstoque, estoqueBaixo, disponiveis };
   };
@@ -2371,7 +2377,7 @@ export default function Produtos() {
           {/* Filtros - Desktop */}
           <div className="hidden md:flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600 dark:text-blue-400" />
               <Input
                 placeholder="Buscar por nome, descrição ou código..."
                 value={termoBusca}
@@ -2424,15 +2430,10 @@ export default function Produtos() {
               </select>
               <Button 
                 variant="outline" 
-                onClick={carregarProdutos}
-                disabled={produtosApi.loading}
+                onClick={limparFiltros}
               >
-                {produtosApi.loading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Atualizar
+                <FilterX className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400" />
+                Limpar
               </Button>
             </div>
           </div>
@@ -2440,7 +2441,7 @@ export default function Produtos() {
           {/* Filtros - Mobile */}
           <div className="md:hidden space-y-3 w-full">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-blue-600 dark:text-blue-400" />
               <Input
                 placeholder="Buscar produtos..."
                 value={termoBusca}
@@ -2496,17 +2497,11 @@ export default function Produtos() {
 
             <Button 
               variant="outline" 
-              onClick={carregarProdutos}
-              disabled={produtosApi.loading}
+              onClick={limparFiltros}
               className="w-full text-xs sm:text-sm"
             >
-              {produtosApi.loading ? (
-                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              )}
-              <span className="hidden sm:inline">Atualizar</span>
-              <span className="sm:hidden">Atualizar</span>
+              <FilterX className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-blue-600 dark:text-blue-400" />
+              Limpar
             </Button>
           </div>
         </CardContent>

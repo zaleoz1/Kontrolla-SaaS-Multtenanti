@@ -88,22 +88,22 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
       <div className={cn(
         "fixed lg:static inset-y-0 left-0 z-50 flex h-full flex-col bg-sidebar border-r border-sidebar-border transform transition-all duration-300 ease-in-out flex-shrink-0",
         // Em telas menores (mobile), sempre usar largura completa
-        "lg:w-80 w-80",
+        "lg:w-64 w-64",
         // Em desktop, usar largura colapsada se necessário
-        isCollapsed && "lg:w-16",
+        isCollapsed && "lg:w-14",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Logo e nome do sistema */}
         <div className={cn(
-          "flex h-16 items-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0",
+          "flex h-14 items-center border-b border-sidebar-border bg-gradient-primary flex-shrink-0",
           // Em mobile, sempre mostrar texto completo
           "lg:justify-between justify-between",
-          isCollapsed ? "lg:justify-center lg:px-2 px-6" : "px-6"
+          isCollapsed ? "lg:justify-center lg:px-2 px-4" : "px-4"
         )}>
           <div className="flex items-center space-x-2">
-            <Store className="h-8 w-8 text-white" />
+            <Store className="h-6 w-6 lg:h-7 lg:w-7 text-white" />
             {!isCollapsed && (
-              <span className="text-xl font-bold text-white">
+              <span className="text-lg font-bold text-white">
                 {tenant?.nome || "KontrollaPro"}
               </span>
             )}
@@ -126,7 +126,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
         <nav className={cn(
           "flex-1 space-y-1 overflow-y-auto",
           // Em mobile, sempre usar padding completo
-          "lg:p-4 p-4",
+          "lg:p-3 p-4",
           isCollapsed && "lg:p-2"
         )}>
           {navegacao
@@ -145,8 +145,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
                   cn(
                     "flex items-center text-sm font-medium rounded-lg transition-all duration-200",
                     // Em mobile, sempre mostrar texto completo
-                    "lg:px-4 px-4 py-3",
-                    isCollapsed && "lg:px-2 lg:justify-center lg:px-2",
+                    "lg:px-3 px-4 py-2.5",
+                    isCollapsed && "lg:px-2 lg:justify-center",
                     "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     isActive
                       ? "bg-sidebar-primary text-white shadow-md"
@@ -156,9 +156,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
                 title={isCollapsed ? item.nome : undefined}
               >
                 <item.icone className={cn(
-                  "h-5 w-5",
-                  // Em mobile, sempre mostrar margem
-                  "lg:mr-3 mr-3",
+                  "h-4 w-4 lg:h-[1.125rem] lg:w-[1.125rem]",
+                  "lg:mr-2.5 mr-3",
                   isCollapsed && "lg:mr-0"
                 )} />
                 {/* Em mobile, sempre mostrar texto */}
@@ -172,7 +171,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
         <div className={cn(
           "border-t border-sidebar-border flex-shrink-0",
           // Em mobile, sempre usar padding completo
-          "lg:p-4 p-4",
+          "lg:p-3 p-4",
           isCollapsed && "lg:p-2"
         )}>
           {/* Em mobile, sempre mostrar layout completo */}
@@ -233,7 +232,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
                 cn(
                   "flex items-center text-sm font-medium rounded-lg transition-all duration-200 w-full",
                   // Em mobile, sempre mostrar layout completo
-                  "lg:px-4 px-4 py-3 justify-start",
+                  "lg:px-3 px-4 py-2.5 justify-start",
                   isCollapsed && "lg:px-2 lg:justify-center",
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   isActive
@@ -244,9 +243,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
               title={isCollapsed ? "Configurações" : undefined}
             >
               <Settings className={cn(
-                "h-4 w-4",
-                // Em mobile, sempre mostrar margem
-                "lg:mr-3 mr-3",
+                "h-4 w-4 lg:h-[1.125rem] lg:w-[1.125rem]",
+                "lg:mr-2.5 mr-3",
                 isCollapsed && "lg:mr-0"
               )} />
               {/* Em mobile, sempre mostrar texto */}
@@ -260,16 +258,15 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
             className={cn(
               "w-full text-sidebar-foreground hover:bg-sidebar-accent mt-1",
               // Em mobile, sempre mostrar layout completo
-              "lg:px-4 px-4 py-3 justify-start",
+              "lg:px-3 px-4 py-2.5 justify-start",
               isCollapsed && "lg:px-2 lg:justify-center"
             )}
             onClick={onLogout}
             title={isCollapsed ? "Sair" : undefined}
           >
             <LogOut className={cn(
-              "h-4 w-4",
-              // Em mobile, sempre mostrar margem
-              "lg:mr-3 mr-3",
+              "h-4 w-4 lg:h-[1.125rem] lg:w-[1.125rem]",
+              "lg:mr-2.5 mr-3",
               isCollapsed && "lg:mr-0"
             )} />
             {/* Em mobile, sempre mostrar texto */}

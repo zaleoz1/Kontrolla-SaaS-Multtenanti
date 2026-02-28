@@ -137,21 +137,21 @@ export function ConfiguracoesSidebar({
       
       {/* Container principal da sidebar */}
       <div className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 flex h-full w-80 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
+        "fixed lg:static inset-y-0 left-0 z-50 flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out flex-shrink-0",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Header do sidebar */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border bg-gradient-primary px-6 flex-shrink-0">
+        <div className="flex h-14 items-center justify-between border-b border-sidebar-border bg-gradient-primary px-4 flex-shrink-0">
           <div className="flex items-center space-x-2">
-            <Settings className="h-6 w-6 text-white" />
-            <span className="text-lg font-bold text-white">Configurações</span>
+            <Settings className="h-5 w-5 text-white" />
+            <span className="text-base font-bold text-white">Configurações</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/dashboard")}
-              className="text-white hover:bg-white/20"
+              className="text-white hover:bg-white/20 h-8 w-8 p-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -160,15 +160,15 @@ export function ConfiguracoesSidebar({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="lg:hidden text-white hover:bg-white/20"
+              className="lg:hidden text-white hover:bg-white/20 h-8 w-8 p-0"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
       {/* Navegação das abas */}
-      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+      <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
         {configuracoesTabs
           .filter((tab) => isTabVisible(tab))
           .map((tab) => {
@@ -212,17 +212,17 @@ export function ConfiguracoesSidebar({
               key={tab.id}
               onClick={handleClick}
               className={cn(
-                "w-full flex items-start space-x-3 p-4 text-left rounded-lg transition-all duration-200",
+                "w-full flex items-start space-x-2.5 p-3 text-left rounded-lg transition-all duration-200",
                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 activeTab === tab.id 
                   ? "bg-sidebar-primary text-white shadow-md" 
                   : "text-sidebar-foreground"
               )}
             >
-              <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <Icon className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm">{tab.nome}</p>
-                <p className="text-xs text-sidebar-foreground/60 mt-1">
+                <p className="text-xs text-sidebar-foreground/60 mt-0.5">
                   {tab.descricao}
                 </p>
               </div>
@@ -232,14 +232,14 @@ export function ConfiguracoesSidebar({
       </nav>
 
         {/* Botão voltar na parte inferior */}
-        <div className="border-t border-sidebar-border p-4 flex-shrink-0">
+        <div className="border-t border-sidebar-border p-3 flex-shrink-0">
           <Button 
             onClick={() => navigate("/dashboard")}
             variant="outline" 
             size="sm" 
-            className="w-full justify-start"
+            className="w-full justify-start h-9 text-sm px-3"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-3.5 w-3.5 mr-2" />
             Voltar ao Dashboard
           </Button>
         </div>
