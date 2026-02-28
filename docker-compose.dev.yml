@@ -25,6 +25,20 @@ services:
       MEUDANFE_API_KEY: 518f8e2a-351c-4bd3-9f60-e0b04f79b8c9
       MEUDANFE_API_URL: https://api.meudanfe.com.br/v2/fd
       FOCUS_NFE_TOKEN_PRINCIPAL: XnAPKJKCzYl7ZSzcPQewYM5a3jCuCgZ8
+      FRONTEND_URL: http://localhost:5173
+      GOOGLE_CLIENT_ID: 505635879481-974u3cn4qac3eeti5i9gjsreo3o315dp.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+      GOOGLE_REDIRECT_URI: http://localhost:3000/api/auth/google/callback
+
+      # Stripe (assinaturas) - valores vêm do Backend/.env ou variáveis de ambiente
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_STARTER: ${STRIPE_PRICE_STARTER}
+      STRIPE_PRICE_PROFESSIONAL: ${STRIPE_PRICE_PROFESSIONAL}
+      STRIPE_PRICE_ENTERPRISE: ${STRIPE_PRICE_ENTERPRISE}
+      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL:-http://localhost:5173/dashboard?stripe=success}
+      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-http://localhost:5173/signup?stripe=cancel}
+      STRIPE_BILLING_PORTAL_RETURN_URL: ${STRIPE_BILLING_PORTAL_RETURN_URL:-http://localhost:5173/dashboard/configuracoes?aba=assinatura}
     volumes:
       - ./Backend:/app
       - /app/node_modules

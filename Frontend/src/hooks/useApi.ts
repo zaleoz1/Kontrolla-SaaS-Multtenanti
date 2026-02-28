@@ -82,16 +82,15 @@ export function useApi<T = any>() {
         
         switch (response.status) {
           case HTTP_STATUS.UNAUTHORIZED:
-            errorMessage = ERROR_MESSAGES.UNAUTHORIZED;
-            // Limpar token inválido
+            errorMessage = errorMessage || ERROR_MESSAGES.UNAUTHORIZED;
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             break;
           case HTTP_STATUS.FORBIDDEN:
-            errorMessage = ERROR_MESSAGES.FORBIDDEN;
+            errorMessage = errorMessage || ERROR_MESSAGES.FORBIDDEN;
             break;
           case HTTP_STATUS.NOT_FOUND:
-            errorMessage = ERROR_MESSAGES.NOT_FOUND;
+            errorMessage = errorMessage || ERROR_MESSAGES.NOT_FOUND;
             break;
           case HTTP_STATUS.BAD_REQUEST:
             errorMessage = errorMessage || ERROR_MESSAGES.VALIDATION_ERROR;
@@ -100,7 +99,7 @@ export function useApi<T = any>() {
             errorMessage = errorMessage || 'Recurso já existe ou está em conflito';
             break;
           case HTTP_STATUS.INTERNAL_SERVER_ERROR:
-            errorMessage = ERROR_MESSAGES.SERVER_ERROR;
+            errorMessage = errorMessage || ERROR_MESSAGES.SERVER_ERROR;
             break;
           case HTTP_STATUS.SERVICE_UNAVAILABLE:
             errorMessage = errorMessage || ERROR_MESSAGES.SERVICE_UNAVAILABLE;
