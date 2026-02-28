@@ -25,21 +25,27 @@ set -e
 PROJECT_DIR="${KONTROLLA_PROJECT_DIR:-/opt/kontrollapro}"
 COMPOSE_FILE="docker-compose.prod.yml"
 
-# Cores
+# Cores e estilos
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
+
+# Tema: destaque (cyan), sucesso (verde), aviso (amarelo), erro (vermelho)
+ACCENT="${CYAN}"
 
 # =====================================================
 # FUNÇÕES AUXILIARES
 # =====================================================
-log()  { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
-warn() { echo -e "${YELLOW}[$(date +'%H:%M:%S')] ⚠${NC} $1"; }
-err()  { echo -e "${RED}[$(date +'%H:%M:%S')] ✗${NC} $1"; }
+log()  { echo -e "${GREEN}▶${NC} ${DIM}[$(date +'%H:%M:%S')]${NC} $1"; }
+warn() { echo -e "${YELLOW}⚠${NC} ${DIM}[$(date +'%H:%M:%S')]${NC} $1"; }
+err()  { echo -e "${RED}✗${NC} ${DIM}[$(date +'%H:%M:%S')]${NC} $1"; }
 
 cd_project() {
     if [ ! -d "$PROJECT_DIR" ]; then
@@ -79,11 +85,14 @@ action_deploy() {
 
 action_logs() {
     echo ""
-    echo -e "${CYAN}  Logs de qual serviço?${NC}"
-    echo "  1) backend    2) nginx    3) mysql    4) redis"
-    echo "  5) todos (follow)    6) backup"
-    echo "  0) Voltar"
-    read -r -p "  Opção: " opt
+    echo -e "  ${BOLD}${ACCENT}┌─────────────────────────────────────────┐${NC}"
+    echo -e "  ${BOLD}${ACCENT}│${NC}  ${WHITE}Logs de qual serviço?${NC}                    ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}├─────────────────────────────────────────┤${NC}"
+    echo -e "  ${BOLD}${ACCENT}│${NC}  ${GREEN}1)${NC} backend    ${GREEN}2)${NC} nginx    ${GREEN}3)${NC} mysql    ${GREEN}4)${NC} redis  ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}│${NC}  ${GREEN}5)${NC} todos      ${GREEN}6)${NC} backup   ${DIM}0) Voltar${NC}         ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}└─────────────────────────────────────────┘${NC}"
+    echo ""
+    read -r -p "$(echo -e "  ${ACCENT}Opção:${NC} )" opt
     cd_project
     case "$opt" in
         1) docker compose -f "$COMPOSE_FILE" logs -f --tail=200 backend ;;
@@ -124,8 +133,14 @@ action_restart() {
 
 action_restart_one() {
     echo ""
-    echo "  1) backend    2) nginx    3) mysql    4) redis"
-    read -r -p "  Reiniciar qual? (0=voltar): " opt
+    echo -e "  ${BOLD}${ACCENT}┌────────────────────────────────────┐${NC}"
+    echo -e "  ${BOLD}${ACCENT}│${NC}  ${WHITE}Reiniciar qual serviço?${NC}              ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}├────────────────────────────────────┤${NC}"
+    echo -e "  ${BOLD}${ACCENT}│${NC}  ${GREEN}1)${NC} backend  ${GREEN}2)${NC} nginx  ${GREEN}3)${NC} mysql  ${GREEN}4)${NC} redis  ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}│${NC}  ${DIM}0) Voltar${NC}                          ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}└────────────────────────────────────┘${NC}"
+    echo ""
+    read -r -p "$(echo -e "  ${ACCENT}Opção:${NC} )" opt
     [ "$opt" = "0" ] && return
     cd_project
     case "$opt" in
@@ -143,11 +158,14 @@ action_pull_and_deploy() {
 }
 
 action_stop() {
-    warn "Parar todos os containers? (s/N)"
-    read -r -p "  " r
+    echo ""
+    echo -e "  ${YELLOW}⚠ Parar todos os containers?${NC} ${DIM}(s/N)${NC}"
+    read -r -p "$(echo -e "  ${ACCENT}Confirmar:${NC} )" r
     if [ "$r" = "s" ] || [ "$r" = "S" ]; then
         run_compose down
         log "Containers parados."
+    else
+        log "Operação cancelada."
     fi
 }
 
@@ -171,29 +189,46 @@ action_health() {
 }
 
 # =====================================================
-# MENU PRINCIPAL
+# BANNER E MENU PRINCIPAL
 # =====================================================
+show_banner() {
+    clear
+    echo ""
+    echo -e "  ${BOLD}${ACCENT}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}                                                                ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}   ${WHITE}${BOLD}  K O N T R O L L A P R O${NC}   ·   ${DIM}P A I N E L   V P S${NC}              ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}                                                                ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}   ${DIM}📁 $PROJECT_DIR${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}                                                                ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
+    echo ""
+}
+
 show_menu() {
+    show_banner
+    echo -e "  ${DIM}─── Deploy ─────────────────────────────────────────────────${NC}"
+    echo -e "  ${GREEN}  1)${NC}  Git pull"
+    echo -e "  ${GREEN}  2)${NC}  Deploy (build frontend + containers)"
+    echo -e "  ${GREEN}  3)${NC}  Git pull + Deploy"
     echo ""
-    echo -e "${BOLD}${BLUE}  ╔══════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${BLUE}  ║     KONTROLLAPRO - PAINEL VPS                ║${NC}"
-    echo -e "${BOLD}${BLUE}  ║     Diretório: $PROJECT_DIR${NC}"
-    echo -e "${BOLD}${BLUE}  ╚══════════════════════════════════════════════╝${NC}"
+    echo -e "  ${DIM}─── Monitoramento ─────────────────────────────────────────${NC}"
+    echo -e "  ${GREEN}  4)${NC}  Ver logs (backend / nginx / mysql / redis)"
+    echo -e "  ${GREEN}  5)${NC}  Status dos containers"
+    echo -e "  ${GREEN} 11)${NC}  Health check (backend + nginx)"
     echo ""
-    echo "  1)  Git pull"
-    echo "  2)  Deploy (build frontend + containers)"
-    echo "  3)  Git pull + Deploy"
-    echo "  4)  Ver logs (backend/nginx/mysql/redis)"
-    echo "  5)  Status dos containers"
-    echo "  6)  Backup manual"
-    echo "  7)  Reiniciar todos os serviços"
-    echo "  8)  Reiniciar um serviço"
-    echo "  9)  Parar containers"
-    echo "  10) Iniciar containers"
-    echo "  11) Health check (backend + nginx)"
-    echo "  12) Abrir shell no diretório do projeto"
+    echo -e "  ${DIM}─── Manutenção ───────────────────────────────────────────${NC}"
+    echo -e "  ${GREEN}  6)${NC}  Backup manual"
+    echo -e "  ${GREEN}  7)${NC}  Reiniciar todos os serviços"
+    echo -e "  ${GREEN}  8)${NC}  Reiniciar um serviço"
+    echo -e "  ${GREEN}  9)${NC}  Parar containers"
+    echo -e "  ${GREEN} 10)${NC}  Iniciar containers"
     echo ""
-    echo "  0)  Sair"
+    echo -e "  ${DIM}─── Outros ───────────────────────────────────────────────${NC}"
+    echo -e "  ${GREEN} 12)${NC}  Abrir shell no diretório do projeto"
+    echo ""
+    echo -e "  ${BOLD}${ACCENT}  ┌────────────────────────────────────┐${NC}"
+    echo -e "  ${BOLD}${ACCENT}  │${NC}  ${RED} 0)${NC}  Sair                              ${BOLD}${ACCENT}│${NC}"
+    echo -e "  ${BOLD}${ACCENT}  └────────────────────────────────────┘${NC}"
     echo ""
 }
 
@@ -220,7 +255,7 @@ main() {
 
     while true; do
         show_menu
-        read -r -p "  Escolha uma opção: " op
+        read -r -p "$(echo -e "  ${BOLD}${ACCENT}▶ Escolha uma opção${NC} ${DIM}[0-12]:${NC} ")" op
         case "$op" in
             1)  action_git_pull ;;
             2)  action_deploy ;;
@@ -234,7 +269,7 @@ main() {
             10) action_start ;;
             11) action_health ;;
             12) action_shell ;;
-            0)  log "Até logo." ; exit 0 ;;
+            0)  echo "" ; echo -e "  ${GREEN}✓${NC} ${DIM}Até logo.${NC}" ; echo "" ; exit 0 ;;
             *)  warn "Opção inválida." ;;
         esac
         [ "$op" != "4" ] && echo "" && read -r -p "  Pressione Enter para continuar..."
