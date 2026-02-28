@@ -292,7 +292,32 @@ export function useAuth() {
       }
 
       throw new Error('Token inválido');
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.message || '';
+      const isTransientError =
+        error?.name === 'AbortError' ||
+        message.includes('Tempo limite') ||
+        message.includes('Erro de conexão') ||
+        message.includes('Failed to fetch');
+
+      if (isTransientError) {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const cachedUser = JSON.parse(userData);
+            setAuthState({
+              user: cachedUser,
+              isAuthenticated: true,
+              loading: false,
+            });
+            console.warn('Falha temporária ao verificar token; sessão local mantida.');
+            return true;
+          } catch {
+            // segue o fluxo padrão de limpeza se houver erro ao parsear usuário local
+          }
+        }
+      }
+
       console.error('Erro na verificação do token:', error);
       localStorage.removeItem('token');
       localStorage.removeItem('user');

@@ -110,6 +110,9 @@ router.get('/status', async (req, res) => {
 });
  
 router.post('/checkout-session', requireAdmin, async (req, res) => {
+  let planId;
+  let priceId;
+
   try {
     if (!isStripeConfigured()) {
       return res.status(503).json({
@@ -117,8 +120,8 @@ router.post('/checkout-session', requireAdmin, async (req, res) => {
       });
     }
  
-    const planId = req.body?.planId || req.body?.plano || req.body?.selectedPlan;
-    const priceId = getStripePriceIdForPlan(planId);
+    planId = req.body?.planId || req.body?.plano || req.body?.selectedPlan;
+    priceId = getStripePriceIdForPlan(planId);
     if (!planId || !priceId) {
       return res.status(400).json({
         error: 'Plano inválido (planId) ou Price ID não configurado no servidor',

@@ -66,8 +66,6 @@ export function useApi<T = any>() {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
         let errorMessage: string = ERROR_MESSAGES.UNKNOWN_ERROR;
         
@@ -138,7 +136,11 @@ export function useApi<T = any>() {
       }
 
       setState({ data: null, loading: false, error: errorMessage });
-      throw error;
+      throw new Error(errorMessage);
+    } finally {
+      // Garante limpeza do timer tanto em sucesso quanto em erro
+      // (inclusive abort/timeout), evitando timers pendentes.
+      clearTimeout(timeoutId);
     }
   }, []);
 

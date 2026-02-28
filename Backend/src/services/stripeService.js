@@ -5,19 +5,25 @@ import { URLSearchParams } from 'url';
 const STRIPE_API_BASE_URL = 'https://api.stripe.com';
 const DEFAULT_WEBHOOK_TOLERANCE_SECONDS = 300; // 5 min
  
+function isUnsetOrPlaceholder(value) {
+  const v = String(value || '').trim();
+  return !v || v.toLowerCase().startsWith('change_me');
+}
+
 export function isStripeConfigured() {
-  return Boolean(process.env.STRIPE_SECRET_KEY);
+  return !isUnsetOrPlaceholder(process.env.STRIPE_SECRET_KEY);
 }
  
 export function getStripePriceIdForPlan(planId) {
   const normalized = String(planId || '').trim().toLowerCase();
+  const clean = (value) => (isUnsetOrPlaceholder(value) ? undefined : value);
   switch (normalized) {
     case 'starter':
-      return process.env.STRIPE_PRICE_STARTER;
+      return clean(process.env.STRIPE_PRICE_STARTER);
     case 'professional':
-      return process.env.STRIPE_PRICE_PROFESSIONAL;
+      return clean(process.env.STRIPE_PRICE_PROFESSIONAL);
     case 'enterprise':
-      return process.env.STRIPE_PRICE_ENTERPRISE;
+      return clean(process.env.STRIPE_PRICE_ENTERPRISE);
     default:
       return undefined;
   }
