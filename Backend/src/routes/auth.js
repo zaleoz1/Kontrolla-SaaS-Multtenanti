@@ -11,6 +11,12 @@ import {
   invalidateSession, 
   generateJWT 
 } from '../middleware/auth.js';
+import {
+  isStripeConfigured,
+  getStripePriceIdForPlan,
+  createStripeCustomer,
+  createStripeCheckoutSession,
+} from '../services/stripeService.js';
 import { validateLogin, validateSignup } from '../middleware/validation.js';
 import { 
   enviarEmailVerificacao, 
@@ -178,9 +184,73 @@ router.post('/signup', validateSignup, async (req, res) => {
     );
     console.log('✅ Dados do usuário encontrados');
 
+    // (Opcional) Criar checkout Stripe para assinatura do plano
+    let checkout_url = null;
+    try {
+      const priceId = getStripePriceIdForPlan(selectedPlan);
+      const canUseStripe =
+        isStripeConfigured() &&
+        Boolean(process.env.STRIPE_WEBHOOK_SECRET) &&
+        Boolean(priceId);
+
+      if (canUseStripe) {
+        // Criar customer Stripe e salvar no tenant
+        const customer = await createStripeCustomer({
+          email,
+          name: company,
+          metadata: {
+            tenant_id: tenantId,
+            tenant_slug: finalSlug,
+            plan_id: selectedPlan,
+          },
+        });
+
+        await query(
+          'UPDATE tenants SET stripe_customer_id = ?, stripe_price_id = ? WHERE id = ?',
+          [customer.id, priceId, tenantId]
+        );
+
+        const successUrl =
+          process.env.STRIPE_SUCCESS_URL ||
+          process.env.FRONTEND_URL ||
+          'http://localhost:5173/dashboard?stripe=success';
+        const cancelUrl =
+          process.env.STRIPE_CANCEL_URL ||
+          process.env.FRONTEND_URL ||
+          'http://localhost:5173/signup?stripe=cancel';
+
+        const session = await createStripeCheckoutSession({
+          customerId: customer.id,
+          tenantId,
+          planId: selectedPlan,
+          priceId,
+          successUrl,
+          cancelUrl,
+        });
+
+        checkout_url = session?.url || null;
+
+        if (session?.id) {
+          await query(
+            'UPDATE tenants SET stripe_checkout_session_id = ? WHERE id = ?',
+            [session.id, tenantId]
+          );
+        }
+      }
+    } catch (stripeError) {
+      // Não bloquear o cadastro se Stripe falhar (ex: env não configurado corretamente)
+      const stripeErr = stripeError?.response?.data?.error;
+      if (stripeErr?.code === 'resource_missing' && stripeErr?.param === 'line_items[0][price]') {
+        console.warn('⚠️ Stripe price não encontrado no signup. Verifique STRIPE_PRICE_* e modo test/live.');
+      } else {
+        console.warn('⚠️ Stripe checkout não gerado no signup:', stripeError?.response?.data || stripeError?.message || stripeError);
+      }
+    }
+
     res.status(201).json({
       message: 'Cadastro realizado com sucesso',
       token,
+      checkout_url,
       user: {
         id: usuarios[0].id,
         nome: usuarios[0].nome,

@@ -24,6 +24,7 @@ import fornecedoresRoutes from './routes/fornecedores.js';
 import funcionariosRoutes from './routes/funcionarios.js';
 import notificationsRoutes from './routes/notifications.js';
 import meudanfeRoutes from './routes/meudanfe.js';
+import billingRoutes, { billingWebhookHandler } from './routes/billing.js';
 
 // Importar middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -125,7 +126,10 @@ app.use('/api/', limiter);
 // Middleware de logging
 app.use(morgan('combined'));
 
-// Middleware para parsing de JSON
+// Webhook Stripe precisa de corpo "raw" para validação de assinatura
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), billingWebhookHandler);
+
+// Middleware para parsing de JSON (depois do webhook Stripe)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -218,6 +222,7 @@ app.use('/api/fornecedores', fornecedoresRoutes);
 app.use('/api/funcionarios', funcionariosRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/meudanfe', meudanfeRoutes);
+app.use('/api/billing', billingRoutes);
 
 // Health check também no prefixo da API (para compatibilidade com frontend)
 app.get('/api/health', (req, res) => {

@@ -23,6 +23,13 @@ CREATE TABLE IF NOT EXISTS tenants (
     inscricao_estadual VARCHAR(20),
     inscricao_municipal VARCHAR(20),
     logo LONGTEXT,
+    -- Stripe Billing (assinaturas)
+    stripe_customer_id VARCHAR(255),
+    stripe_subscription_id VARCHAR(255),
+    stripe_price_id VARCHAR(255),
+    stripe_checkout_session_id VARCHAR(255),
+    subscription_status VARCHAR(50),
+    subscription_current_period_end TIMESTAMP NULL,
     status ENUM('ativo', 'inativo', 'suspenso') DEFAULT 'ativo',
     plano VARCHAR(50) DEFAULT 'basico',
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

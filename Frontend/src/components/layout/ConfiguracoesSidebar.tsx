@@ -4,6 +4,7 @@ import {
   User, 
   Building2, 
   CreditCard, 
+  DollarSign,
   Palette, 
   Bell, 
   Shield,
@@ -56,6 +57,13 @@ const configuracoesTabs = [
     icone: UserCog, 
     descricao: "Gerenciar usuários e permissões",
     permissao: "configuracoes_administradores"
+  },
+  { 
+    id: "assinatura", 
+    nome: "Assinatura", 
+    icone: DollarSign, 
+    descricao: "Plano e Stripe",
+    permissao: "configuracoes_gerais"
   },
   { 
     id: "metodos-pagamento", 

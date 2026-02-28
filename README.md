@@ -119,6 +119,52 @@ JWT_SECRET=seu_jwt_secret_muito_seguro_aqui
 CORS_ORIGIN=http://localhost:5173
 ```
 
+### Stripe (assinaturas dos planos)
+
+Para habilitar pagamentos recorrentes por assinatura via Stripe, configure no `.env` do Backend:
+
+```env
+# Stripe
+STRIPE_SECRET_KEY=sk_live_xxx_ou_sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Price IDs (um por plano do seu sistema)
+STRIPE_PRICE_STARTER=price_xxx
+STRIPE_PRICE_PROFESSIONAL=price_xxx
+STRIPE_PRICE_ENTERPRISE=price_xxx
+
+# URLs de retorno do Checkout (web)
+STRIPE_SUCCESS_URL=https://pvd.kontrollapro.com.br/dashboard?stripe=success
+STRIPE_CANCEL_URL=https://pvd.kontrollapro.com.br/signup?stripe=cancel
+
+# Billing Portal (opcional)
+STRIPE_BILLING_PORTAL_RETURN_URL=https://pvd.kontrollapro.com.br/dashboard/configuracoes
+```
+
+Se você também for usar **Stripe.js no Frontend** (ex.: para Elements), configure no `Frontend/.env.production`:
+
+```env
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_xxx_ou_pk_test_xxx
+```
+
+#### Webhook Stripe
+
+Crie um endpoint de webhook no Stripe apontando para:
+- `POST /api/billing/webhook` (ex.: `https://pvd.kontrollapro.com.br/api/billing/webhook`)
+
+Eventos recomendados:
+- `checkout.session.completed`
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+
+Depois rode as migrações do banco (local/servidor) para adicionar os campos de billing no tenant:
+
+```bash
+cd Backend
+npm run migrate
+```
+
 ### 5. Execute o projeto
 
 **Backend:**

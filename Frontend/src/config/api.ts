@@ -155,6 +155,14 @@ export const API_ENDPOINTS = {
     DELETE: (id: number) => `/nfe/${id}`,
     STATS: '/nfe/stats/overview',
   },
+
+  // Billing / Stripe
+  BILLING: {
+    STATUS: '/billing/status',
+    CHECKOUT_SESSION: '/billing/checkout-session',
+    PORTAL_SESSION: '/billing/portal-session',
+    WEBHOOK: '/billing/webhook',
+  },
 };
 
 // Status codes

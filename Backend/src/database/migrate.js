@@ -38,6 +38,42 @@ async function runMigrations() {
     await connection.query(schema);
     console.log('✅ Schema executado com sucesso!');
 
+    // Aplicar migrações incrementais (se existirem)
+    const migrationsDir = path.join(__dirname, 'migrations');
+    if (fs.existsSync(migrationsDir)) {
+      console.log('🧩 Verificando migrações incrementais...');
+
+      // Tabela de controle de migrações
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+          filename VARCHAR(255) PRIMARY KEY,
+          applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      const files = fs
+        .readdirSync(migrationsDir)
+        .filter((f) => f.endsWith('.sql'))
+        .sort();
+
+      for (const file of files) {
+        const [rows] = await connection.query(
+          'SELECT filename FROM schema_migrations WHERE filename = ? LIMIT 1',
+          [file]
+        );
+        if (Array.isArray(rows) && rows.length > 0) {
+          continue; // já aplicada
+        }
+
+        const filePath = path.join(migrationsDir, file);
+        const sql = fs.readFileSync(filePath, 'utf8');
+        console.log(`➡️ Aplicando migração: ${file}`);
+        await connection.query(sql);
+        await connection.query('INSERT INTO schema_migrations (filename) VALUES (?)', [file]);
+        console.log(`✅ Migração aplicada: ${file}`);
+      }
+    }
+
     console.log('✅ Migração concluída com sucesso!');
     console.log('📊 Banco de dados criado e configurado');
     

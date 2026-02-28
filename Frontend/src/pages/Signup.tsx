@@ -418,7 +418,14 @@ export default function Signup() {
           description: "Bem-vindo ao Kontrolla. Redirecionando para o dashboard...",
           variant: "default",
         });
-        // Redirecionar para o dashboard
+        const checkoutUrl = result.data?.checkout_url;
+        if (checkoutUrl) {
+          // Se o Stripe estiver configurado no backend, redireciona para o checkout do plano
+          window.location.href = checkoutUrl;
+          return;
+        }
+
+        // Fallback: seguir para o dashboard normalmente
         navigate("/dashboard");
       } else {
         toast({
