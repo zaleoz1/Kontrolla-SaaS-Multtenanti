@@ -69,8 +69,8 @@ action_atualizar() {
     cd_project
     log "📥 Git pull origin main..."
     git pull origin main || git pull origin master || git pull
-    log "🐳 Docker-compose up -d --build..."
-    docker compose -f "$COMPOSE_FILE" up -d --build
+    log "🐳 Docker-compose up -d --build --force-recreate..."
+    docker compose -f "$COMPOSE_FILE" up -d --build --force-recreate
     log "✅ Atualização concluída."
     run_compose ps
 }
@@ -87,8 +87,8 @@ action_restart_docker() {
     cd_project
     log "⬇️ Docker-compose down..."
     docker compose -f "$COMPOSE_FILE" down
-    log "🐳 Docker-compose up -d --build..."
-    docker compose -f "$COMPOSE_FILE" up -d --build
+    log "🐳 Docker-compose up -d --build --force-recreate..."
+    docker compose -f "$COMPOSE_FILE" up -d --build --force-recreate
     log "✅ Restart concluído."
     run_compose ps
 }
