@@ -93,6 +93,28 @@ router.get('/tenant/:tenantId', async (req, res) => {
   }
 });
 
+// Atualizar apenas o plano do tenant (ex.: pela página de Assinatura)
+const PLANOS_PERMITIDOS = ['starter', 'professional', 'enterprise'];
+router.patch('/tenant/plano', requireAdmin, async (req, res) => {
+  try {
+    const plano = req.body?.plano != null ? String(req.body.plano).trim().toLowerCase() : null;
+    if (!plano || !PLANOS_PERMITIDOS.includes(plano)) {
+      return res.status(400).json({
+        error: 'Plano inválido. Use: starter, professional ou enterprise.',
+      });
+    }
+    await query(
+      'UPDATE tenants SET plano = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE id = ?',
+      [plano, req.user.tenant_id]
+    );
+    const [tenant] = await query('SELECT * FROM tenants WHERE id = ?', [req.user.tenant_id]);
+    return res.json({ message: 'Plano atualizado com sucesso', tenant });
+  } catch (error) {
+    console.error('Erro ao atualizar plano do tenant:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Atualizar dados do tenant
 router.put('/tenant', requireAdmin, async (req, res) => {
   try {

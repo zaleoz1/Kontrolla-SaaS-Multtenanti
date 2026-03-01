@@ -92,12 +92,50 @@ router.get('/status', async (req, res) => {
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant não encontrado' });
     }
- 
+
+    let subscription_status = tenant.subscription_status || null;
+    let subscription_current_period_end = tenant.subscription_current_period_end;
+    let plano = tenant.plano || null;
+
+    // Enriquecer com dados da API Stripe quando houver assinatura (mostra info em tempo real)
+    if (tenant.stripe_subscription_id && isStripeConfigured()) {
+      try {
+        const subscription = await retrieveStripeSubscription(tenant.stripe_subscription_id);
+        if (subscription && subscription.status) {
+          subscription_status = subscription.status;
+        }
+        if (subscription && subscription.current_period_end) {
+          subscription_current_period_end =
+            typeof subscription.current_period_end === 'number'
+              ? new Date(subscription.current_period_end * 1000).toISOString()
+              : subscription.current_period_end;
+        }
+        const planId =
+          subscription?.metadata?.plan_id ||
+          subscription?.items?.data?.[0]?.price?.metadata?.plan_id;
+        if (planId) {
+          const p = String(planId).trim().toLowerCase();
+          if (['starter', 'professional', 'enterprise'].includes(p)) plano = p;
+        }
+      } catch (stripeErr) {
+        console.warn('Stripe subscription fetch (status):', stripeErr?.message || stripeErr);
+        // mantém valores do tenant (DB)
+      }
+    }
+
+    // Normalizar data para ISO string quando vier do DB (Date ou string)
+    if (subscription_current_period_end && typeof subscription_current_period_end !== 'string') {
+      subscription_current_period_end =
+        subscription_current_period_end instanceof Date
+          ? subscription_current_period_end.toISOString()
+          : String(subscription_current_period_end);
+    }
+
     res.json({
       billing: {
-        plano: tenant.plano,
-        subscription_status: tenant.subscription_status || null,
-        subscription_current_period_end: tenant.subscription_current_period_end || null,
+        plano,
+        subscription_status,
+        subscription_current_period_end: subscription_current_period_end || null,
         stripe_customer_id: tenant.stripe_customer_id || null,
         stripe_subscription_id: tenant.stripe_subscription_id || null,
         stripe_price_id: tenant.stripe_price_id || null,

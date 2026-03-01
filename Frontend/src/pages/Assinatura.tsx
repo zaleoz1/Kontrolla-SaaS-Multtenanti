@@ -54,7 +54,7 @@ const PLANOS = [
 export default function Assinatura() {
   const { toast } = useToast();
   const billing = useBilling();
-  const { dadosTenant, dadosConta } = useConfiguracoes();
+  const { dadosTenant, dadosConta, carregarDados, atualizarPlanoTenant } = useConfiguracoes();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [planoSelecionado, setPlanoSelecionado] = useState<'starter' | 'professional' | 'enterprise'>('professional');
 
@@ -75,13 +75,19 @@ export default function Assinatura() {
     return { label: status, variant: 'secondary' as const, cor: 'text-muted-foreground' };
   };
 
+  // Ao abrir a página, buscar sempre status do billing e dados do tenant para exibir plano atual (ex.: após checkout Stripe)
   useEffect(() => {
     billing.fetchStatus();
-    const planoAtual = (dadosTenant?.plano || '').toLowerCase();
+    carregarDados();
+  }, [billing.fetchStatus, carregarDados]);
+
+  // Atualizar plano selecionado quando tenant ou billing retornarem o plano atual
+  useEffect(() => {
+    const planoAtual = (dadosTenant?.plano || billing.status?.plano || '').toString().toLowerCase();
     if (planoAtual === 'starter' || planoAtual === 'professional' || planoAtual === 'enterprise') {
-      setPlanoSelecionado(planoAtual as any);
+      setPlanoSelecionado(planoAtual as 'starter' | 'professional' | 'enterprise');
     }
-  }, [billing.fetchStatus, dadosTenant?.plano]);
+  }, [dadosTenant?.plano, billing.status?.plano]);
 
   const handleAssinarOuAlterarPlano = async () => {
     if (!canManageBilling) {
@@ -89,6 +95,17 @@ export default function Assinatura() {
         title: "Permissão insuficiente",
         description: "Somente o usuário admin do tenant pode gerenciar a assinatura.",
         variant: "default"
+      });
+      return;
+    }
+    try {
+      // Salvar o plano selecionado no banco antes de redirecionar ao Stripe
+      await atualizarPlanoTenant(planoSelecionado);
+    } catch {
+      toast({
+        title: "Erro ao salvar plano",
+        description: "Não foi possível atualizar o plano. Tente novamente.",
+        variant: "destructive"
       });
       return;
     }

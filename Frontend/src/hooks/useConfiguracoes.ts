@@ -314,6 +314,23 @@ export const useConfiguracoes = () => {
     }
   };
 
+  // Atualizar apenas o plano do tenant (ex.: página Assinatura)
+  const atualizarPlanoTenant = async (plano: string) => {
+    try {
+      const response = await makeRequest('/configuracoes/tenant/plano', {
+        method: 'PATCH',
+        body: { plano: plano.toLowerCase() },
+      });
+      if (response.tenant) {
+        setDadosTenant(response.tenant);
+      }
+      return response;
+    } catch (err) {
+      console.error('Erro ao atualizar plano do tenant:', err);
+      throw err;
+    }
+  };
+
   // Atualizar configurações do sistema
   const atualizarConfiguracoes = async (dados: Partial<ConfiguracoesSistema>) => {
     try {
@@ -770,6 +787,7 @@ export const useConfiguracoes = () => {
     carregarDados,
     atualizarDadosConta,
     atualizarDadosTenant,
+    atualizarPlanoTenant,
     atualizarConfiguracoes,
     alterarSenha,
     uploadAvatar,
