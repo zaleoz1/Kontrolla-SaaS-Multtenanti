@@ -184,6 +184,27 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
       saldoEfetivoParams
     );
 
+    // Totais a receber (valor e quantidade) com os mesmos filtros da listagem
+    const [totaisPendentesResult] = await query(
+      `SELECT
+         COALESCE(SUM(valor_pendente), 0) as valor_pendente,
+         SUM(CASE WHEN valor_pendente > 0 THEN 1 ELSE 0 END) as quantidade_pendentes
+       FROM (
+         SELECT v.id,
+           CASE
+             WHEN EXISTS (SELECT 1 FROM contas_receber cr WHERE cr.venda_id = v.id AND cr.status IN ('pendente', 'vencido') AND cr.descricao LIKE 'Pagamento a prazo%')
+             THEN (SELECT COALESCE(SUM(CAST(cr.valor AS DECIMAL(10,2))), 0) FROM contas_receber cr WHERE cr.venda_id = v.id AND cr.status IN ('pendente', 'vencido') AND cr.descricao LIKE 'Pagamento a prazo%')
+             WHEN v.status = 'pendente' THEN CAST(v.total AS DECIMAL(10,2))
+             ELSE GREATEST(0, CAST(v.total AS DECIMAL(10,2)) - COALESCE((SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 0))
+           END as valor_pendente
+         FROM vendas v
+         LEFT JOIN clientes c ON v.cliente_id = c.id AND c.tenant_id = v.tenant_id
+         LEFT JOIN usuarios u ON v.usuario_id = u.id AND u.tenant_id = v.tenant_id
+         ${whereClause}
+       ) sub`,
+      params
+    );
+
     res.json({
       vendas: vendasComItens,
       pagination: {
@@ -194,7 +215,11 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
         hasNext: page < totalPages,
         hasPrev: page > 1
       },
-      saldoEfetivo: saldoEfetivoResult.saldo_efetivo
+      saldoEfetivo: saldoEfetivoResult.saldo_efetivo,
+      totaisPendentes: {
+        valor_pendente: Number(totaisPendentesResult?.valor_pendente ?? 0),
+        quantidade_pendentes: Number(totaisPendentesResult?.quantidade_pendentes ?? 0)
+      }
     });
   } catch (error) {
     console.error('Erro ao listar vendas:', error);

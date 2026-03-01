@@ -81,6 +81,11 @@ export interface VendasFilters {
   data_fim?: string;
 }
 
+export interface TotaisPendentes {
+  valor_pendente: number;
+  quantidade_pendentes: number;
+}
+
 export interface VendasResponse {
   vendas: Venda[];
   pagination: {
@@ -92,6 +97,7 @@ export interface VendasResponse {
     hasPrev: boolean;
   };
   saldoEfetivo?: number;
+  totaisPendentes?: TotaisPendentes;
 }
 
 export const useVendas = () => {
@@ -100,6 +106,7 @@ export const useVendas = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saldoEfetivo, setSaldoEfetivo] = useState<number>(0);
+  const [totaisPendentes, setTotaisPendentes] = useState<TotaisPendentes>({ valor_pendente: 0, quantidade_pendentes: 0 });
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -144,6 +151,7 @@ export const useVendas = () => {
       }
       setPagination(response.pagination);
       setSaldoEfetivo(response.saldoEfetivo || 0);
+      setTotaisPendentes(response.totaisPendentes ?? { valor_pendente: 0, quantidade_pendentes: 0 });
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar vendas');
@@ -419,6 +427,7 @@ export const useVendas = () => {
     error,
     pagination,
     saldoEfetivo,
+    totaisPendentes,
     fetchVendas,
     fetchVenda,
     createVenda,

@@ -65,6 +65,7 @@ export default function Vendas() {
     error,
     pagination,
     saldoEfetivo,
+    totaisPendentes,
     fetchVendas,
     fetchVendasStats,
     deleteVenda,
@@ -318,9 +319,14 @@ export default function Vendas() {
     return acc + (typeof venda.total === 'number' ? venda.total : parseFloat(venda.total) || 0);
   }, 0);
   
-  // Calcular estatísticas de vendas pendentes
+  // Estatísticas de vendas pendentes: usar totais da API (todas as vendas do filtro) quando disponíveis
   const estatisticasPendentes = calcularEstatisticasPendentes(vendasSeparadas);
-  const saldoPendente = estatisticasPendentes.valorTotal;
+  const saldoPendente = (totaisPendentes?.valor_pendente ?? null) !== null && totaisPendentes.valor_pendente >= 0
+    ? totaisPendentes.valor_pendente
+    : estatisticasPendentes.valorTotal;
+  const quantidadePendentes = (totaisPendentes?.quantidade_pendentes ?? null) !== null && totaisPendentes.quantidade_pendentes >= 0
+    ? totaisPendentes.quantidade_pendentes
+    : estatisticasPendentes.quantidade;
   
 
 
@@ -775,7 +781,7 @@ export default function Vendas() {
                   {formatCurrency(saldoPendente || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {estatisticasPendentes?.quantidade || 0} {(estatisticasPendentes?.quantidade || 0) === 1 ? 'venda' : 'vendas'} pendente{(estatisticasPendentes?.quantidade || 0) !== 1 ? 's' : ''}
+                  {quantidadePendentes} {quantidadePendentes === 1 ? 'venda' : 'vendas'} pendente{quantidadePendentes !== 1 ? 's' : ''}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-yellow-100 flex-shrink-0 ml-2">
