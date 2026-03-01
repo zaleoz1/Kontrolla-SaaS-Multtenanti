@@ -74,6 +74,12 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
     return null;
   }
 
+  // Plano Starter: ocultar Relatórios e NF-e / Consulta NF-e
+  const plano = (tenant?.plano || '').toString().toLowerCase();
+  const isPlanoStarter = plano === 'starter';
+  const esconderRelatoriosNfe = (item: { permissao: string }) =>
+    isPlanoStarter && (item.permissao === 'relatorios' || item.permissao === 'nfe');
+
   return (
     <>
       {/* Overlay para mobile - só aparece quando sidebar está aberta */}
@@ -130,7 +136,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, user, tenant, onLogout }
           isCollapsed && "lg:p-2"
         )}>
           {navegacao
-            .filter((item) => hasPermission(item.permissao as any))
+            .filter((item) => hasPermission(item.permissao as any) && !esconderRelatoriosNfe(item))
             .map((item) => (
               <NavLink
                 key={item.nome}

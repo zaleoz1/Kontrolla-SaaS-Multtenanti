@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCrudApi, useApi } from "@/hooks/useApi";
 import { API_ENDPOINTS } from "@/config/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useTenant } from "@/hooks/useTenant";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useMeuDanfe } from "@/hooks/useMeuDanfe";
 import { 
@@ -297,6 +298,8 @@ export default function Produtos() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
+  const { tenant } = useTenant();
+  const isPlanoStarter = (tenant?.plano || '').toString().toLowerCase() === 'starter';
   
   const produtosApi = useCrudApi<ProdutosResponse>(API_ENDPOINTS.PRODUCTS.LIST);
   const deleteApi = useCrudApi(API_ENDPOINTS.PRODUCTS.LIST);
@@ -2181,14 +2184,16 @@ export default function Produtos() {
                     <Upload className="h-4 w-4 mr-2" />
                     Importar XML(s)
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowConsultaNfeDialog(true)}
-                    className="border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    Consultar NF-e
-                  </Button>
+                  {!isPlanoStarter && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowConsultaNfeDialog(true)}
+                      className="border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Consultar NF-e
+                    </Button>
+                  )}
                   <Button className="bg-gradient-primary text-white" onClick={() => navigate("/dashboard/novo-produto")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Novo Produto
@@ -2249,14 +2254,16 @@ export default function Produtos() {
                       <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       <span>Exportar</span>
                     </Button>
-                    <Button 
-                      variant="outline"
-                      className="flex-1 text-xs sm:text-sm border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                      onClick={() => setShowConsultaNfeDialog(true)}
-                    >
-                      <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span>Consultar NF-e</span>
-                    </Button>
+                    {!isPlanoStarter && (
+                      <Button 
+                        variant="outline"
+                        className="flex-1 text-xs sm:text-sm border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                        onClick={() => setShowConsultaNfeDialog(true)}
+                      >
+                        <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span>Consultar NF-e</span>
+                      </Button>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button 

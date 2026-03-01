@@ -64,9 +64,14 @@ import { useClientes, Cliente } from "@/hooks/useClientes";
 import { useProdutos, Produto } from "@/hooks/useProdutos";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
+import { Navigate } from "react-router-dom";
 
 export default function NFe() {
   const { toast } = useToast();
+  const { tenant } = useTenant();
+  const isPlanoStarter = (tenant?.plano || '').toString().toLowerCase() === 'starter';
+  if (isPlanoStarter) return <Navigate to="/dashboard" replace />;
+
   const getDocumentoLabel = (modelo?: string) => (String(modelo || '') === '65' ? 'NFC-e' : 'NF-e');
   const DOCUMENTO_FISCAL_PREF_KEY = "kontrolla.documento_fiscal_modelo";
   
@@ -102,7 +107,6 @@ export default function NFe() {
 
   const { clientes, buscarClientes } = useClientes();
   const { produtos, buscarProdutos } = useProdutos();
-  const { tenant } = useTenant();
 
   // Estados locais
   const [termoBusca, setTermoBusca] = useState("");

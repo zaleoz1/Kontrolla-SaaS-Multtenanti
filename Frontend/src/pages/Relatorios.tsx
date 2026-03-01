@@ -52,7 +52,11 @@ import { useRelatorios } from "@/hooks/useRelatorios";
 
 import { useAuth } from "@/hooks/useAuth";
 
+import { useTenant } from "@/hooks/useTenant";
+
 import { useState, useEffect } from "react";
+
+import { Navigate } from "react-router-dom";
 
 import { gerarRelatorioVendasPDF, gerarRelatorioProdutosPDF, gerarRelatorioClientesPDF, gerarRelatorioFinanceiroPDF, gerarRelatorioEstoquePDF } from "@/utils/gerarPDF";
 
@@ -63,6 +67,9 @@ import { api } from "@/lib/api";
 export default function Relatorios() {
 
   const { user } = useAuth();
+  const { tenant } = useTenant();
+  const isPlanoStarter = (tenant?.plano || '').toString().toLowerCase() === 'starter';
+  if (isPlanoStarter) return <Navigate to="/dashboard" replace />;
 
   const {
 

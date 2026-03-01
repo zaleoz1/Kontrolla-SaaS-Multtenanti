@@ -30,7 +30,8 @@ import {
   Calendar,
   QrCode,
   FileCheck,
-  ExternalLink
+  ExternalLink,
+  Crown
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -107,6 +108,7 @@ export default function Pagamentos() {
     criarVenda 
   } = usePagamentos();
   const { tenant, loading: carregandoTenant } = useTenant();
+  const isPlanoStarter = (tenant?.plano || '').toString().toLowerCase() === 'starter';
   const { metodosPagamento: metodosDisponiveis, buscarMetodosPagamento } = useMetodosPagamento();
   const { loading: carregandoMetodos } = useApi();
   const { configuracao: pixConfiguracao, loading: carregandoPix } = usePixConfiguracoes();
@@ -684,10 +686,10 @@ export default function Pagamentos() {
         pagamentoPrazo
       );
 
-      // Adicionar opção de emitir NF-e
+      // Adicionar opção de emitir NF-e (plano Starter não pode emitir)
       const dadosVendaComNfe = {
         ...dadosVenda,
-        emitir_nfe: emitirNfe,
+        emitir_nfe: isPlanoStarter ? false : emitirNfe,
         documento_fiscal: documentoFiscal
       };
 
@@ -717,7 +719,7 @@ export default function Pagamentos() {
       setVendaFinalizada(dadosNota);
       
       // Mostrar toast com resultado
-      if (emitirNfe && response.nfe) {
+      if (!isPlanoStarter && emitirNfe && response.nfe) {
         const labelDoc = getDocumentoFiscalLabel(response.nfe.modelo);
         // Considerar sucesso se autorizada ou processando (enviada com sucesso)
         const nfeSucesso = response.nfe.success || response.nfe.status === 'processando_autorizacao';
@@ -2656,30 +2658,36 @@ export default function Pagamentos() {
                     })()}
                   </div>
                   
-                  {/* Toggle para Emissão de documento fiscal (NF-e / NFC-e) */}
+                  {/* Toggle para Emissão de documento fiscal (NF-e / NFC-e) - desativado no plano Starter */}
                   <div className="pt-3 border-t border-border mt-3">
-                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                    <div className={`p-2 rounded border border-blue-200 dark:border-blue-800 ${isPlanoStarter ? "bg-muted/50 dark:bg-muted/30 opacity-80" : "bg-blue-50 dark:bg-blue-900/20"}`}>
                       <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <FileCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <FileCheck className={`h-4 w-4 ${isPlanoStarter ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400"}`} />
                         <div>
-                          <Label htmlFor="emitir-nfe" className="text-xs font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
+                          <Label htmlFor="emitir-nfe" className={`text-xs font-medium cursor-pointer ${isPlanoStarter ? "text-muted-foreground" : "text-blue-800 dark:text-blue-200"}`}>
                             Emitir documento fiscal
                           </Label>
-                          <p className="text-[10px] text-blue-600 dark:text-blue-400">
-                            {emitirNfe ? `Será emitida ${documentoFiscal === "nfce" ? "NFC-e" : "NF-e"}` : "Sem nota fiscal"}
+                          <p className={`text-[10px] flex items-center gap-1.5 ${isPlanoStarter ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400"}`}>
+                            {isPlanoStarter ? (
+                              <>
+                                <Crown className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0" aria-hidden />
+                                Disponível nos planos Professional e Enterprise
+                              </>
+                            ) : (emitirNfe ? `Será emitida ${documentoFiscal === "nfce" ? "NFC-e" : "NF-e"}` : "Sem nota fiscal")}
                           </p>
                         </div>
                       </div>
                       <Switch
                         id="emitir-nfe"
-                        checked={emitirNfe}
-                        onCheckedChange={setEmitirNfe}
+                        checked={isPlanoStarter ? false : emitirNfe}
+                        onCheckedChange={isPlanoStarter ? undefined : setEmitirNfe}
+                        disabled={isPlanoStarter}
                         className="data-[state=checked]:bg-blue-600"
                       />
                       </div>
                       
-                      {emitirNfe && (
+                      {!isPlanoStarter && emitirNfe && (
                         <div className="mt-2 text-[10px] text-blue-600 dark:text-blue-400">
                           Será emitida <strong>{documentoFiscal === "nfce" ? "NFC-e (65)" : "NF-e (55)"}</strong>.
                           {documentoFiscal === "nfe" && !clienteSelecionado?.cpf_cnpj && (

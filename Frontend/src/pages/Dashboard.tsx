@@ -22,6 +22,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDashboard, TopProduto } from "@/hooks/useDashboard";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useTenant } from "@/hooks/useTenant";
 import { useApi } from "@/hooks/useApi";
 import { API_ENDPOINTS } from "@/config/api";
 import { useNotificationContext } from "@/contexts/NotificationContext";
@@ -41,7 +42,9 @@ export default function Dashboard() {
   const [topProdutosExpandido, setTopProdutosExpandido] = useState(false);
   const [vendasExpandido, setVendasExpandido] = useState(false);
   const { hasPermission } = usePermissions();
+  const { tenant } = useTenant();
   const { makeRequest } = useApi();
+  const isPlanoStarter = (tenant?.plano || '').toString().toLowerCase() === 'starter';
   const { triggerNovaVenda, triggerEstoqueBaixo, triggerContaVencida } = useNotificationContext();
   const logopixPath = useImagePath('logopix.png');
   
@@ -347,8 +350,8 @@ export default function Dashboard() {
             <span className="hidden sm:inline">Atualizar</span>
             <span className="sm:hidden">Atualizar</span>
           </Button>
-          {/* Botão Ver Relatórios - só aparece se tiver permissão */}
-          {hasPermission('relatorios') && (
+          {/* Botão Ver Relatórios - só aparece se tiver permissão e não for plano Starter */}
+          {hasPermission('relatorios') && !isPlanoStarter && (
             <Button size="sm" className="bg-gradient-primary text-white text-xs sm:text-sm" onClick={() => navigate("/dashboard/relatorios")}>
               <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Ver Relatórios</span>
@@ -398,8 +401,8 @@ export default function Dashboard() {
               <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
-            {/* Botão Relatórios mobile - só aparece se tiver permissão */}
-            {hasPermission('relatorios') && (
+            {/* Botão Relatórios mobile - só aparece se tiver permissão e não for plano Starter */}
+            {hasPermission('relatorios') && !isPlanoStarter && (
               <Button size="sm" className="bg-gradient-primary text-white flex-1 text-xs" onClick={() => navigate("/dashboard/relatorios")}>
                 <TrendingUp className="h-3 w-3 mr-1" />
                 Relatórios

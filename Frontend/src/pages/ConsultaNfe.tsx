@@ -43,10 +43,15 @@ import {
 import { useMeuDanfe, ConsultaNfeResult, NfeImportada, MeuDanfeConfig, MeuDanfeStats } from "@/hooks/useMeuDanfe";
 import { useToast } from "@/hooks/use-toast";
 import { useElectron } from "@/hooks/useElectron";
+import { useTenant } from "@/hooks/useTenant";
+import { Navigate } from "react-router-dom";
 
 export default function ConsultaNfe() {
   const { toast } = useToast();
   const isElectron = useElectron();
+  const { tenant } = useTenant();
+  const isPlanoStarter = (tenant?.plano || '').toString().toLowerCase() === 'starter';
+  if (isPlanoStarter) return <Navigate to="/dashboard" replace />;
   
   const {
     loading,
