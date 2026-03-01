@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -318,6 +318,27 @@ export default function Vendas() {
       setCarregandoMais(false);
     }
   };
+
+  // Totais por método de pagamento (quando filtro por método ativo) — calculado da lista filtrada
+  const totaisPorMetodo = useMemo(() => {
+    if (!filtros.forma_pagamento || filtros.forma_pagamento === 'prazo') return null;
+    const metodo = filtros.forma_pagamento;
+    let receita = 0;
+    let qtd = 0;
+    vendasSeparadas.forEach((venda) => {
+      if (venda.metodos_pagamento && venda.metodos_pagamento.length > 0) {
+        const doMetodo = venda.metodos_pagamento.filter((m: any) => String(m.metodo) === metodo);
+        if (doMetodo.length > 0) {
+          qtd += 1;
+          receita += doMetodo.reduce((s: number, m: any) => s + (parseFloat(m.valor) || 0) - (m.troco || 0), 0);
+        }
+      } else if (String(venda.forma_pagamento) === metodo) {
+        qtd += 1;
+        receita += typeof venda.total === 'number' ? venda.total : parseFloat(venda.total) || 0;
+      }
+    });
+    return { receita_total: receita, total_vendas: qtd };
+  }, [vendasSeparadas, filtros.forma_pagamento]);
 
   // Calcular totais
   const totalVendas = vendasSeparadas.reduce((acc, venda) => {
@@ -749,6 +770,12 @@ export default function Vendas() {
         const filtroMetodo = filtros.forma_pagamento && filtros.forma_pagamento !== 'prazo';
         const labelTotal = filtroMetodo ? `Total ${getPaymentText(filtros.forma_pagamento)}` : 'Total Hoje';
         const labelVendas = filtroMetodo ? `vendas ${getPaymentText(filtros.forma_pagamento)}` : 'vendas hoje';
+        const valorCardTotal = filtroMetodo && totaisPorMetodo
+          ? totaisPorMetodo.receita_total
+          : (stats ? stats.receita_total : totalVendas) || 0;
+        const qtdCardTotal = filtroMetodo && totaisPorMetodo
+          ? totaisPorMetodo.total_vendas
+          : (stats ? stats.total_vendas : vendas.length) || 0;
         return (
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-card shadow-card">
@@ -757,10 +784,10 @@ export default function Vendas() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground">{labelTotal}</p>
                 <p className="text-lg sm:text-2xl font-bold truncate">
-                  {stats ? formatCurrency(stats.receita_total || 0) : formatCurrency(totalVendas || 0)}
+                  {formatCurrency(valorCardTotal)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats ? `${stats.total_vendas || 0} ${labelVendas}` : `${vendas.length || 0} ${labelVendas}`}
+                  {qtdCardTotal} {labelVendas}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0 ml-2">
@@ -779,7 +806,7 @@ export default function Vendas() {
                   {pagination.total || 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats ? `${stats.total_vendas || 0} ${labelVendas}` : 'Carregando...'}
+                  {filtroMetodo && totaisPorMetodo ? `${totaisPorMetodo.total_vendas} ${labelVendas}` : (stats ? `${stats.total_vendas || 0} ${labelVendas}` : 'Carregando...')}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-secondary/10 flex-shrink-0 ml-2">

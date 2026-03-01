@@ -1050,7 +1050,7 @@ export default function Financeiro() {
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className={`text-sm sm:text-2xl font-bold break-words ${
+                  <p className={`text-sm sm:text-lg font-bold break-words ${
                     saldoAtual >= 0 ? 'text-success' : 'text-destructive'
                   }`}>
                     {formatarValor(saldoAtual)}
@@ -1076,7 +1076,7 @@ export default function Financeiro() {
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-success break-words">
+                  <p className="text-sm sm:text-lg font-bold text-success break-words">
                     {formatarValor(totalEntradas)}
                   </p>
                 )}
@@ -1096,7 +1096,7 @@ export default function Financeiro() {
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-yellow-600 break-words">
+                  <p className="text-sm sm:text-lg font-bold text-yellow-600 break-words">
                     {formatarValor(totalReceber)}
                   </p>
                 )}
@@ -1116,7 +1116,7 @@ export default function Financeiro() {
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-destructive break-words">
+                  <p className="text-sm sm:text-lg font-bold text-destructive break-words">
                     {formatarValor(totalPagar)}
                   </p>
                 )}
@@ -1136,7 +1136,7 @@ export default function Financeiro() {
                 {loadingStats ? (
                   <Skeleton className="h-5 sm:h-8 w-20 sm:w-32" />
                 ) : (
-                  <p className="text-sm sm:text-2xl font-bold text-green-500 break-words">
+                  <p className="text-sm sm:text-lg font-bold text-green-500 break-words">
                     {formatarValor(totalPagoPagar)}
                   </p>
                 )}
