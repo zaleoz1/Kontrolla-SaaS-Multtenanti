@@ -1087,79 +1087,96 @@ router.delete('/:id', validateId, handleValidationErrors, async (req, res) => {
   }
 });
 
-// Estatísticas das vendas
+// Estatísticas das vendas (opcional: por forma_pagamento quando informado e não for 'prazo')
 router.get('/stats/overview', async (req, res) => {
   try {
-    const { periodo = 'hoje' } = req.query;
-    
-    let whereClause = 'WHERE tenant_id = ?';
-    let params = [req.user.tenant_id];
+    const { periodo = 'hoje', forma_pagamento: formaPagamento = '' } = req.query;
+    const tenantId = req.user.tenant_id;
+    const filtroPorMetodo = formaPagamento && String(formaPagamento).trim() && String(formaPagamento).trim() !== 'prazo';
 
-    // Adicionar filtro de período
+    let dateCondition = '';
+    const params = [tenantId];
     switch (periodo) {
       case 'hoje':
-        whereClause += ' AND DATE(data_venda) = CURDATE()';
+        dateCondition = 'AND DATE(v.data_venda) = CURDATE()';
         break;
       case 'semana':
-        whereClause += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        dateCondition = 'AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
         break;
       case 'mes':
-        whereClause += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        dateCondition = 'AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
         break;
       case 'ano':
-        whereClause += ' AND data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+        dateCondition = 'AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
         break;
     }
 
-    const stats = await query(
-      `SELECT 
-        COUNT(*) as total_vendas,
-        COUNT(CASE 
-          WHEN status = 'pago' OR EXISTS(
-            SELECT 1 FROM venda_pagamentos vp 
-            WHERE vp.venda_id = v.id
-          ) THEN 1 
-        END) as vendas_pagas,
-        COUNT(CASE 
-          WHEN status = 'pendente' AND NOT EXISTS(
-            SELECT 1 FROM venda_pagamentos vp 
-            WHERE vp.venda_id = v.id
-          ) THEN 1 
-        END) as vendas_pendentes,
-        CAST(COALESCE(
-          SUM(CASE 
-            WHEN status = 'pago' OR EXISTS(
-              SELECT 1 FROM venda_pagamentos vp 
-              WHERE vp.venda_id = v.id
-            ) THEN 
-              COALESCE(
-                (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
-                v.total
-              )
-            ELSE 0 
-          END), 0
-        ) AS DECIMAL(10,2)) as receita_total,
-        CAST(COALESCE(
-          AVG(CASE 
-            WHEN status = 'pago' OR EXISTS(
-              SELECT 1 FROM venda_pagamentos vp 
-              WHERE vp.venda_id = v.id
-            ) THEN 
-              COALESCE(
-                (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) FROM venda_pagamentos vp WHERE vp.venda_id = v.id), 
-                v.total
-              )
-            ELSE NULL 
-          END), 0
-        ) AS DECIMAL(10,2)) as ticket_medio
-      FROM vendas v
-      ${whereClause}`,
-      params
-    );
+    let stats;
+    if (filtroPorMetodo) {
+      const metodo = String(formaPagamento).trim();
+      params.push(metodo);
+      const result = await query(
+        `SELECT 
+          COUNT(DISTINCT v.id) as total_vendas,
+          0 as vendas_pagas,
+          0 as vendas_pendentes,
+          CAST(COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)), 0) AS DECIMAL(10,2)) as receita_total,
+          CAST(COALESCE(SUM(vp.valor - COALESCE(vp.troco, 0)) / NULLIF(COUNT(DISTINCT v.id), 0), 0) AS DECIMAL(10,2)) as ticket_medio
+        FROM venda_pagamentos vp
+        JOIN vendas v ON v.id = vp.venda_id AND v.tenant_id = ?
+        WHERE vp.metodo = ? ${dateCondition}`,
+        params
+      );
+      stats = result[0];
+    } else {
+      let whereClause = 'WHERE v.tenant_id = ?';
+      const mainParams = [tenantId];
+      switch (periodo) {
+        case 'hoje':
+          whereClause += ' AND DATE(v.data_venda) = CURDATE()';
+          break;
+        case 'semana':
+          whereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          break;
+        case 'mes':
+          whereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          break;
+        case 'ano':
+          whereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          break;
+      }
+      const result = await query(
+        `SELECT 
+          COUNT(*) as total_vendas,
+          COUNT(CASE 
+            WHEN v.status = 'pago' OR EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) THEN 1 
+          END) as vendas_pagas,
+          COUNT(CASE 
+            WHEN v.status = 'pendente' AND NOT EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) THEN 1 
+          END) as vendas_pendentes,
+          CAST(COALESCE(
+            SUM(CASE 
+              WHEN v.status = 'pago' OR EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) THEN 
+                COALESCE((SELECT SUM(vp2.valor - COALESCE(vp2.troco, 0)) FROM venda_pagamentos vp2 WHERE vp2.venda_id = v.id), v.total)
+              ELSE 0 
+            END), 0) AS DECIMAL(10,2)) as receita_total,
+          CAST(COALESCE(
+            AVG(CASE 
+              WHEN v.status = 'pago' OR EXISTS(SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id) THEN 
+                COALESCE((SELECT SUM(vp2.valor - COALESCE(vp2.troco, 0)) FROM venda_pagamentos vp2 WHERE vp2.venda_id = v.id), v.total)
+              ELSE NULL 
+            END), 0) AS DECIMAL(10,2)) as ticket_medio
+        FROM vendas v
+        ${whereClause}`,
+        mainParams
+      );
+      stats = result[0];
+    }
 
     res.json({
-      stats: stats[0],
-      periodo
+      stats,
+      periodo,
+      forma_pagamento: filtroPorMetodo ? String(formaPagamento).trim() : null
     });
   } catch (error) {
     console.error('Erro ao buscar estatísticas das vendas:', error);

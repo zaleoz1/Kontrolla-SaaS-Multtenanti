@@ -227,12 +227,16 @@ export const useVendas = () => {
   };
 
   // Buscar estatísticas das vendas
-  const fetchVendasStats = async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje'): Promise<VendasStats | null> => {
+  const fetchVendasStats = async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'hoje', formaPagamento?: string): Promise<VendasStats | null> => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await makeRequest(`/vendas/stats/overview?periodo=${periodo}`) as { stats: VendasStats; periodo: string };
+      let url = `/vendas/stats/overview?periodo=${periodo}`;
+      if (formaPagamento && formaPagamento.trim() && formaPagamento.trim() !== 'prazo') {
+        url += `&forma_pagamento=${encodeURIComponent(formaPagamento.trim())}`;
+      }
+      const response = await makeRequest(url) as { stats: VendasStats; periodo: string };
       return response.stats;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar estatísticas');

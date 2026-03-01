@@ -147,12 +147,13 @@ export default function Vendas() {
   // Carregar dados iniciais
   useEffect(() => {
     fetchVendas(filtros);
-    loadStats();
+    loadStats(filtros.forma_pagamento);
   }, []);
 
-  // Carregar estatísticas
-  const loadStats = async () => {
-    const statsData = await fetchVendasStats('hoje');
+  // Carregar estatísticas (por método de pagamento quando filtro ativo, exceto prazo)
+  const loadStats = async (formaPagamento?: string) => {
+    const metodo = formaPagamento && formaPagamento.trim() && formaPagamento.trim() !== 'prazo' ? formaPagamento.trim() : undefined;
+    const statsData = await fetchVendasStats('hoje', metodo);
     setStats(statsData);
   };
 
@@ -284,12 +285,14 @@ export default function Vendas() {
     };
     setFiltros(novosFiltros);
     fetchVendas(novosFiltros);
+    loadStats();
   };
 
   const handleFormaPagamentoFilter = (valor: string) => {
     const novosFiltros = { ...filtros, forma_pagamento: valor, page: 1 };
     setFiltros(novosFiltros);
     fetchVendas(novosFiltros);
+    loadStats(valor);
   };
 
   // Separar vendas com pagamento múltiplo
@@ -742,17 +745,22 @@ export default function Vendas() {
       </div>
 
       {/* Cards de Resumo */}
+      {(() => {
+        const filtroMetodo = filtros.forma_pagamento && filtros.forma_pagamento !== 'prazo';
+        const labelTotal = filtroMetodo ? `Total ${getPaymentText(filtros.forma_pagamento)}` : 'Total Hoje';
+        const labelVendas = filtroMetodo ? `vendas ${getPaymentText(filtros.forma_pagamento)}` : 'vendas hoje';
+        return (
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-card shadow-card">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Hoje</p>
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">{labelTotal}</p>
                 <p className="text-lg sm:text-2xl font-bold truncate">
                   {stats ? formatCurrency(stats.receita_total || 0) : formatCurrency(totalVendas || 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats ? `${stats.total_vendas || 0} vendas hoje` : `${vendas.length || 0} vendas hoje`}
+                  {stats ? `${stats.total_vendas || 0} ${labelVendas}` : `${vendas.length || 0} ${labelVendas}`}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0 ml-2">
@@ -771,7 +779,7 @@ export default function Vendas() {
                   {pagination.total || 0}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats ? `${stats.total_vendas || 0} vendas hoje` : 'Carregando...'}
+                  {stats ? `${stats.total_vendas || 0} ${labelVendas}` : 'Carregando...'}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-secondary/10 flex-shrink-0 ml-2">
@@ -819,6 +827,8 @@ export default function Vendas() {
           </CardContent>
         </Card>
       </div>
+        );
+      })()}
 
       {/* Filtros */}
       <Card className="bg-gradient-to-br from-white via-slate-50/30 to-slate-100/50 shadow-lg border-0 overflow-hidden dark:from-slate-900 dark:via-slate-800/95 dark:to-slate-700/90">
