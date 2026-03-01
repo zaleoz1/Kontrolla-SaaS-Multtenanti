@@ -11,6 +11,7 @@ import {
   createStripeCheckoutSession,
   createStripeBillingPortalSession,
   retrieveStripeSubscription,
+  listStripeSubscriptions,
   listStripeInvoices,
   listStripePaymentMethods,
   verifyStripeWebhookSignature,
@@ -98,30 +99,43 @@ router.get('/status', async (req, res) => {
     let subscription_status = tenant.subscription_status || null;
     let subscription_current_period_end = tenant.subscription_current_period_end;
     let plano = tenant.plano || null;
+    let subscription = null;
 
-    // Enriquecer com dados da API Stripe quando houver assinatura (mostra info em tempo real)
+    // 1) Tentar por subscription_id salvo no tenant
     if (tenant.stripe_subscription_id && isStripeConfigured()) {
       try {
-        const subscription = await retrieveStripeSubscription(tenant.stripe_subscription_id);
-        if (subscription && subscription.status) {
-          subscription_status = subscription.status;
-        }
-        if (subscription && subscription.current_period_end) {
-          subscription_current_period_end =
-            typeof subscription.current_period_end === 'number'
-              ? new Date(subscription.current_period_end * 1000).toISOString()
-              : subscription.current_period_end;
-        }
-        const planId =
-          subscription?.metadata?.plan_id ||
-          subscription?.items?.data?.[0]?.price?.metadata?.plan_id;
-        if (planId) {
-          const p = String(planId).trim().toLowerCase();
-          if (['starter', 'professional', 'enterprise'].includes(p)) plano = p;
-        }
+        subscription = await retrieveStripeSubscription(tenant.stripe_subscription_id);
       } catch (stripeErr) {
-        console.warn('Stripe subscription fetch (status):', stripeErr?.message || stripeErr);
-        // mantém valores do tenant (DB)
+        console.warn('Stripe subscription by id (status):', stripeErr?.message || stripeErr);
+      }
+    }
+
+    // 2) Fallback: buscar assinaturas do cliente quando não temos subscription ou dados incompletos
+    if ((!subscription || !subscription.status) && tenant.stripe_customer_id && isStripeConfigured()) {
+      try {
+        const listRes = await listStripeSubscriptions(tenant.stripe_customer_id, 5);
+        const subs = listRes?.data || [];
+        const active = subs.find((s) => ['active', 'trialing'].includes(s?.status));
+        subscription = subscription || active || subs[0] || null;
+      } catch (stripeErr) {
+        console.warn('Stripe list subscriptions (status):', stripeErr?.message || stripeErr);
+      }
+    }
+
+    if (subscription) {
+      if (subscription.status) subscription_status = subscription.status;
+      if (subscription.current_period_end) {
+        subscription_current_period_end =
+          typeof subscription.current_period_end === 'number'
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : subscription.current_period_end;
+      }
+      const planId =
+        subscription?.metadata?.plan_id ||
+        subscription?.items?.data?.[0]?.price?.metadata?.plan_id;
+      if (planId) {
+        const p = String(planId).trim().toLowerCase();
+        if (['starter', 'professional', 'enterprise'].includes(p)) plano = p;
       }
     }
 

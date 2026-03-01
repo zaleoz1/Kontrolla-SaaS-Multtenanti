@@ -67,9 +67,11 @@ export default function Assinatura() {
     return dadosConta?.role === 'admin';
   }, [dadosConta?.role]);
 
+  // Priorizar dados do Stripe (billing.status) para plano, status e renovação
   const planoAtualId = useMemo(() => {
-    return (dadosTenant?.plano || billing.status?.plano || '').toString().toLowerCase();
-  }, [dadosTenant?.plano, billing.status?.plano]);
+    const p = (billing.status?.plano || dadosTenant?.plano || '').toString().trim().toLowerCase();
+    return p || '';
+  }, [billing.status?.plano, dadosTenant?.plano]);
 
   const stripeStatusLabel = (status: string | null) => {
     if (!status) return { label: 'Sem assinatura', variant: 'secondary' as const, cor: 'text-muted-foreground' };
@@ -148,7 +150,10 @@ export default function Assinatura() {
     });
   };
 
-  const statusInfo = stripeStatusLabel(billing.status?.subscription_status || null);
+  const statusInfo = useMemo(
+    () => stripeStatusLabel(billing.status?.subscription_status ?? null),
+    [billing.status?.subscription_status]
+  );
 
   return (
     <div className="flex h-screen bg-background prevent-zoom touch-optimized mobile-scroll overflow-x-hidden">
@@ -253,7 +258,7 @@ export default function Assinatura() {
                 <p className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">Próxima renovação</p>
                 <p className="text-sm sm:text-base font-semibold mt-0.5">
                   {billing.status?.subscription_current_period_end
-                    ? new Date(billing.status.subscription_current_period_end).toLocaleDateString('pt-BR')
+                    ? formatDate(billing.status.subscription_current_period_end)
                     : '—'}
                 </p>
               </div>

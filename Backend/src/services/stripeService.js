@@ -125,6 +125,15 @@ export async function retrieveStripeSubscription(subscriptionId) {
   return stripeGet(`/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
 }
 
+/** Lista assinaturas do cliente (fallback quando não há subscription_id salvo) */
+export async function listStripeSubscriptions(customerId, limit = 5) {
+  const params = new URLSearchParams();
+  params.append('customer', customerId);
+  params.append('limit', String(limit));
+  params.append('status', 'all');
+  return stripeGet(`/v1/subscriptions?${params.toString()}`);
+}
+
 /** Lista faturas do cliente (histórico de pagamentos); expand charge para ver reembolsos */
 export async function listStripeInvoices(customerId, limit = 30) {
   const params = new URLSearchParams();
