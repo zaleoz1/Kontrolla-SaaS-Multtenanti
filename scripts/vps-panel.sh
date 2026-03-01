@@ -8,14 +8,14 @@
 # Como usar:
 #   1. No VPS, vá ao diretório do projeto: cd /opt/kontrollapro
 #   2. Execute: ./scripts/vps-panel.sh
-#   3. Ou execute uma opção direto: ./scripts/vps-panel.sh 1   (só git pull)
+#   3. Ou execute uma opção direto: ./scripts/vps-panel.sh 1   (atualizar: pull + up --build)
 #
 # Se o projeto estiver em outro path:
 #   KONTROLLA_PROJECT_DIR=/caminho/do/projeto ./scripts/vps-panel.sh
 #
-# Opções: 1=git pull, 2=deploy, 3=git pull+deploy, 4=logs, 5=status,
+# Opções: 1=atualizar, 2=restart docker, 3=git pull+deploy, 4=logs, 5=status,
 #         6=backup, 7=restart todos, 8=restart um, 9=parar, 10=iniciar,
-#         11=health, 12=shell, 0=sair
+#         11=health, 12=shell, 13=acessar MySQL, 0=sair
 
 set -e
 
@@ -64,11 +64,33 @@ run_compose() {
 # =====================================================
 # AÇÕES DO MENU
 # =====================================================
+action_atualizar() {
+    log "🔄 Atualizar: git pull + docker-compose up -d --build..."
+    cd_project
+    log "📥 Git pull origin main..."
+    git pull origin main || git pull origin master || git pull
+    log "🐳 Docker-compose up -d --build..."
+    docker compose -f "$COMPOSE_FILE" up -d --build
+    log "✅ Atualização concluída."
+    run_compose ps
+}
+
 action_git_pull() {
     log "📥 Git pull..."
     cd_project
     git pull origin main || git pull origin master || git pull
     log "✅ Git pull concluído."
+}
+
+action_restart_docker() {
+    log "🔄 Restart Docker: down + up -d --build..."
+    cd_project
+    log "⬇️ Docker-compose down..."
+    docker compose -f "$COMPOSE_FILE" down
+    log "🐳 Docker-compose up -d --build..."
+    docker compose -f "$COMPOSE_FILE" up -d --build
+    log "✅ Restart concluído."
+    run_compose ps
 }
 
 action_deploy() {
@@ -191,6 +213,11 @@ action_health() {
     curl -sf -o /dev/null http://localhost/health 2>/dev/null && log "Nginx OK" || warn "Nginx não respondeu em /health"
 }
 
+action_mysql() {
+    log "Acessando MySQL (container kontrolla-mysql)..."
+    docker exec -it kontrolla-mysql mysql -u kontrollapro -p'KontrollaProd2024@DB!' kontrollapro_prod
+}
+
 # =====================================================
 # BANNER E MENU PRINCIPAL (largura fixa 52 chars)
 # =====================================================
@@ -206,12 +233,12 @@ show_menu() {
     echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}$PROJECT_DIR${NC}                                    ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${NC}"
     echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}Deploy${NC}                                                ${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}1)${NC} Git pull    ${GREEN}2)${NC} Deploy     ${GREEN}3)${NC} Pull + Deploy  ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}1)${NC} Atualizar   ${GREEN}2)${NC} Restart Docker  ${GREEN}3)${NC} Pull + Deploy  ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}Monitoramento${NC}                                         ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}4)${NC} Logs       ${GREEN}5)${NC} Status     ${GREEN}11)${NC} Health check   ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┃${NC}  ${DIM}Manutenção${NC}                                              ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}6)${NC} Backup     ${GREEN}7)${NC} Restart    ${GREEN}8)${NC} Restart one   ${BOLD}${ACCENT}┃${NC}"
-    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}9)${NC} Parar      ${GREEN}10)${NC} Iniciar   ${GREEN}12)${NC} Shell         ${BOLD}${ACCENT}┃${NC}"
+    echo -e "  ${BOLD}${ACCENT}┃${NC}    ${GREEN}9)${NC} Parar      ${GREEN}10)${NC} Iniciar   ${GREEN}12)${NC} Shell   ${GREEN}13)${NC} MySQL  ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫${NC}"
     echo -e "  ${BOLD}${ACCENT}┃${NC}  ${RED}0) Sair${NC}                                                  ${BOLD}${ACCENT}┃${NC}"
     echo -e "  ${BOLD}${ACCENT}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
@@ -222,8 +249,8 @@ main() {
     # Se passou número como argumento, executa direto (ex: ./vps-panel.sh 1)
     if [ -n "${1:-}" ] && [ "$1" -eq "$1" ] 2>/dev/null; then
         case "$1" in
-            1) action_git_pull ;;
-            2) action_deploy ;;
+            1) action_atualizar ;;
+            2) action_restart_docker ;;
             3) action_pull_and_deploy ;;
             4) action_logs ;;
             5) action_status ;;
@@ -234,6 +261,7 @@ main() {
             10) action_start ;;
             11) action_health ;;
             12) action_shell ;;
+            13) action_mysql ;;
             *) err "Opção inválida: $1" ; exit 1 ;;
         esac
         exit 0
@@ -241,11 +269,11 @@ main() {
 
     while true; do
         show_menu
-        echo -en "  ${BOLD}${ACCENT}▶${NC} ${DIM}Opção [0-12]:${NC} "
+        echo -en "  ${BOLD}${ACCENT}▶${NC} ${DIM}Opção [0-13]:${NC} "
         read -r op
         case "$op" in
-            1)  action_git_pull ;;
-            2)  action_deploy ;;
+            1)  action_atualizar ;;
+            2)  action_restart_docker ;;
             3)  action_pull_and_deploy ;;
             4)  action_logs ;;
             5)  action_status ;;
@@ -256,6 +284,7 @@ main() {
             10) action_start ;;
             11) action_health ;;
             12) action_shell ;;
+            13) action_mysql ;;
             0)  echo "" ; echo -e "  ${GREEN}✓${NC} ${DIM}Até logo.${NC}" ; echo "" ; exit 0 ;;
             *)  warn "Opção inválida." ;;
         esac
