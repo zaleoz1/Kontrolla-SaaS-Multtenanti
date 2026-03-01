@@ -35,11 +35,22 @@ export interface DadosRelatorioVendas {
   }>;
 }
 
+const toNum = (v: unknown): number => (v === null || v === undefined ? 0 : Number(v) || 0);
+
 export const gerarRelatorioVendasPDF = (
   dados: DadosRelatorioVendas,
   formatarMoeda: (valor: number) => string
 ) => {
-  const { periodo, responsavel, resumo_geral, formas_pagamento, vendas_por_categoria, vendas_por_data } = dados;
+  const { periodo, responsavel, resumo_geral: resumoRaw, formas_pagamento, vendas_por_categoria, vendas_por_data } = dados;
+
+  // Garantir valores numéricos (backend pode retornar strings)
+  const resumo_geral = {
+    total_vendas: toNum(resumoRaw?.total_vendas),
+    receita_total: toNum(resumoRaw?.receita_total),
+    ticket_medio: toNum(resumoRaw?.ticket_medio),
+    vendas_pagas: toNum(resumoRaw?.vendas_pagas),
+    vendas_pendentes: toNum(resumoRaw?.vendas_pendentes),
+  };
 
   // Datas formatadas
   const dataInicio = new Date(periodo.data_inicio).toLocaleDateString('pt-BR');
@@ -174,9 +185,9 @@ export const gerarRelatorioVendasPDF = (
   autoTable(doc, {
     startY: y,
     head: [['Forma de Pagamento', 'Valor Total']],
-    body: formas_pagamento.map(f => [
+    body: (formas_pagamento || []).map(f => [
       formasPagamentoMap[f.metodo_pagamento] || f.metodo_pagamento,
-      formatarMoeda(f.valor_total),
+      formatarMoeda(toNum(f.valor_total)),
     ]),
     theme: 'grid',
     margin: { left: 20, right: 20 },
@@ -195,10 +206,10 @@ export const gerarRelatorioVendasPDF = (
   autoTable(doc, {
     startY: y,
     head: [['Categoria', 'Faturamento', '%']],
-    body: vendas_por_categoria.map(c => [
+    body: (vendas_por_categoria || []).map(c => [
       c.categoria_nome || 'Sem categoria',
-      formatarMoeda(c.faturamento),
-      `${c.percentual.toFixed(1)}%`,
+      formatarMoeda(toNum(c.faturamento)),
+      `${(toNum(c.percentual)).toFixed(1)}%`,
     ]),
     theme: 'grid',
     margin: { left: 20, right: 20 },
@@ -214,11 +225,12 @@ export const gerarRelatorioVendasPDF = (
   // Vendas por data
   text('4. VENDAS POR DATA', 20, y, { size: 14, bold: true });
   y += 8;
-  const vendasData = vendas_por_data.map(v => [
+  const vendasPorData = vendas_por_data || [];
+  const vendasData = vendasPorData.map(v => [
     new Date(v.data_venda).toLocaleDateString('pt-BR'),
-    formatarMoeda(v.valor_total),
+    formatarMoeda(toNum(v.valor_total)),
   ]);
-  const total = vendas_por_data.reduce((s, v) => s + v.valor_total, 0);
+  const total = vendasPorData.reduce((s, v) => s + toNum(v.valor_total), 0);
   vendasData.push(['TOTAL', formatarMoeda(total)]);
 
   autoTable(doc, {

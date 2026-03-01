@@ -156,35 +156,36 @@ export default function Dashboard() {
   const dadosGrafico = useMemo(() => {
     const hoje = new Date();
     const ultimos7Dias: { data: string; valor: number; valorReal: number; periodo: string; temVenda: boolean }[] = [];
-    
-    // Encontrar o valor máximo para calcular o mínimo visual
-    const maxValor = Math.max(...graficoVendasOriginal.map(item => item.receita_total), 1);
+    const toNum = (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0);
+
+    // Encontrar o valor máximo para calcular o mínimo visual (garantir números para escala correta)
+    const maxValor = Math.max(...graficoVendasOriginal.map(item => toNum(item.receita_total)), 1);
     const minBarraVisual = maxValor * 0.03; // 3% do máximo para barras vazias
-    
+
     // Criar array com os últimos 7 dias
     for (let i = 6; i >= 0; i--) {
       const dia = new Date(hoje);
       dia.setDate(hoje.getDate() - i);
       const dataFormatada = dia.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
       const periodoISO = dia.toISOString().split('T')[0];
-      
+
       // Buscar se existe venda nesse dia
       const vendaDia = graficoVendasOriginal.find((item) => {
         const itemData = new Date(item.periodo).toISOString().split('T')[0];
         return itemData === periodoISO;
       });
-      
-      const valorReal = vendaDia ? vendaDia.receita_total : 0;
-      
+
+      const valorReal = vendaDia ? toNum(vendaDia.receita_total) : 0;
+
       ultimos7Dias.push({
         data: dataFormatada,
         valor: valorReal > 0 ? valorReal : minBarraVisual, // Valor mínimo para visualização
-        valorReal: valorReal, // Valor real para tooltip
+        valorReal,
         periodo: periodoISO,
         temVenda: valorReal > 0
       });
     }
-    
+
     return ultimos7Dias;
   }, [graficoVendasOriginal]);
   
