@@ -493,6 +493,84 @@ export const useRelatorios = () => {
     return { dados, loading, refetch: fetchDados };
   };
 
+  // Hook para meses que possuem vendas (para Relatórios Recentes - download por mês)
+  const useMesesComVendas = () => {
+    const [meses, setMeses] = useState<Array<{ ano: number; mes: number; dataInicio: string; dataFim: string; label: string }>>([]);
+    const [loading, setLoading] = useState(false);
+
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    const fetchMeses = async () => {
+      try {
+        setLoading(true);
+        const hoje = new Date();
+        const dataFim = hoje.toISOString().split('T')[0];
+        const dozeMesesAtras = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
+        const dataInicio = dozeMesesAtras.toISOString().split('T')[0];
+
+        const response = await api.get('/relatorios/vendas-periodo', {
+          params: {
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            agrupamento: 'diario',
+            limit: 400
+          }
+        });
+        const data = response.data as { vendas: RelatorioVendasPeriodo[] };
+        const vendas = data.vendas || [];
+
+        const porMes = new Map<string, { ano: number; mes: number; total_vendas: number }>();
+        vendas.forEach((v: RelatorioVendasPeriodo) => {
+          const periodo = v.periodo;
+          if (!periodo) return;
+          const d = new Date(periodo);
+          if (isNaN(d.getTime())) return;
+          const ano = d.getFullYear();
+          const mes = d.getMonth() + 1;
+          const key = `${ano}-${mes}`;
+          const total = Number(v.total_vendas) || 0;
+          const atual = porMes.get(key);
+          if (atual) {
+            atual.total_vendas += total;
+          } else {
+            porMes.set(key, { ano, mes, total_vendas: total });
+          }
+        });
+
+        const lista: Array<{ ano: number; mes: number; dataInicio: string; dataFim: string; label: string }> = [];
+        porMes.forEach((val) => {
+          if (val.total_vendas <= 0) return;
+          const primeiroDia = new Date(val.ano, val.mes - 1, 1);
+          const ultimoDia = new Date(val.ano, val.mes, 0);
+          lista.push({
+            ano: val.ano,
+            mes: val.mes,
+            dataInicio: primeiroDia.toISOString().split('T')[0],
+            dataFim: ultimoDia.toISOString().split('T')[0],
+            label: `${nomesMeses[val.mes - 1]} ${val.ano}`
+          });
+        });
+
+        lista.sort((a, b) => {
+          if (a.ano !== b.ano) return b.ano - a.ano;
+          return b.mes - a.mes;
+        });
+        setMeses(lista);
+      } catch (err) {
+        console.error('Erro ao buscar meses com vendas:', err);
+        setMeses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      fetchMeses();
+    }, []);
+
+    return { meses, loading, refetch: fetchMeses };
+  };
+
   // Hook para buscar categorias
   const useCategorias = () => {
     const [categorias, setCategorias] = useState<Array<{id: number, nome: string}>>([]);
@@ -530,6 +608,7 @@ export const useRelatorios = () => {
     useRelatorioFinanceiro,
     useRelatorioControleEstoque,
     useRelatorioPerformanceVendas,
+    useMesesComVendas,
     useCategorias
   };
 };

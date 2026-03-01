@@ -116,6 +116,12 @@ export interface ResumoFinanceiro {
   saldo: number;
 }
 
+export interface FormaPagamentoResumo {
+  metodo_pagamento: string;
+  quantidade: number;
+  valor_total: number;
+}
+
 export interface DashboardData {
   metricas: DashboardMetricas;
   vendas_recentes: VendaRecente[];
@@ -123,6 +129,7 @@ export interface DashboardData {
   grafico_vendas: GraficoVendas[];
   top_produtos: TopProduto[];
   resumo_financeiro: ResumoFinanceiro;
+  formas_pagamento: FormaPagamentoResumo[];
   periodo: string;
 }
 
@@ -137,23 +144,33 @@ export function useDashboard() {
     try {
       setLoading(true);
       setError(null);
-      // Buscar todas as métricas em paralelo
+      const hoje = new Date();
+      const dataFim = hoje.toISOString().split('T')[0];
+      const trintaDiasAtras = new Date(hoje);
+      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+      const dataInicio = trintaDiasAtras.toISOString().split('T')[0];
+      // Buscar todas as métricas em paralelo (incluindo vendas por forma de pagamento - últimos 30 dias)
       const [
         metricasResponse,
         vendasRecentesResponse,
         estoqueBaixoResponse,
         graficoVendasResponse,
         topProdutosResponse,
-        resumoFinanceiroResponse
+        resumoFinanceiroResponse,
+        vendasDetalhadoResponse
       ] = await Promise.all([
         makeRequest(`${API_ENDPOINTS.DASHBOARD.METRICS}?periodo=${periodo}`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.RECENT_SALES}?limit=500`),
-        // Buscar todos os produtos com alerta de estoque (zerado + baixo)
         makeRequest(`${API_ENDPOINTS.DASHBOARD.LOW_STOCK}?limit=all`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.SALES_CHART}?tipo=diario&dias=30`),
         makeRequest(`${API_ENDPOINTS.DASHBOARD.TOP_PRODUCTS}?limit=10&periodo=30`),
-        makeRequest(`${API_ENDPOINTS.DASHBOARD.FINANCIAL_SUMMARY}?periodo=30`)
+        makeRequest(`${API_ENDPOINTS.DASHBOARD.FINANCIAL_SUMMARY}?periodo=30`),
+        makeRequest(`/relatorios/vendas-periodo-detalhado?data_inicio=${dataInicio}&data_fim=${dataFim}`)
       ]);
+
+      const formasPagamento = (vendasDetalhadoResponse?.formas_pagamento || []).filter(
+        (f: FormaPagamentoResumo) => Number(f.valor_total) > 0
+      );
 
       const dashboardData: DashboardData = {
         metricas: metricasResponse.metricas,
@@ -162,6 +179,7 @@ export function useDashboard() {
         grafico_vendas: graficoVendasResponse.vendas,
         top_produtos: topProdutosResponse.produtos,
         resumo_financeiro: resumoFinanceiroResponse.resumo,
+        formas_pagamento: formasPagamento,
         periodo: metricasResponse.periodo
       };
 

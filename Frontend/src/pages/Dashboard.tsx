@@ -150,6 +150,7 @@ export default function Dashboard() {
   const produtosEstoqueBaixoOriginal = data?.estoque_baixo || [];
   const produtosMaisVendidosOriginal = data?.top_produtos || [];
   const graficoVendasOriginal = data?.grafico_vendas || [];
+  const formasPagamento = data?.formas_pagamento || [];
   
   // Preparar dados do gráfico (últimos 7 dias - incluindo dias sem vendas)
   const dadosGrafico = useMemo(() => {
@@ -846,6 +847,64 @@ export default function Dashboard() {
               <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
               <p className="text-sm sm:text-base">Nenhum dado disponível</p>
               <p className="text-xs sm:text-sm">O gráfico aparecerá quando houver vendas</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Vendas por forma de pagamento (últimos 30 dias) - lista estilizada */}
+      <Card className="bg-gradient-card shadow-card overflow-hidden">
+        <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border/50 bg-muted/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+              Vendas por forma de pagamento
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">Últimos 30 dias</span>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          {formasPagamento.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {formasPagamento.map((f, index) => {
+                const cores = [
+                  'border-l-amber-500 bg-amber-500/5 dark:bg-amber-500/10',
+                  'border-l-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10',
+                  'border-l-blue-500 bg-blue-500/5 dark:bg-blue-500/10',
+                  'border-l-violet-500 bg-violet-500/5 dark:bg-violet-500/10',
+                  'border-l-rose-500 bg-rose-500/5 dark:bg-rose-500/10',
+                  'border-l-cyan-500 bg-cyan-500/5 dark:bg-cyan-500/10',
+                  'border-l-orange-500 bg-orange-500/5 dark:bg-orange-500/10',
+                  'border-l-slate-500 bg-slate-500/5 dark:bg-slate-500/10'
+                ];
+                const estilo = cores[index % cores.length];
+                return (
+                  <div
+                    key={f.metodo_pagamento}
+                    className={`rounded-lg border border-border/60 dark:border-border/70 border-l-4 p-4 ${estilo} transition-colors hover:opacity-90`}
+                  >
+                    <p className="font-semibold text-sm text-foreground mb-1">
+                      {getPaymentText(f.metodo_pagamento)}
+                    </p>
+                    {f.quantidade > 0 && (
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {f.quantidade} transações
+                      </p>
+                    )}
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                      {formatCurrency(Number(f.valor_total) || 0)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-10 sm:py-12 text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/20">
+              <DollarSign className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm sm:text-base font-medium">Nenhum pagamento no período</p>
+              <p className="text-xs sm:text-sm mt-1">Os valores por PIX, cartão, dinheiro etc. aparecerão aqui</p>
             </div>
           )}
         </CardContent>

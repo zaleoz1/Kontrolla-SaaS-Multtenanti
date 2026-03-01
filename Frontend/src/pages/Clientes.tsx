@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,11 +77,16 @@ interface ClientesStats {
   receita_total: number;
 }
 
+const CLIENTES_POR_PAGINA = 12;
+
 export default function Clientes() {
   const [termoBusca, setTermoBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [clientesExibidos, setClientesExibidos] = useState<Cliente[]>([]);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [totaisPagar, setTotaisPagar] = useState<Record<number, { total_pagar: number; quantidade_contas: number }>>({});
+  const scrollPositionRef = useRef<number | null>(null);
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
 
@@ -89,30 +94,29 @@ export default function Clientes() {
   const clientesApi = useCrudApi<ClientesResponse>(API_ENDPOINTS.CLIENTS.LIST);
   const statsApi = useCrudApi<{ stats: ClientesStats }>(API_ENDPOINTS.CLIENTS.STATS);
 
-  // Carregar dados iniciais
-  useEffect(() => {
-    carregarClientes();
-    carregarEstatisticas();
-  }, [paginaAtual, termoBusca, filtroStatus]);
-
-  // Dados dos clientes
-  const clientes = clientesApi.data?.clientes || [];
+  // Dados da API (pagination para total e hasNext)
   const pagination = clientesApi.data?.pagination;
   const stats = statsApi.data?.stats;
 
-  // Carregar totais a pagar quando os clientes mudarem
+  // Carregar dados iniciais e ao mudar filtros (sempre página 1, substituir lista)
   useEffect(() => {
-    if (clientes.length > 0) {
+    carregarClientes(1, true);
+    carregarEstatisticas();
+  }, [termoBusca, filtroStatus]);
+
+  // Carregar totais a pagar quando os clientes exibidos mudarem
+  useEffect(() => {
+    if (clientesExibidos.length > 0) {
       carregarTotaisPagar();
     }
-  }, [clientes]);
+  }, [clientesExibidos]);
 
-  // Função para carregar clientes
-  const carregarClientes = async () => {
+  // Função para carregar clientes (page = página a buscar; replace = true substitui a lista, false adiciona)
+  const carregarClientes = async (page: number, replace: boolean) => {
     try {
       const params: Record<string, any> = {
-        page: paginaAtual,
-        limit: 12,
+        page,
+        limit: CLIENTES_POR_PAGINA,
       };
 
       if (termoBusca) {
@@ -123,11 +127,51 @@ export default function Clientes() {
         params.status = filtroStatus;
       }
 
-      await clientesApi.list(params);
+      const response = await clientesApi.list(params) as ClientesResponse;
+      const lista = response?.clientes || [];
+
+      if (replace) {
+        setClientesExibidos(lista);
+        setPaginaAtual(1);
+      } else {
+        setClientesExibidos((prev) => [...prev, ...lista]);
+        setPaginaAtual(page);
+      }
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
     }
   };
+
+  // Obter o elemento que faz o scroll (main do layout ou document)
+  const getScrollContainer = () => document.querySelector('main.overflow-y-auto') || document.scrollingElement || document.documentElement;
+
+  // Carregar mais clientes (próxima página) — mantém a posição de rolagem
+  const carregarMais = async () => {
+    if (carregandoMais || !pagination?.hasNext) return;
+    const scrollEl = getScrollContainer();
+    scrollPositionRef.current = scrollEl?.scrollTop ?? 0;
+    setCarregandoMais(true);
+    try {
+      await carregarClientes(paginaAtual + 1, false);
+    } finally {
+      setCarregandoMais(false);
+    }
+  };
+
+  // Restaurar posição de rolagem após carregar mais itens
+  useEffect(() => {
+    if (scrollPositionRef.current === null) return;
+    const pos = scrollPositionRef.current;
+    scrollPositionRef.current = null;
+    requestAnimationFrame(() => {
+      const scrollEl = getScrollContainer();
+      if (scrollEl && 'scrollTop' in scrollEl) scrollEl.scrollTop = pos;
+    });
+  }, [clientesExibidos]);
+
+  const clientes = clientesExibidos;
+  const temMaisClientes = Boolean(pagination?.hasNext && clientes.length < (pagination?.total ?? 0));
+  const clientesRestantes = Math.max(0, (pagination?.total ?? 0) - clientes.length);
 
   // Função para carregar estatísticas
   const carregarEstatisticas = async () => {
@@ -183,7 +227,7 @@ export default function Clientes() {
 
   // Função para recarregar dados
   const recarregarDados = () => {
-    carregarClientes();
+    carregarClientes(1, true);
     carregarEstatisticas();
   };
 
@@ -505,6 +549,7 @@ export default function Clientes() {
           ))}
         </div>
       ) : (
+        <>
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {clientes.map((cliente) => (
             <Card key={cliente.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
@@ -615,6 +660,23 @@ export default function Clientes() {
             </Card>
           ))}
         </div>
+
+        {/* Botão Ver mais - exibe mais itens sem indicador de carregamento */}
+        {temMaisClientes && !clientesApi.loading && (
+          <button
+            type="button"
+            onClick={carregarMais}
+            disabled={carregandoMais}
+            className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/50 rounded-lg mt-4 hover:bg-muted/50 disabled:opacity-50"
+          >
+            <Users className="h-4 w-4" />
+            Ver mais {Math.min(clientesRestantes, CLIENTES_POR_PAGINA)} cliente{clientesRestantes !== 1 ? 's' : ''}
+            <span className="text-xs text-muted-foreground">
+              ({clientes.length} de {pagination?.total ?? 0})
+            </span>
+          </button>
+        )}
+        </>
       )}
 
       {/* Estado Vazio */}
@@ -640,84 +702,6 @@ export default function Clientes() {
         </Card>
       )}
 
-      {/* Paginação */}
-      {pagination && pagination.totalPages > 1 && (
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="p-4 sm:p-6">
-            {/* Desktop Layout */}
-            <div className="hidden sm:flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} clientes
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPaginaAtual(paginaAtual - 1)}
-                  disabled={!pagination.hasPrev || clientesApi.loading}
-                >
-                  Anterior
-                </Button>
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={pageNum === paginaAtual ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPaginaAtual(pageNum)}
-                        disabled={clientesApi.loading}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPaginaAtual(paginaAtual + 1)}
-                  disabled={!pagination.hasNext || clientesApi.loading}
-                >
-                  Próxima
-                </Button>
-              </div>
-            </div>
-
-            {/* Mobile Layout - Apenas números das páginas */}
-            <div className="sm:hidden">
-              <div className="text-center mb-4">
-                <div className="text-xs text-muted-foreground mb-1">
-                  Página {pagination.page} de {pagination.totalPages}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} clientes
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-center space-x-1">
-                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={pageNum === paginaAtual ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPaginaAtual(pageNum)}
-                      disabled={clientesApi.loading}
-                      className="w-10 h-10 p-0 text-sm font-medium"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   DialogTitle, 
   DialogDescription 
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Plus, 
   Search, 
@@ -45,7 +46,8 @@ export default function Vendas() {
     q: "",
     status: "",
     data_inicio: "",
-    data_fim: ""
+    data_fim: "",
+    forma_pagamento: ""
   });
   const [stats, setStats] = useState<any>(null);
   const [vendaSelecionada, setVendaSelecionada] = useState<any>(null);
@@ -277,8 +279,15 @@ export default function Vendas() {
       q: "",
       status: "",
       data_inicio: "",
-      data_fim: ""
+      data_fim: "",
+      forma_pagamento: ""
     };
+    setFiltros(novosFiltros);
+    fetchVendas(novosFiltros);
+  };
+
+  const handleFormaPagamentoFilter = (valor: string) => {
+    const novosFiltros = { ...filtros, forma_pagamento: valor, page: 1 };
     setFiltros(novosFiltros);
     fetchVendas(novosFiltros);
   };
@@ -904,14 +913,38 @@ export default function Vendas() {
                 </div>
               </div>
 
+              {/* Método de pagamento - Mobile */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Método de pagamento</label>
+                <Select 
+                  value={
+                    filtros.forma_pagamento && (metodosPagamento.some(m => m.tipo === filtros.forma_pagamento) || filtros.forma_pagamento === 'prazo')
+                      ? filtros.forma_pagamento
+                      : "todos"
+                  } 
+                  onValueChange={(v) => handleFormaPagamentoFilter(v === "todos" ? "" : v)}
+                >
+                  <SelectTrigger className="min-w-[220px] w-full h-9 text-sm dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100">
+                    <SelectValue placeholder="Métodos de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Métodos de pagamento</SelectItem>
+                    {metodosPagamento.map((metodo) => (
+                      <SelectItem key={metodo.id} value={metodo.tipo}>{metodo.nome}</SelectItem>
+                    ))}
+                    <SelectItem value="prazo">{getPaymentText("prazo")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Botões de Ação */}
               <div className="flex space-x-2 pt-2">
                 <Button 
                   variant="outline" 
                   onClick={limparPesquisa}
-                  disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
+                  disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status && !filtros.forma_pagamento}
                   size="sm"
-                  className="flex-1 h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
+                    className="flex-1 h-9 text-xs font-medium dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                 >
                   Limpar Tudo
                 </Button>
@@ -952,7 +985,7 @@ export default function Vendas() {
               <Button 
                 variant="outline" 
                 onClick={limparPesquisa}
-                disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status}
+                disabled={!termoBusca && !dataInicio && !dataFim && !filtros.status && !filtros.forma_pagamento}
                     className="w-full sm:w-auto dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-100 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                     size="sm"
               >
@@ -987,7 +1020,7 @@ export default function Vendas() {
               </div>
             </div>
 
-            {/* Filtros de Data */}
+            {/* Filtros de Data e Método */}
               <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <div className="flex items-center space-x-2">
@@ -1010,7 +1043,26 @@ export default function Vendas() {
                 />
               </div>
                 </div>
-                <div className="flex justify-end">
+                <div className="flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+                  <Select 
+                      value={
+                        filtros.forma_pagamento && (metodosPagamento.some(m => m.tipo === filtros.forma_pagamento) || filtros.forma_pagamento === 'prazo')
+                          ? filtros.forma_pagamento
+                          : "todos"
+                      } 
+                      onValueChange={(v) => handleFormaPagamentoFilter(v === "todos" ? "" : v)}
+                    >
+                      <SelectTrigger className="w-full sm:min-w-[220px] sm:w-[220px] h-9 text-sm dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100">
+                        <SelectValue placeholder="Métodos de pagamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Métodos de pagamento</SelectItem>
+                        {metodosPagamento.map((metodo) => (
+                          <SelectItem key={metodo.id} value={metodo.tipo}>{metodo.nome}</SelectItem>
+                        ))}
+                        <SelectItem value="prazo">{getPaymentText("prazo")}</SelectItem>
+                      </SelectContent>
+                    </Select>
                 <Button 
                   variant="outline" 
                   onClick={limparFiltrosData}

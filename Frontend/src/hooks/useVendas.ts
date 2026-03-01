@@ -79,6 +79,7 @@ export interface VendasFilters {
   status?: string;
   data_inicio?: string;
   data_fim?: string;
+  forma_pagamento?: string;
 }
 
 export interface TotaisPendentes {
@@ -132,6 +133,7 @@ export const useVendas = () => {
       if (filters.status) params.append('status', filters.status);
       if (filters.data_inicio) params.append('data_inicio', filters.data_inicio);
       if (filters.data_fim) params.append('data_fim', filters.data_fim);
+      if (filters.forma_pagamento) params.append('forma_pagamento', filters.forma_pagamento);
 
       const response = await makeRequest(`/vendas?${params.toString()}`) as VendasResponse;
       

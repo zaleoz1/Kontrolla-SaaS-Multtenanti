@@ -56,6 +56,8 @@ import { useState, useEffect } from "react";
 
 import { gerarRelatorioVendasPDF, gerarRelatorioProdutosPDF, gerarRelatorioClientesPDF, gerarRelatorioFinanceiroPDF, gerarRelatorioEstoquePDF } from "@/utils/gerarPDF";
 
+import { api } from "@/lib/api";
+
 
 
 export default function Relatorios() {
@@ -78,9 +80,13 @@ export default function Relatorios() {
 
     useRelatorioControleEstoque,
 
+    useMesesComVendas,
+
     useCategorias
 
   } = useRelatorios();
+
+  const { meses: mesesComVendas, loading: loadingMesesComVendas } = useMesesComVendas();
 
 
 
@@ -119,6 +125,7 @@ export default function Relatorios() {
   const [modalClientesAberto, setModalClientesAberto] = useState(false);
   const [modalFinanceiroAberto, setModalFinanceiroAberto] = useState(false);
   const [modalEstoqueAberto, setModalEstoqueAberto] = useState(false);
+  const [baixandoRelatorioMes, setBaixandoRelatorioMes] = useState<string | null>(null);
 
 
   // Hooks para buscar dados
@@ -247,51 +254,23 @@ export default function Relatorios() {
 
 
 
-  const relatoriosRecentes = [
-
-    {
-
-      nome: "Relatório de Vendas - Janeiro 2024",
-
-      tipo: "PDF",
-
-      tamanho: "2.4 MB",
-
-      geradoEm: "2024-01-18 14:30",
-
-      downloads: 3
-
-    },
-
-    {
-
-      nome: "Análise de Produtos - Dezembro 2023", 
-
-      tipo: "Excel",
-
-      tamanho: "1.8 MB",
-
-      geradoEm: "2024-01-15 10:15",
-
-      downloads: 8
-
-    },
-
-    {
-
-      nome: "Relatório Financeiro - 4º Trimestre",
-
-      tipo: "PDF", 
-
-      tamanho: "3.1 MB",
-
-      geradoEm: "2024-01-10 16:45",
-
-      downloads: 12
-
+  const baixarRelatorioMes = async (dataInicio: string, dataFim: string) => {
+    const key = dataInicio;
+    setBaixandoRelatorioMes(key);
+    try {
+      const response = await api.get('/relatorios/vendas-periodo-detalhado', {
+        params: { data_inicio: dataInicio, data_fim: dataFim }
+      });
+      const dados = response.data;
+      if (dados && dados.resumo_geral) {
+        gerarRelatorioVendasPDF(dados, formatarMoeda);
+      }
+    } catch (err) {
+      console.error('Erro ao gerar relatório do mês:', err);
+    } finally {
+      setBaixandoRelatorioMes(null);
     }
-
-  ];
+  };
 
 
 
@@ -2617,97 +2596,63 @@ export default function Relatorios() {
 
 
 
-        {/* Relatórios Recentes */}
-
+        {/* Relatórios Recentes - apenas meses com vendas */}
         <div className="order-1 lg:order-2">
-
           <Card className="bg-gradient-card shadow-card">
-
             <CardHeader>
-
               <CardTitle className="flex items-center justify-between">
-
                 <span>Relatórios Recentes</span>
-
-                <Badge variant="secondary">{relatoriosRecentes.length}</Badge>
-
+                <Badge variant="secondary">{mesesComVendas.length}</Badge>
               </CardTitle>
-
             </CardHeader>
-
             <CardContent>
-
               <div className="space-y-4">
-
-                {relatoriosRecentes.map((relatorio, index) => (
-
-                  <div key={index} className="space-y-2">
-
-                    <div className="flex items-start justify-between">
-
-                      <div className="space-y-1">
-
-                        <p className="font-medium text-sm line-clamp-2">{relatorio.nome}</p>
-
-                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-
-                          <FileText className="h-3 w-3" />
-
-                          <span>{relatorio.tipo}</span>
-
-                          <span>•</span>
-
-                          <span>{relatorio.tamanho}</span>
-
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-
-                          {formatarDataHora(relatorio.geradoEm)}
-                        </p>
-
-                      </div>
-
-                      <Button variant="ghost" size="sm">
-
-                        <Download className="h-4 w-4" />
-
-                      </Button>
-
-                    </div>
-
-                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-
-                      <Download className="h-3 w-3" />
-
-                      <span>{relatorio.downloads} downloads</span>
-
-                    </div>
-
-                    {index < relatoriosRecentes.length - 1 && (
-
-                      <div className="border-t border-border/50" />
-
-                    )}
-
+                {loadingMesesComVendas ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-
-                ))}
-
+                ) : mesesComVendas.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Nenhum mês com vendas nos últimos 12 meses.
+                  </p>
+                ) : (
+                  mesesComVendas.map((mes, index) => (
+                    <div key={`${mes.ano}-${mes.mes}`} className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <p className="font-medium text-sm line-clamp-2">
+                            Relatório de Vendas - {mes.label}
+                          </p>
+                          <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                            <FileText className="h-3 w-3" />
+                            <span>PDF</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formatarData(mes.dataInicio)} — {formatarData(mes.dataFim)}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => baixarRelatorioMes(mes.dataInicio, mes.dataFim)}
+                          disabled={baixandoRelatorioMes === mes.dataInicio}
+                        >
+                          {baixandoRelatorioMes === mes.dataInicio ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {index < mesesComVendas.length - 1 && (
+                        <div className="border-t border-border/50" />
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
-
-              
-
-              <Button variant="outline" size="sm" className="w-full mt-4">
-
-                Ver Todos os Relatórios
-
-              </Button>
-
             </CardContent>
-
           </Card>
-
         </div>
 
       </div>

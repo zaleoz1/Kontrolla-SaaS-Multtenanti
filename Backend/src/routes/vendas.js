@@ -33,7 +33,7 @@ router.use(authenticateToken);
 // Listar vendas com paginação e busca
 router.get('/', validatePagination, validateSearch, handleValidationErrors, async (req, res) => {
   try {
-    const { page = 1, limit = 10, q = '', status = '', data_inicio = '', data_fim = '' } = req.query;
+    const { page = 1, limit = 10, q = '', status = '', data_inicio = '', data_fim = '', forma_pagamento = '' } = req.query;
     const offset = (page - 1) * limit;
 
     let whereClause = 'WHERE v.tenant_id = ?';
@@ -71,6 +71,17 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
     if (data_fim) {
       whereClause += ' AND DATE(v.data_venda) <= ?';
       params.push(data_fim);
+    }
+
+    // Filtro por forma de pagamento (v.forma_pagamento, venda_pagamentos.metodo ou contas_receber para prazo)
+    if (forma_pagamento && forma_pagamento.trim()) {
+      const metodo = forma_pagamento.trim();
+      if (metodo === 'prazo') {
+        whereClause += ` AND (v.forma_pagamento = 'prazo' OR EXISTS (SELECT 1 FROM contas_receber cr WHERE cr.venda_id = v.id AND cr.descricao LIKE 'Pagamento a prazo%'))`;
+      } else {
+        whereClause += ` AND (v.forma_pagamento = ? OR EXISTS (SELECT 1 FROM venda_pagamentos vp WHERE vp.venda_id = v.id AND vp.metodo = ?))`;
+        params.push(metodo, metodo);
+      }
     }
 
     // Buscar vendas com informações do cliente (otimizada)
