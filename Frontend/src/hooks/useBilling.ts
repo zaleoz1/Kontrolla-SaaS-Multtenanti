@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useApi } from './useApi';
 import { API_ENDPOINTS } from '@/config/api';
- 
+
 export interface BillingStatus {
   plano: string | null;
   subscription_status: string | null;
@@ -10,13 +10,38 @@ export interface BillingStatus {
   stripe_subscription_id: string | null;
   stripe_price_id: string | null;
 }
- 
+
+export interface BillingInvoice {
+  id: string;
+  number: string;
+  status: string;
+  statusLabel: string;
+  amount_paid: number;
+  amount_refunded: number;
+  currency: string;
+  created: string | null;
+  invoice_pdf: string | null;
+  hosted_invoice_url: string | null;
+}
+
+export interface BillingPaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  funding: string | null;
+}
+
 export function useBilling() {
   const { makeRequest } = useApi();
   const [status, setStatus] = useState<BillingStatus | null>(null);
+  const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<BillingPaymentMethod[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
- 
+
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -33,6 +58,35 @@ export function useBilling() {
       setLoading(false);
     }
   }, [makeRequest]);
+
+  const fetchInvoices = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await makeRequest(API_ENDPOINTS.BILLING.INVOICES, { method: 'GET' });
+      setInvoices((res?.invoices ?? []) as BillingInvoice[]);
+      return res?.invoices ?? [];
+    } catch (e: any) {
+      setInvoices([]);
+      return [];
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [makeRequest]);
+
+  const fetchPaymentMethods = useCallback(async () => {
+    try {
+      const res = await makeRequest(API_ENDPOINTS.BILLING.PAYMENT_METHODS, { method: 'GET' });
+      setPaymentMethods((res?.payment_methods ?? []) as BillingPaymentMethod[]);
+      return res?.payment_methods ?? [];
+    } catch {
+      setPaymentMethods([]);
+      return [];
+    }
+  }, [makeRequest]);
+
+  const fetchBillingHistory = useCallback(async () => {
+    await Promise.all([fetchInvoices(), fetchPaymentMethods()]);
+  }, [fetchInvoices, fetchPaymentMethods]);
  
   const createCheckoutSession = useCallback(async (planId: string) => {
     setLoading(true);
@@ -69,9 +123,15 @@ export function useBilling() {
  
   return {
     status,
+    invoices,
+    paymentMethods,
     loading,
+    loadingHistory,
     error,
     fetchStatus,
+    fetchInvoices,
+    fetchPaymentMethods,
+    fetchBillingHistory,
     createCheckoutSession,
     createPortalSession,
   };

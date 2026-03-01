@@ -161,6 +161,8 @@ export const API_ENDPOINTS = {
     STATUS: '/billing/status',
     CHECKOUT_SESSION: '/billing/checkout-session',
     PORTAL_SESSION: '/billing/portal-session',
+    INVOICES: '/billing/invoices',
+    PAYMENT_METHODS: '/billing/payment-methods',
     WEBHOOK: '/billing/webhook',
   },
 };

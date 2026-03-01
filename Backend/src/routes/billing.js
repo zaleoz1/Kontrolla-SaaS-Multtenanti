@@ -11,6 +11,8 @@ import {
   createStripeCheckoutSession,
   createStripeBillingPortalSession,
   retrieveStripeSubscription,
+  listStripeInvoices,
+  listStripePaymentMethods,
   verifyStripeWebhookSignature,
 } from '../services/stripeService.js';
  
@@ -237,7 +239,82 @@ router.post('/portal-session', requireAdmin, async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
- 
+
+// Histórico de faturas (pagamentos, reembolsos, cancelamentos)
+router.get('/invoices', async (req, res) => {
+  try {
+    const tenant = await getTenantById(req.user.tenant_id);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant não encontrado' });
+    }
+    if (!tenant.stripe_customer_id) {
+      return res.json({ invoices: [] });
+    }
+    if (!isStripeConfigured()) {
+      return res.json({ invoices: [] });
+    }
+    const result = await listStripeInvoices(tenant.stripe_customer_id, 50);
+    const raw = result?.data || [];
+    const invoices = raw.map((inv) => {
+      const charge = inv.charge && typeof inv.charge === 'object' ? inv.charge : null;
+      const amountPaid = inv.amount_paid != null ? Number(inv.amount_paid) / 100 : 0;
+      const amountRefunded = charge?.amount_refunded != null ? Number(charge.amount_refunded) / 100 : 0;
+      const refunded = Boolean(charge?.refunded);
+      let statusLabel = (inv.status || '').toLowerCase();
+      if (refunded || amountRefunded > 0) statusLabel = 'refunded';
+      return {
+        id: inv.id,
+        number: inv.number || inv.id,
+        status: inv.status,
+        statusLabel,
+        amount_paid: amountPaid,
+        amount_refunded: amountRefunded,
+        currency: (inv.currency || 'brl').toUpperCase(),
+        created: inv.created ? new Date(inv.created * 1000).toISOString() : null,
+        invoice_pdf: inv.invoice_pdf || null,
+        hosted_invoice_url: inv.hosted_invoice_url || null,
+      };
+    });
+    res.json({ invoices });
+  } catch (error) {
+    console.error('Erro ao listar faturas (Stripe):', error?.message || error);
+    res.status(500).json({ error: 'Erro ao carregar histórico de pagamentos', invoices: [] });
+  }
+});
+
+// Cartões / métodos de pagamento do cliente
+router.get('/payment-methods', async (req, res) => {
+  try {
+    const tenant = await getTenantById(req.user.tenant_id);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant não encontrado' });
+    }
+    if (!tenant.stripe_customer_id) {
+      return res.json({ payment_methods: [] });
+    }
+    if (!isStripeConfigured()) {
+      return res.json({ payment_methods: [] });
+    }
+    const result = await listStripePaymentMethods(tenant.stripe_customer_id, 'card');
+    const raw = result?.data || [];
+    const payment_methods = raw.map((pm) => {
+      const card = pm.card || {};
+      return {
+        id: pm.id,
+        brand: (card.brand || 'card').toLowerCase(),
+        last4: card.last4 || '****',
+        exp_month: card.exp_month,
+        exp_year: card.exp_year,
+        funding: card.funding || null,
+      };
+    });
+    res.json({ payment_methods });
+  } catch (error) {
+    console.error('Erro ao listar payment methods (Stripe):', error?.message || error);
+    res.status(500).json({ error: 'Erro ao carregar cartões', payment_methods: [] });
+  }
+});
+
 // =====================================================
 // WEBHOOK (sem auth) - exposto via server.js com body raw
 // =====================================================

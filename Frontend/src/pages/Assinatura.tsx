@@ -7,6 +7,7 @@ import { ConfiguracoesSidebar } from "@/components/layout/ConfiguracoesSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { useBilling } from "@/hooks/useBilling";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   DollarSign,
   RefreshCw,
@@ -20,7 +21,11 @@ import {
   ExternalLink,
   Shield,
   Calendar,
-  Menu
+  Menu,
+  Receipt,
+  FileText,
+  RotateCcw,
+  XCircle,
 } from "lucide-react";
 
 const PLANOS = [
@@ -75,11 +80,12 @@ export default function Assinatura() {
     return { label: status, variant: 'secondary' as const, cor: 'text-muted-foreground' };
   };
 
-  // Ao abrir a página, buscar sempre status do billing e dados do tenant para exibir plano atual (ex.: após checkout Stripe)
+  // Ao abrir a página, buscar sempre status do billing, tenant e histórico (faturas + cartões)
   useEffect(() => {
     billing.fetchStatus();
     carregarDados();
-  }, [billing.fetchStatus, carregarDados]);
+    billing.fetchBillingHistory();
+  }, [billing.fetchStatus, billing.fetchBillingHistory, carregarDados]);
 
   // Atualizar plano selecionado quando tenant ou billing retornarem o plano atual
   useEffect(() => {
@@ -272,6 +278,162 @@ export default function Assinatura() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Cartão cadastrado */}
+      <Card className="border-0 shadow-lg overflow-hidden">
+        <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            Cartão cadastrado
+          </CardTitle>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Forma de pagamento usada na assinatura
+          </p>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          {billing.loadingHistory ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Carregando…
+            </div>
+          ) : billing.paymentMethods.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {billing.paymentMethods.map((pm) => (
+                <div
+                  key={pm.id}
+                  className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-muted/50 border border-border/50"
+                >
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold capitalize">
+                      {pm.brand === 'visa' ? 'Visa' : pm.brand === 'mastercard' ? 'Mastercard' : pm.brand}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      •••• {pm.last4} — expira {String(pm.exp_month).padStart(2, '0')}/{pm.exp_year}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 text-muted-foreground">
+              <p className="text-sm">Nenhum cartão cadastrado.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAbrirPortalStripe}
+                disabled={!billing.status?.stripe_customer_id || !canManageBilling}
+              >
+                Gerenciar no Portal Stripe
+                <ExternalLink className="h-3 w-3 ml-1.5" />
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Histórico de pagamentos, cancelamentos e reembolsos */}
+      <Card className="border-0 shadow-lg overflow-hidden">
+        <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                Histórico de pagamentos
+              </CardTitle>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                Faturas, reembolsos e cancelamentos
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => billing.fetchBillingHistory()}
+              disabled={billing.loadingHistory}
+            >
+              <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1.5 ${billing.loadingHistory ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          {billing.loadingHistory ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Carregando histórico…
+            </div>
+          ) : billing.invoices.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Nenhuma fatura encontrada.</p>
+              <p className="text-xs mt-1">O histórico aparecerá após a primeira cobrança.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-border/60">
+                    <th className="text-left py-3 px-3 font-medium text-muted-foreground">Data</th>
+                    <th className="text-left py-3 px-3 font-medium text-muted-foreground">Fatura</th>
+                    <th className="text-right py-3 px-3 font-medium text-muted-foreground">Valor</th>
+                    <th className="text-left py-3 px-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-right py-3 px-3 font-medium text-muted-foreground">Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billing.invoices.map((inv) => {
+                    const isRefunded = inv.statusLabel === 'refunded' || inv.amount_refunded > 0;
+                    const isVoid = (inv.status || '').toLowerCase() === 'void';
+                    const isPaid = (inv.status || '').toLowerCase() === 'paid' && !isRefunded;
+                    const statusBadge =
+                      isRefunded ? { label: 'Reembolsado', variant: 'secondary' as const, icon: RotateCcw } :
+                      isVoid ? { label: 'Cancelado', variant: 'outline' as const, icon: XCircle } :
+                      isPaid ? { label: 'Pago', variant: 'default' as const, icon: Check } :
+                      { label: inv.status || '—', variant: 'secondary' as const, icon: FileText };
+                    const StatusIcon = statusBadge.icon;
+                    return (
+                      <tr key={inv.id} className="border-b border-border/40 hover:bg-muted/30">
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          {inv.created ? formatDate(inv.created) : '—'}
+                        </td>
+                        <td className="py-3 px-3 font-medium">{inv.number}</td>
+                        <td className="py-3 px-3 text-right">
+                          {isRefunded && inv.amount_refunded > 0 ? (
+                            <span className="text-red-600 dark:text-red-400">-{formatCurrency(inv.amount_refunded)}</span>
+                          ) : (
+                            formatCurrency(inv.amount_paid)
+                          )}
+                        </td>
+                        <td className="py-3 px-3">
+                          <Badge variant={statusBadge.variant} className="text-[10px] sm:text-xs gap-1">
+                            <StatusIcon className="h-3 w-3" />
+                            {statusBadge.label}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          {(inv.invoice_pdf || inv.hosted_invoice_url) && (
+                            <a
+                              href={inv.invoice_pdf || inv.hosted_invoice_url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline text-xs font-medium inline-flex items-center gap-1"
+                            >
+                              PDF
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

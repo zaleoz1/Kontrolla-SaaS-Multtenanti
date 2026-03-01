@@ -124,6 +124,23 @@ export async function createStripeBillingPortalSession({ customerId, returnUrl }
 export async function retrieveStripeSubscription(subscriptionId) {
   return stripeGet(`/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
 }
+
+/** Lista faturas do cliente (histórico de pagamentos); expand charge para ver reembolsos */
+export async function listStripeInvoices(customerId, limit = 30) {
+  const params = new URLSearchParams();
+  params.append('customer', customerId);
+  params.append('limit', String(limit));
+  params.append('expand[0]', 'data.charge');
+  return stripeGet(`/v1/invoices?${params.toString()}`);
+}
+
+/** Lista métodos de pagamento (cartões) do cliente */
+export async function listStripePaymentMethods(customerId, type = 'card') {
+  const params = new URLSearchParams();
+  params.append('customer', customerId);
+  params.append('type', type);
+  return stripeGet(`/v1/payment_methods?${params.toString()}`);
+}
  
 function timingSafeEqualHex(a, b) {
   const aBuf = Buffer.from(String(a || ''), 'hex');
