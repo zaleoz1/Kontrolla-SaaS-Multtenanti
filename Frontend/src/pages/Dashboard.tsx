@@ -578,7 +578,7 @@ export default function Dashboard() {
                         <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                         <Badge 
                           variant="secondary"
-                          className={`${Number(produto.estoque_atual) === 0 ? "bg-destructive/20 border-destructive/30 text-destructive dark:text-red-400" : "bg-warning/20 border-warning/30 text-black dark:text-black"} text-xs shrink-0`}
+                          className={`${Number(produto.estoque_atual) === 0 ? "bg-destructive border-destructive/50 text-white dark:text-white" : "bg-warning/20 border-warning/30 text-black dark:text-black"} text-xs shrink-0`}
                         >
                           {formatarEstoque(produto)}
                         </Badge>

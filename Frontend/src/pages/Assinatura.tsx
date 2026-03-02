@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useBilling } from "@/hooks/useBilling";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { PaymentMethodCard } from "@/components/assinatura/PaymentMethodCard";
 import {
   DollarSign,
   RefreshCw,
@@ -26,33 +27,70 @@ import {
   FileText,
   RotateCcw,
   XCircle,
+  ChevronDown,
+  ChevronUp,
+  List,
 } from "lucide-react";
 
 const PLANOS = [
   {
     id: 'starter' as const,
     nome: 'Starter',
-    descricao: 'Ideal para quem está começando',
+    descricao: 'Perfeito para pequenos negócios',
+    preco: 'R$ 57',
+    periodo: '/mês',
     icone: Zap,
     cor: 'blue',
-    recursos: ['Até 100 produtos', 'Relatórios básicos', '1 usuário', 'Suporte por email'],
+    recursos: [
+      'Até 100 produtos',
+      'Até 500 vendas/mês',
+      '1 usuário',
+      'Relatórios básicos',
+      'Suporte por email',
+      'Catálogo online',
+      'Backup diário',
+    ],
   },
   {
     id: 'professional' as const,
     nome: 'Professional',
-    descricao: 'Para negócios em crescimento',
+    descricao: 'Ideal para empresas em crescimento',
+    preco: 'R$ 167',
+    periodo: '/mês',
     icone: Crown,
     cor: 'primary',
     destaque: true,
-    recursos: ['Produtos ilimitados', 'Relatórios avançados', 'Até 5 usuários', 'Suporte prioritário', 'Catálogo online'],
+    recursos: [
+      'Produtos ilimitados',
+      'Vendas ilimitadas',
+      'Até 5 usuários',
+      'Relatórios avançados',
+      'NF-e integrada',
+      'Suporte prioritário',
+      'API completa',
+      'Backup automático',
+      'Integrações populares',
+    ],
   },
   {
     id: 'enterprise' as const,
     nome: 'Enterprise',
-    descricao: 'Solução completa para grandes operações',
+    descricao: 'Para grandes empresas',
+    preco: 'R$ 397',
+    periodo: '/mês',
     icone: Building2,
     cor: 'purple',
-    recursos: ['Tudo do Professional', 'Usuários ilimitados', 'API dedicada', 'Suporte 24/7', 'Gerente de conta'],
+    recursos: [
+      'Tudo do Professional',
+      'Usuários ilimitados',
+      'Multi-empresas',
+      'Integrações customizadas',
+      'Suporte 24/7',
+      'Treinamento dedicado',
+      'SLA 99.9% garantido',
+      'Consultoria incluída',
+      'White-label disponível',
+    ],
   },
 ];
 
@@ -62,6 +100,7 @@ export default function Assinatura() {
   const { dadosTenant, dadosConta, carregarDados, atualizarPlanoTenant } = useConfiguracoes();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [planoSelecionado, setPlanoSelecionado] = useState<'starter' | 'professional' | 'enterprise'>('professional');
+  const [recursosExpandidos, setRecursosExpandidos] = useState(false);
 
   const canManageBilling = useMemo(() => {
     return dadosConta?.role === 'admin';
@@ -306,22 +345,14 @@ export default function Assinatura() {
           ) : billing.paymentMethods.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {billing.paymentMethods.map((pm) => (
-                <div
+                <PaymentMethodCard
                   key={pm.id}
-                  className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-muted/50 border border-border/50"
-                >
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold capitalize">
-                      {pm.brand === 'visa' ? 'Visa' : pm.brand === 'mastercard' ? 'Mastercard' : pm.brand}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      •••• {pm.last4} — expira {String(pm.exp_month).padStart(2, '0')}/{pm.exp_year}
-                    </p>
-                  </div>
-                </div>
+                  brand={pm.brand ?? "card"}
+                  last4={pm.last4 ?? "****"}
+                  expMonth={pm.exp_month ?? 0}
+                  expYear={pm.exp_year ?? 0}
+                  className="w-full max-w-[180px]"
+                />
               ))}
             </div>
           ) : (
@@ -479,7 +510,7 @@ export default function Assinatura() {
             return (
               <Card
                 key={plano.id}
-                className={`relative cursor-pointer overflow-hidden transition-all duration-300 ease-out rounded-2xl border ${
+                className={`relative cursor-pointer overflow-hidden transition-all duration-300 ease-out rounded-2xl border flex flex-col h-full ${
                   isSelecionado
                     ? `ring-1 ${cores.ring} shadow-lg border-primary/50 bg-gradient-to-b ${cores.gradient} scale-[1.01]`
                     : 'border-border/60 hover:border-border/80 hover:shadow-lg'
@@ -492,13 +523,6 @@ export default function Assinatura() {
                   plano.cor === 'purple' ? 'bg-gradient-to-r from-purple-500 to-purple-400' :
                   'bg-gradient-to-r from-primary to-primary/80'
                 }`} />
-                {plano.destaque && (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-                    <Badge className="bg-gradient-to-r from-primary to-primary/90 text-white shadow-lg text-[10px] sm:text-xs px-3 py-0.5 font-medium border-0">
-                      Mais popular
-                    </Badge>
-                  </div>
-                )}
                 {isAtual && (
                   <div className="absolute top-4 right-4 z-10">
                     <Badge variant="secondary" className="bg-background/95 backdrop-blur text-[10px] sm:text-xs px-2.5 py-0.5 border border-primary/30 text-primary font-medium">
@@ -511,33 +535,47 @@ export default function Assinatura() {
                     <div className={`p-3 rounded-xl ${cores.bg} w-fit`}>
                       <Icon className={`h-6 w-6 sm:h-7 sm:w-7 ${cores.icon}`} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">{plano.nome}</CardTitle>
                       <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-snug">{plano.descricao}</p>
+                      <p className="mt-2 text-lg sm:text-xl font-bold text-foreground">
+                        {plano.preco}
+                        <span className="text-sm font-normal text-muted-foreground ml-1">{plano.periodo}</span>
+                      </p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0">
-                  <ul className="space-y-3">
-                    {plano.recursos.map((recurso, i) => (
-                      <li key={i} className="flex items-center gap-3 text-sm">
-                        <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
-                          isSelecionado ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                        }`}>
-                          <Check className="h-3 w-3" strokeWidth={2.5} />
-                        </span>
-                        <span className={isSelecionado ? 'text-foreground/90' : 'text-muted-foreground'}>{recurso}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isSelecionado && (
-                    <div className="mt-5 pt-4 border-t border-border/60">
-                      <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
-                        <Check className="h-4 w-4" strokeWidth={2.5} />
-                        Selecionado
-                      </div>
-                    </div>
+                <CardContent className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0 flex flex-col flex-1 min-h-0">
+                  {recursosExpandidos && (
+                    <ul className="space-y-3">
+                      {plano.recursos.map((recurso, i) => (
+                        <li key={i} className="flex items-center gap-3 text-sm">
+                          <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                            isSelecionado ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                          }`}>
+                            <Check className="h-3 w-3" strokeWidth={2.5} />
+                          </span>
+                          <span className={isSelecionado ? 'text-foreground/90' : 'text-muted-foreground'}>{recurso}</span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
+                  <div className="mt-auto pt-4 border-t border-border/60">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRecursosExpandidos((prev) => !prev);
+                      }}
+                    >
+                      <List className="h-4 w-4" />
+                      {recursosExpandidos ? 'Ocultar recursos' : 'Ver recursos'}
+                      {recursosExpandidos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
