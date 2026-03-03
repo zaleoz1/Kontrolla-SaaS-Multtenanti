@@ -124,11 +124,12 @@ router.get('/status', async (req, res) => {
 
     if (subscription) {
       if (subscription.status) subscription_status = subscription.status;
-      if (subscription.current_period_end) {
+      const periodEnd = subscription.current_period_end;
+      if (periodEnd != null && periodEnd !== '') {
         subscription_current_period_end =
-          typeof subscription.current_period_end === 'number'
-            ? new Date(subscription.current_period_end * 1000).toISOString()
-            : subscription.current_period_end;
+          typeof periodEnd === 'number'
+            ? new Date(periodEnd * 1000).toISOString()
+            : String(periodEnd);
       }
       const planId =
         subscription?.metadata?.plan_id ||
@@ -152,6 +153,17 @@ router.get('/status', async (req, res) => {
         }
       } else {
         subscription_current_period_end = new Date(subscription_current_period_end).toISOString();
+      }
+    }
+
+    // Persistir no tenant quando veio do Stripe (para próximas requisições não dependerem da API)
+    if (subscription && subscription_current_period_end) {
+      try {
+        await updateTenantStripeFields(req.user.tenant_id, {
+          subscription_current_period_end,
+        });
+      } catch (err) {
+        console.warn('Falha ao persistir subscription_current_period_end no tenant:', err?.message || err);
       }
     }
 
