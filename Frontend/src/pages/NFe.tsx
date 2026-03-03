@@ -51,6 +51,7 @@ import {
   DollarSign,
   Settings,
   Trash2,
+  Hash,
   RefreshCw,
   Loader2,
   Pencil,
@@ -89,6 +90,7 @@ export default function NFe() {
     consultarNfeSefaz,
     cancelarNfe,
     reprocessarNfe,
+    reatribuirNumeroEReemitir,
     marcarNfeComoAutorizada,
     downloadXml,
     downloadDanfe,
@@ -148,11 +150,12 @@ export default function NFe() {
   const [nfeParaReprocessar, setNfeParaReprocessar] = useState<Nfe | null>(null);
   const [nfeParaMarcarAutorizada, setNfeParaMarcarAutorizada] = useState<Nfe | null>(null);
   const [chaveMarcarAutorizada, setChaveMarcarAutorizada] = useState("");
+  const [reatribuindoId, setReatribuindoId] = useState<number | null>(null);
   
-  // Erro de duplicidade na SEFAZ = nota pode já estar autorizada; reprocessar não é permitido
+  // Erro de duplicidade na SEFAZ (NF-e ou NFC-e) = nota pode já estar autorizada; reprocessar não é permitido
   const isErroDuplicidadeNfe = (motivo: string | null | undefined) =>
-    !!motivo && /duplicidade de nf-?e/i.test(motivo);
-  // Extrair chave de acesso da mensagem de rejeição (ex.: [chNFe: 21240752390958000130550010000000091199820007])
+    !!motivo && /duplicidade\s+de\s+(nf-?e|nfc-?e)/i.test(motivo);
+  // Extrair chave de acesso da mensagem de rejeição (ex.: [chNFe:21260252390958000130650010000000561707038098] ou [chNFe: 21240...])
   const extrairChaveDoMotivo = (motivo: string | null | undefined) => {
     if (!motivo) return "";
     const m = motivo.match(/\[chNFe:\s*(\d+)\]/i);
@@ -529,6 +532,37 @@ export default function NFe() {
         description: err instanceof Error ? err.message : "Não foi possível atualizar o status.",
         variant: "destructive"
       });
+    }
+  };
+
+  // Reatribuir número e reemitir (para notas com erro de duplicidade já criadas)
+  const handleReatribuirNumeroEReemitir = async (nfe: Nfe) => {
+    try {
+      setReatribuindoId(nfe.id);
+      const resultado = await reatribuirNumeroEReemitir(nfe.id);
+      if (resultado.success) {
+        toast({
+          title: "Número reatribuído e NF-e reenviada",
+          description: resultado.mensagem || `Protocolo: ${resultado.protocolo || "Processando..."}`
+        });
+      } else {
+        toast({
+          title: "NF-e reenviada",
+          description: resultado.mensagem || "Aguardando processamento pela SEFAZ."
+        });
+      }
+      if (nfeSelecionada?.id === nfe.id) {
+        const atualizada = await fetchNfe(nfe.id);
+        if (atualizada) setNfeSelecionada(atualizada);
+      }
+    } catch (err) {
+      toast({
+        title: "Erro ao reatribuir número",
+        description: err instanceof Error ? err.message : "Não foi possível reatribuir e reenviar.",
+        variant: "destructive"
+      });
+    } finally {
+      setReatribuindoId(null);
     }
   };
 
@@ -993,19 +1027,36 @@ export default function NFe() {
                                 Verificar
                               </Button>
                               {isErroDuplicidadeNfe(nfe.motivo_status) && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="bg-success/10 hover:bg-success/20"
-                                  onClick={() => {
-                                    setNfeParaMarcarAutorizada(nfe);
-                                    setChaveMarcarAutorizada(extrairChaveDoMotivo(nfe.motivo_status));
-                                  }}
-                                  title="A nota pode já estar autorizada na SEFAZ. Marque como autorizada para corrigir o status."
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Marcar como autorizada
-                                </Button>
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="bg-primary/10 hover:bg-primary/20"
+                                    onClick={() => handleReatribuirNumeroEReemitir(nfe)}
+                                    disabled={reatribuindoId === nfe.id}
+                                    title="Atribuir um novo número a esta nota e reenviar para a SEFAZ (mesma nota, sem criar outra)."
+                                  >
+                                    {reatribuindoId === nfe.id ? (
+                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Hash className="h-4 w-4 mr-2" />
+                                    )}
+                                    Tentar com novo número
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="bg-success/10 hover:bg-success/20"
+                                    onClick={() => {
+                                      setNfeParaMarcarAutorizada(nfe);
+                                      setChaveMarcarAutorizada(extrairChaveDoMotivo(nfe.motivo_status));
+                                    }}
+                                    title="A nota pode já estar autorizada na SEFAZ. Marque como autorizada para corrigir o status."
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Marcar como autorizada
+                                  </Button>
+                                </>
                               )}
                               <Button 
                                 variant="outline" 
@@ -2061,7 +2112,7 @@ export default function NFe() {
                         try {
                           const resultado = await consultarNfeSefaz(nfeSelecionada.id);
                           const msgSefaz = String(resultado.mensagem_sefaz || '');
-                          const isDuplicidade = /duplicidade\s+de\s+nf-?e/i.test(msgSefaz);
+                          const isDuplicidade = /duplicidade\s+de\s+(nf-?e|nfc-?e)/i.test(msgSefaz);
                           const isJaCancelada = resultado.status_sefaz === '218' || /já está cancelada|já cancelada na base/i.test(msgSefaz);
                           if (resultado.status === "autorizado") {
                             toast({ title: "NF-e autorizada!", description: resultado.mensagem_sefaz || `Protocolo: ${resultado.protocolo || "N/A"}` });
@@ -2094,6 +2145,22 @@ export default function NFe() {
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Verificar status na SEFAZ
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-primary/10 hover:bg-primary/20"
+                      onClick={() => nfeSelecionada && handleReatribuirNumeroEReemitir(nfeSelecionada)}
+                      disabled={nfeSelecionada ? reatribuindoId === nfeSelecionada.id : false}
+                      title="Atribuir um novo número a esta nota e reenviar para a SEFAZ (mesma nota, sem criar outra)."
+                    >
+                      {nfeSelecionada && reatribuindoId === nfeSelecionada.id ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Hash className="h-4 w-4 mr-2" />
+                      )}
+                      Tentar com novo número
                     </Button>
                     <Button
                       type="button"

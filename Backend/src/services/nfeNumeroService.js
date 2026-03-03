@@ -36,18 +36,37 @@ function getChaveSequencia(ambiente, tipoDocumento = 'nfe') {
  * Chamado quando a SEFAZ retorna duplicidade (o número já foi usado) ou já cancelada (número consumido).
  * @param {number} tenantId - ID do tenant
  * @param {string} ambiente - 'homologacao' ou 'producao'
+ * @param {string} tipoDocumento - 'nfe' ou 'nfce'
  * @param {string|number} numeroUsado - Número que foi rejeitado (ex.: 14)
+ * @param {import('mysql2/promise').PoolConnection} [conn] - Conexão opcional (para usar dentro de transação)
  */
-export async function avancarSequenciaAposDuplicidadeDocumento(tenantId, ambiente, tipoDocumento, numeroUsado) {
+export async function avancarSequenciaAposDuplicidadeDocumento(tenantId, ambiente, tipoDocumento, numeroUsado, conn = null) {
   const chave = getChaveSequencia(ambiente, tipoDocumento);
   const num = parseInt(String(numeroUsado).replace(/\D/g, ''), 10) || 0;
   if (num <= 0) return;
-  await query(
+  const run = conn ? (sql, params) => conn.execute(sql, params) : query;
+  await run(
     `INSERT INTO tenant_configuracoes (tenant_id, chave, valor)
      VALUES (?, ?, ?)
      ON DUPLICATE KEY UPDATE valor = GREATEST(CAST(valor AS UNSIGNED), ?)`,
     [tenantId, chave, String(num), num]
   );
+}
+
+/**
+ * Reserva o próximo número disponível após rejeição por duplicidade, dentro de uma transação.
+ * Avança a sequência com o número rejeitado e retorna o próximo número (para atualizar a mesma NF-e e reenviar).
+ * Garante que nenhuma outra emissão use o mesmo número enquanto a transação estiver ativa.
+ * @param {import('mysql2/promise').PoolConnection} conn - Conexão da transação (com lock)
+ * @param {number} tenantId - ID do tenant
+ * @param {string} ambiente - 'homologacao' ou 'producao'
+ * @param {string} tipoDocumento - 'nfe' ou 'nfce'
+ * @param {string|number} numeroRejeitado - Número que a SEFAZ rejeitou por duplicidade
+ * @returns {Promise<string>} - Próximo número formatado (9 dígitos)
+ */
+export async function obterProximoNumeroAposDuplicidade(conn, tenantId, ambiente, tipoDocumento, numeroRejeitado) {
+  await avancarSequenciaAposDuplicidadeDocumento(tenantId, ambiente, tipoDocumento, numeroRejeitado, conn);
+  return gerarProximoNumeroDocumento(conn, tenantId, ambiente, tipoDocumento);
 }
 
 /**

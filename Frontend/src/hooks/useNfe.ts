@@ -507,6 +507,37 @@ export function useNfe() {
     }
   }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
 
+  // Reatribuir número e reemitir (para notas com erro de duplicidade já criadas)
+  const reatribuirNumeroEReemitir = useCallback(async (id: number): Promise<{
+    success: boolean;
+    status?: string;
+    protocolo?: string;
+    chave_acesso?: string;
+    mensagem?: string;
+  }> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await makeRequest(`/nfe/${id}/reatribuir-numero-e-reemitir`, {
+        method: 'POST'
+      }) as {
+        success: boolean;
+        status?: string;
+        protocolo?: string;
+        chave_acesso?: string;
+        mensagem?: string;
+      };
+      await fetchNfes({ page: pagination.page, limit: pagination.limit });
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao reatribuir número e reemitir');
+      console.error('Erro ao reatribuir número e reemitir NF-e:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
+
   // Download XML da NF-e
   const downloadXml = useCallback(async (id: number, numero: string, chaveAcesso?: string): Promise<void> => {
     try {
@@ -736,6 +767,7 @@ export function useNfe() {
     consultarNfeSefaz,
     cancelarNfe,
     reprocessarNfe,
+    reatribuirNumeroEReemitir,
     downloadXml,
     downloadDanfe,
     

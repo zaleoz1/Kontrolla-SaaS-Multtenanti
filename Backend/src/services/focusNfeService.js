@@ -21,13 +21,13 @@
  */
 
 import axios from 'axios';
-import { query } from '../database/connection.js';
-import { avancarSequenciaAposDuplicidadeDocumento } from './nfeNumeroService.js';
+import { query, transaction } from '../database/connection.js';
+import { avancarSequenciaAposDuplicidadeDocumento, obterProximoNumeroAposDuplicidade } from './nfeNumeroService.js';
 
 /** Rejeições SEFAZ em que o número já foi "consumido" e a sequência deve avançar (próxima emissão usa número seguinte). */
 function deveAvancarSequencia(statusSefaz, mensagem) {
   const msg = String(mensagem || '');
-  if (/duplicidade\s+de\s+nf-?e|rejei[cç][aã]o[^.]*duplicidade/i.test(msg)) return true;
+  if (/duplicidade\s+de\s+(nf-?e|nfc-?e)|rejei[cç][aã]o[^.]*duplicidade/i.test(msg)) return true;
   if (statusSefaz === '218' || /já está cancelada|já cancelada na base/i.test(msg)) return true;
   return false;
 }
@@ -707,12 +707,16 @@ function extrairNumero(endereco) {
 }
 
 /**
- * Emite uma NF-e através da API Focus NFe
+ * Emite uma NF-e através da API Focus NFe.
+ * Em caso de rejeição por duplicidade (número já usado na SEFAZ), o sistema pode tentar
+ * automaticamente um novo número (uma única vez), atualizando o mesmo registro e reenviando.
  * @param {number} tenantId - ID do tenant
  * @param {number} nfeId - ID da NF-e no banco de dados
+ * @param {{ retryPorDuplicidade?: boolean }} [options] - retryPorDuplicidade: true = já é retry, não tentar de novo
  * @returns {Promise<Object>}
  */
-export async function emitirNfe(tenantId, nfeId) {
+export async function emitirNfe(tenantId, nfeId, options = {}) {
+  const retryPorDuplicidade = !!options.retryPorDuplicidade;
   try {
     // Buscar configurações
     const focusConfig = await getFocusNfeConfig(tenantId);
@@ -827,14 +831,38 @@ export async function emitirNfe(tenantId, nfeId) {
     } catch (postError) {
       const dataErro = postError.response?.data || {};
       const msgErro = dataErro.mensagem || dataErro.mensagem_sefaz || postError.message;
-      // Salvar ref mesmo quando a API retorna erro (ex.: duplicidade), para permitir "Verificar" depois
+      const textoErro = String(msgErro || '');
+      const ehDuplicidade = deveAvancarSequencia(dataErro.status_sefaz, textoErro);
+
+      // Retry automático por duplicidade: atribuir novo número à MESMA nota e reenviar uma vez
+      if (ehDuplicidade && !retryPorDuplicidade) {
+        try {
+          const novoNumero = await transaction(async (conn) => {
+            const proximo = await obterProximoNumeroAposDuplicidade(conn, tenantId, nfe.ambiente, tipoDocumento, nfe.numero);
+            await conn.execute(
+              `UPDATE nfe SET numero = ?, status = 'pendente', motivo_status = NULL, chave_acesso = NULL, protocolo = NULL, focus_nfe_ref = NULL WHERE id = ? AND tenant_id = ?`,
+              [proximo, nfeId, tenantId]
+            );
+            return proximo;
+          });
+          console.log(`[Focus NFe] Duplicidade: número ${nfe.numero} já usado na SEFAZ. Atribuído novo número ${novoNumero} e reenviando (NFe id=${nfeId}).`);
+          return emitirNfe(tenantId, nfeId, { retryPorDuplicidade: true });
+        } catch (errRetry) {
+          console.warn('[Focus NFe] Retry por duplicidade falhou:', errRetry?.message);
+          await query(
+            `UPDATE nfe SET status = 'erro', motivo_status = ?, focus_nfe_ref = ? WHERE id = ? AND tenant_id = ?`,
+            [msgErro, referencia, nfeId, tenantId]
+          );
+          throw new Error(msgErro);
+        }
+      }
+
+      // Salvar ref mesmo quando a API retorna erro (ex.: duplicidade em retry), para permitir "Verificar" depois
       await query(
         `UPDATE nfe SET status = 'erro', motivo_status = ?, focus_nfe_ref = ? WHERE id = ? AND tenant_id = ?`,
         [msgErro, referencia, nfeId, tenantId]
       );
-      // Se for duplicidade ou NF-e já cancelada (número consumido na SEFAZ), avançar sequência
-      const textoErro = String(msgErro || '');
-      if (deveAvancarSequencia(dataErro.status_sefaz, textoErro)) {
+      if (ehDuplicidade) {
         avancarSequenciaAposDuplicidadeDocumento(tenantId, nfe.ambiente, tipoDocumento, nfe.numero).catch(() => {});
       }
       throw new Error(msgErro);
@@ -842,6 +870,27 @@ export async function emitirNfe(tenantId, nfeId) {
     
     const { data } = response;
     
+    const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
+    const ehErroDuplicidade = data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgSefaz);
+
+    // Retry automático por duplicidade na resposta: atribuir novo número à MESMA nota e reenviar uma vez
+    if (ehErroDuplicidade && !retryPorDuplicidade) {
+      try {
+        const novoNumero = await transaction(async (conn) => {
+          const proximo = await obterProximoNumeroAposDuplicidade(conn, tenantId, nfe.ambiente, tipoDocumento, nfe.numero);
+          await conn.execute(
+            `UPDATE nfe SET numero = ?, status = 'pendente', motivo_status = NULL, chave_acesso = NULL, protocolo = NULL, focus_nfe_ref = NULL WHERE id = ? AND tenant_id = ?`,
+            [proximo, nfeId, tenantId]
+          );
+          return proximo;
+        });
+        console.log(`[Focus NFe] Duplicidade (resposta): número ${nfe.numero} já usado na SEFAZ. Atribuído novo número ${novoNumero} e reenviando (NFe id=${nfeId}).`);
+        return emitirNfe(tenantId, nfeId, { retryPorDuplicidade: true });
+      } catch (errRetry) {
+        console.warn('[Focus NFe] Retry por duplicidade (resposta) falhou:', errRetry?.message);
+      }
+    }
+
     // Salvar referência e status
     await query(
       `UPDATE nfe SET 
@@ -863,9 +912,8 @@ export async function emitirNfe(tenantId, nfeId) {
         tenantId
       ]
     );
-    // Se rejeitou (duplicidade 539 ou já cancelada 218), avançar sequência para a próxima emissão não repetir o número
-    const msgSefaz = String(data.mensagem_sefaz || data.mensagem || '');
-    if (data.status === 'erro_autorizacao' && deveAvancarSequencia(data.status_sefaz, msgSefaz)) {
+    // Se rejeitou por duplicidade (ex.: 539) ou já cancelada (218), avançar sequência para a próxima emissão não repetir o número
+    if (ehErroDuplicidade) {
       avancarSequenciaAposDuplicidadeDocumento(tenantId, nfe.ambiente, tipoDocumento, nfe.numero).catch(() => {});
     }
     
@@ -894,6 +942,42 @@ export async function emitirNfe(tenantId, nfeId) {
     
     throw new Error(error.response?.data?.mensagem || error.message);
   }
+}
+
+/**
+ * Reatribui um novo número à NF-e com erro de duplicidade e reemite (para notas já criadas com status erro).
+ * Atualiza o MESMO registro com o próximo número disponível e envia para a SEFAZ.
+ * @param {number} tenantId - ID do tenant
+ * @param {number} nfeId - ID da NF-e no banco de dados
+ * @returns {Promise<Object>} - Resultado da emissão (mesmo formato de emitirNfe)
+ */
+export async function reatribuirNumeroEReemitirNfe(tenantId, nfeId) {
+  const nfeRows = await query(
+    `SELECT id, numero, serie, ambiente, modelo, status, motivo_status FROM nfe WHERE id = ? AND tenant_id = ?`,
+    [nfeId, tenantId]
+  );
+  if (!nfeRows || nfeRows.length === 0) {
+    throw new Error('NF-e não encontrada');
+  }
+  const nfeRow = nfeRows[0];
+  if (nfeRow.status !== 'erro') {
+    throw new Error('Apenas NF-e com status "erro" podem ser reatribuídas. Status atual: ' + (nfeRow.status || ''));
+  }
+  const motivo = String(nfeRow.motivo_status || '');
+  if (!/duplicidade\s+de\s+(nf-?e|nfc-?e)/i.test(motivo)) {
+    throw new Error('Reatribuição por número está disponível apenas para notas com erro de duplicidade na SEFAZ.');
+  }
+  const tipoDocumento = getTipoDocumentoFromModelo(nfeRow.modelo);
+  const novoNumero = await transaction(async (conn) => {
+    const proximo = await obterProximoNumeroAposDuplicidade(conn, tenantId, nfeRow.ambiente, tipoDocumento, nfeRow.numero);
+    await conn.execute(
+      `UPDATE nfe SET numero = ?, status = 'pendente', motivo_status = NULL, chave_acesso = NULL, protocolo = NULL, focus_nfe_ref = NULL WHERE id = ? AND tenant_id = ?`,
+      [proximo, nfeId, tenantId]
+    );
+    return proximo;
+  });
+  console.log(`[Focus NFe] Reatribuição manual: NF-e id=${nfeId} número ${nfeRow.numero} → ${novoNumero}; reenviando.`);
+  return emitirNfe(tenantId, nfeId);
 }
 
 /**

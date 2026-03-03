@@ -7,6 +7,7 @@ import {
   emitirNfe as focusEmitirNfe,
   consultarNfe as focusConsultarNfe,
   cancelarNfe as focusCancelarNfe,
+  reatribuirNumeroEReemitirNfe as focusReatribuirNumeroEReemitirNfe,
   obterXmlNfe,
   obterDanfeNfe,
   getFocusNfeConfig,
@@ -358,6 +359,23 @@ router.patch('/:id/status', validateId, handleValidationErrors, async (req, res)
     console.error('Erro ao atualizar status da NF-e:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Reatribuir novo número e reemitir (para notas já criadas com status erro de duplicidade)
+router.post('/:id/reatribuir-numero-e-reemitir', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const resultado = await focusReatribuirNumeroEReemitirNfe(req.user.tenant_id, id);
+    res.json({
+      message: 'Número reatribuído e NF-e reenviada para a SEFAZ.',
+      ...resultado
+    });
+  } catch (error) {
+    console.error('Erro ao reatribuir número e reemitir NF-e:', error);
+    res.status(400).json({
+      error: error.message || 'Erro ao reatribuir número e reemitir NF-e'
     });
   }
 });
@@ -778,9 +796,9 @@ router.post('/:id/reprocessar', validateId, handleValidationErrors, async (req, 
       });
     }
     
-    // Não permitir reprocessar quando a SEFAZ rejeitou por duplicidade: a nota pode já estar autorizada
+    // Não permitir reprocessar quando a SEFAZ rejeitou por duplicidade (NF-e ou NFC-e): a nota pode já estar autorizada
     const motivo = (nfe.motivo_status || '').toLowerCase();
-    if (motivo.includes('duplicidade de nf-e') || motivo.includes('duplicidade de nfe')) {
+    if (/duplicidade\s+de\s+(nf-?e|nfc-?e)/.test(motivo)) {
       return res.status(400).json({
         error: 'Esta NF-e não pode ser reprocessada: a SEFAZ indicou duplicidade (a nota pode já estar autorizada). Use "Verificar" para consultar o status na SEFAZ ou verifique na lista de notas autorizadas.'
       });
