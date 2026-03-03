@@ -829,7 +829,28 @@ router.get('/vendas-periodo-detalhado', async (req, res) => {
       [tenantId, data_inicio, data_fim]
     );
 
-    // 5. Informações do responsável (usuário logado)
+    // 5. Lista de vendas do período (para relatório Excel com detalhamento)
+    const listaVendas = await query(
+      `SELECT 
+        v.id,
+        v.numero_venda,
+        v.data_venda,
+        v.status,
+        v.total,
+        c.nome as cliente_nome,
+        c.cpf_cnpj as cliente_documento,
+        COALESCE(
+          (SELECT SUM(vp.valor - COALESCE(vp.troco, 0)) FROM venda_pagamentos vp WHERE vp.venda_id = v.id),
+          v.total
+        ) as valor_pago
+       FROM vendas v
+       LEFT JOIN clientes c ON v.cliente_id = c.id AND c.tenant_id = v.tenant_id
+       WHERE v.tenant_id = ? AND DATE(v.data_venda) BETWEEN ? AND ?
+       ORDER BY v.data_venda DESC, v.id DESC`,
+      [tenantId, data_inicio, data_fim]
+    );
+
+    // 6. Informações do responsável (usuário logado)
     const [responsavel] = await query(
       `SELECT nome, sobrenome, email 
        FROM usuarios 
@@ -856,7 +877,8 @@ router.get('/vendas-periodo-detalhado', async (req, res) => {
       resumo_geral: resumoGeral,
       formas_pagamento: formasPagamento,
       vendas_por_categoria: vendasPorCategoriaComPercentual,
-      vendas_por_data: vendasPorData
+      vendas_por_data: vendasPorData,
+      lista_vendas: listaVendas
     });
   } catch (error) {
     console.error('Erro ao gerar relatório detalhado de vendas:', error);

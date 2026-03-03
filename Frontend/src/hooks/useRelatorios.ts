@@ -537,16 +537,24 @@ export const useRelatorios = () => {
           }
         });
 
+        // Para cada mês: usar estritamente primeiro e último dia do mês (evitar timezone e mistura de meses)
+        const toYMD = (y: number, m: number, d: number) =>
+          `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const lista: Array<{ ano: number; mes: number; dataInicio: string; dataFim: string; label: string }> = [];
         porMes.forEach((val) => {
           if (val.total_vendas <= 0) return;
-          const primeiroDia = new Date(val.ano, val.mes - 1, 1);
-          const ultimoDia = new Date(val.ano, val.mes, 0);
+          const dataInicio = toYMD(val.ano, val.mes, 1);
+          const ultimoDiaDoMes = new Date(val.ano, val.mes, 0);
+          const dataFim = toYMD(
+            ultimoDiaDoMes.getFullYear(),
+            ultimoDiaDoMes.getMonth() + 1,
+            ultimoDiaDoMes.getDate()
+          );
           lista.push({
             ano: val.ano,
             mes: val.mes,
-            dataInicio: primeiroDia.toISOString().split('T')[0],
-            dataFim: ultimoDia.toISOString().split('T')[0],
+            dataInicio,
+            dataFim,
             label: `${nomesMeses[val.mes - 1]} ${val.ano}`
           });
         });

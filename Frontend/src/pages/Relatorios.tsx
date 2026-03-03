@@ -59,7 +59,7 @@ import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 
 import { gerarRelatorioVendasPDF, gerarRelatorioProdutosPDF, gerarRelatorioClientesPDF, gerarRelatorioFinanceiroPDF, gerarRelatorioEstoquePDF } from "@/utils/gerarPDF";
-
+import { exportarParaExcel, exportarMultiplasAbas } from "@/utils/gerarExcel";
 import { api } from "@/lib/api";
 
 
@@ -261,7 +261,13 @@ export default function Relatorios() {
 
 
 
-  const baixarRelatorioMes = async (dataInicio: string, dataFim: string) => {
+  // Nome da empresa para o arquivo (sanitizado para uso em nome de arquivo)
+  const nomeEmpresaArquivo = (() => {
+    const n = (tenant?.nome_fantasia || tenant?.razao_social || tenant?.nome || 'Empresa').toString().trim();
+    return n.replace(/[/\\:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim() || 'Empresa';
+  })();
+
+  const baixarRelatorioMes = async (dataInicio: string, dataFim: string, labelMes?: string) => {
     const key = dataInicio;
     setBaixandoRelatorioMes(key);
     try {
@@ -270,10 +276,62 @@ export default function Relatorios() {
       });
       const dados = response.data;
       if (dados && dados.resumo_geral) {
-        gerarRelatorioVendasPDF(dados, formatarMoeda);
+        const nomeArquivo = labelMes
+          ? `${nomeEmpresaArquivo} - Vendas ${labelMes}.pdf`
+          : undefined;
+        gerarRelatorioVendasPDF(dados, formatarMoeda, nomeArquivo);
       }
     } catch (err) {
       console.error('Erro ao gerar relatório do mês:', err);
+    } finally {
+      setBaixandoRelatorioMes(null);
+    }
+  };
+
+  const baixarRelatorioMesExcel = async (dataInicio: string, dataFim: string, labelMes?: string) => {
+    const key = `${dataInicio}-excel`;
+    setBaixandoRelatorioMes(key);
+    try {
+      const response = await api.get('/relatorios/vendas-periodo-detalhado', {
+        params: { data_inicio: dataInicio, data_fim: dataFim }
+      });
+      const dados = response.data;
+      if (dados && dados.resumo_geral) {
+        const vendasPorData = (dados.vendas_por_data || []).map((r: { data_venda: string; quantidade_vendas: number; valor_total: number }) => ({
+          Data: r.data_venda,
+          'Qtd. vendas': r.quantidade_vendas,
+          'Valor total': r.valor_total
+        }));
+        const resumo = dados.resumo_geral ? [{
+          'Total vendas': dados.resumo_geral.total_vendas,
+          'Receita total': dados.resumo_geral.receita_total,
+          'Ticket médio': dados.resumo_geral.ticket_medio,
+          'Vendas pagas': dados.resumo_geral.vendas_pagas,
+          'Vendas pendentes': dados.resumo_geral.vendas_pendentes
+        }] : [];
+        const listaVendas = (dados.lista_vendas || []).map((v: { numero_venda: string; data_venda: string; cliente_nome: string | null; cliente_documento: string | null; total: number; valor_pago: number | null; status: string }) => ({
+          'Número': v.numero_venda,
+          'Data': v.data_venda,
+          'Cliente': v.cliente_nome ?? '',
+          'CPF/CNPJ': v.cliente_documento ?? '',
+          'Total': v.total,
+          'Valor pago': v.valor_pago ?? v.total,
+          'Status': v.status === 'pago' ? 'Pago' : 'Pendente'
+        }));
+        const nomeArquivo = labelMes
+          ? `${nomeEmpresaArquivo} - Vendas ${labelMes}`
+          : `relatorio_vendas_${dataInicio}`;
+        exportarMultiplasAbas(
+          [
+            { nomeAba: 'Vendas', dados: listaVendas },
+            { nomeAba: 'Vendas por data', dados: vendasPorData },
+            { nomeAba: 'Resumo', dados: resumo }
+          ].filter(aba => aba.dados.length > 0),
+          nomeArquivo
+        );
+      }
+    } catch (err) {
+      console.error('Erro ao gerar relatório Excel do mês:', err);
     } finally {
       setBaixandoRelatorioMes(null);
     }
@@ -1020,11 +1078,39 @@ export default function Relatorios() {
     switch (tipo) {
 
       case 'vendas':
-
-        // Usar o relatório detalhado em PDF profissional
-
-        gerarRelatorioVendasDetalhado();
-
+        if (formato === 'excel' && dadosVendasDetalhado) {
+          const vendasPorData = (dadosVendasDetalhado.vendas_por_data || []).map((r: { data_venda: string; quantidade_vendas: number; valor_total: number }) => ({
+            Data: r.data_venda,
+            'Qtd. vendas': r.quantidade_vendas,
+            'Valor total': r.valor_total
+          }));
+          const resumo = dadosVendasDetalhado.resumo_geral ? [{
+            'Total vendas': dadosVendasDetalhado.resumo_geral.total_vendas,
+            'Receita total': dadosVendasDetalhado.resumo_geral.receita_total,
+            'Ticket médio': dadosVendasDetalhado.resumo_geral.ticket_medio,
+            'Vendas pagas': dadosVendasDetalhado.resumo_geral.vendas_pagas,
+            'Vendas pendentes': dadosVendasDetalhado.resumo_geral.vendas_pendentes
+          }] : [];
+          const listaVendasPrincipal = (dadosVendasDetalhado.lista_vendas || []).map((v: { numero_venda: string; data_venda: string; cliente_nome: string | null; cliente_documento: string | null; total: number; valor_pago: number | null; status: string }) => ({
+            'Número': v.numero_venda,
+            'Data': v.data_venda,
+            'Cliente': v.cliente_nome ?? '',
+            'CPF/CNPJ': v.cliente_documento ?? '',
+            'Total': v.total,
+            'Valor pago': v.valor_pago ?? v.total,
+            'Status': v.status === 'pago' ? 'Pago' : 'Pendente'
+          }));
+          exportarMultiplasAbas(
+            [
+              { nomeAba: 'Vendas', dados: listaVendasPrincipal },
+              { nomeAba: 'Vendas por data', dados: vendasPorData },
+              { nomeAba: 'Resumo', dados: resumo }
+            ].filter(aba => aba.dados.length > 0),
+            nomeArquivo
+          );
+        } else {
+          gerarRelatorioVendasDetalhado();
+        }
         break;
 
       case 'produtos':
@@ -1039,9 +1125,11 @@ export default function Relatorios() {
 
             gerarJSON(dadosProdutos, nomeArquivo);
 
-          } else {
+          } else if (formato === 'excel') {
 
-            // Usar o relatório detalhado em PDF profissional
+            exportarParaExcel(dadosProdutos.produtos as unknown as Record<string, unknown>[], nomeArquivo, 'Produtos');
+
+          } else {
 
             gerarRelatorioProdutosDetalhado();
 
@@ -1063,9 +1151,11 @@ export default function Relatorios() {
 
             gerarJSON(dadosClientes, nomeArquivo);
 
-          } else {
+          } else if (formato === 'excel') {
 
-            // Usar o relatório detalhado em PDF profissional
+            exportarParaExcel(dadosClientes.clientes as unknown as Record<string, unknown>[], nomeArquivo, 'Clientes');
+
+          } else {
 
             await gerarRelatorioClientesDetalhado();
 
@@ -1087,9 +1177,11 @@ export default function Relatorios() {
 
             gerarJSON(dadosFinanceiro, nomeArquivo);
 
-          } else {
+          } else if (formato === 'excel') {
 
-            // Usar o relatório detalhado em PDF profissional
+            exportarParaExcel(dadosFinanceiro.transacoes as unknown as Record<string, unknown>[], nomeArquivo, 'Transações');
+
+          } else {
 
             gerarRelatorioFinanceiroDetalhado();
 
@@ -1111,9 +1203,11 @@ export default function Relatorios() {
 
             gerarJSON(dadosEstoque, nomeArquivo);
 
-          } else {
+          } else if (formato === 'excel') {
 
-            // Usar o relatório detalhado em PDF profissional
+            exportarParaExcel(dadosEstoque.produtos as unknown as Record<string, unknown>[], nomeArquivo, 'Estoque');
+
+          } else {
 
             gerarRelatorioEstoqueDetalhado();
 
@@ -2441,128 +2535,86 @@ export default function Relatorios() {
 
                       )}
                       {relatorio.tipo === 'vendas' ? (
-
+                        <>
                         <Button 
-
                           variant="outline" 
-
                           size="sm" 
-
-                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
-
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'excel')}
                           disabled={relatorio.loading || loadingVendasDetalhado || !dadosVendasDetalhado}
-
                           className="text-xs sm:text-sm"
-
                         >
-
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Excel</span>
+                          <span className="sm:hidden">📊</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
+                          disabled={relatorio.loading || loadingVendasDetalhado || !dadosVendasDetalhado}
+                          className="text-xs sm:text-sm"
+                        >
                           {loadingVendasDetalhado ? (
-
                             <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
-
                           ) : (
-
                             <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-
                           )}
-
                           <span className="hidden sm:inline">PDF</span>
                           <span className="sm:hidden">📄</span>
-
                         </Button>
-
+                        </>
                       ) : relatorio.tipo === 'produtos' ? (
-
-                        <Button 
-
-                          variant="outline" 
-
-                          size="sm" 
-
-                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
-
-                          disabled={relatorio.loading || !dadosProdutos || !user}
-
-                          className="text-xs sm:text-sm"
-
-                        >
-
+                        <>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'excel')} disabled={relatorio.loading || !dadosProdutos || !user} className="text-xs sm:text-sm">
                           <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-
+                          <span className="hidden sm:inline">Excel</span>
+                          <span className="sm:hidden">📊</span>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')} disabled={relatorio.loading || !dadosProdutos || !user} className="text-xs sm:text-sm">
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
                           <span className="sm:hidden">📄</span>
-
                         </Button>
-
+                        </>
                       ) : relatorio.tipo === 'clientes' ? (
-
-                        <Button 
-
-                          variant="outline" 
-
-                          size="sm" 
-
-                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
-
-                          disabled={relatorio.loading || !dadosClientes || !user}
-
-                          className="text-xs sm:text-sm"
-
-                        >
-
+                        <>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'excel')} disabled={relatorio.loading || !dadosClientes || !user} className="text-xs sm:text-sm">
                           <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-
+                          <span className="hidden sm:inline">Excel</span>
+                          <span className="sm:hidden">📊</span>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')} disabled={relatorio.loading || !dadosClientes || !user} className="text-xs sm:text-sm">
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
                           <span className="sm:hidden">📄</span>
-
                         </Button>
-
+                        </>
                       ) : relatorio.tipo === 'financeiro' ? (
-
-                        <Button 
-
-                          variant="outline" 
-
-                          size="sm" 
-
-                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
-
-                          disabled={relatorio.loading || !dadosFinanceiro || !user}
-
-                          className="text-xs sm:text-sm"
-
-                        >
-
+                        <>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'excel')} disabled={relatorio.loading || !dadosFinanceiro || !user} className="text-xs sm:text-sm">
                           <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-
+                          <span className="hidden sm:inline">Excel</span>
+                          <span className="sm:hidden">📊</span>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')} disabled={relatorio.loading || !dadosFinanceiro || !user} className="text-xs sm:text-sm">
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
                           <span className="sm:hidden">📄</span>
-
                         </Button>
-
+                        </>
                       ) : relatorio.tipo === 'estoque' ? (
-
-                        <Button 
-
-                          variant="outline" 
-
-                          size="sm" 
-
-                          onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')}
-
-                          disabled={relatorio.loading || !dadosEstoque || !user}
-
-                          className="text-xs sm:text-sm"
-
-                        >
-
+                        <>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'excel')} disabled={relatorio.loading || !dadosEstoque || !user} className="text-xs sm:text-sm">
                           <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-
+                          <span className="hidden sm:inline">Excel</span>
+                          <span className="sm:hidden">📊</span>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => baixarRelatorio(relatorio.tipo, 'pdf')} disabled={relatorio.loading || !dadosEstoque || !user} className="text-xs sm:text-sm">
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
                           <span className="sm:hidden">📄</span>
-
                         </Button>
-
+                        </>
                       ) : (
 
                         <Select onValueChange={(formato) => baixarRelatorio(relatorio.tipo, formato)}>
@@ -2576,6 +2628,8 @@ export default function Relatorios() {
                           <SelectContent>
 
                             <SelectItem value="csv">CSV</SelectItem>
+
+                            <SelectItem value="excel">Excel</SelectItem>
 
                             <SelectItem value="json">JSON</SelectItem>
 
@@ -2632,24 +2686,43 @@ export default function Relatorios() {
                           </p>
                           <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                             <FileText className="h-3 w-3" />
-                            <span>PDF</span>
+                            <span>PDF · Excel</span>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {formatarData(mes.dataInicio)} — {formatarData(mes.dataFim)}
                           </p>
+                          <p className="text-xs text-muted-foreground/80">
+                            Apenas vendas deste mês
+                          </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => baixarRelatorioMes(mes.dataInicio, mes.dataFim)}
-                          disabled={baixandoRelatorioMes === mes.dataInicio}
-                        >
-                          {baixandoRelatorioMes === mes.dataInicio ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Download className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => baixarRelatorioMes(mes.dataInicio, mes.dataFim, mes.label)}
+                            disabled={baixandoRelatorioMes === mes.dataInicio}
+                            title="Baixar PDF"
+                          >
+                            {baixandoRelatorioMes === mes.dataInicio ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => baixarRelatorioMesExcel(mes.dataInicio, mes.dataFim, mes.label)}
+                            disabled={baixandoRelatorioMes === `${mes.dataInicio}-excel`}
+                            title="Baixar Excel"
+                          >
+                            {baixandoRelatorioMes === `${mes.dataInicio}-excel` ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       {index < mesesComVendas.length - 1 && (
                         <div className="border-t border-border/50" />

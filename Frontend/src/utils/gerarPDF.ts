@@ -39,7 +39,8 @@ const toNum = (v: unknown): number => (v === null || v === undefined ? 0 : Numbe
 
 export const gerarRelatorioVendasPDF = (
   dados: DadosRelatorioVendas,
-  formatarMoeda: (valor: number) => string
+  formatarMoeda: (valor: number) => string,
+  nomeArquivo?: string
 ) => {
   const { periodo, responsavel, resumo_geral: resumoRaw, formas_pagamento, vendas_por_categoria, vendas_por_data } = dados;
 
@@ -265,7 +266,10 @@ export const gerarRelatorioVendasPDF = (
   // Aplicar header/rodapé em todas as páginas
   applyHeaderFooter();
 
-  doc.save(`relatorio_vendas_${new Date().toISOString().split('T')[0]}.pdf`);
+  const arquivo = nomeArquivo?.trim()
+    ? `${nomeArquivo.replace(/\.pdf$/i, '')}.pdf`
+    : `relatorio_vendas_${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(arquivo);
 };
 
 export interface DadosRelatorioProdutos {

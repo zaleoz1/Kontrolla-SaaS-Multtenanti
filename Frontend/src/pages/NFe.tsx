@@ -711,18 +711,6 @@ export default function NFe() {
       )
     : clientes;
 
-  // Paginação
-  const handlePaginacao = (pagina: number) => {
-    fetchNfes({
-      page: pagina,
-      limit: pagination.limit,
-      q: termoBusca,
-      status: statusFiltro || undefined,
-      data_inicio: dataInicio || undefined,
-      data_fim: dataFim || undefined
-    });
-  };
-
   return (
     <div className="space-y-6 overflow-x-hidden prevent-zoom touch-optimized mobile-scroll">
       {/* Header */}
@@ -1104,31 +1092,6 @@ export default function NFe() {
                   </CardContent>
                 </Card>
               ))}
-
-              {/* Paginação */}
-              {pagination.totalPages > 1 && (
-                <div className="flex justify-center space-x-2 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePaginacao(pagination.page - 1)}
-                    disabled={!pagination.hasPrev}
-                  >
-                    Anterior
-                  </Button>
-                  <span className="flex items-center px-4 text-sm text-muted-foreground">
-                    Página {pagination.page} de {pagination.totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePaginacao(pagination.page + 1)}
-                    disabled={!pagination.hasNext}
-                  >
-                    Próxima
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </TabsContent>

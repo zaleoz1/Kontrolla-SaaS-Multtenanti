@@ -148,7 +148,7 @@ export function useNfe() {
   const [stats, setStats] = useState<NfeStats | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 10000,
     total: 0,
     totalPages: 0,
     hasNext: false,
