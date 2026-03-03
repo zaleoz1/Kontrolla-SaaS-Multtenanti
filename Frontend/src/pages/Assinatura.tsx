@@ -121,6 +121,23 @@ export default function Assinatura() {
     return { label: status, variant: 'secondary' as const, cor: 'text-muted-foreground' };
   };
 
+  // Normaliza e formata a data da próxima renovação (Stripe envia Unix; backend pode enviar ISO ou MySQL)
+  const proximaRenovacaoLabel = (): string => {
+    const raw = billing.status?.subscription_current_period_end;
+    if (raw == null || raw === '') return '—';
+    let date: Date;
+    if (typeof raw === 'number') {
+      date = new Date(raw * 1000);
+    } else if (typeof raw === 'string') {
+      const normalized = raw.trim().replace(' ', 'T');
+      date = new Date(normalized);
+    } else {
+      return '—';
+    }
+    if (Number.isNaN(date.getTime())) return '—';
+    return formatDate(date);
+  };
+
   // Ao abrir a página, buscar sempre status do billing, tenant e histórico (faturas + cartões)
   useEffect(() => {
     billing.fetchStatus();
@@ -296,9 +313,7 @@ export default function Assinatura() {
               <div className="min-w-0">
                 <p className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">Próxima renovação</p>
                 <p className="text-sm sm:text-base font-semibold mt-0.5">
-                  {billing.status?.subscription_current_period_end
-                    ? formatDate(billing.status.subscription_current_period_end)
-                    : '—'}
+                  {billing.loading ? '…' : proximaRenovacaoLabel()}
                 </p>
               </div>
             </div>

@@ -139,12 +139,20 @@ router.get('/status', async (req, res) => {
       }
     }
 
-    // Normalizar data para ISO string quando vier do DB (Date ou string)
-    if (subscription_current_period_end && typeof subscription_current_period_end !== 'string') {
-      subscription_current_period_end =
-        subscription_current_period_end instanceof Date
-          ? subscription_current_period_end.toISOString()
-          : String(subscription_current_period_end);
+    // Normalizar data para ISO string (Date, número Unix ou string MySQL/ISO)
+    if (subscription_current_period_end != null && subscription_current_period_end !== '') {
+      if (typeof subscription_current_period_end === 'number') {
+        subscription_current_period_end = new Date(subscription_current_period_end * 1000).toISOString();
+      } else if (subscription_current_period_end instanceof Date) {
+        subscription_current_period_end = subscription_current_period_end.toISOString();
+      } else if (typeof subscription_current_period_end === 'string') {
+        const trimmed = subscription_current_period_end.trim();
+        if (trimmed.indexOf('T') === -1 && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+          subscription_current_period_end = new Date(trimmed.replace(' ', 'T')).toISOString();
+        }
+      } else {
+        subscription_current_period_end = new Date(subscription_current_period_end).toISOString();
+      }
     }
 
     res.json({
