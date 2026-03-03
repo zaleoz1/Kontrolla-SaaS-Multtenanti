@@ -121,21 +121,34 @@ export default function Assinatura() {
     return { label: status, variant: 'secondary' as const, cor: 'text-muted-foreground' };
   };
 
-  // Normaliza e formata a data da próxima renovação (Stripe envia Unix; backend pode enviar ISO ou MySQL)
+  // Normaliza e formata a data da próxima renovação (Stripe/API ou fallback: mesmo dia no mês seguinte pela fatura)
   const proximaRenovacaoLabel = (): string => {
     const raw = billing.status?.subscription_current_period_end;
-    if (raw == null || raw === '') return '—';
-    let date: Date;
-    if (typeof raw === 'number') {
-      date = new Date(raw * 1000);
-    } else if (typeof raw === 'string') {
-      const normalized = raw.trim().replace(' ', 'T');
-      date = new Date(normalized);
-    } else {
-      return '—';
+    if (raw != null && raw !== '') {
+      let date: Date;
+      if (typeof raw === 'number') {
+        date = new Date(raw * 1000);
+      } else if (typeof raw === 'string') {
+        const normalized = raw.trim().replace(' ', 'T');
+        date = new Date(normalized);
+      } else {
+        date = new Date(NaN);
+      }
+      if (!Number.isNaN(date.getTime())) return formatDate(date);
     }
-    if (Number.isNaN(date.getTime())) return '—';
-    return formatDate(date);
+    // Fallback: mesma data da assinatura (fatura mais recente) + 1 mês = próxima renovação
+    if (billing.invoices.length > 0) {
+      const withDate = billing.invoices
+        .map((inv) => ({ inv, d: inv.created ? new Date(inv.created) : null }))
+        .filter(({ d }) => d != null && !Number.isNaN(d.getTime()));
+      if (withDate.length > 0) {
+        const latest = withDate.reduce((a, b) => (a.d && b.d && a.d.getTime() < b.d.getTime() ? b : a));
+        const d = latest.d!;
+        const next = new Date(d.getFullYear(), d.getMonth() + 1, d.getDate());
+        return formatDate(next);
+      }
+    }
+    return '—';
   };
 
   // Ao abrir a página, buscar sempre status do billing, tenant e histórico (faturas + cartões)
