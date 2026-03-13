@@ -1395,25 +1395,31 @@ router.delete('/contas-pagar/:id', validateId, handleValidationErrors, async (re
 // Estatísticas financeiras
 router.get('/stats/overview', async (req, res) => {
   try {
-    const { periodo = 'mes' } = req.query;
-    
+    const { periodo = 'mes', data_inicio: dataInicio, data_fim: dataFim } = req.query;
+    const useDateRange = dataInicio && dataFim;
+
     let whereClause = 'WHERE tenant_id = ?';
     let params = [req.user.tenant_id];
 
-    // Adicionar filtro de período
-    switch (periodo) {
-      case 'hoje':
-        whereClause += ' AND DATE(data_transacao) = CURDATE()';
-        break;
-      case 'semana':
-        whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        break;
-      case 'mes':
-        whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        break;
-      case 'ano':
-        whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        break;
+    // Adicionar filtro de período (ou intervalo de datas quando data_inicio e data_fim são fornecidos)
+    if (useDateRange) {
+      whereClause += ' AND DATE(data_transacao) >= ? AND DATE(data_transacao) <= ?';
+      params.push(dataInicio, dataFim);
+    } else {
+      switch (periodo) {
+        case 'hoje':
+          whereClause += ' AND DATE(data_transacao) = CURDATE()';
+          break;
+        case 'semana':
+          whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          break;
+        case 'mes':
+          whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          break;
+        case 'ano':
+          whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          break;
+      }
     }
 
     // Estatísticas de transações
@@ -1434,19 +1440,24 @@ router.get('/stats/overview', async (req, res) => {
     let vendasParams = [req.user.tenant_id];
 
     // Aplicar filtro de período para vendas
-    switch (periodo) {
-      case 'hoje':
-        vendasWhereClause += ' AND DATE(v.data_venda) = CURDATE()';
-        break;
-      case 'semana':
-        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        break;
-      case 'mes':
-        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        break;
-      case 'ano':
-        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        break;
+    if (useDateRange) {
+      vendasWhereClause += ' AND DATE(v.data_venda) >= ? AND DATE(v.data_venda) <= ?';
+      vendasParams.push(dataInicio, dataFim);
+    } else {
+      switch (periodo) {
+        case 'hoje':
+          vendasWhereClause += ' AND DATE(v.data_venda) = CURDATE()';
+          break;
+        case 'semana':
+          vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          break;
+        case 'mes':
+          vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          break;
+        case 'ano':
+          vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          break;
+      }
     }
 
     const vendasPagas = await query(
@@ -1468,31 +1479,42 @@ router.get('/stats/overview', async (req, res) => {
     let adiantamentoWhere = 'WHERE t.tenant_id = ?';
     let adiantamentoParams = [req.user.tenant_id];
 
-    switch (periodo) {
-      case 'hoje':
-        contasWhereReceber += ' AND DATE(data_vencimento) = CURDATE()';
-        contasWherePagar += ' AND DATE(data_vencimento) = CURDATE()';
-        contasWherePagarTrans += ' AND DATE(data_transacao) = CURDATE()';
-        adiantamentoWhere += ' AND DATE(t.data_transacao) = CURDATE()';
-        break;
-      case 'semana':
-        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        break;
-      case 'mes':
-        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        break;
-      case 'ano':
-        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        break;
+    if (useDateRange) {
+      contasWhereReceber += ' AND DATE(data_vencimento) >= ? AND DATE(data_vencimento) <= ?';
+      contasParamsReceber.push(dataInicio, dataFim);
+      contasWherePagar += ' AND DATE(data_vencimento) >= ? AND DATE(data_vencimento) <= ?';
+      contasParamsPagar.push(dataInicio, dataFim);
+      contasWherePagarTrans += ' AND DATE(t.data_transacao) >= ? AND DATE(t.data_transacao) <= ?';
+      contasParamsPagarTrans.push(dataInicio, dataFim);
+      adiantamentoWhere += ' AND DATE(t.data_transacao) >= ? AND DATE(t.data_transacao) <= ?';
+      adiantamentoParams.push(dataInicio, dataFim);
+    } else {
+      switch (periodo) {
+        case 'hoje':
+          contasWhereReceber += ' AND DATE(data_vencimento) = CURDATE()';
+          contasWherePagar += ' AND DATE(data_vencimento) = CURDATE()';
+          contasWherePagarTrans += ' AND DATE(data_transacao) = CURDATE()';
+          adiantamentoWhere += ' AND DATE(t.data_transacao) = CURDATE()';
+          break;
+        case 'semana':
+          contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          break;
+        case 'mes':
+          contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+          break;
+        case 'ano':
+          contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          break;
+      }
     }
 
     // Contas a receber (APENAS da tabela contas_receber)

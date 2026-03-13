@@ -51,7 +51,7 @@ import { useContasReceber } from "@/hooks/useContasReceber";
 import { useContasPagar } from "@/hooks/useContasPagar";
 import { useFinanceiroStats } from "@/hooks/useFinanceiroStats";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
-import { api } from "@/lib/api";
+import { api, get } from "@/lib/api";
 
 // Interfaces para pagamentos e recebimentos
 interface PagamentoData {
@@ -103,7 +103,10 @@ interface AdiantamentoData {
 
 export default function Financeiro() {
   const [termoBusca, setTermoBusca] = useState("");
-  const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('mes');
+  // Período: 'hoje' | 'semana' | 'mes' | 'ano' ou 'YYYY-MM' para mês específico (ex: '2025-02' = Fevereiro 2025)
+  const [periodo, setPeriodo] = useState<string>('mes');
+  // Meses (YYYY-MM) que possuem ao menos uma transação no ano atual
+  const [mesesComDados, setMesesComDados] = useState<string[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroStatusPagar, setFiltroStatusPagar] = useState<string>('todos');
@@ -174,11 +177,68 @@ export default function Financeiro() {
     taxaParcela: 0
   });
 
-  // Calcula intervalo de datas a partir do período selecionado
-  const getDateRangeFromPeriodo = (p: 'hoje' | 'semana' | 'mes' | 'ano') => {
+  // Nomes dos meses para exibição no filtro
+  const NOMES_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  // Descobrir, no carregamento da página, quais meses do ano atual têm dados financeiros
+  useEffect(() => {
+    const carregarMesesComDados = async () => {
+      try {
+        const anoAtual = new Date().getFullYear();
+        const data_inicio = `${anoAtual}-01-01`;
+        const data_fim = `${anoAtual}-12-31`;
+
+        const params = new URLSearchParams({
+          page: '1',
+          limit: '1000',
+          data_inicio,
+          data_fim,
+        });
+
+        type TransacaoMesResponse = {
+          transacoes: { data_transacao: string }[];
+        };
+
+        const response = await get<TransacaoMesResponse>(`${API_ENDPOINTS.FINANCIAL.TRANSACTIONS}?${params.toString()}`);
+
+        const mesesSet = new Set<string>();
+        response.transacoes.forEach((t) => {
+          if (!t.data_transacao) return;
+          const data = t.data_transacao.split('T')[0];
+          if (!data) return;
+          const [ano, mes] = data.split('-');
+          if (ano && mes) {
+            mesesSet.add(`${ano}-${mes}`);
+          }
+        });
+
+        const mesesOrdenados = Array.from(mesesSet).sort();
+        setMesesComDados(mesesOrdenados);
+      } catch (error) {
+        console.error('Erro ao carregar meses com dados financeiros:', error);
+      }
+    };
+
+    carregarMesesComDados();
+  }, []);
+
+  // Calcula intervalo de datas a partir do período selecionado (inclui mês específico YYYY-MM)
+  const getDateRangeFromPeriodo = (p: string) => {
     const hoje = new Date();
     const fim = hoje.toISOString().split('T')[0];
     let inicio: string;
+
+    // Mês específico no formato YYYY-MM (ex: 2025-02 = Fevereiro 2025)
+    const matchMesEspecifico = /^(\d{4})-(\d{2})$/.exec(p);
+    if (matchMesEspecifico) {
+      const ano = parseInt(matchMesEspecifico[1], 10);
+      const mes = parseInt(matchMesEspecifico[2], 10) - 1; // 0-indexed
+      const primeiroDia = new Date(ano, mes, 1);
+      const ultimoDia = new Date(ano, mes + 1, 0);
+      inicio = primeiroDia.toISOString().split('T')[0];
+      const fimMes = ultimoDia.toISOString().split('T')[0];
+      return { data_inicio: inicio, data_fim: fimMes };
+    }
 
     switch (p) {
       case 'hoje':
@@ -202,10 +262,44 @@ export default function Financeiro() {
         inicio = d.toISOString().split('T')[0];
         break;
       }
+      default:
+        inicio = fim;
     }
 
     return { data_inicio: inicio, data_fim: fim };
   };
+
+  // Rótulo do período para exibir no Select
+  const getPeriodoLabel = (value: string) => {
+    const matchMes = /^(\d{4})-(\d{2})$/.exec(value);
+    if (matchMes) {
+      const mesIndex = parseInt(matchMes[2], 10) - 1;
+      return `${NOMES_MESES[mesIndex]} ${matchMes[1]}`;
+    }
+    const labels: Record<string, string> = { hoje: 'Hoje', semana: 'Esta Semana', mes: 'Este Mês', ano: 'Este Ano' };
+    return labels[value] ?? value;
+  };
+
+  // Opções do select: presets fixos + apenas meses/anos que possuem dados
+  const opcoesPeriodo = [
+    { value: 'hoje', label: 'Hoje' },
+    { value: 'semana', label: 'Esta Semana' },
+    { value: 'mes', label: 'Este Mês' },
+    { value: 'ano', label: 'Este Ano' },
+    ...mesesComDados.map((valor) => {
+      const matchMes = /^(\d{4})-(\d{2})$/.exec(valor);
+      if (!matchMes) {
+        return { value: valor, label: valor };
+      }
+      const ano = matchMes[1];
+      const mesIndex = parseInt(matchMes[2], 10) - 1;
+      const nomeMes = NOMES_MESES[mesIndex] ?? valor;
+      return {
+        value: valor,
+        label: `${nomeMes} ${ano}`,
+      };
+    }),
+  ];
 
   // Hooks para dados financeiros
   const { 
@@ -346,11 +440,12 @@ export default function Financeiro() {
     const carregarDados = async () => {
       try {
         const dateRange = getDateRangeFromPeriodo(periodo);
+        const statsParams = /^\d{4}-\d{2}$/.test(periodo) ? dateRange : periodo;
         await Promise.all([
-          buscarStats(periodo),
+          buscarStats(statsParams),
           buscarTransacoes(dateRange),
-          buscarContasReceber({}),
-          buscarContasPagar({})
+          buscarContasReceber(dateRange),
+          buscarContasPagar(dateRange)
         ]);
       } catch (error) {
         console.error('Erro ao carregar dados financeiros:', error);
@@ -364,11 +459,12 @@ export default function Financeiro() {
   const recarregarDados = async () => {
     try {
       const dateRange = getDateRangeFromPeriodo(periodo);
+      const statsParams = /^\d{4}-\d{2}$/.test(periodo) ? dateRange : periodo;
       await Promise.all([
-        buscarStats(periodo),
+        buscarStats(statsParams),
         buscarTransacoes(dateRange),
-        buscarContasReceber({}),
-        buscarContasPagar({})
+        buscarContasReceber(dateRange),
+        buscarContasPagar(dateRange)
       ]);
     } catch (error) {
       console.error('Erro ao recarregar dados:', error);
@@ -978,15 +1074,14 @@ export default function Financeiro() {
 
           {/* Filtros e Ações - Desktop */}
           <div className="hidden md:flex items-center space-x-2">
-            <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
+            <Select value={periodo} onValueChange={setPeriodo}>
               <SelectTrigger className="w-40">
-                <SelectValue />
+                <SelectValue placeholder="Período">{getPeriodoLabel(periodo)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="hoje">Hoje</SelectItem>
-                <SelectItem value="semana">Esta Semana</SelectItem>
-                <SelectItem value="mes">Este Mês</SelectItem>
-                <SelectItem value="ano">Este Ano</SelectItem>
+                {opcoesPeriodo.map((op) => (
+                  <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={recarregarDados} disabled={loadingStats}>
@@ -1004,15 +1099,14 @@ export default function Financeiro() {
         <div className="md:hidden space-y-3 w-full">
           <div className="space-y-1 w-full">
             <Label className="text-xs font-medium">Período:</Label>
-            <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
+            <Select value={periodo} onValueChange={setPeriodo}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Período">{getPeriodoLabel(periodo)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="hoje">Hoje</SelectItem>
-                <SelectItem value="semana">Esta Semana</SelectItem>
-                <SelectItem value="mes">Este Mês</SelectItem>
-                <SelectItem value="ano">Este Ano</SelectItem>
+                {opcoesPeriodo.map((op) => (
+                  <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

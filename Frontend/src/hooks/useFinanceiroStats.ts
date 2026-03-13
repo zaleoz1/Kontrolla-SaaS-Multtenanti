@@ -35,11 +35,15 @@ export function useFinanceiroStats() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const buscarStats = useCallback(async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'mes') => {
+  const buscarStats = useCallback(async (periodoOrRange: 'hoje' | 'semana' | 'mes' | 'ano' | string | { data_inicio: string; data_fim: string } = 'mes') => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.list({ periodo });
+      const params =
+        typeof periodoOrRange === 'object' && periodoOrRange?.data_inicio && periodoOrRange?.data_fim
+          ? { data_inicio: periodoOrRange.data_inicio, data_fim: periodoOrRange.data_fim }
+          : { periodo: periodoOrRange as string };
+      const response = await api.list(params);
       setStats(response);
       return response;
     } catch (err) {
