@@ -191,8 +191,7 @@ export default function Financeiro() {
         break;
       }
       case 'mes': {
-        const d = new Date(hoje);
-        d.setMonth(d.getMonth() - 1);
+        const d = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
         inicio = d.toISOString().split('T')[0];
         break;
       }

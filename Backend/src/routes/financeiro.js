@@ -1409,7 +1409,7 @@ router.get('/stats/overview', async (req, res) => {
         whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
         break;
       case 'mes':
-        whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        whereClause += " AND data_transacao >= DATE_FORMAT(CURDATE(), '%Y-%m-01')";
         break;
       case 'ano':
         whereClause += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
@@ -1442,7 +1442,7 @@ router.get('/stats/overview', async (req, res) => {
         vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
         break;
       case 'mes':
-        vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+        vendasWhereClause += " AND v.data_venda >= DATE_FORMAT(CURDATE(), '%Y-%m-01')";
         break;
       case 'ano':
         vendasWhereClause += ' AND v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
@@ -1481,12 +1481,14 @@ router.get('/stats/overview', async (req, res) => {
         contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
         adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
         break;
-      case 'mes':
-        contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        contasWherePagarTrans += ' AND data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        adiantamentoWhere += ' AND t.data_transacao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
+      case 'mes': {
+        const inicioMes = "DATE_FORMAT(CURDATE(), '%Y-%m-01')";
+        contasWhereReceber += ` AND data_vencimento >= ${inicioMes}`;
+        contasWherePagar += ` AND data_vencimento >= ${inicioMes}`;
+        contasWherePagarTrans += ` AND data_transacao >= ${inicioMes}`;
+        adiantamentoWhere += ` AND t.data_transacao >= ${inicioMes}`;
         break;
+      }
       case 'ano':
         contasWhereReceber += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
         contasWherePagar += ' AND data_vencimento >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
