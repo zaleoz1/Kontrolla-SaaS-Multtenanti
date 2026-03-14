@@ -285,13 +285,16 @@ export function useNfe() {
     }
   }, [makeRequest, fetchNfes, pagination.page, pagination.limit]);
 
-  // Buscar estatísticas
-  const fetchStats = useCallback(async (periodo: 'hoje' | 'semana' | 'mes' | 'ano' = 'mes'): Promise<NfeStats | null> => {
+  // Buscar estatísticas (periodo ou intervalo data_inicio/data_fim para mês específico)
+  const fetchStats = useCallback(async (periodoOuDatas: 'hoje' | 'semana' | 'mes' | 'ano' | { data_inicio: string; data_fim: string } = 'mes'): Promise<NfeStats | null> => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await makeRequest(`/nfe/stats/overview?periodo=${periodo}`) as { stats: NfeStats; periodo: string };
+      const params = typeof periodoOuDatas === 'object'
+        ? `data_inicio=${encodeURIComponent(periodoOuDatas.data_inicio)}&data_fim=${encodeURIComponent(periodoOuDatas.data_fim)}`
+        : `periodo=${periodoOuDatas}`;
+      const response = await makeRequest(`/nfe/stats/overview?${params}`) as { stats: NfeStats; periodo: string };
       setStats(response.stats);
       return response.stats;
     } catch (err) {

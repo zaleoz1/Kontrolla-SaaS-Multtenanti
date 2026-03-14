@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,8 +44,10 @@ import {
   Image,
   Trash2,
   Loader2,
-  Edit
+  Edit,
+  ChevronDown
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTransacoes } from "@/hooks/useTransacoes";
 import { useContasReceber } from "@/hooks/useContasReceber";
 import { useContasPagar } from "@/hooks/useContasPagar";
@@ -459,6 +461,20 @@ export default function Financeiro() {
 
     return true;
   });
+
+  // Agrupar contas a receber por cliente (um card "pasta" por cliente)
+  const contasReceberAgrupadasPorCliente = useMemo(() => {
+    const map = new Map<string, { clienteId: number | null; clienteNome: string; contas: typeof contasReceberFiltradas }>();
+    for (const conta of contasReceberFiltradas) {
+      const key = conta.cliente_id != null ? String(conta.cliente_id) : 'sem-cliente';
+      const nome = conta.cliente_nome || 'Cliente não informado';
+      if (!map.has(key)) {
+        map.set(key, { clienteId: conta.cliente_id ?? null, clienteNome: nome, contas: [] });
+      }
+      map.get(key)!.contas.push(conta);
+    }
+    return Array.from(map.values());
+  }, [contasReceberFiltradas]);
 
   // Função para filtrar contas a pagar
   const contasPagarFiltradas = contasPagar.filter((conta) => {
@@ -1404,120 +1420,143 @@ export default function Financeiro() {
                   )}
                 </div>
               ) : (
-                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {contasReceberFiltradas.map((item) => {
-                    const dias = calcularDiasVencimento(item.data_vencimento);
+                <div className="space-y-3">
+                  {contasReceberAgrupadasPorCliente.map((grupo) => {
+                    const totalCliente = grupo.contas.reduce((s, c) => s + (Number(c.valor) || 0), 0);
+                    const hoje = new Date().toISOString().split('T')[0];
+                    const contasOrdenadas = [...grupo.contas].sort((a, b) => (a.data_vencimento || '').localeCompare(b.data_vencimento || ''));
+                    const contaMaisProxima = contasOrdenadas.find((c) => (c.data_vencimento || '') >= hoje) ?? contasOrdenadas[contasOrdenadas.length - 1];
+                    const vencimentoMaisProximo = contaMaisProxima ? formatarData(contaMaisProxima.data_vencimento) : null;
                     return (
-                      <Card key={item.id} className="bg-gradient-card shadow-card hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
-                        <CardHeader className="pb-2 sm:pb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-green-100">
-                              <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {obterBadgeStatus(item.status, dias)}
-                              {item.tipo_origem === 'venda' && (
-                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                                  Venda
-                                </Badge>
-                              )}
-                              {item.tipo_origem === 'transacao_entrada' && (
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                                  Transação
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        
-                        <CardContent className="space-y-2 sm:space-y-3 flex-1">
-                          <div>
-                            <h3 className="font-semibold text-sm sm:text-base line-clamp-1">
-                              {item.cliente_nome || 'Cliente não informado'}
-                            </h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">
-                              {item.descricao}
-                            </p>
-                          </div>
-
-                          <div className="space-y-1.5 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Vencimento:</span>
-                              <span className="font-medium">{formatarData(item.data_vencimento)}</span>
-                            </div>
-                            {item.parcela && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Parcela:</span>
-                                <span className="font-medium">{item.parcela}</span>
+                      <Collapsible key={grupo.clienteId ?? 'sem-cliente'} defaultOpen={false}>
+                        <Card className="bg-gradient-card shadow-card overflow-hidden">
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="group cursor-pointer hover:bg-muted/30 transition-colors py-4 sm:py-5">
+                              <div className="flex items-center justify-between gap-3 text-left">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div className="p-2 rounded-lg bg-green-100 shrink-0">
+                                    <Building2 className="h-5 w-5 text-green-600" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h3 className="font-semibold text-sm sm:text-base truncate">
+                                      {grupo.clienteNome}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {grupo.contas.length} {grupo.contas.length === 1 ? 'conta' : 'contas'} a receber
+                                      {vencimentoMaisProximo && (
+                                        <span className="block mt-0.5 text-blue-600 dark:text-blue-500 font-medium">
+                                          Venc. mais próximo: {vencimentoMaisProximo}
+                                        </span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-sm sm:text-base font-bold text-yellow-600 dark:text-yellow-500">
+                                    {formatarValor(totalCliente)}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                                </div>
                               </div>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Status:</span>
-                              <span className={`font-medium ${
-                                dias > 0 ? 'text-blue-600' : 
-                                dias === 0 ? 'text-orange-600' : 
-                                'text-destructive'
-                              }`}>
-                                {obterTextoDias(dias)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Valor */}
-                          <div className="pt-2 border-t border-border/50">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-muted-foreground">Valor:</span>
-                              <p className="text-base sm:text-lg font-bold text-success">{formatarValor(Number(item.valor) || 0)}</p>
-                            </div>
-                          </div>
-
-                          {/* Exibir anexos se existirem */}
-                          {item.anexos && item.anexos.length > 0 && (
-                            <div className="flex flex-wrap gap-2 items-center">
-                              <span className="text-xs font-medium">Anexos:</span>
-                              {item.anexos.map((anexoUrl: string, idx: number) => (
-                                <Button
-                                  key={idx}
-                                  size="icon"
-                                  variant="outline"
-                                  className="h-7 w-7 p-0"
-                                  title="Visualizar anexo"
-                                  onClick={() => window.open(anexoUrl, '_blank')}
-                                >
-                                  {getFileIcon(anexoUrl)}
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-
-                        {/* Footer fixo com botões */}
-                        <div className="px-6 pb-6 pt-2 mt-auto border-t border-border/50">
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => abrirModalEdicao(item, 'receber')}
-                              className="flex-1 text-xs sm:text-sm"
-                            >
-                              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">Editar</span>
-                              <span className="sm:hidden">Ed.</span>
-                            </Button>
-                            {item.status === 'pendente' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => abrirModalPagamento(item, 'receber')}
-                                className="flex-1 text-xs sm:text-sm"
-                              >
-                                <Receipt className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                Receber
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-0 pb-4">
+                              <div className="space-y-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {grupo.contas.map((item) => {
+                                  const dias = calcularDiasVencimento(item.data_vencimento);
+                                  return (
+                                    <Card
+                                      key={item.id}
+                                      className="bg-background/80 shadow-sm border border-border/60 hover:shadow-md hover:border-border/70 transition-all duration-200 flex flex-col"
+                                    >
+                                      <CardHeader className="pb-2 pt-3 px-3 sm:px-4">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="p-1.5 rounded-lg bg-green-100 shrink-0">
+                                            <Receipt className="h-4 w-4 text-green-600" />
+                                          </div>
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            {obterBadgeStatus(item.status, dias)}
+                                            {item.tipo_origem === 'venda' && (
+                                              <Badge variant="outline" className="text-[10px] h-4 bg-green-50 text-green-700 shrink-0">
+                                                Venda
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent className="space-y-2 px-3 sm:px-4 pb-3 flex-1">
+                                        <p className="font-medium text-sm line-clamp-2 leading-tight">{item.descricao}</p>
+                                        <div className="space-y-1 text-xs text-muted-foreground">
+                                          <div className="flex justify-between">
+                                            <span>Vencimento:</span>
+                                            <span className="font-medium text-foreground">{formatarData(item.data_vencimento)}</span>
+                                          </div>
+                                          {item.parcela && (
+                                            <div className="flex justify-between">
+                                              <span>Parcela:</span>
+                                              <span className="font-medium">{item.parcela}</span>
+                                            </div>
+                                          )}
+                                          <div className="flex justify-between">
+                                            <span>Status:</span>
+                                            <span className={`font-medium ${dias > 0 ? 'text-blue-600' : dias === 0 ? 'text-orange-600' : 'text-destructive'}`}>
+                                              {obterTextoDias(dias)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                                          <span className="text-xs text-muted-foreground">Valor:</span>
+                                          <p className="text-sm font-bold text-yellow-600 dark:text-yellow-500">{formatarValor(Number(item.valor) || 0)}</p>
+                                        </div>
+                                        {item.anexos && item.anexos.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 items-center">
+                                            <span className="text-xs font-medium text-muted-foreground">Anexos:</span>
+                                            {item.anexos.map((anexoUrl: string, idx: number) => (
+                                              <Button
+                                                key={idx}
+                                                size="icon"
+                                                variant="outline"
+                                                className="h-7 w-7 p-0"
+                                                title="Visualizar anexo"
+                                                onClick={(e) => { e.stopPropagation(); window.open(anexoUrl, '_blank'); }}
+                                              >
+                                                {getFileIcon(anexoUrl)}
+                                              </Button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                      <div className="px-3 sm:px-4 pb-3 pt-0 flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="flex-1 text-xs h-8"
+                                          onClick={(e) => { e.stopPropagation(); abrirModalEdicao(item, 'receber'); }}
+                                        >
+                                          <Edit className="h-3 w-3 mr-1" />
+                                          Editar
+                                        </Button>
+                                        {item.status === 'pendente' && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-1 text-xs h-8"
+                                            onClick={(e) => { e.stopPropagation(); abrirModalPagamento(item, 'receber'); }}
+                                          >
+                                            <Receipt className="h-3 w-3 mr-1" />
+                                            Receber
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
                     );
                   })}
                 </div>

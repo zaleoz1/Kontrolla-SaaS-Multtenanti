@@ -95,28 +95,59 @@ router.get('/', validatePagination, validateSearch, handleValidationErrors, asyn
   }
 });
 
+// Meses que possuem NF-e emitidas
+const MESES_NOMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+router.get('/meses-com-dados', async (req, res) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    const meses = await query(
+      `SELECT DISTINCT YEAR(data_emissao) as ano, MONTH(data_emissao) as mes 
+       FROM nfe 
+       WHERE tenant_id = ? 
+       ORDER BY ano DESC, mes DESC 
+       LIMIT 24`,
+      [tenantId]
+    );
+    const resultado = meses.map(({ ano, mes }) => {
+      const value = `${ano}-${String(mes).padStart(2, '0')}`;
+      const label = `${MESES_NOMES[Number(mes) - 1]} ${ano}`;
+      return { ano: Number(ano), mes: Number(mes), value, label };
+    });
+    res.json({ meses: resultado });
+  } catch (error) {
+    console.error('Erro ao buscar meses com dados NF-e:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Estatísticas das NF-e (deve vir antes da rota /:id)
 router.get('/stats/overview', async (req, res) => {
   try {
-    const { periodo = 'mes' } = req.query;
-    
+    const { periodo = 'mes', data_inicio: dataInicio, data_fim: dataFim } = req.query;
+    const usoDataRange = dataInicio && dataFim;
+
     let whereClause = 'WHERE tenant_id = ?';
     let params = [req.user.tenant_id];
 
-    // Adicionar filtro de período
-    switch (periodo) {
-      case 'hoje':
-        whereClause += ' AND DATE(data_emissao) = CURDATE()';
-        break;
-      case 'semana':
-        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-        break;
-      case 'mes':
-        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-        break;
-      case 'ano':
-        whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
-        break;
+    if (usoDataRange) {
+      whereClause += ' AND DATE(data_emissao) >= ? AND DATE(data_emissao) <= ?';
+      params.push(dataInicio, dataFim);
+    } else {
+      // Adicionar filtro de período
+      switch (periodo) {
+        case 'hoje':
+          whereClause += ' AND DATE(data_emissao) = CURDATE()';
+          break;
+        case 'semana':
+          whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+          break;
+        case 'mes':
+          whereClause += " AND data_emissao >= DATE_FORMAT(CURDATE(), '%Y-%m-01')";
+          break;
+        case 'ano':
+          whereClause += ' AND data_emissao >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)';
+          break;
+      }
     }
 
     const stats = await query(

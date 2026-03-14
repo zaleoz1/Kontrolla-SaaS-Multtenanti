@@ -13,6 +13,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -65,7 +67,11 @@ import { useClientes, Cliente } from "@/hooks/useClientes";
 import { useProdutos, Produto } from "@/hooks/useProdutos";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
+import { useApi } from "@/hooks/useApi";
+import { API_ENDPOINTS } from "@/config/api";
 import { Navigate } from "react-router-dom";
+
+export type PeriodoNfeValue = 'hoje' | 'semana' | 'mes' | 'ano' | string;
 
 export default function NFe() {
   const { toast } = useToast();
@@ -113,9 +119,52 @@ export default function NFe() {
   // Estados locais
   const [termoBusca, setTermoBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<string>("");
+  const [periodo, setPeriodo] = useState<PeriodoNfeValue>("mes");
+  const [mesesComDados, setMesesComDados] = useState<{ value: string; label: string }[]>([]);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [tabAtual, setTabAtual] = useState("lista");
+
+  const { makeRequest } = useApi();
+
+  // Intervalo de datas a partir do período (inclui mês específico YYYY-MM)
+  const getDateRangeFromPeriodo = useCallback((p: PeriodoNfeValue): { data_inicio: string; data_fim: string } => {
+    const hoje = new Date();
+    const fim = hoje.toISOString().split('T')[0];
+    let inicio: string;
+    if (/^\d{4}-\d{2}$/.test(p)) {
+      inicio = `${p}-01`;
+      const [y, m] = p.split('-').map(Number);
+      const ultimoDia = new Date(y, m, 0);
+      const dataFimMes = ultimoDia.toISOString().split('T')[0];
+      return { data_inicio: inicio, data_fim: dataFimMes };
+    }
+    switch (p) {
+      case 'hoje':
+        inicio = fim;
+        break;
+      case 'semana': {
+        const d = new Date(hoje);
+        d.setDate(d.getDate() - 7);
+        inicio = d.toISOString().split('T')[0];
+        break;
+      }
+      case 'mes': {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        inicio = d.toISOString().split('T')[0];
+        break;
+      }
+      case 'ano': {
+        const d = new Date(hoje);
+        d.setFullYear(d.getFullYear() - 1);
+        inicio = d.toISOString().split('T')[0];
+        break;
+      }
+      default:
+        inicio = fim;
+    }
+    return { data_inicio: inicio, data_fim: fim };
+  }, []);
 
   // Estados do modal de detalhes
   const [nfeSelecionada, setNfeSelecionada] = useState<Nfe | null>(null);
@@ -184,10 +233,28 @@ export default function NFe() {
   const [mostrarTokenHomologacao, setMostrarTokenHomologacao] = useState(false);
   const [mostrarTokenProducao, setMostrarTokenProducao] = useState(false);
 
-  // Carregar dados iniciais
+  // Carregar meses que possuem NF-e
   useEffect(() => {
-    fetchNfes();
-    fetchStats();
+    makeRequest(API_ENDPOINTS.NFE.MESES_COM_DADOS)
+      .then((res: { meses?: { value: string; label: string }[] }) => setMesesComDados(res?.meses ?? []))
+      .catch(() => {});
+  }, [makeRequest]);
+
+  // Sincronizar dataInicio/dataFim com periodo e buscar stats ao mudar período
+  useEffect(() => {
+    const range = getDateRangeFromPeriodo(periodo);
+    setDataInicio(range.data_inicio);
+    setDataFim(range.data_fim);
+    const isMesEspecifico = /^\d{4}-\d{2}$/.test(periodo);
+    if (isMesEspecifico) {
+      fetchStats({ data_inicio: range.data_inicio, data_fim: range.data_fim });
+    } else {
+      fetchStats(periodo as 'hoje' | 'semana' | 'mes' | 'ano');
+    }
+  }, [periodo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Carregar dados iniciais (lista e stats são carregados via periodo + handleBusca)
+  useEffect(() => {
     buscarClientes({ limit: 100 });
     buscarProdutos({ limit: 100, status: 'ativo' });
     carregarConfigFocusNfe();
@@ -814,6 +881,25 @@ export default function NFe() {
                     className="pl-10"
                   />
                 </div>
+                <Select value={periodo} onValueChange={(value: string) => setPeriodo(value)}>
+                  <SelectTrigger className="w-44 min-w-[11rem]">
+                    <SelectValue placeholder="Período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hoje">Hoje</SelectItem>
+                    <SelectItem value="semana">Esta Semana</SelectItem>
+                    <SelectItem value="mes">Este Mês</SelectItem>
+                    <SelectItem value="ano">Este Ano</SelectItem>
+                    {mesesComDados.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="text-muted-foreground">Meses com dados</SelectLabel>
+                        {mesesComDados.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </SelectContent>
+                </Select>
                 <Select 
                   value={statusFiltro || "todos"} 
                   onValueChange={(value) => setStatusFiltro(value === "todos" ? "" : value)}
@@ -829,20 +915,6 @@ export default function NFe() {
                     <SelectItem value="erro">Erro</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input
-                  type="date"
-                  value={dataInicio}
-                  onChange={(e) => setDataInicio(e.target.value)}
-                  className="w-[150px]"
-                  placeholder="Data início"
-                />
-                <Input
-                  type="date"
-                  value={dataFim}
-                  onChange={(e) => setDataFim(e.target.value)}
-                  className="w-[150px]"
-                  placeholder="Data fim"
-                />
               </div>
             </CardContent>
           </Card>

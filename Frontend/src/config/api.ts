@@ -155,6 +155,7 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: (id: number) => `/nfe/${id}/status`,
     DELETE: (id: number) => `/nfe/${id}`,
     STATS: '/nfe/stats/overview',
+    MESES_COM_DADOS: '/nfe/meses-com-dados',
   },
 
   // Billing / Stripe
