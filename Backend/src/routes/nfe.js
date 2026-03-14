@@ -802,6 +802,32 @@ router.get('/:id/danfe', validateId, handleValidationErrors, async (req, res) =>
   }
 });
 
+// Stream do DANFE (PDF) para impressão direta (proxy para evitar CORS)
+router.get('/:id/danfe/stream', validateId, handleValidationErrors, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existingNfes = await query(
+      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
+      [id, req.user.tenant_id]
+    );
+    if (existingNfes.length === 0) {
+      return res.status(404).json({ error: 'NF-e não encontrada' });
+    }
+    const resultado = await obterDanfeNfe(req.user.tenant_id, id);
+    const pdfResponse = await fetch(resultado.url, { method: 'GET' });
+    if (!pdfResponse.ok) {
+      return res.status(502).json({ error: 'Não foi possível obter o PDF do DANFE' });
+    }
+    const buffer = Buffer.from(await pdfResponse.arrayBuffer());
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${resultado.filename}"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erro ao obter stream DANFE:', error);
+    res.status(500).json({ error: error.message || 'Erro ao obter DANFE para impressão' });
+  }
+});
+
 // Reprocessar NF-e com erro (tentar emitir novamente)
 router.post('/:id/reprocessar', validateId, handleValidationErrors, async (req, res) => {
   try {

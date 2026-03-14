@@ -100,6 +100,7 @@ export default function NFe() {
     marcarNfeComoAutorizada,
     downloadXml,
     downloadDanfe,
+    imprimirDanfe,
     updateNfeStatus,
     deleteNfe,
     fetchStats,
@@ -980,9 +981,11 @@ export default function NFe() {
                           <p className="text-2xl font-bold text-foreground">
                             {formatCurrency(nfe.valor_total)}
                           </p>
-                          <p className="text-sm text-muted-foreground capitalize">
-                            {nfe.ambiente}
-                          </p>
+                          {nfe.ambiente === 'homologacao' && (
+                            <p className="text-sm text-muted-foreground capitalize">
+                              {nfe.ambiente}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-center space-x-2 flex-wrap gap-1">
@@ -997,6 +1000,27 @@ export default function NFe() {
                                 <Download className="h-4 w-4 mr-1" />
                                 PDF
                               </Button>
+                              {nfe.modelo === '65' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  title="Imprimir NFC-e (impressão direta)"
+                                  onClick={async () => {
+                                    try {
+                                      await imprimirDanfe(nfe.id);
+                                    } catch {
+                                      toast({
+                                        title: "Erro ao imprimir",
+                                        description: "Permita pop-ups ou use o botão PDF e imprima na nova aba.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Printer className="h-4 w-4 mr-1" />
+                                  Imprimir
+                                </Button>
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm" 
@@ -2093,10 +2117,12 @@ export default function NFe() {
                   <Label className="text-muted-foreground">CPF/CNPJ</Label>
                   <p className="font-medium">{nfeSelecionada.cliente_cnpj_cpf || nfeSelecionada.cnpj_cpf || "-"}</p>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Ambiente</Label>
-                  <p className="font-medium capitalize">{nfeSelecionada.ambiente}</p>
-                </div>
+                {nfeSelecionada.ambiente === 'homologacao' && (
+                  <div>
+                    <Label className="text-muted-foreground">Ambiente</Label>
+                    <p className="font-medium capitalize">{nfeSelecionada.ambiente}</p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-muted-foreground">Valor Total</Label>
                   <p className="font-medium text-lg text-primary">
