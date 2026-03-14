@@ -1432,11 +1432,13 @@ export async function obterDanfePdfBuffer(tenantId, nfeId) {
     const path = resultado.path || resultado.url;
     response = await client.get(path, { responseType: 'arraybuffer', timeout: 30000 });
   }
-  const contentType = response.headers['content-type'] || '';
-  if (!contentType.includes('application/pdf')) {
+  const buffer = Buffer.from(response.data);
+  const contentType = (response.headers['content-type'] || '').toLowerCase();
+  const isPdfContentType = contentType.includes('application/pdf') || contentType.includes('application/octet-stream');
+  const isPdfMagic = buffer.length >= 5 && buffer.slice(0, 5).toString('ascii') === '%PDF-';
+  if (!isPdfContentType && !isPdfMagic) {
     throw new Error('Resposta da Focus NFe não é um PDF válido. Use o botão PDF para abrir em nova aba.');
   }
-  const buffer = Buffer.from(response.data);
   return { buffer, filename: resultado.filename };
 }
 
