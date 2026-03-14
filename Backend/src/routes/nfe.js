@@ -10,7 +10,6 @@ import {
   reatribuirNumeroEReemitirNfe as focusReatribuirNumeroEReemitirNfe,
   obterXmlNfe,
   obterDanfeNfe,
-  obterDanfePdfBuffer,
   getFocusNfeConfig,
   saveFocusNfeConfig,
   validarConfiguracoes,
@@ -800,27 +799,6 @@ router.get('/:id/danfe', validateId, handleValidationErrors, async (req, res) =>
     res.status(500).json({
       error: error.message || 'Erro ao obter DANFE da NF-e'
     });
-  }
-});
-
-// Stream do DANFE (PDF) para impressão direta (usa cliente Focus NFe com mesma autenticação)
-router.get('/:id/danfe/stream', validateId, handleValidationErrors, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const existingNfes = await query(
-      'SELECT id, status FROM nfe WHERE id = ? AND tenant_id = ?',
-      [id, req.user.tenant_id]
-    );
-    if (existingNfes.length === 0) {
-      return res.status(404).json({ error: 'NF-e não encontrada' });
-    }
-    const { buffer, filename } = await obterDanfePdfBuffer(req.user.tenant_id, id);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    res.send(buffer);
-  } catch (error) {
-    console.error('Erro ao obter stream DANFE:', error);
-    res.status(500).json({ error: error.message || 'Erro ao obter DANFE para impressão' });
   }
 });
 

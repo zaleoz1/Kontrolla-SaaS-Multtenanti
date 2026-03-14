@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useApi } from './useApi';
-import { API_CONFIG } from '../config/api';
 
 // Interface para itens da NF-e
 export interface NfeItem {
@@ -682,57 +681,6 @@ export function useNfe() {
     }
   }, [makeRequest]);
 
-  // Imprimir DANFE (impressão direta) — abre o PDF e dispara o diálogo de impressão
-  const imprimirDanfe = useCallback(async (id: number): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const url = `${API_CONFIG.BASE_URL}/nfe/${id}/danfe/stream`;
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (!res.ok) {
-        let msg = 'Não foi possível obter o DANFE para impressão.';
-        if (contentType.includes('application/json')) {
-          try {
-            const data = await res.json();
-            msg = data.error || msg;
-          } catch {
-            // use default msg
-          }
-        }
-        throw new Error(msg);
-      }
-      if (!contentType.includes('application/pdf')) {
-        throw new Error('Resposta não é um PDF. Use o botão PDF e imprima na nova aba.');
-      }
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const printWindow = window.open('', '_blank', 'width=800,height=600');
-      if (!printWindow) {
-        URL.revokeObjectURL(blobUrl);
-        throw new Error('Permita pop-ups para imprimir. Ou use o botão PDF e imprima na nova aba.');
-      }
-      printWindow.document.write(`
-        <!DOCTYPE html><html><head><title>DANFE - Impressão</title></head>
-        <body style="margin:0;">
-          <iframe src="${blobUrl}" style="width:100%;height:100vh;border:none;" onload="setTimeout(function(){window.print();}, 600)"></iframe>
-        </body></html>
-      `);
-      printWindow.document.close();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao imprimir DANFE');
-      console.error('Erro ao imprimir DANFE:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // Buscar configurações da Focus NFe
   const fetchFocusNfeConfig = useCallback(async (): Promise<FocusNfeConfig | null> => {
     try {
@@ -825,8 +773,7 @@ export function useNfe() {
     reatribuirNumeroEReemitir,
     downloadXml,
     downloadDanfe,
-    imprimirDanfe,
-
+    
     // Configurações Focus NFe
     fetchFocusNfeConfig,
     saveFocusNfeConfig,

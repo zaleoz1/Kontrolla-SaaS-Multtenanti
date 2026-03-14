@@ -100,7 +100,6 @@ export default function NFe() {
     marcarNfeComoAutorizada,
     downloadXml,
     downloadDanfe,
-    imprimirDanfe,
     updateNfeStatus,
     deleteNfe,
     fetchStats,
@@ -1000,27 +999,6 @@ export default function NFe() {
                                 <Download className="h-4 w-4 mr-1" />
                                 PDF
                               </Button>
-                              {nfe.modelo === '65' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  title="Imprimir NFC-e (impressão direta)"
-                                  onClick={async () => {
-                                    try {
-                                      await imprimirDanfe(nfe.id);
-                                    } catch {
-                                      toast({
-                                        title: "Erro ao imprimir",
-                                        description: "Permita pop-ups ou use o botão PDF e imprima na nova aba.",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Printer className="h-4 w-4 mr-1" />
-                                  Imprimir
-                                </Button>
-                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm" 
