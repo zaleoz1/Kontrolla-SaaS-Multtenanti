@@ -10,6 +10,7 @@ import {
   reatribuirNumeroEReemitirNfe as focusReatribuirNumeroEReemitirNfe,
   obterXmlNfe,
   obterDanfeNfe,
+  obterDanfePdfBuffer,
   getFocusNfeConfig,
   saveFocusNfeConfig,
   validarConfiguracoes,
@@ -802,7 +803,7 @@ router.get('/:id/danfe', validateId, handleValidationErrors, async (req, res) =>
   }
 });
 
-// Stream do DANFE (PDF) para impressão direta (proxy para evitar CORS)
+// Stream do DANFE (PDF) para impressão direta (usa cliente Focus NFe com mesma autenticação)
 router.get('/:id/danfe/stream', validateId, handleValidationErrors, async (req, res) => {
   try {
     const { id } = req.params;
@@ -813,21 +814,9 @@ router.get('/:id/danfe/stream', validateId, handleValidationErrors, async (req, 
     if (existingNfes.length === 0) {
       return res.status(404).json({ error: 'NF-e não encontrada' });
     }
-    const resultado = await obterDanfeNfe(req.user.tenant_id, id);
-    const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
-    const token = (focusConfig.ambiente === 'producao' ? focusConfig.token_producao : focusConfig.token_homologacao) || focusConfig.token || '';
-    const authHeader = token ? { Authorization: 'Basic ' + Buffer.from(token + ':').toString('base64') } : {};
-    const pdfResponse = await fetch(resultado.url, { method: 'GET', headers: authHeader });
-    if (!pdfResponse.ok) {
-      return res.status(502).json({ error: 'Não foi possível obter o PDF do DANFE. Tente o botão PDF.' });
-    }
-    const contentType = pdfResponse.headers.get('content-type') || '';
-    if (!contentType.includes('application/pdf')) {
-      return res.status(502).json({ error: 'Resposta não é um PDF válido. Use o botão PDF para abrir em nova aba.' });
-    }
-    const buffer = Buffer.from(await pdfResponse.arrayBuffer());
+    const { buffer, filename } = await obterDanfePdfBuffer(req.user.tenant_id, id);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${resultado.filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
     res.send(buffer);
   } catch (error) {
     console.error('Erro ao obter stream DANFE:', error);

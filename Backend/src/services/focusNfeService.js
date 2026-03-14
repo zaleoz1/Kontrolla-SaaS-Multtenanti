@@ -1404,11 +1404,40 @@ export async function obterDanfeNfe(tenantId, nfeId) {
     
     return {
       url: danfeUrl,
-      filename: `danfe_${nfe.numero}_${nfe.chave_acesso || 'sem_chave'}.pdf`
+      filename: `danfe_${nfe.numero}_${nfe.chave_acesso || 'sem_chave'}.pdf`,
+      path: data.caminho_danfe.startsWith('http') ? new URL(data.caminho_danfe).pathname : data.caminho_danfe
     };
   } catch (error) {
     throw new Error(error.response?.data?.mensagem || error.message);
   }
+}
+
+/**
+ * Obtém o PDF do DANFE como Buffer (para stream/impressão), usando o cliente autenticado.
+ * @param {number} tenantId
+ * @param {number} nfeId
+ * @returns {Promise<{ buffer: Buffer, filename: string }>}
+ */
+export async function obterDanfePdfBuffer(tenantId, nfeId) {
+  const focusConfig = await getFocusNfeConfig(tenantId);
+  const token = getTokenForAmbiente(focusConfig);
+  if (!token) throw new Error('Token da API Focus NFe não configurado');
+  const resultado = await obterDanfeNfe(tenantId, nfeId);
+  const auth = { username: token, password: '' };
+  let response;
+  if (resultado.url.startsWith('http')) {
+    response = await axios.get(resultado.url, { auth, responseType: 'arraybuffer', timeout: 30000, maxRedirects: 5 });
+  } else {
+    const client = createFocusNfeClient(token, focusConfig.ambiente);
+    const path = resultado.path || resultado.url;
+    response = await client.get(path, { responseType: 'arraybuffer', timeout: 30000 });
+  }
+  const contentType = response.headers['content-type'] || '';
+  if (!contentType.includes('application/pdf')) {
+    throw new Error('Resposta da Focus NFe não é um PDF válido. Use o botão PDF para abrir em nova aba.');
+  }
+  const buffer = Buffer.from(response.data);
+  return { buffer, filename: resultado.filename };
 }
 
 /**
@@ -1476,6 +1505,7 @@ export default {
   cancelarNfe,
   obterXmlNfe,
   obterDanfeNfe,
+  obterDanfePdfBuffer,
   obterJsonEnvioFocus
 };
 
