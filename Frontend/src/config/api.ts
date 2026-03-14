@@ -89,6 +89,7 @@ export const API_ENDPOINTS = {
     ACCOUNTS_RECEIVABLE: '/financeiro/contas-receber',
     ACCOUNTS_PAYABLE: '/financeiro/contas-pagar',
     STATS: '/financeiro/stats/overview',
+    MESES_COM_DADOS: '/financeiro/meses-com-dados',
   },
   
   // Relatórios

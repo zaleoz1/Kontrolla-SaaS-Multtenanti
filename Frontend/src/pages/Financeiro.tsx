@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -52,6 +52,8 @@ import { useContasPagar } from "@/hooks/useContasPagar";
 import { useFinanceiroStats } from "@/hooks/useFinanceiroStats";
 import { useMetodosPagamento } from "@/hooks/useMetodosPagamento";
 import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
+import { API_ENDPOINTS } from "@/config/api";
 
 // Interfaces para pagamentos e recebimentos
 interface PagamentoData {
@@ -101,9 +103,12 @@ interface AdiantamentoData {
   taxaParcela?: number;
 }
 
+export type PeriodoValue = 'hoje' | 'semana' | 'mes' | 'ano' | string;
+
 export default function Financeiro() {
   const [termoBusca, setTermoBusca] = useState("");
-  const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('mes');
+  const [periodo, setPeriodo] = useState<PeriodoValue>('mes');
+  const [mesesComDados, setMesesComDados] = useState<{ value: string; label: string }[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroStatusPagar, setFiltroStatusPagar] = useState<string>('todos');
@@ -111,6 +116,7 @@ export default function Financeiro() {
   const [filtroTipoTransacao, setFiltroTipoTransacao] = useState<'todos' | 'entrada' | 'saida'>('todos');
   const [filtroDataInicioTrans, setFiltroDataInicioTrans] = useState('');
   const navigate = useNavigate();
+  const { makeRequest } = useApi();
 
   // Estados para modais de pagamento e recebimento
   const [modalPagamento, setModalPagamento] = useState(false);
@@ -174,11 +180,20 @@ export default function Financeiro() {
     taxaParcela: 0
   });
 
-  // Calcula intervalo de datas a partir do período selecionado
-  const getDateRangeFromPeriodo = (p: 'hoje' | 'semana' | 'mes' | 'ano') => {
+  // Calcula intervalo de datas a partir do período selecionado (inclui mês específico YYYY-MM)
+  const getDateRangeFromPeriodo = (p: PeriodoValue): { data_inicio: string; data_fim: string } => {
     const hoje = new Date();
     const fim = hoje.toISOString().split('T')[0];
     let inicio: string;
+
+    // Mês específico (ex: "2025-01" = Janeiro 2025)
+    if (/^\d{4}-\d{2}$/.test(p)) {
+      inicio = `${p}-01`;
+      const [y, m] = p.split('-').map(Number);
+      const ultimoDia = new Date(y, m, 0);
+      const dataFim = ultimoDia.toISOString().split('T')[0];
+      return { data_inicio: inicio, data_fim: dataFim };
+    }
 
     switch (p) {
       case 'hoje':
@@ -201,6 +216,8 @@ export default function Financeiro() {
         inicio = d.toISOString().split('T')[0];
         break;
       }
+      default:
+        inicio = fim;
     }
 
     return { data_inicio: inicio, data_fim: fim };
@@ -340,13 +357,21 @@ export default function Financeiro() {
     }
   }, [dadosRecebimento.metodoPagamento]);
 
+  // Carregar meses que possuem dados financeiros
+  useEffect(() => {
+    makeRequest(API_ENDPOINTS.FINANCIAL.MESES_COM_DADOS)
+      .then((res: { meses?: { value: string; label: string }[] }) => setMesesComDados(res?.meses ?? []))
+      .catch(() => {});
+  }, [makeRequest]);
+
   // Carregar dados iniciais
   useEffect(() => {
     const carregarDados = async () => {
       try {
         const dateRange = getDateRangeFromPeriodo(periodo);
+        const isMesEspecifico = /^\d{4}-\d{2}$/.test(periodo);
         await Promise.all([
-          buscarStats(periodo),
+          isMesEspecifico ? buscarStats({ data_inicio: dateRange.data_inicio, data_fim: dateRange.data_fim }) : buscarStats(periodo as 'hoje' | 'semana' | 'mes' | 'ano'),
           buscarTransacoes(dateRange),
           buscarContasReceber({}),
           buscarContasPagar({})
@@ -363,8 +388,9 @@ export default function Financeiro() {
   const recarregarDados = async () => {
     try {
       const dateRange = getDateRangeFromPeriodo(periodo);
+      const isMesEspecifico = /^\d{4}-\d{2}$/.test(periodo);
       await Promise.all([
-        buscarStats(periodo),
+        isMesEspecifico ? buscarStats({ data_inicio: dateRange.data_inicio, data_fim: dateRange.data_fim }) : buscarStats(periodo as 'hoje' | 'semana' | 'mes' | 'ano'),
         buscarTransacoes(dateRange),
         buscarContasReceber({}),
         buscarContasPagar({})
@@ -977,15 +1003,23 @@ export default function Financeiro() {
 
           {/* Filtros e Ações - Desktop */}
           <div className="hidden md:flex items-center space-x-2">
-            <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
+            <Select value={periodo} onValueChange={(value: string) => setPeriodo(value)}>
+              <SelectTrigger className="w-44 min-w-[11rem]">
+                <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="hoje">Hoje</SelectItem>
                 <SelectItem value="semana">Esta Semana</SelectItem>
                 <SelectItem value="mes">Este Mês</SelectItem>
                 <SelectItem value="ano">Este Ano</SelectItem>
+                {mesesComDados.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-muted-foreground">Meses com dados</SelectLabel>
+                    {mesesComDados.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={recarregarDados} disabled={loadingStats}>
@@ -1003,15 +1037,23 @@ export default function Financeiro() {
         <div className="md:hidden space-y-3 w-full">
           <div className="space-y-1 w-full">
             <Label className="text-xs font-medium">Período:</Label>
-            <Select value={periodo} onValueChange={(value: 'hoje' | 'semana' | 'mes' | 'ano') => setPeriodo(value)}>
+            <Select value={periodo} onValueChange={(value: string) => setPeriodo(value)}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="hoje">Hoje</SelectItem>
                 <SelectItem value="semana">Esta Semana</SelectItem>
                 <SelectItem value="mes">Este Mês</SelectItem>
                 <SelectItem value="ano">Este Ano</SelectItem>
+                {mesesComDados.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-muted-foreground">Meses com dados</SelectLabel>
+                    {mesesComDados.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
               </SelectContent>
             </Select>
           </div>
