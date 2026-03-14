@@ -693,7 +693,22 @@ export function useNfe() {
         method: 'GET',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error('Não foi possível obter o DANFE para impressão');
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok) {
+        let msg = 'Não foi possível obter o DANFE para impressão.';
+        if (contentType.includes('application/json')) {
+          try {
+            const data = await res.json();
+            msg = data.error || msg;
+          } catch {
+            // use default msg
+          }
+        }
+        throw new Error(msg);
+      }
+      if (!contentType.includes('application/pdf')) {
+        throw new Error('Resposta não é um PDF. Use o botão PDF e imprima na nova aba.');
+      }
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const printWindow = window.open('', '_blank', 'width=800,height=600');

@@ -814,9 +814,16 @@ router.get('/:id/danfe/stream', validateId, handleValidationErrors, async (req, 
       return res.status(404).json({ error: 'NF-e não encontrada' });
     }
     const resultado = await obterDanfeNfe(req.user.tenant_id, id);
-    const pdfResponse = await fetch(resultado.url, { method: 'GET' });
+    const focusConfig = await getFocusNfeConfig(req.user.tenant_id);
+    const token = (focusConfig.ambiente === 'producao' ? focusConfig.token_producao : focusConfig.token_homologacao) || focusConfig.token || '';
+    const authHeader = token ? { Authorization: 'Basic ' + Buffer.from(token + ':').toString('base64') } : {};
+    const pdfResponse = await fetch(resultado.url, { method: 'GET', headers: authHeader });
     if (!pdfResponse.ok) {
-      return res.status(502).json({ error: 'Não foi possível obter o PDF do DANFE' });
+      return res.status(502).json({ error: 'Não foi possível obter o PDF do DANFE. Tente o botão PDF.' });
+    }
+    const contentType = pdfResponse.headers.get('content-type') || '';
+    if (!contentType.includes('application/pdf')) {
+      return res.status(502).json({ error: 'Resposta não é um PDF válido. Use o botão PDF para abrir em nova aba.' });
     }
     const buffer = Buffer.from(await pdfResponse.arrayBuffer());
     res.setHeader('Content-Type', 'application/pdf');
